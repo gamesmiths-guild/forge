@@ -1,0 +1,9 @@
+* text=auto
+
+*.editorconfig   text eol=crlf
+*.gitattributes  text eol=crlf
+*.gitignore      text eol=crlf
+*.sln            text eol=crlf
+*.csproj         text eol=crlf
+*.cs             text eol=crlf diff=csharp
+*.md             text eol=crlf diff=markdown

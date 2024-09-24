@@ -1,0 +1,57 @@
+<Project>
+  <PropertyGroup>
+    <AssemblyTitle>Forge</AssemblyTitle>
+    <Product>Forge Gameplay Framework</Product>
+    <Company>Gamesmiths Guild</Company>
+    <Copyright>Copyright © 2024 Gamesmiths Guild</Copyright>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Package Metadata">
+    <PackageId>Gamesmiths.Forge</PackageId>
+    <Title>Forge Gameplay Framework</Title>
+    <Authors>Lex</Authors>
+    <Description>A gameplay framework for developing games using C#.</Description>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/gamesmiths-guild/forge</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/gamesmiths-guild/forge</PackageProjectUrl>
+    <PackageTags>gameplay;framework;game;engine;gamedev;C#</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>https://github.com/gamesmiths-guild/forge/releases</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Versioning">
+    <Version>0.1.0</Version>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Documentation">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NeutralLanguage>en-US</NeutralLanguage>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Configure assembly names and namespaces">
+		<AssemblyName>$Gamesmiths.(SolutionName).$(MSBuildProjectName)</AssemblyName>
+		<RootNamespace>$(AssemblyName)</RootNamespace>
+	</PropertyGroup>
+
+  <ItemGroup Label="Dependencies">
+    <!--
+      Common packages will come here.
+    -->
+  </ItemGroup>
+
+  <!--<ItemGroup Label="Static Analysis">
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" OutputItemType="analyzer" />
+    <PackageReference Include="Roslynator.Analyzers" Version="4.12.5" PrivateAssets="all" OutputItemType="analyzer" />
+  </ItemGroup>-->
+</Project>
