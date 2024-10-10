@@ -4,10 +4,6 @@
     <RootNamespace>$(AssemblyName)</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup Label="Dependencies">
-    <PackageReference Include="Shouldly" Version="4.2.1" />
-  </ItemGroup>
-
   <ItemGroup>
     <AdditionalFiles Include="../stylecop.json" Link="stylecop.json" />
   </ItemGroup>
