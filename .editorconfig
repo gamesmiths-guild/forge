@@ -193,7 +193,7 @@ csharp_style_prefer_range_operator = true:suggestion
 csharp_style_prefer_tuple_swap = true:suggestion
 csharp_style_prefer_utf8_string_literals = true:suggestion
 csharp_style_throw_expression = true:suggestion
-csharp_style_unused_value_assignment_preference = discard_variable:warning
+csharp_style_unused_value_assignment_preference = discard_variable:suggestion
 csharp_style_unused_value_expression_statement_preference = discard_variable:suggestion
 
 # 'using' directive preferences
@@ -347,6 +347,11 @@ dotnet_naming_style.camel_case.capitalization = camel_case
 
 #### Analyzers ####
 
+### .NET ###
+
+# Expression value is never used
+dotnet_diagnostic.IDE0058.severity = suggestion
+
 #### Roslynator ####
 
 # Set severity for all analyzers that are enabled by default (https://docs.microsoft.com/en-us/visualstudio/code-quality/use-roslyn-analyzers?view=vs-2022#set-rule-severity-of-multiple-analyzer-rules-at-once-in-an-editorconfig-file)
@@ -359,6 +364,9 @@ roslynator_refactorings.enabled = true
 # Enable/disable all compiler diagnostic fixes
 roslynator_compiler_diagnostic_fixes.enabled = true
 
+# RCS1021: Convert lambda expression body to expression body
+dotnet_diagnostic.RCS1021.severity = none
+
 ### StyleCop ###
 
 # SA1309: Field names should not begin with underscore
@@ -369,3 +377,5 @@ dotnet_diagnostic.SA1101.severity = none
 
 # SA1201: Elements should appear in the correct order
 dotnet_diagnostic.SA1201.severity = none
+
+### Sonar Analyzer ###
