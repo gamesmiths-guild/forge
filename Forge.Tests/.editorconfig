@@ -6,3 +6,6 @@ root=false
 
 # SA1600: Elements should be documented
 dotnet_diagnostic.SA1600.severity = none
+
+# CA1707: Identifiers should not contain underscores
+dotnet_diagnostic.CA1707.severity = none
