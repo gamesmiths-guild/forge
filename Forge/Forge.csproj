@@ -8,9 +8,7 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
-    <PropertyGroup>
-    <AssemblyName>Gamesmiths.Forge</AssemblyName>
-    <RootNamespace>Gamesmiths.Forge</RootNamespace>
+  <PropertyGroup>
     <AssemblyTitle>Forge</AssemblyTitle>
     <Product>Forge Gameplay Framework</Product>
     <Company>Gamesmiths Guild</Company>

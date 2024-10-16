@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup Label="Configure assembly names and namespaces">
-    <AssemblyName>$Gamesmiths.(SolutionName).$(MSBuildProjectName)</AssemblyName>
+    <AssemblyName>Gamesmiths.$(MSBuildProjectName)</AssemblyName>
     <RootNamespace>$(AssemblyName)</RootNamespace>
   </PropertyGroup>
 
