@@ -10,6 +10,9 @@ public class StringKeyTests
 	[Theory]
 	[Trait("Initialization", "Constructor")]
 
+	// Empty string
+	[InlineData("")]
+
 	// Simple strings
 	[InlineData("simple")]
 	[InlineData("Simple")]
@@ -38,13 +41,27 @@ public class StringKeyTests
 	// Embedded null characters
 	[InlineData("null\0char")]
 	[InlineData("another\0null")]
-
 	public void Constructor_initializes_with_correct_value(string keyName)
 	{
 		var key = new StringKey(keyName);
 
 		key.ToString().Should().Be(keyName.Trim().ToLowerInvariant());
 		key.GetHashCode().Should().Be(StringComparer.OrdinalIgnoreCase.GetHashCode(keyName.Trim()));
+	}
+
+	[Fact]
+	[Trait("Initialization", "Exception")]
+	public void Constructor_throws_exception_for_null_argument()
+	{
+		Action act = static () =>
+		{
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
+			var key = new StringKey(null);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
+			key.GetHashCode();
+		};
+
+		act.Should().Throw<ArgumentException>().WithMessage("Value cannot be null.*");
 	}
 
 	[Theory]
@@ -141,6 +158,21 @@ public class StringKeyTests
 
 		key.ToString().Should().Be(keyName.Trim().ToLowerInvariant());
 		key.GetHashCode().Should().Be(StringComparer.OrdinalIgnoreCase.GetHashCode(keyName.Trim()));
+	}
+
+	[Fact]
+	[Trait("Conversion", "Exception")]
+	public void Conversion_throws_exception_for_null_argument()
+	{
+		Action act = static () =>
+		{
+#pragma warning disable CS8604 // Possible null reference argument.
+			StringKey key = null;
+#pragma warning restore CS8604 // Possible null reference argument.
+			key.GetHashCode();
+		};
+
+		act.Should().Throw<ArgumentException>().WithMessage("Value cannot be null.*");
 	}
 
 	[Theory]

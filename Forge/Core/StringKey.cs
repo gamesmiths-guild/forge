@@ -1,7 +1,5 @@
 // Copyright © 2024 Gamesmiths Guild.
 
-using System.Diagnostics;
-
 namespace Gamesmiths.Forge.Core;
 
 /// <summary>
@@ -21,13 +19,13 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	private readonly int _hashCode;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="StringKey"/> struct.
-	/// This creates an invalid <see cref="StringKey"/> instance and should never be used. Use the
-	/// string-based constructor instead, passing a non-null and non-empty <see cref="string"/>.
+	/// Gets a default Empty <see cref="StringKey"/>.
 	/// </summary>
-#pragma warning disable S1133 // Deprecated code should be removed
-	[Obsolete("Default constructor shouldn't be used. Use the string-based constructor instead.", true)]
-#pragma warning restore S1133 // Deprecated code should be removed
+	public static StringKey Empty { get; } = new();
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="StringKey"/> struct.
+	/// </summary>
 	public StringKey()
 	{
 		// This constructor should not be used.
@@ -45,7 +43,7 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// </param>
 	public StringKey(string key)
 	{
-		Debug.Assert(!string.IsNullOrWhiteSpace(key), $"A {nameof(StringKey)} should never be null or empty.");
+		ArgumentNullException.ThrowIfNull(key);
 
 		// Intern and store the string in lowercase to ensure case-insensitive uniqueness.
 		_key = string.Intern(key.Trim().ToLowerInvariant());
@@ -57,24 +55,18 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// <inheritdoc />
 	public override readonly string ToString()
 	{
-		Debug.Assert(!string.IsNullOrWhiteSpace(_key), $"A {nameof(StringKey)} should never be null or empty.");
-
 		return _key;
 	}
 
 	/// <inheritdoc />
 	public override readonly int GetHashCode()
 	{
-		Debug.Assert(!string.IsNullOrWhiteSpace(_key), $"A {nameof(StringKey)} should never be null or empty.");
-
 		return _hashCode;
 	}
 
 	/// <inheritdoc />
 	public override readonly bool Equals(object? obj)
 	{
-		Debug.Assert(!string.IsNullOrWhiteSpace(_key), $"A {nameof(StringKey)} should never be null or empty.");
-
 		if (obj is StringKey other)
 		{
 			return Equals(other);
@@ -86,9 +78,6 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// <inheritdoc/>
 	public readonly bool Equals(StringKey other)
 	{
-		Debug.Assert(!string.IsNullOrWhiteSpace(_key), $"A {nameof(StringKey)} should never be null or empty.");
-		Debug.Assert(!string.IsNullOrWhiteSpace(other._key), $"A {nameof(StringKey)} should never be null or empty.");
-
 		return _key.Equals(other._key, StringComparison.OrdinalIgnoreCase);
 	}
 
@@ -111,9 +100,6 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// <inheritdoc/>
 	public readonly int CompareTo(StringKey other)
 	{
-		Debug.Assert(!string.IsNullOrWhiteSpace(_key), $"A {nameof(StringKey)} should never be null or empty.");
-		Debug.Assert(!string.IsNullOrWhiteSpace(other._key), $"A {nameof(StringKey)} should never be null or empty.");
-
 		return string.Compare(_key, other._key, StringComparison.OrdinalIgnoreCase);
 	}
 
@@ -123,10 +109,6 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// <param name="stringId">The <see cref="StringKey"/> to convert.</param>
 	public static implicit operator string(StringKey stringId)
 	{
-		Debug.Assert(
-			!string.IsNullOrWhiteSpace(stringId._key),
-			$"A {nameof(StringKey)} should never be null or empty.");
-
 		return stringId._key;
 	}
 
