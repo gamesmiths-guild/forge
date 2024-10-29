@@ -349,8 +349,11 @@ dotnet_naming_style.camel_case.capitalization = camel_case
 
 ### .NET ###
 
-# Expression value is never used
+# IDE0058: Expression value is never used
 dotnet_diagnostic.IDE0058.severity = suggestion
+
+# IDE0053: Use block body for lambda expression
+dotnet_diagnostic.IDE0053.severity = suggestion
 
 #### Roslynator ####
 
@@ -379,3 +382,6 @@ dotnet_diagnostic.SA1101.severity = none
 dotnet_diagnostic.SA1201.severity = none
 
 ### Sonar Analyzer ###
+
+# T0004: Internal Stylyng Rule (Use SafeRegex)
+dotnet_diagnostic.T0004.severity = none
