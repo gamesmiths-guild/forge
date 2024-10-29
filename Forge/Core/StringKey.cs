@@ -125,88 +125,88 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// <summary>
 	/// Determines if two <see cref="StringKey"/> objects are equal.
 	/// </summary>
-	/// <param name="a">The first <see cref="StringKey"/> to compare.</param>
-	/// <param name="b">The second <see cref="StringKey"/> to compare.</param>
+	/// <param name="lhs">The first <see cref="StringKey"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="StringKey"/> to compare.</param>
 	/// <returns>
-	/// <see langword="true"/> if the values of <paramref name="a"/> and <paramref name="b"/> are equal; otherwise,
+	/// <see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal; otherwise,
 	/// <see langword="false"/>.
 	/// </returns>
-	public static bool operator ==(StringKey a, StringKey b)
+	public static bool operator ==(StringKey lhs, StringKey rhs)
 	{
-		return a.Equals(b);
+		return lhs.Equals(rhs);
 	}
 
 	/// <summary>
 	/// Determines if two <see cref="StringKey"/> objects are not equal.
 	/// </summary>
-	/// <param name="a">The first <see cref="StringKey"/> to compare.</param>
-	/// <param name="b">The second <see cref="StringKey"/> to compare.</param>
+	/// <param name="lhs">The first <see cref="StringKey"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="StringKey"/> to compare.</param>
 	/// <returns>
-	/// <see langword="true"/> if the values of <paramref name="a"/> and <paramref name="b"/> are not equal; otherwise,
+	/// <see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not equal; otherwise,
 	/// <see langword="false"/>.
 	/// </returns>
-	public static bool operator !=(StringKey a, StringKey b)
+	public static bool operator !=(StringKey lhs, StringKey rhs)
 	{
-		return !a.Equals(b);
+		return !lhs.Equals(rhs);
 	}
 
 	/// <summary>
 	/// Determines whether one <see cref="StringKey"/> is lexically less than another <see cref="StringKey"/> using
 	/// <see cref="StringComparison.OrdinalIgnoreCase"/>.
 	/// </summary>
-	/// <param name="a">The first <see cref="StringKey"/>.</param>
-	/// <param name="b">The second <see cref="StringKey"/>.</param>
+	/// <param name="lhs">The first <see cref="StringKey"/>.</param>
+	/// <param name="rhs">The second <see cref="StringKey"/>.</param>
 	/// <returns>
-	/// <see langword="true"/> if <paramref name="a"/> is lexically less than <paramref name="b"/>; otherwise,
+	/// <see langword="true"/> if <paramref name="lhs"/> is lexically less than <paramref name="rhs"/>; otherwise,
 	/// <see langword="false"/>.
 	/// </returns>
-	public static bool operator <(StringKey a, StringKey b)
+	public static bool operator <(StringKey lhs, StringKey rhs)
 	{
-		return a.CompareTo(b) < 0;
+		return lhs.CompareTo(rhs) < 0;
 	}
 
 	/// <summary>
 	/// Determines whether one <see cref="StringKey"/> is lexically greater than another <see cref="StringKey"/> using
 	/// <see cref="StringComparison.OrdinalIgnoreCase"/>.
 	/// </summary>
-	/// <param name="a">The first <see cref="StringKey"/>.</param>
-	/// <param name="b">The second <see cref="StringKey"/>.</param>
+	/// <param name="lhs">The first <see cref="StringKey"/>.</param>
+	/// <param name="rhs">The second <see cref="StringKey"/>.</param>
 	/// <returns>
-	/// <see langword="true"/> if <paramref name="a"/> is lexically greater than <paramref name="b"/>; otherwise,
+	/// <see langword="true"/> if <paramref name="lhs"/> is lexically greater than <paramref name="rhs"/>; otherwise,
 	/// <see langword="false"/>.
 	/// </returns>
-	public static bool operator >(StringKey a, StringKey b)
+	public static bool operator >(StringKey lhs, StringKey rhs)
 	{
-		return a.CompareTo(b) > 0;
+		return lhs.CompareTo(rhs) > 0;
 	}
 
 	/// <summary>
 	/// Determines whether one <see cref="StringKey"/> is lexically less than or equal to another
 	/// <see cref="StringKey"/> using <see cref="StringComparison.OrdinalIgnoreCase"/>.
 	/// </summary>
-	/// <param name="a">The first <see cref="StringKey"/>.</param>
-	/// <param name="b">The second <see cref="StringKey"/>.</param>
+	/// <param name="lhs">The first <see cref="StringKey"/>.</param>
+	/// <param name="rhs">The second <see cref="StringKey"/>.</param>
 	/// <returns>
-	/// <see langword="true"/> if <paramref name="a"/> is lexically less than or equal to <paramref name="b"/>;
+	/// <see langword="true"/> if <paramref name="lhs"/> is lexically less than or equal to <paramref name="rhs"/>;
 	/// otherwise, <see langword="false"/>.
 	/// </returns>
-	public static bool operator <=(StringKey a, StringKey b)
+	public static bool operator <=(StringKey lhs, StringKey rhs)
 	{
-		return a.CompareTo(b) <= 0;
+		return lhs.CompareTo(rhs) <= 0;
 	}
 
 	/// <summary>
 	/// Determines whether one <see cref="StringKey"/> is lexically greater than or equal to another
 	/// <see cref="StringKey"/> using <see cref="StringComparison.OrdinalIgnoreCase"/>.
 	/// </summary>
-	/// <param name="a">The first <see cref="StringKey"/>.</param>
-	/// <param name="b">The second <see cref="StringKey"/>.</param>
+	/// <param name="lhs">The first <see cref="StringKey"/>.</param>
+	/// <param name="rhs">The second <see cref="StringKey"/>.</param>
 	/// <returns>
-	/// <see langword="true"/> if <paramref name="a"/> is lexically greater than or equal to <paramref name="b"/>;
+	/// <see langword="true"/> if <paramref name="lhs"/> is lexically greater than or equal to <paramref name="rhs"/>;
 	/// otherwise, <see langword="false"/>.
 	/// </returns>
-	public static bool operator >=(StringKey a, StringKey b)
+	public static bool operator >=(StringKey lhs, StringKey rhs)
 	{
-		return a.CompareTo(b) >= 0;
+		return lhs.CompareTo(rhs) >= 0;
 	}
 }
