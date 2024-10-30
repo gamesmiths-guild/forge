@@ -28,7 +28,6 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// </summary>
 	public StringKey()
 	{
-		// This constructor should not be used.
 		_key = string.Empty;
 		_hashCode = 0;
 	}
@@ -36,11 +35,9 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// <summary>
 	/// Initializes a new instance of the <see cref="StringKey"/> struct.
 	/// </summary>
-	/// <param name="key">
-	/// The <see cref="string"/> value used to initialize the <see cref="StringKey"/>. The provided string will be
-	/// rimmed of any leading or trailing whitespace and stored in lowercase. It must not be null, empty, or contain
-	/// only whitespace.
-	/// </param>
+	/// <param name="key">The <see cref="string"/> value used to initialize the <see cref="StringKey"/>. The provided
+	/// string will be trimmed of any leading or trailing whitespace and stored in lowercase. It must not be null,
+	/// empty, or contain only whitespace.</param>
 	public StringKey(string key)
 	{
 		ArgumentNullException.ThrowIfNull(key);
@@ -127,10 +124,8 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// </summary>
 	/// <param name="lhs">The first <see cref="StringKey"/> to compare.</param>
 	/// <param name="rhs">The second <see cref="StringKey"/> to compare.</param>
-	/// <returns>
-	/// <see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal; otherwise,
-	/// <see langword="false"/>.
-	/// </returns>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal;
+	/// otherwise, <see langword="false"/>.</returns>
 	public static bool operator ==(StringKey lhs, StringKey rhs)
 	{
 		return lhs.Equals(rhs);
@@ -141,10 +136,8 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// </summary>
 	/// <param name="lhs">The first <see cref="StringKey"/> to compare.</param>
 	/// <param name="rhs">The second <see cref="StringKey"/> to compare.</param>
-	/// <returns>
-	/// <see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not equal; otherwise,
-	/// <see langword="false"/>.
-	/// </returns>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not
+	/// equal; otherwise, <see langword="false"/>.</returns>
 	public static bool operator !=(StringKey lhs, StringKey rhs)
 	{
 		return !lhs.Equals(rhs);
@@ -156,10 +149,8 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// </summary>
 	/// <param name="lhs">The first <see cref="StringKey"/>.</param>
 	/// <param name="rhs">The second <see cref="StringKey"/>.</param>
-	/// <returns>
-	/// <see langword="true"/> if <paramref name="lhs"/> is lexically less than <paramref name="rhs"/>; otherwise,
-	/// <see langword="false"/>.
-	/// </returns>
+	/// <returns><see langword="true"/> if <paramref name="lhs"/> is lexically less than <paramref name="rhs"/>;
+	/// otherwise, <see langword="false"/>.</returns>
 	public static bool operator <(StringKey lhs, StringKey rhs)
 	{
 		return lhs.CompareTo(rhs) < 0;
@@ -171,10 +162,8 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// </summary>
 	/// <param name="lhs">The first <see cref="StringKey"/>.</param>
 	/// <param name="rhs">The second <see cref="StringKey"/>.</param>
-	/// <returns>
-	/// <see langword="true"/> if <paramref name="lhs"/> is lexically greater than <paramref name="rhs"/>; otherwise,
-	/// <see langword="false"/>.
-	/// </returns>
+	/// <returns><see langword="true"/> if <paramref name="lhs"/> is lexically greater than <paramref name="rhs"/>;
+	/// otherwise, <see langword="false"/>.</returns>
 	public static bool operator >(StringKey lhs, StringKey rhs)
 	{
 		return lhs.CompareTo(rhs) > 0;
@@ -186,10 +175,8 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// </summary>
 	/// <param name="lhs">The first <see cref="StringKey"/>.</param>
 	/// <param name="rhs">The second <see cref="StringKey"/>.</param>
-	/// <returns>
-	/// <see langword="true"/> if <paramref name="lhs"/> is lexically less than or equal to <paramref name="rhs"/>;
-	/// otherwise, <see langword="false"/>.
-	/// </returns>
+	/// <returns><see langword="true"/> if <paramref name="lhs"/> is lexically less than or equal to
+	/// <paramref name="rhs"/>; otherwise, <see langword="false"/>.</returns>
 	public static bool operator <=(StringKey lhs, StringKey rhs)
 	{
 		return lhs.CompareTo(rhs) <= 0;
@@ -201,10 +188,8 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// </summary>
 	/// <param name="lhs">The first <see cref="StringKey"/>.</param>
 	/// <param name="rhs">The second <see cref="StringKey"/>.</param>
-	/// <returns>
-	/// <see langword="true"/> if <paramref name="lhs"/> is lexically greater than or equal to <paramref name="rhs"/>;
-	/// otherwise, <see langword="false"/>.
-	/// </returns>
+	/// <returns><see langword="true"/> if <paramref name="lhs"/> is lexically greater than or equal to
+	/// <paramref name="rhs"/>; otherwise, <see langword="false"/>.</returns>
 	public static bool operator >=(StringKey lhs, StringKey rhs)
 	{
 		return lhs.CompareTo(rhs) >= 0;
