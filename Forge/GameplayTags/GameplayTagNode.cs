@@ -131,12 +131,7 @@ public class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 	/// <inheritdoc/>
 	public override bool Equals(object? obj)
 	{
-		if (obj is GameplayTagNode other)
-		{
-			return Equals(other);
-		}
-
-		return false;
+		return ReferenceEquals(this, obj);
 	}
 
 	/// <inheritdoc/>
@@ -154,12 +149,7 @@ public class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 	/// otherwise, <see langword="false"/>.</returns>
 	public static bool operator ==(GameplayTagNode lhs, GameplayTagNode rhs)
 	{
-		if (lhs is null)
-		{
-			return rhs is null;
-		}
-
-		return lhs.Equals(rhs);
+		return ReferenceEquals(lhs, rhs);
 	}
 
 	/// <summary>
