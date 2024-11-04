@@ -1,6 +1,7 @@
 // Copyright © 2024 Gamesmiths Guild.
 
 using System.Collections;
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.Serialization;
 using System.Text;
@@ -41,19 +42,33 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	/// </summary>
 	public bool IsEmpty => GameplayTags.Count == 0;
 
+	internal GameplayTagsManager GameplayTagsManager { get; }
+
 	/// <summary>
 	/// Initializes a new instance of the <see cref="GameplayTagContainer"/> class.
 	/// </summary>
-	public GameplayTagContainer()
+	/// <param name="gameplayTagsManager">The manager for handling tag indexing and associations for this container.
+	/// </param>
+	public GameplayTagContainer(GameplayTagsManager gameplayTagsManager)
 	{
+		GameplayTagsManager = gameplayTagsManager;
 	}
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="GameplayTagContainer"/> class.
 	/// </summary>
 	/// <param name="tag">A <see cref="GameplayTag"/> to be added in the container.</param>
+	/// <exception cref="ArgumentException">Throws if the tag used to initialize this container is not registered with a
+	/// <see cref="GameplayTagsManager"/>.</exception>
 	public GameplayTagContainer(GameplayTag tag)
 	{
+		if (tag.GameplayTagsManager is null)
+		{
+			throw new ArgumentException("Tag must be registered with a manager.", nameof(tag));
+		}
+
+		GameplayTagsManager = tag.GameplayTagsManager;
+
 		AddTag(tag);
 	}
 
@@ -63,6 +78,7 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	/// </summary>
 	/// <param name="other">The other <see cref="GameplayTagContainer"/> to copy the values from.</param>
 	public GameplayTagContainer(GameplayTagContainer other)
+		: this(other.GameplayTagsManager)
 	{
 		GameplayTags.UnionWith(other.GameplayTags);
 		ParentTags.UnionWith(other.ParentTags);
@@ -72,8 +88,11 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	/// Initializes a new instance of the <see cref="GameplayTagContainer"/> class based on a list of
 	/// <see cref="GameplayTag"/>s.
 	/// </summary>
+	/// <param name="gameplayTagsManager">The manager for handling tag indexing and associations for this container.
+	/// </param>
 	/// <param name="sourceTags">The set of <see cref="GameplayTag"/>s to initialize this container with.</param>
-	public GameplayTagContainer(HashSet<GameplayTag> sourceTags)
+	public GameplayTagContainer(GameplayTagsManager gameplayTagsManager, HashSet<GameplayTag> sourceTags)
+		: this(gameplayTagsManager)
 	{
 		GameplayTags.UnionWith(sourceTags);
 		FillParentTags();
@@ -82,11 +101,15 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	/// <summary>
 	/// Efficient network serialization, leveraging the dictionary for optimized performance.
 	/// </summary>
+	/// <param name="gameplayTagsManager">The manager responsible for tag lookup and net index handling.</param>
 	/// <param name="container">The <see cref="GameplayTagContainer"/> to be serialized.</param>
 	/// <param name="serializedContainerStream">The serialized stream for this caontainer.</param>
 	/// <returns><see langword="true"/> if successfully serialized; <see langword="false"/> otherwise.</returns>
 	/// <exception cref="SerializationException">Throws if there are more tags than the configured max size.</exception>
-	public static bool NetSerialize(GameplayTagContainer container, out byte[] serializedContainerStream)
+	public static bool NetSerialize(
+		GameplayTagsManager gameplayTagsManager,
+		GameplayTagContainer container,
+		out byte[] serializedContainerStream)
 	{
 		var containerStream = new List<byte>();
 
@@ -107,8 +130,19 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 			return true;
 		}
 
+		// Containers at this point should always have a designated manager.
+		Debug.Assert(
+			container.GameplayTagsManager is not null,
+			$"Container isn't properly registred in a {typeof(GameplayTagsManager)}.");
+
+		if (gameplayTagsManager != container.GameplayTagsManager)
+		{
+			serializedContainerStream = [];
+			return false;
+		}
+
 		var numTags = (byte)container.GameplayTags.Count;
-		var maxSize = (1 << GameplayTagsManager.Instance.NumBitsForContainerSize) - 1;
+		var maxSize = (1 << gameplayTagsManager.NumBitsForContainerSize) - 1;
 
 		if (numTags > maxSize)
 		{
@@ -120,7 +154,7 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 
 		foreach (GameplayTag tag in container.GameplayTags)
 		{
-			GameplayTag.NetSerialize(tag, out var index);
+			GameplayTag.NetSerialize(gameplayTagsManager, tag, out var index);
 
 			// Read net index from buffer. This is just a practical example, use a BitStream reader here isntead.
 			var netIndex = new ushort[] { index };
@@ -140,13 +174,14 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	/// <summary>
 	/// Efficient network deserialization, leveraging the dictionary for optimized performance.
 	/// </summary>
+	/// <param name="gameplayTagsManager">The manager responsible for tag lookup and net index handling.</param>
 	/// <param name="stream">The data stream to be deserialized.</param>
 	/// <param name="deserializedContainer">The resulting <see cref="GameplayTagContainer"/> from deserialization.
 	/// </param>
 	/// <returns><see langword="true"/> if successfully deserialized; <see langword="false"/> otherwise.</returns>
-	public static bool NetDeserialize(byte[] stream, out GameplayTagContainer deserializedContainer)
+	public static bool NetDeserialize(GameplayTagsManager gameplayTagsManager, byte[] stream, out GameplayTagContainer deserializedContainer)
 	{
-		deserializedContainer = new GameplayTagContainer();
+		deserializedContainer = new GameplayTagContainer(gameplayTagsManager);
 
 		// Empty container.
 		if (stream[0] == 1)
@@ -162,13 +197,12 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 			var tagStream = new byte[2];
 			Array.Copy(stream, 2 + (2 * i), tagStream, 0, 2);
 
-			GameplayTag.NetDeserialize(tagStream, out GameplayTag deserializedTag);
+			GameplayTag.NetDeserialize(gameplayTagsManager, tagStream, out GameplayTag deserializedTag);
 
 			deserializedContainer.AddTag(deserializedTag);
 		}
 
 		deserializedContainer.FillParentTags();
-
 		return true;
 	}
 
@@ -180,7 +214,7 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	{
 		if (tag != GameplayTag.Empty && GameplayTags.Add(tag))
 		{
-			ParentTags.UnionWith(GameplayTagsManager.Instance.ExtractParentTags(tag));
+			ParentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
 		}
 	}
 
@@ -378,7 +412,7 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	/// <paramref name="otherContainer"/>.</returns>
 	public GameplayTagContainer Filter(GameplayTagContainer otherContainer)
 	{
-		GameplayTagContainer resultContainer = new();
+		GameplayTagContainer resultContainer = new(GameplayTagsManager);
 
 		foreach (GameplayTag tag in GameplayTags.Where(x => x.MatchesAny(otherContainer)))
 		{
@@ -397,7 +431,7 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	/// <paramref name="otherContainer"/>.</returns>
 	public GameplayTagContainer FilterExact(GameplayTagContainer otherContainer)
 	{
-		GameplayTagContainer resultContainer = new();
+		GameplayTagContainer resultContainer = new(GameplayTagsManager);
 
 		foreach (GameplayTag tag in GameplayTags.Where(x => x.MatchesAnyExact(otherContainer)))
 		{
@@ -514,13 +548,13 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	{
 		if (GameplayTags.Add(tag))
 		{
-			ParentTags.UnionWith(GameplayTagsManager.Instance.ExtractParentTags(tag));
+			ParentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
 		}
 	}
 
 	internal GameplayTagContainer GetExplicitGameplayTagParents()
 	{
-		GameplayTagContainer resultContainer = new(GameplayTags);
+		GameplayTagContainer resultContainer = new(GameplayTagsManager, GameplayTags);
 
 		foreach (GameplayTag tag in ParentTags)
 		{
@@ -537,11 +571,9 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 
 		if (GameplayTags.Count > 0)
 		{
-			GameplayTagsManager tagsManager = GameplayTagsManager.Instance;
-
 			foreach (GameplayTag tag in GameplayTags)
 			{
-				ParentTags.UnionWith(tagsManager.ExtractParentTags(tag));
+				ParentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
 			}
 		}
 	}

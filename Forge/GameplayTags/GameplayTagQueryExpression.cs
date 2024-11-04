@@ -8,8 +8,12 @@ namespace Gamesmiths.Forge.GameplayTags;
 /// <summary>
 /// Supports a streamlined, fluent syntax to configure the type and parameters for a <see cref="GameplayTagQuery"/>.
 /// </summary>
-public class GameplayTagQueryExpression
+/// <param name="gameplayTagsManager">The manager for handling tags for this query expression.
+/// </param>
+public class GameplayTagQueryExpression(GameplayTagsManager gameplayTagsManager)
 {
+	private readonly GameplayTagsManager _gameplayTagsManager = gameplayTagsManager;
+
 	private readonly List<GameplayTagQueryExpression> _expressionSet = [];
 
 	private readonly List<GameplayTag> _tagSet = [];
@@ -113,7 +117,7 @@ public class GameplayTagQueryExpression
 	/// <returns>This <see cref="GameplayTagQueryExpression"/> itself.</returns>
 	public GameplayTagQueryExpression AddTag(StringKey tagKey)
 	{
-		return AddTag(GameplayTag.RequestTag(tagKey));
+		return AddTag(GameplayTag.RequestTag(_gameplayTagsManager, tagKey));
 	}
 
 	/// <summary>

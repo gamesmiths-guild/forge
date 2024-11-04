@@ -48,7 +48,7 @@ public class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 	/// <summary>
 	/// Gets a container with only this tag, ideal for executing container-based queries.
 	/// </summary>
-	public GameplayTagContainer SingleTagContainer { get; } = new();
+	public GameplayTagContainer SingleTagContainer { get; }
 
 	/// <summary>
 	/// Gets the <see cref="GameplayTag"/> for this node, including parent tags, delimited by periods.
@@ -67,25 +67,34 @@ public class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 	/// <summary>
 	/// Initializes a new instance of the <see cref="GameplayTagNode"/> class.
 	/// </summary>
-	public GameplayTagNode()
+	/// <param name="gameplayTagsManager">The manager for handling tag indexing and associations for this node.</param>
+	public GameplayTagNode(GameplayTagsManager gameplayTagsManager)
 	{
+		SingleTagContainer = new GameplayTagContainer(gameplayTagsManager);
 		ParentTagNode = null;
 	}
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="GameplayTagNode"/> class.
 	/// </summary>
+	/// <param name="gameplayTagsManager">The manager for handling tag indexing and associations for this node.</param>
 	/// <param name="tagKey">Short key of tag to insert.</param>
 	/// <param name="fullKey">The full key for this tag, for performance.</param>
 	/// <param name="parentTagNode">The parent <see cref="GameplayTagNode"/> of this node, if any.</param>
 	/// <param name="isExplicit">Is the tag explicitly defined or is it implied by the existence of a child tag.</param>
-	public GameplayTagNode(StringKey tagKey, StringKey fullKey, GameplayTagNode? parentTagNode, bool isExplicit)
+	public GameplayTagNode(
+		GameplayTagsManager gameplayTagsManager,
+		StringKey tagKey,
+		StringKey fullKey,
+		GameplayTagNode? parentTagNode,
+		bool isExplicit)
 	{
 		TagKey = tagKey;
 		ParentTagNode = parentTagNode;
 		IsExplicitTag = isExplicit;
 
-		SingleTagContainer.GameplayTags.Add(new GameplayTag(fullKey));
+		SingleTagContainer = new GameplayTagContainer(gameplayTagsManager);
+		SingleTagContainer.GameplayTags.Add(new GameplayTag(gameplayTagsManager, fullKey));
 
 		if (parentTagNode is null)
 		{
@@ -125,7 +134,7 @@ public class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 			return CompleteTagKey.CompareTo(other.CompleteTagKey);
 		}
 
-		throw new ArgumentException($"Object is not a valid {nameof(GameplayTagNode)}", nameof(obj));
+		throw new ArgumentException($"Object is not a valid {typeof(GameplayTagNode)}", nameof(obj));
 	}
 
 	/// <inheritdoc/>

@@ -19,10 +19,10 @@ namespace Gamesmiths.Forge.GameplayTags;
 /// <code>
 /// GameplayTagQuery query;
 /// query.BuildQuery(
-///   new GameplayTagQueryExpression()
+///   new GameplayTagQueryExpression(gameplayTagsManager)
 ///     .AllTagsMatch()
-///       .AddTag(GameplayTag.RequestTag("enemy.undead.zombie"))
-///       .AddTag(GameplayTag.RequestTag("item.consumable.potion.health"))
+///       .AddTag("enemy.undead.zombie")
+///       .AddTag("item.consumable.potion.health")
 /// );
 /// </code>
 /// <para>Internally, queries are stored as byte streams to be memory-efficient and allow fast evaluation at runtime.
@@ -59,7 +59,7 @@ public class GameplayTagQuery
 	public static GameplayTagQuery MakeQueryMatchAnyTags(GameplayTagContainer container)
 	{
 		return BuildQuery(
-			new GameplayTagQueryExpression()
+			new GameplayTagQueryExpression(container.GameplayTagsManager)
 				.AnyTagsMatch()
 				.AddTags(container));
 	}
@@ -73,7 +73,7 @@ public class GameplayTagQuery
 	public static GameplayTagQuery MakeQueryMatchAnyTagsExact(GameplayTagContainer container)
 	{
 		return BuildQuery(
-			new GameplayTagQueryExpression()
+			new GameplayTagQueryExpression(container.GameplayTagsManager)
 				.AnyTagsMatchExact()
 				.AddTags(container));
 	}
@@ -86,7 +86,7 @@ public class GameplayTagQuery
 	public static GameplayTagQuery MakeQueryMatchAllTags(GameplayTagContainer container)
 	{
 		return BuildQuery(
-			new GameplayTagQueryExpression()
+			new GameplayTagQueryExpression(container.GameplayTagsManager)
 				.AllTagsMatch()
 				.AddTags(container));
 	}
@@ -100,7 +100,7 @@ public class GameplayTagQuery
 	public static GameplayTagQuery MakeQueryMatchAllTagsExact(GameplayTagContainer container)
 	{
 		return BuildQuery(
-			new GameplayTagQueryExpression()
+			new GameplayTagQueryExpression(container.GameplayTagsManager)
 				.AllTagsMatchExact()
 				.AddTags(container));
 	}
@@ -113,7 +113,7 @@ public class GameplayTagQuery
 	public static GameplayTagQuery MakeQueryMatchNoTags(GameplayTagContainer container)
 	{
 		return BuildQuery(
-			new GameplayTagQueryExpression()
+			new GameplayTagQueryExpression(container.GameplayTagsManager)
 				.NoTagsMatch()
 				.AddTags(container));
 	}
@@ -127,7 +127,7 @@ public class GameplayTagQuery
 	public static GameplayTagQuery MakeQueryMatchNoTagsExact(GameplayTagContainer container)
 	{
 		return BuildQuery(
-			new GameplayTagQueryExpression()
+			new GameplayTagQueryExpression(container.GameplayTagsManager)
 				.NoTagsMatchExact()
 				.AddTags(container));
 	}
@@ -140,7 +140,7 @@ public class GameplayTagQuery
 	public static GameplayTagQuery MakeQueryMatchTag(GameplayTag tag)
 	{
 		return BuildQuery(
-			new GameplayTagQueryExpression()
+			new GameplayTagQueryExpression(tag.GameplayTagsManager)
 				.AllTagsMatch()
 				.AddTag(tag));
 	}
@@ -153,7 +153,7 @@ public class GameplayTagQuery
 	public static GameplayTagQuery MakeQueryMatchTagExact(GameplayTag tag)
 	{
 		return BuildQuery(
-			new GameplayTagQueryExpression()
+			new GameplayTagQueryExpression(tag.GameplayTagsManager)
 				.AllTagsMatchExact()
 				.AddTag(tag));
 	}

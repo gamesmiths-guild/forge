@@ -1,11 +1,12 @@
 // Copyright © 2024 Gamesmiths Guild.
 
+using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.GameplayTags;
 
 /// <summary>
-/// A gameplay tag is a structured label, following a hierarchy like "enemy.undead.zombie" or
+/// A gameplay tag is an immutable structured label, following a hierarchy like "enemy.undead.zombie" or
 /// "item.consumable.potion.health", that gets registered and managed by the <see cref="GameplayTagsManager"/>.
 /// </summary>
 public readonly struct GameplayTag : IEquatable<GameplayTag>
@@ -16,7 +17,7 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	/// <remarks>
 	/// Generally used for tag validation.
 	/// </remarks>
-	public static GameplayTag Empty { get; } = new(StringKey.Empty);
+	public static GameplayTag Empty { get; }
 
 	/// <summary>
 	/// Gets the <see cref="StringKey"/> representing this tag.
@@ -28,18 +29,18 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	/// </summary>
 	public bool IsValid => this != Empty;
 
-	/// <summary>
-	/// Initializes a new instance of the <see cref="GameplayTag"/> struct.
-	/// </summary>
-	/// <param name="tagKey"><see cref="StringKey"/> that's going to represents this tag.</param>
-	internal GameplayTag(StringKey tagKey)
+	internal readonly GameplayTagsManager? GameplayTagsManager { get; }
+
+	internal GameplayTag(GameplayTagsManager gameplayTagsManager, StringKey tagKey)
 	{
+		GameplayTagsManager = gameplayTagsManager;
 		TagKey = tagKey;
 	}
 
 	/// <summary>
 	/// Gets the <see cref="GameplayTag"/> that corresponds to the given <see cref="StringKey"/>.
 	/// </summary>
+	/// <param name="gameplayTagsManager">The manager from which to request gameplay tags.</param>
 	/// <param name="tagKey">The key of the tag to search for.</param>
 	/// <param name="errorIfNotFound">If <see langword="true"/>, throws an exception if the tag is not found.</param>
 	/// <returns>Will return the corresponding <see cref="GameplayTag"/> or an <see cref="Empty"/> if not
@@ -47,9 +48,9 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	/// <exception cref="GameplayTagNotRegisteredException">Thrown for when a <see cref="GameplayTag"/> is not properly
 	/// registered with the <see cref="GameplayTagsManager"/> and <paramref name="errorIfNotFound"/>is set to
 	/// <see langword="true"/>.</exception>
-	public static GameplayTag RequestTag(StringKey tagKey, bool errorIfNotFound = true)
+	public static GameplayTag RequestTag(GameplayTagsManager gameplayTagsManager, StringKey tagKey, bool errorIfNotFound = true)
 	{
-		return GameplayTagsManager.Instance.RequestTag(tagKey, errorIfNotFound);
+		return gameplayTagsManager.RequestTag(tagKey, errorIfNotFound);
 	}
 
 	/// <summary>
@@ -58,12 +59,30 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	/// <remarks>
 	/// TODO: Use a propper BitStream or similar solution in the future.
 	/// </remarks>
+	/// <param name="gameplayTagsManager">The manager responsible for tag lookup and net index handling.</param>
 	/// <param name="tag">The <see cref="GameplayTag"/> to be serialized.</param>
 	/// <param name="netIndex">The serialized index for this tag.</param>
 	/// <returns><see langword="true"/> if serialized successfully.</returns>
-	public static bool NetSerialize(GameplayTag tag, out ushort netIndex)
+	public static bool NetSerialize(GameplayTagsManager gameplayTagsManager, GameplayTag tag, out ushort netIndex)
 	{
-		netIndex = GameplayTagsManager.Instance.GetNetIndexFromTag(tag);
+		if (!tag.IsValid)
+		{
+			netIndex = gameplayTagsManager.InvalidTagNetIndex;
+			return true;
+		}
+
+		// Tags at this point should always have a designated manager.
+		Debug.Assert(
+			tag.GameplayTagsManager is not null,
+			$"Tag \"{tag.TagKey}\" isn't properly registred in a {typeof(GameplayTagsManager)}.");
+
+		if (gameplayTagsManager != tag.GameplayTagsManager)
+		{
+			netIndex = gameplayTagsManager.InvalidTagNetIndex;
+			return false;
+		}
+
+		netIndex = tag.GameplayTagsManager.GetNetIndexFromTag(tag);
 		return true;
 	}
 
@@ -73,20 +92,21 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	/// <remarks>
 	/// TODO: Use a propper BitStream or similar solution in the future.
 	/// </remarks>
+	/// <param name="gameplayTagsManager">The manager responsible for tag lookup and net index handling.</param>
 	/// <param name="stream">The data stream to be deserialized.</param>
 	/// <param name="tag">The resulting <see cref="GameplayTag"/> from deserialization.</param>
 	/// <returns><see langword="true"/> if deserialized successfully.</returns>
 	/// <exception cref="InvalidTagNetIndexException">Thrown if tried to deserialize a value that is not a valid tag net
 	/// index.</exception>
-	public static bool NetDeserialize(byte[] stream, out GameplayTag tag)
+	public static bool NetDeserialize(GameplayTagsManager gameplayTagsManager, byte[] stream, out GameplayTag tag)
 	{
 		// Read netIndex from buffer. This is just a practical example, use a BitStream reader here instead.
 		var netIndex = new ushort[stream.Length / 2];
 		Buffer.BlockCopy(stream, 0, netIndex, 0, stream.Length);
 
-		StringKey tagKey = GameplayTagsManager.Instance.GetTagKeyFromNetIndex(netIndex[0]);
+		StringKey tagKey = gameplayTagsManager.GetTagKeyFromNetIndex(netIndex[0]);
 
-		tag = GameplayTagsManager.Instance.RequestTag(tagKey, false);
+		tag = gameplayTagsManager.RequestTag(tagKey, false);
 
 		return true;
 	}
@@ -112,22 +132,33 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	/// <summary>
 	/// Gets a <see cref="GameplayTagContainer"/> containing only this <see cref="GameplayTag"/>.
 	/// </summary>
-	/// <returns>A <see cref="GameplayTagContainer"/> containing only this <see cref="GameplayTag"/>.</returns>
-	public readonly GameplayTagContainer GetSingleTagContainer()
+	/// <returns>A <see cref="GameplayTagContainer"/> containing only this <see cref="GameplayTag"/>.Will return
+	/// <see langword="null"/> in case it's requested from an <see cref="Empty"/> tag.</returns>
+	public readonly GameplayTagContainer? GetSingleTagContainer()
 	{
-		GameplayTagNode? tagNode = GameplayTagsManager.Instance.FindTagNode(this);
+		if (!IsValid)
+		{
+			return null;
+		}
+
+		// Tags at this point should always have a designated manager.
+		Debug.Assert(
+			GameplayTagsManager is not null,
+			$"Tag \"{TagKey}\" isn't properly registred in a {typeof(GameplayTagsManager)}.");
+
+		GameplayTagNode? tagNode = GameplayTagsManager.FindTagNode(this);
 
 		if (tagNode is not null)
 		{
 			return tagNode.SingleTagContainer;
 		}
 
-		// Tags at this point should always be invalid.
-		System.Diagnostics.Debug.Assert(
+		// Tags at this point should always be invalid for some other reason.
+		Debug.Assert(
 			!IsValid,
 			$"Tag \"{TagKey}\" isn't properly registred in the {nameof(GameplayTagsManager)}.");
 
-		return new GameplayTagContainer();
+		return new GameplayTagContainer(GameplayTagsManager);
 	}
 
 	/// <summary>
@@ -139,7 +170,17 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	/// <returns>The direct parent of this <see cref="GameplayTag"/>.</returns>
 	public readonly GameplayTag RequestDirectParent()
 	{
-		return GameplayTagsManager.Instance.RequestTagDirectParent(this);
+		if (!IsValid)
+		{
+			return Empty;
+		}
+
+		// Tags at this point should always have a designated manager.
+		Debug.Assert(
+			GameplayTagsManager is not null,
+			$"Tag \"{TagKey}\" isn't properly registred in a {typeof(GameplayTagsManager)}.");
+
+		return GameplayTagsManager.RequestTagDirectParent(this);
 	}
 
 	/// <summary>
@@ -150,11 +191,21 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	/// For example, calling this on "enemy.undead.zombie" would produce a <see cref="GameplayTagContainer"/> containing
 	/// "enemy.undead.zombie", "enemy.undead", and "enemy".
 	/// </remarks>
-	/// <returns>A <see cref="GameplayTagContainer"/> with this tag and all of its parent tags added explicitly.
-	/// </returns>
-	public readonly GameplayTagContainer GetTagParents()
+	/// <returns>A <see cref="GameplayTagContainer"/> with this tag and all of its parent tags added explicitly. Will
+	/// return <see langword="null"/> in case it's requested from an <see cref="Empty"/> tag.</returns>
+	public readonly GameplayTagContainer? GetTagParents()
 	{
-		return GameplayTagsManager.Instance.RequestTagParents(this);
+		if (!IsValid)
+		{
+			return null;
+		}
+
+		// Tags at this point should always have a designated manager.
+		Debug.Assert(
+			GameplayTagsManager is not null,
+			$"Tag \"{TagKey}\" isn't properly registred in a {typeof(GameplayTagsManager)}.");
+
+		return GameplayTagsManager.RequestTagParents(this);
 	}
 
 #if DEBUG
@@ -170,6 +221,16 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	{
 		var uniqueParentTags = new HashSet<GameplayTag>();
 
+		if (!IsValid)
+		{
+			return uniqueParentTags;
+		}
+
+		// Tags at this point should always have a designated manager.
+		Debug.Assert(
+			GameplayTagsManager is not null,
+			$"Tag \"{TagKey}\" isn't properly registred in a {typeof(GameplayTagsManager)}.");
+
 		// Tags should follow the order of the GameplayTag node's ParentTags, starting with the immediate parent.
 		StringKey rawTag = TagKey;
 
@@ -182,7 +243,7 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 
 			dotIndex = parent.LastIndexOf('.');
 
-			var parentTag = new GameplayTag(parent);
+			var parentTag = new GameplayTag(GameplayTagsManager, parent);
 			uniqueParentTags.Add(parentTag);
 		}
 
@@ -203,7 +264,18 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	/// </returns>
 	public readonly bool MatchesTag(GameplayTag otherTag)
 	{
-		GameplayTagNode? tagNode = GameplayTagsManager.Instance.FindTagNode(this);
+		// Handles Empty tag.
+		if (!IsValid)
+		{
+			return !otherTag.IsValid;
+		}
+
+		// Tags at this point should always have a designated manager.
+		Debug.Assert(
+			GameplayTagsManager is not null,
+			$"Tag \"{TagKey}\" isn't properly registred in a {typeof(GameplayTagsManager)}.");
+
+		GameplayTagNode? tagNode = GameplayTagsManager.FindTagNode(this);
 
 		if (tagNode is not null)
 		{
@@ -227,7 +299,7 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	{
 		if (!otherTag.IsValid)
 		{
-			return false;
+			return !IsValid;
 		}
 
 		return TagKey == otherTag.TagKey;
@@ -247,7 +319,18 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	/// </para></returns>
 	public readonly bool MatchesAny(GameplayTagContainer container)
 	{
-		GameplayTagNode? tagNode = GameplayTagsManager.Instance.FindTagNode(this);
+		// Handles Empty tag.
+		if (!IsValid)
+		{
+			return false;
+		}
+
+		// Tags at this point should always have a designated manager.
+		Debug.Assert(
+			GameplayTagsManager is not null,
+			$"Tag \"{TagKey}\" isn't properly registred in a {typeof(GameplayTagsManager)}.");
+
+		GameplayTagNode? tagNode = GameplayTagsManager.FindTagNode(this);
 
 		if (tagNode is not null)
 		{
@@ -287,7 +370,18 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	/// </returns>
 	public readonly int MatchesTagDepth(GameplayTag otherTag)
 	{
-		return GameplayTagsManager.Instance.GameplayTagsMatchDepth(this, otherTag);
+		// Handles Empty tags.
+		if (!IsValid || !otherTag.IsValid)
+		{
+			return 0;
+		}
+
+		// Tags at this point should always have a designated manager.
+		Debug.Assert(
+			GameplayTagsManager is not null,
+			$"Tag \"{TagKey}\" isn't properly registred in a {typeof(GameplayTagsManager)}.");
+
+		return GameplayTagsManager.GameplayTagsMatchDepth(this, otherTag);
 	}
 
 	/// <inheritdoc />

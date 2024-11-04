@@ -25,17 +25,15 @@ public sealed class GameplayTagsManager
 
 	private bool _networkIndexInvalidated = true;
 
-	private ushort _invalidTagNetIndex;
-
 	/// <summary>
-	/// Gets the singleton instance of the <see cref="GameplayTagsManager"/>.
+	/// Gets the current value for the net index of invalid tags.
 	/// </summary>
-	public static GameplayTagsManager Instance { get; } = new();
+	public ushort InvalidTagNetIndex { get; private set; }
 
 	/// <summary>
 	/// Gets the root <see cref="GameplayTagNode"/> of the tag nodes tree.
 	/// </summary>
-	public GameplayTagNode RootNode { get; private set; } = new();
+	public GameplayTagNode RootNode { get; }
 
 	/// <summary>
 	/// Gets the number of <see cref="GameplayTagNode"/> registered in this manager.
@@ -47,33 +45,18 @@ public sealed class GameplayTagsManager
 	/// </summary>
 	public int NumBitsForContainerSize { get; } = 6;
 
-	private GameplayTagsManager()
-	{
-	}
-
 	/// <summary>
-	/// Constructs a <see cref="GameplayTagNode"/> tree from a list of strings.
+	/// Initializes a new instance of the <see cref="GameplayTagsManager"/> class from a list of strings.
 	/// </summary>
 	/// <param name="tags">List of tags to initialize.</param>
-	public void ConstructGameplayTagTreeFromList(string[] tags)
+	public GameplayTagsManager(string[] tags)
 	{
-		RootNode = new GameplayTagNode();
+		RootNode = new GameplayTagNode(this);
 
 		foreach (var tag in tags)
 		{
 			AddGameplayTagToTree(tag);
 		}
-	}
-
-	/// <summary>
-	/// Constructs a <see cref="GameplayTagNode"/> tree from a file where each line represents a single tag.
-	/// </summary>
-	/// <param name="filePath">Path to the file containing the tags.</param>
-	public void ConstructGameplayTagTreeFromFile(string filePath)
-	{
-		IEnumerable<string> content = File.ReadLines(filePath);
-
-		ConstructGameplayTagTreeFromList(content.ToArray());
 	}
 
 	/// <summary>
@@ -95,7 +78,7 @@ public sealed class GameplayTagsManager
 	/// <returns>A <see cref="GameplayTagContainer"/> with all registered tags.</returns>
 	public GameplayTagContainer RequestAllGameplayTags(bool explicitTagsOnly)
 	{
-		GameplayTagContainer tagContainer = new();
+		GameplayTagContainer tagContainer = new(this);
 
 		foreach (GameplayTagNode? tagNode in _gameplayTagNodeMap.Select(x => x.Value))
 		{
@@ -164,7 +147,7 @@ public sealed class GameplayTagsManager
 	/// <paramref name="errorIfNotFound"/>is set to <see langword="true"/>.</exception>
 	public GameplayTagContainer RequestGameplayTagContainer(string[] tags, bool errorIfNotFound = true)
 	{
-		GameplayTagContainer gameplayTagContainer = new();
+		GameplayTagContainer gameplayTagContainer = new(this);
 
 		foreach (var tagString in tags)
 		{
@@ -199,7 +182,7 @@ public sealed class GameplayTagsManager
 			return parentTags.GetExplicitGameplayTagParents();
 		}
 
-		return new GameplayTagContainer();
+		return new GameplayTagContainer(this);
 	}
 
 	/// <summary>
@@ -210,7 +193,7 @@ public sealed class GameplayTagsManager
 	/// <returns>A <see cref="GameplayTagContainer"/> that includes all child tags explicitly.</returns>
 	public GameplayTagContainer RequestGameplayTagChildren(GameplayTag tag)
 	{
-		GameplayTagContainer tagContainer = new();
+		GameplayTagContainer tagContainer = new(this);
 
 		// Intentionally leaves out the input GameplayTag from the returned container.
 		GameplayTagNode? gameplayTagNode = FindTagNode(tag);
@@ -294,7 +277,7 @@ public sealed class GameplayTagsManager
 
 	internal GameplayTag RequestTag(StringKey tagKey, bool errorIfNotFound)
 	{
-		var possibleTag = new GameplayTag(tagKey);
+		var possibleTag = new GameplayTag(this, tagKey);
 
 		if (_gameplayTagNodeMap.ContainsKey(possibleTag))
 		{
@@ -382,7 +365,7 @@ public sealed class GameplayTagsManager
 			return gameplayTagNode.NetIndex;
 		}
 
-		return _invalidTagNetIndex;
+		return InvalidTagNetIndex;
 	}
 
 	internal StringKey GetTagKeyFromNetIndex(ushort tagIndex)
@@ -391,7 +374,7 @@ public sealed class GameplayTagsManager
 
 		if (tagIndex >= _networkGameplayTagNodeIndex.Count)
 		{
-			if (tagIndex != _invalidTagNetIndex)
+			if (tagIndex != InvalidTagNetIndex)
 			{
 				throw new InvalidTagNetIndexException(tagIndex);
 			}
@@ -537,6 +520,7 @@ public sealed class GameplayTagsManager
 
 			// Don't add the root node as parent.
 			var tagNode = new GameplayTagNode(
+				this,
 				tagKey,
 				fullTagKey,
 				parentNode != RootNode ? parentNode : null,
@@ -565,7 +549,7 @@ public sealed class GameplayTagsManager
 			return gameplayTagNode.SingleTagContainer;
 		}
 
-		return new GameplayTagContainer();
+		return new GameplayTagContainer(this);
 	}
 
 	private void VerifyNetworkIndex()
@@ -588,7 +572,7 @@ public sealed class GameplayTagsManager
 
 		checked
 		{
-			_invalidTagNetIndex = (ushort)(_networkGameplayTagNodeIndex.Count + 1);
+			InvalidTagNetIndex = (ushort)(_networkGameplayTagNodeIndex.Count + 1);
 		}
 
 		// Should make some checks.
