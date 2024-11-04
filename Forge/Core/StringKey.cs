@@ -14,23 +14,14 @@ namespace Gamesmiths.Forge.Core;
 /// </summary>
 public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>, IComparable
 {
-	private readonly string _key;
+	private readonly string? _key;
 
 	private readonly int _hashCode;
 
 	/// <summary>
 	/// Gets a default Empty <see cref="StringKey"/>.
 	/// </summary>
-	public static StringKey Empty { get; } = new();
-
-	/// <summary>
-	/// Initializes a new instance of the <see cref="StringKey"/> struct.
-	/// </summary>
-	public StringKey()
-	{
-		_key = string.Empty;
-		_hashCode = 0;
-	}
+	public static StringKey Empty { get; }
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="StringKey"/> struct.
@@ -52,6 +43,11 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// <inheritdoc />
 	public override readonly string ToString()
 	{
+		if (string.IsNullOrEmpty(_key))
+		{
+			return string.Empty;
+		}
+
 		return _key;
 	}
 
@@ -75,7 +71,12 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// <inheritdoc/>
 	public readonly bool Equals(StringKey other)
 	{
-		return _key.Equals(other._key, StringComparison.OrdinalIgnoreCase);
+		if (_key is not null)
+		{
+			return _key.Equals(other._key, StringComparison.OrdinalIgnoreCase);
+		}
+
+		return other._key is null;
 	}
 
 	/// <inheritdoc/>
@@ -91,7 +92,7 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 			return CompareTo(other);
 		}
 
-		throw new ArgumentException($"Object is not a valid {nameof(StringKey)}", nameof(obj));
+		throw new ArgumentException($"Object is not a valid {typeof(StringKey)}", nameof(obj));
 	}
 
 	/// <inheritdoc/>
@@ -106,6 +107,11 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// <param name="stringId">The <see cref="StringKey"/> to convert.</param>
 	public static implicit operator string(StringKey stringId)
 	{
+		if (string.IsNullOrEmpty(stringId._key))
+		{
+			return string.Empty;
+		}
+
 		return stringId._key;
 	}
 
