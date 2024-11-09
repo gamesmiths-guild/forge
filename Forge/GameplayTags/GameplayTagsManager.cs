@@ -57,6 +57,8 @@ public sealed class GameplayTagsManager
 		{
 			AddGameplayTagToTree(tag);
 		}
+
+		ConstructNetIndex();
 	}
 
 	/// <summary>
@@ -533,6 +535,8 @@ public sealed class GameplayTagsManager
 			GameplayTag gameplayTag = tagNode.CompleteTag;
 
 			_gameplayTagNodeMap.Add(gameplayTag, tagNode);
+
+			_networkIndexInvalidated = true;
 
 			Debug.Assert(
 				gameplayTag.TagKey == fullTagKey,
