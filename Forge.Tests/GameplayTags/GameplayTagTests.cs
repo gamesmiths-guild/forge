@@ -640,7 +640,7 @@ public class GameplayTagTests
 	[InlineData("item.consumable.food.bread")]
 	[InlineData("color.darl.red")]
 	[InlineData("foo.bar")]
-	public void No_tag_should_MatchAny_with_an_empty_container(string tagKey)
+	public void No_tag_MatchAny_with_an_empty_container(string tagKey)
 	{
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey, false);
 
@@ -783,7 +783,7 @@ public class GameplayTagTests
 	[InlineData("item.consumable.food.bread")]
 	[InlineData("color.dark.red")]
 	[InlineData("foo.bar")]
-	public void No_tag_should_MatchAnyExact_with_an_empty_container(string tagKey)
+	public void No_tag_MatchAnyExact_with_an_empty_container(string tagKey)
 	{
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey, false);
 
