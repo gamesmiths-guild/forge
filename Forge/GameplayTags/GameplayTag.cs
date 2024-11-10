@@ -267,7 +267,7 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 		// Handles Empty tag.
 		if (!IsValid)
 		{
-			return !otherTag.IsValid;
+			return false;
 		}
 
 		// Tags at this point should always have a designated manager.
@@ -299,7 +299,7 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 	{
 		if (!otherTag.IsValid)
 		{
-			return !IsValid;
+			return false;
 		}
 
 		return TagKey == otherTag.TagKey;
