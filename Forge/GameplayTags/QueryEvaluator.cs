@@ -80,9 +80,6 @@ public class QueryEvaluator(GameplayTagQuery query)
 				Debug.Fail($"{typeof(GameplayTagQueryExpressionType)} should never be set as" +
 					$"{GameplayTagQueryExpressionType.Undefined}.");
 				return false;
-			default:
-				Debug.Fail($"{typeof(GameplayTagQueryExpressionType)} should always be specified.");
-				return false;
 		}
 	}
 

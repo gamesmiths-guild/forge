@@ -207,10 +207,6 @@ public class GameplayTagQueryExpression(GameplayTagsManager gameplayTagsManager)
 				Debug.Fail($"{typeof(GameplayTagQueryExpressionType)} should never be set as" +
 					$"{GameplayTagQueryExpressionType.Undefined}.");
 				break;
-
-			default:
-				Debug.Fail($"{typeof(GameplayTagQueryExpressionType)} should always be specified.");
-				break;
 		}
 	}
 
