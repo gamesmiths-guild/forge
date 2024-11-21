@@ -34,7 +34,7 @@ public class QueryEvaluator(GameplayTagQuery query)
 		}
 
 		Debug.Assert(
-			_curStreamIdx != _query.QueryTokenStream.Count,
+			_curStreamIdx == _query.QueryTokenStream.Count,
 			"There shouldn't be remaining tokens into the stream.");
 
 		return returnValue;
