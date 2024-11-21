@@ -33,11 +33,6 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	public int Count => GameplayTags.Count;
 
 	/// <summary>
-	/// Gets a value indicating whether the container has any valid tags.
-	/// </summary>
-	public bool IsValid => GameplayTags.Count > 0;
-
-	/// <summary>
 	/// Gets a value indicating whether the container is empty or not.
 	/// </summary>
 	public bool IsEmpty => GameplayTags.Count == 0;
@@ -199,8 +194,8 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 
 			GameplayTag.NetDeserialize(gameplayTagsManager, tagStream, out GameplayTag deserializedTag);
 
-			deserializedContainer.AddTag(deserializedTag);
-		}
+				deserializedContainer.AddTag(deserializedTag);
+			}
 
 		deserializedContainer.FillParentTags();
 		return true;
