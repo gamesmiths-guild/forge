@@ -174,7 +174,10 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	/// <param name="deserializedContainer">The resulting <see cref="GameplayTagContainer"/> from deserialization.
 	/// </param>
 	/// <returns><see langword="true"/> if successfully deserialized; <see langword="false"/> otherwise.</returns>
-	public static bool NetDeserialize(GameplayTagsManager gameplayTagsManager, byte[] stream, out GameplayTagContainer deserializedContainer)
+	public static bool NetDeserialize(
+		GameplayTagsManager gameplayTagsManager,
+		byte[] stream,
+		out GameplayTagContainer deserializedContainer)
 	{
 		deserializedContainer = new GameplayTagContainer(gameplayTagsManager);
 
@@ -192,10 +195,11 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 			var tagStream = new byte[2];
 			Array.Copy(stream, 2 + (2 * i), tagStream, 0, 2);
 
-			GameplayTag.NetDeserialize(gameplayTagsManager, tagStream, out GameplayTag deserializedTag);
-
+			if (GameplayTag.NetDeserialize(gameplayTagsManager, tagStream, out GameplayTag deserializedTag))
+			{
 				deserializedContainer.AddTag(deserializedTag);
 			}
+		}
 
 		deserializedContainer.FillParentTags();
 		return true;
