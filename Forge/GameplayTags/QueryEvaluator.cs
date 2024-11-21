@@ -81,6 +81,8 @@ public class QueryEvaluator(GameplayTagQuery query)
 					$"{GameplayTagQueryExpressionType.Undefined}.");
 				return false;
 		}
+
+		return false;
 	}
 
 	private bool EvaluateAnyTagsMatch(GameplayTagContainer tags, bool exactMatch, bool skip)
