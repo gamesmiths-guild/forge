@@ -16,15 +16,6 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 
 	private readonly GameplayTagsManager _gameplayTagsManager = fixture.GameplayTagsManager;
 
-	public static TheoryData<string[]> GetContainerTags()
-	{
-		return [
-				["tag"],
-				["tag", "simple.tag"],
-				["tag", "simple.tag", "other.tag"]
-			];
-	}
-
 	[Theory]
 	[Trait("Initialization", "Request")]
 	[InlineData("simple")]
