@@ -211,9 +211,10 @@ public sealed class GameplayTagsManager
 	public override string ToString()
 	{
 		var result = new StringBuilder();
-		foreach (GameplayTag value in _gameplayTagNodeMap.Keys)
+
+		foreach (GameplayTagNode node in _networkGameplayTagNodeIndex)
 		{
-			result.AppendLine(value.TagKey);
+			result.AppendLine(node.CompleteTagKey);
 		}
 
 		return result.ToString();
