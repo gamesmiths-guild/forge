@@ -7,7 +7,7 @@ namespace Gamesmiths.Forge.GameplayTags;
 /// <summary>
 /// Represents a node in the <see cref="GameplayTagNode"/> tree, holding metadata for an individual tag.
 /// </summary>
-public class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
+internal class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 {
 	/// <summary>
 	/// Standard value for the net index of an invalid tag.
@@ -22,7 +22,7 @@ public class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 	public StringKey TagKey { get; }
 
 	/// <summary>
-	/// Gets the net index of this <see cref="GameplayTagNode"/>.
+	/// Gets or sets the net index of this <see cref="GameplayTagNode"/>.
 	/// </summary>
 	public ushort NetIndex
 	{

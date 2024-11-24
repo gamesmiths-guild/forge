@@ -31,11 +31,6 @@ public sealed class GameplayTagsManager
 	public ushort InvalidTagNetIndex { get; private set; }
 
 	/// <summary>
-	/// Gets the root <see cref="GameplayTagNode"/> of the tag nodes tree.
-	/// </summary>
-	public GameplayTagNode RootNode { get; }
-
-	/// <summary>
 	/// Gets the number of <see cref="GameplayTagNode"/> registered in this manager.
 	/// </summary>
 	public int NodesCount => _gameplayTagNodeMap.Count;
@@ -44,6 +39,8 @@ public sealed class GameplayTagsManager
 	/// Gets the numbers of bits to use for replicating container size.
 	/// </summary>
 	public int NumBitsForContainerSize { get; } = 6;
+
+	internal GameplayTagNode RootNode { get; }
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="GameplayTagsManager"/> class from a list of strings.
