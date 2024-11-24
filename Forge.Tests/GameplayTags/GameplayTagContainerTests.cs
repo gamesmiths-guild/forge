@@ -87,7 +87,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	public void Container_with_registered_tags_serializes_successfully_with_valid_net_index(
 		string[] tagKeys, byte[] netIndexStream)
 	{
-		GameplayTagContainer container = _gameplayTagsManager.RequestGameplayTagContainer(tagKeys);
+		GameplayTagContainer container = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		GameplayTagContainer.NetSerialize(_gameplayTagsManager, container, out var containerStream);
 
@@ -138,7 +138,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 			netIndexStream,
 			out GameplayTagContainer deserializedContainer).Should().BeTrue();
 
-		GameplayTagContainer tagContainerCheck = _gameplayTagsManager.RequestGameplayTagContainer(tagKeys);
+		GameplayTagContainer tagContainerCheck = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		deserializedContainer.Should().BeEquivalentTo(tagContainerCheck);
 	}
@@ -206,7 +206,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		"enemy")]
 	public void Container_adds_tag_sucessfully(string[] tagKeys, string tagKey)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagKeys);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey);
 
@@ -224,7 +224,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	[InlineData((object)new string[] { "item.equipment.weapon.sword", "item.equipment.weapon" })]
 	public void Container_does_not_add_Empty_tag(string[] tagKeys)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagKeys);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		tagContainer.AddTag(GameplayTag.Empty);
 
@@ -251,7 +251,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		"item.consumable.potion.stamina")]
 	public void Container_does_not_contain_tag_removed(string[] tagKeys, string tagKey)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagKeys);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey);
 
@@ -280,8 +280,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "color.green" })]
 	public void Container_does_not_contain_tags_removed(string[] containerTagKeys, string[] tagsToRemove)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(containerTagKeys);
-		GameplayTagContainer removeTagsContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagsToRemove);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(containerTagKeys);
+		GameplayTagContainer removeTagsContainer = _gameplayTagsManager.RequestTagContainer(tagsToRemove);
 
 		tagContainer.RemoveTags(removeTagsContainer);
 
@@ -298,7 +298,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	[InlineData((object)new string[] { "item.equipment.weapon.sword", "item.equipment.weapon" })]
 	public void Container_is_empty_after_reset(string[] tagKeys)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagKeys);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		tagContainer.Reset(3);
 
@@ -331,7 +331,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		"item")]
 	public void Container_should_have_tag(string[] tagKeys, string tagKey)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagKeys);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey);
 
@@ -357,7 +357,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		"color.dark.green")]
 	public void Container_should_not_have_tag(string[] tagKeys, string tagKey)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagKeys);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey);
 
@@ -368,7 +368,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	[Trait("HasTag", "Empty tag")]
 	public void Container_does_not_have_Empty_tag()
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 
 		tagContainer.HasTag(GameplayTag.Empty).Should().BeFalse();
 	}
@@ -405,7 +405,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		"item.consumable.potion.stamina")]
 	public void Container_should_have_exact_tag(string[] tagKeys, string tagKey)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagKeys);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey);
 
@@ -440,7 +440,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		"item")]
 	public void Container_should_not_have_exact_tag(string[] tagKeys, string tagKey)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagKeys);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey);
 
@@ -451,7 +451,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	[Trait("HasTagExact", "Empty tag")]
 	public void Container_does_not_have_exactly_Empty_tag()
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 
 		tagContainer.HasTagExact(GameplayTag.Empty).Should().BeFalse();
 	}
@@ -485,8 +485,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "color" })]
 	public void Container_A_has_any_container_B_tag(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		tagContainerA.HasAny(tagContainerB).Should().BeTrue();
 	}
@@ -510,8 +510,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "color" })]
 	public void Container_A_does_not_have_any_container_B_tag(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		tagContainerA.HasAny(tagContainerB).Should().BeFalse();
 	}
@@ -520,7 +520,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	[Trait("HasAny", "Empty container")]
 	public void Container_does_not_have_any_empty_container_tags()
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
 
 		tagContainer.HasAny(emptyContainer).Should().BeFalse();
@@ -531,7 +531,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	public void Empty_container_does_not_have_any_container_tags()
 	{
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 
 		emptyContainer.HasAny(tagContainer).Should().BeFalse();
 	}
@@ -555,8 +555,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "item.consumable.potion.health" })]
 	public void Container_A_has_any_exact_container_B_tag(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		tagContainerA.HasAnyExact(tagContainerB).Should().BeTrue();
 	}
@@ -586,8 +586,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "item.consumable.potion" })]
 	public void Container_A_does_not_have_any_exact_container_B_tag(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		tagContainerA.HasAnyExact(tagContainerB).Should().BeFalse();
 	}
@@ -596,7 +596,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	[Trait("HasAnyExact", "Empty container")]
 	public void Container_does_not_have_any_exact_empty_container_tags()
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
 
 		tagContainer.HasAnyExact(emptyContainer).Should().BeFalse();
@@ -607,7 +607,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	public void Empty_container_does_not_have_exact_any_container_tags()
 	{
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 
 		emptyContainer.HasAnyExact(tagContainer).Should().BeFalse();
 	}
@@ -631,8 +631,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "color" })]
 	public void Container_A_has_all_container_B_tag(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		tagContainerA.HasAll(tagContainerB).Should().BeTrue();
 	}
@@ -668,8 +668,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "color.dark.red" })]
 	public void Container_A_does_not_have_all_container_B_tag(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		tagContainerA.HasAll(tagContainerB).Should().BeFalse();
 	}
@@ -678,7 +678,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	[Trait("HasAll", "Empty container")]
 	public void Container_has_all_empty_container_tags()
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
 
 		tagContainer.HasAll(emptyContainer).Should().BeTrue();
@@ -689,7 +689,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	public void Empty_container_does_not_have_all_container_tags()
 	{
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 
 		emptyContainer.HasAll(tagContainer).Should().BeFalse();
 	}
@@ -713,8 +713,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "item.consumable.potion.health" })]
 	public void Container_A_has_all_exact_container_B_tag(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		tagContainerA.HasAllExact(tagContainerB).Should().BeTrue();
 	}
@@ -750,8 +750,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "color" })]
 	public void Container_A_does_not_have_all_exact_container_B_tag(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		tagContainerA.HasAllExact(tagContainerB).Should().BeFalse();
 	}
@@ -760,7 +760,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	[Trait("HasAllExact", "Empty container")]
 	public void Container_has_all_exact_empty_container_tags()
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
 
 		tagContainer.HasAllExact(emptyContainer).Should().BeTrue();
@@ -771,7 +771,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	public void Empty_container_does_not_have_exact_all_container_tags()
 	{
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 
 		emptyContainer.HasAllExact(tagContainer).Should().BeFalse();
 	}
@@ -803,12 +803,12 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		string[] tagKeysB,
 		string[] tagKeysResult)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		GameplayTagContainer filteredContainer = tagContainerA.Filter(tagContainerB);
 
-		GameplayTagContainer validationContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysResult);
+		GameplayTagContainer validationContainer = _gameplayTagsManager.RequestTagContainer(tagKeysResult);
 
 		filteredContainer.Should().BeEquivalentTo(validationContainer);
 	}
@@ -832,8 +832,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "enemy.undead.zombie", "enemy.beast.boar", "enemy.humanoid.orc" })]
 	public void Container_A_filter_container_B_has_no_tags(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		GameplayTagContainer filteredContainer = tagContainerA.Filter(tagContainerB);
 
@@ -845,7 +845,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	[Trait("Filter", "Empty container")]
 	public void Container_filter_empty_container_is_empty()
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
 
 		GameplayTagContainer filteredContainer = tagContainer.Filter(emptyContainer);
@@ -859,7 +859,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	public void Empty_container_filter_container_is_empty()
 	{
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 
 		GameplayTagContainer filteredContainer = emptyContainer.Filter(tagContainer);
 
@@ -894,12 +894,12 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		string[] tagKeysB,
 		string[] tagKeysResult)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		GameplayTagContainer filteredContainer = tagContainerA.FilterExact(tagContainerB);
 
-		GameplayTagContainer validationContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysResult);
+		GameplayTagContainer validationContainer = _gameplayTagsManager.RequestTagContainer(tagKeysResult);
 
 		filteredContainer.Should().BeEquivalentTo(validationContainer);
 	}
@@ -929,8 +929,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "item" })]
 	public void Container_A_filter_exact_container_B_has_no_tags(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		GameplayTagContainer filteredContainer = tagContainerA.FilterExact(tagContainerB);
 
@@ -942,7 +942,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	[Trait("FilterExact", "Empty container")]
 	public void Container_filter_exact_empty_container_is_empty()
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
 
 		GameplayTagContainer filteredContainer = tagContainer.FilterExact(emptyContainer);
@@ -956,7 +956,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	public void Empty_container_filter_exact_container_is_empty()
 	{
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 
 		GameplayTagContainer filteredContainer = emptyContainer.FilterExact(tagContainer);
 
@@ -984,7 +984,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "simple", "other", "tag" })]
 	public void Container_matches_query(string[] containerTagKeys, QueryType queryType, string[] queryTagKeys)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(containerTagKeys);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(containerTagKeys);
 
 		GameplayTagQuery query = BuildSimpleTagQuery(queryType, queryTagKeys);
 
@@ -1011,7 +1011,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "simple", "other", "tag", "item" })]
 	public void Container_does_not_match_query(string[] containerTagKeys, QueryType queryType, string[] queryTagKeys)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(containerTagKeys);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(containerTagKeys);
 
 		GameplayTagQuery query = BuildSimpleTagQuery(queryType, queryTagKeys);
 
@@ -1083,8 +1083,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "enemy.undead.zombie", "enemy.beast.boar", "enemy.humanoid.orc" })]
 	public void Container_A_append_container_B_has_all_tags_from_both(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		tagContainerA.AppendTags(tagContainerB);
 
@@ -1096,7 +1096,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	[Trait("Append", "Empty container")]
 	public void Container_append_empty_container_has_all_container_tags()
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
 
 		tagContainer.AppendTags(emptyContainer);
@@ -1109,7 +1109,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	public void Empty_container_append_container_has_all_container_tags()
 	{
 		var emptyContainer = new GameplayTagContainer(_gameplayTagsManager);
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(["tag", "simple.tag", "other.tag"]);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(["tag", "simple.tag", "other.tag"]);
 
 		emptyContainer.AppendTags(tagContainer);
 
@@ -1142,7 +1142,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		"'item.equipment.weapon.sword', 'item.equipment.weapon', 'item.equipment', 'item'")]
 	public void Container_ToString_returns_expected_string(string[] tagKeys, string output)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagKeys);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		tagContainer.ToString().Should().Be(output);
 	}
@@ -1169,8 +1169,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "enemy.undead.zombie", "enemy.undead.skeleton", "enemy.undead.ghoul" })]
 	public void Containers_are_equal(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		tagContainerA.Should().BeEquivalentTo(tagContainerB);
 		(tagContainerA == tagContainerB).Should().BeFalse();
@@ -1201,8 +1201,8 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 		new string[] { "tag", "simple.tag", "other.tag" })]
 	public void Containers_are_not_equal(string[] tagKeysA, string[] tagKeysB)
 	{
-		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysA);
-		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestGameplayTagContainer(tagKeysB);
+		GameplayTagContainer tagContainerA = _gameplayTagsManager.RequestTagContainer(tagKeysA);
+		GameplayTagContainer tagContainerB = _gameplayTagsManager.RequestTagContainer(tagKeysB);
 
 		tagContainerA.Should().NotBeEquivalentTo(tagContainerB);
 		(tagContainerA == tagContainerB).Should().BeFalse();
@@ -1226,7 +1226,7 @@ public class GameplayTagContainerTests(GameplayTagsManagerFixture fixture) : ICl
 	[InlineData((object)new string[] { "item.equipment.weapon.sword", "item.equipment.weapon" })]
 	public void Container_created_from_another_container_should_be_equal(string[] tagKeys)
 	{
-		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestGameplayTagContainer(tagKeys);
+		GameplayTagContainer tagContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 		var cloneContainer = new GameplayTagContainer(tagContainer);
 
 		tagContainer.Should().BeEquivalentTo(cloneContainer);

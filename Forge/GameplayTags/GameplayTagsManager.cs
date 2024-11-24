@@ -52,7 +52,7 @@ public sealed class GameplayTagsManager
 
 		foreach (var tag in tags)
 		{
-			AddGameplayTagToTree(tag);
+			AddTagToTree(tag);
 		}
 
 		ConstructNetIndex();
@@ -61,11 +61,12 @@ public sealed class GameplayTagsManager
 	/// <summary>
 	/// Destroys the <see cref="GameplayTagNode"/> tree.
 	/// </summary>
-	public void DestroyGameplayTagTree()
+	public void DestroyTagTree()
 	{
 		_gameplayTagNodeMap.Clear();
 		_networkGameplayTagNodeIndex.Clear();
 		_networkIndexInvalidated = true;
+		InvalidTagNetIndex = 1;
 	}
 
 	/// <summary>
@@ -75,7 +76,7 @@ public sealed class GameplayTagsManager
 	/// </remarks>
 	/// <param name="explicitTagsOnly">Whether to include only explicit tags or not.</param>
 	/// <returns>A <see cref="GameplayTagContainer"/> with all registered tags.</returns>
-	public GameplayTagContainer RequestAllGameplayTags(bool explicitTagsOnly)
+	public GameplayTagContainer RequestAllTags(bool explicitTagsOnly)
 	{
 		GameplayTagContainer tagContainer = new(this);
 
@@ -122,7 +123,7 @@ public sealed class GameplayTagsManager
 	/// <param name="tag">The <see cref="GameplayTag"/> to split into its component keys.</param>
 	/// <returns>An array of <see cref="string"/> with each key segment from the <see cref="GameplayTag"/> hierarchy.
 	/// </returns>
-	public string[] SplitGameplayTagKey(GameplayTag tag)
+	public string[] SplitTagKey(GameplayTag tag)
 	{
 		var outKeys = new List<string>();
 		GameplayTagNode? currentNode = FindTagNode(tag);
@@ -144,7 +145,7 @@ public sealed class GameplayTagsManager
 	/// <returns>A <see cref="GameplayTagContainer"/> containing the matching tags.</returns>
 	/// <exception cref="GameplayTagNotRegisteredException">Throws if any tag is not found and
 	/// <paramref name="errorIfNotFound"/>is set to <see langword="true"/>.</exception>
-	public GameplayTagContainer RequestGameplayTagContainer(string[] tags, bool errorIfNotFound = true)
+	public GameplayTagContainer RequestTagContainer(string[] tags, bool errorIfNotFound = true)
 	{
 		GameplayTagContainer gameplayTagContainer = new(this);
 
@@ -190,7 +191,7 @@ public sealed class GameplayTagsManager
 	/// </summary>
 	/// <param name="tag">The root <see cref="GameplayTag"/> to use as the starting point.</param>
 	/// <returns>A <see cref="GameplayTagContainer"/> that includes all child tags explicitly.</returns>
-	public GameplayTagContainer RequestGameplayTagChildren(GameplayTag tag)
+	public GameplayTagContainer RequestTagChildren(GameplayTag tag)
 	{
 		GameplayTagContainer tagContainer = new(this);
 
@@ -418,7 +419,7 @@ public sealed class GameplayTagsManager
 		}
 	}
 
-	private void AddGameplayTagToTree(string tagKey)
+	private void AddTagToTree(string tagKey)
 	{
 		GameplayTagNode currentNode = RootNode;
 
