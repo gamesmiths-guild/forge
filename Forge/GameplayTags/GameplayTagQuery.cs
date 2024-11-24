@@ -139,6 +139,8 @@ public class GameplayTagQuery
 	/// <returns>A constructed <see cref="GameplayTagQuery"/> for matching a single tag.</returns>
 	public static GameplayTagQuery MakeQueryMatchTag(GameplayTag tag)
 	{
+		Debug.Assert(tag.GameplayTagsManager is not null, "Shouldn't be able to use tags without managers.");
+
 		return BuildQuery(
 			new GameplayTagQueryExpression(tag.GameplayTagsManager)
 				.AllTagsMatch()
@@ -152,6 +154,8 @@ public class GameplayTagQuery
 	/// <returns>A constructed <see cref="GameplayTagQuery"/> for matching a single tag exact.</returns>
 	public static GameplayTagQuery MakeQueryMatchTagExact(GameplayTag tag)
 	{
+		Debug.Assert(tag.GameplayTagsManager is not null, "Shouldn't be able to use tags without managers.");
+
 		return BuildQuery(
 			new GameplayTagQueryExpression(tag.GameplayTagsManager)
 				.AllTagsMatchExact()
