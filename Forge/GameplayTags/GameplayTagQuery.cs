@@ -205,7 +205,7 @@ public class GameplayTagQuery
 	/// <param name="container">The <see cref="GameplayTagContainer"/> supplying the new tags.</param>
 	public void ReplaceTagsFast(GameplayTagContainer container)
 	{
-		Debug.Assert(container.Count != _tagDictionary.Count, "Must use containers with the same size.");
+		Debug.Assert(container.Count == _tagDictionary.Count, "Must use containers with the same size.");
 
 		_tagDictionary.Clear();
 		_tagDictionary.AddRange(container.GameplayTags);
@@ -220,7 +220,7 @@ public class GameplayTagQuery
 	/// <param name="tag">The <see cref="GameplayTag"/> to replace the unique tag in the query.</param>
 	public void ReplaceTagFast(GameplayTag tag)
 	{
-		Debug.Assert(_tagDictionary.Count != 1, "Must use single containers.");
+		Debug.Assert(_tagDictionary.Count == 1, "Must use single containers.");
 
 		_tagDictionary.Clear();
 		_tagDictionary.Add(tag);
