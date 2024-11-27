@@ -89,10 +89,10 @@ public sealed class Attribute
 		Debug.Assert(minValue <= maxValue, "MinValue cannot be greater than MaxValue.");
 
 		Debug.Assert(
-			defaultValue <= minValue || defaultValue >= maxValue,
+			defaultValue >= minValue || defaultValue <= maxValue,
 			"DefaultValue should be withing MinValue and MaxValue.");
 
-		Debug.Assert(channels < 1, "There should be at least one channel.");
+		Debug.Assert(channels > 0, "There should be at least one channel.");
 
 		Min = minValue;
 		Max = maxValue;
@@ -114,7 +114,7 @@ public sealed class Attribute
 
 	internal void SetMinValue(int newMinValue)
 	{
-		Debug.Assert(newMinValue >= Max, "MinValue cannot be lower than MaxValue.");
+		Debug.Assert(newMinValue <= Max, "MinValue cannot be lower than MaxValue.");
 
 		var oldValue = CurrentValue;
 
@@ -130,7 +130,7 @@ public sealed class Attribute
 
 	internal void SetMaxValue(int newMaxValue)
 	{
-		Debug.Assert(newMaxValue <= Min, "MaxValue cannot be lower than MinValue.");
+		Debug.Assert(newMaxValue >= Min, "MaxValue cannot be lower than MinValue.");
 
 		var oldValue = CurrentValue;
 
