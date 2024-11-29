@@ -38,12 +38,12 @@ public sealed class Attribute
 	/// <summary>
 	/// Gets the max value for this attribute.
 	/// </summary>
-	public int Max { get; private set; }
+	public int Max { get; }
 
 	/// <summary>
 	/// Gets the min value for this attribute.
 	/// </summary>
-	public int Min { get; private set; }
+	public int Min { get; }
 
 	/// <summary>
 	/// Gets the total modifier value kept so we can make Status Effect application consise.
@@ -63,36 +63,23 @@ public sealed class Attribute
 	/// </remarks>
 	public int Overflow { get; private set; }
 
-	internal Attribute()
-	{
-		Min = int.MinValue;
-		Max = int.MaxValue;
-		BaseValue = 0;
-		Modifier = 0;
-		Overflow = 0;
-		CurrentValue = 0;
-
-		_channels.Add(new ChannelData
-		{
-			Override = null,
-			FlatModifier = 0,
-			PercentModifier = 1,
-		});
-	}
-
-	internal void Initialize(
+	internal Attribute(
 		int defaultValue,
-		int minValue = int.MinValue,
-		int maxValue = int.MaxValue,
-		int channels = 1)
+		int minValue,
+		int maxValue,
+		int channels)
 	{
-		Debug.Assert(minValue <= maxValue, "MinValue cannot be greater than MaxValue.");
+		Debug.Assert(
+			minValue <= maxValue,
+			"MinValue cannot be greater than MaxValue.");
 
 		Debug.Assert(
-			defaultValue >= minValue || defaultValue <= maxValue,
+			defaultValue >= minValue && defaultValue <= maxValue,
 			"DefaultValue should be withing MinValue and MaxValue.");
 
-		Debug.Assert(channels > 0, "There should be at least one channel.");
+		Debug.Assert(
+			channels > 0,
+			"There should be at least one channel.");
 
 		Min = minValue;
 		Max = maxValue;

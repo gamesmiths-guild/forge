@@ -1,30 +1,28 @@
 // Copyright © 2024 Gamesmiths Guild.
 
-using System.Reflection;
+using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Attributes;
 
 /// <summary>
-/// <para>A collection of attributes grouped together for cohesive management. Use this to organize attributes that naturally
-/// belong together, such as character stats, item bonuses, environment properties, skill modifiers, weapon stats, or
-/// vehicle parameters.</para>
+/// <para>A collection of attributes grouped together for cohesive management. Use this to organize attributes that
+/// naturally belong together, such as character stats, item bonuses, environment properties, skill modifiers, weapon
+/// stats, or vehicle parameters.</para>
 /// <para>To use this class you should declare <see langword="public"/> (and ideally <see langword="readonly"/>) fields
-/// of type <see cref="Attribute"/> for each attribute you want to create and then initialize them withing the
-/// <see cref="InitializeAttributes"/> method using <see cref="InitializeAttribute"/> calls for each attribute.</para>
+/// or properties of type <see cref="Attribute"/> for each attribute you want to create and then initialize them withing
+/// the constructor using <see cref="InitializeAttribute"/> calls for each attribute passing <see langword="nameof"/>
+/// for the attributeName paremeter like so:</para>
+/// <code>
+/// Health = InitializeAttribute(nameof(Health), 100, 0, 100);
+/// </code>
 /// </summary>
 /// <remarks>
-/// Particularly useful for grouping primary and secondary attributes, such as pairing MaxHealth and Health, allowing
-/// logic like clamping Health to MaxHealth to be centralized within the set.
+/// Attribute sets are particularly useful for grouping primary and secondary attributes, such as pairing MaxHealth and
+/// Health, allowing logic like clamping Health to MaxHealth to be centralized within the set.
 /// </remarks>
 public abstract class AttributeSet
 {
-	/// <summary>
-	/// Use this method to initialize all attributes with <see cref="InitializeAttribute"/> passing the appropriate
-	/// min, max and initial values.
-	/// </summary>
-	protected abstract void InitializeAttributes();
-
 	/// <summary>
 	/// Gets retrieves a dictionary mapping each attribute to its unique <see cref="StringKey"/>.
 	/// </summary>
@@ -33,56 +31,7 @@ public abstract class AttributeSet
 	/// name of the class extending <see cref="AttributeSet"/> and <c>AttributeFieldName</c> is the name of the
 	/// <see cref="Attribute"/> field defined within that class.
 	/// </remarks>
-	public Dictionary<StringKey, Attribute> AttributesMap { get; }
-
-	/// <summary>
-	/// Initializes a new instance of the <see cref="AttributeSet"/> class.
-	/// </summary>
-	protected AttributeSet()
-	{
-		// Fetch fields of type Attribute
-		IEnumerable<FieldInfo> fields = GetType().GetFields(BindingFlags.Public | BindingFlags.Instance)
-			.Where(x => x.FieldType == typeof(Attribute));
-
-		AttributesMap = new Dictionary<StringKey, Attribute>(fields.Count());
-
-		foreach (FieldInfo? field in fields)
-		{
-			var attributeName = $"{GetType().Name}.{field.Name}";
-
-			// Create an instance of the Attribute class
-			if (Activator.CreateInstance(field.FieldType, true) is Attribute attributeInstance)
-			{
-				// Set the value using the field
-				field.SetValue(this, attributeInstance);
-
-				AttributesMap.Add(attributeName, attributeInstance);
-				attributeInstance.OnValueChanged += AttributeOnValueChanged;
-			}
-		}
-
-#pragma warning disable S1699 // Constructors should only call non-overridable methods
-		InitializeAttributes();
-#pragma warning restore S1699 // Constructors should only call non-overridable methods
-	}
-
-	/// <summary>
-	/// Initializes attributes with the given values.
-	/// </summary>
-	/// <param name="attribute">Which <see cref="Attribute" /> to initialize.</param>
-	/// <param name="defaultValue">The attribute's default initial value.</param>
-	/// <param name="minValue">The attribute's min value.</param>
-	/// <param name="maxValue">The attribute's max value.</param>
-	/// <param name="channels">How many channels are supported for this attribute.</param>
-	protected static void InitializeAttribute(
-		Attribute attribute,
-		int defaultValue,
-		int minValue = int.MinValue,
-		int maxValue = int.MaxValue,
-		int channels = 1)
-	{
-		attribute.Initialize(defaultValue, minValue, maxValue, channels);
-	}
+	public Dictionary<StringKey, Attribute> AttributesMap { get; } = [];
 
 	/// <summary>
 	/// Adds a given value to the attribute's <see cref="Attribute.BaseValue"/> value.
@@ -122,6 +71,32 @@ public abstract class AttributeSet
 	protected static void SetAttributeMaxValue(Attribute attribute, int maxValue)
 	{
 		attribute.SetMaxValue(maxValue);
+	}
+
+	/// <summary>
+	/// Initializes an attribute with the given parameters while taking care of properly registering it into the
+	/// <see cref="AttributesMap"/> and all the necessary events for the framework to function properly.
+	/// </summary>
+	/// <param name="attributeName">The name of the attribute, should typically be the name of the property or field
+	/// registered in the attribute set passed with <see langword="nameof"/>.</param>
+	/// <param name="defaultValue">The default initial value for the initialized attribute.</param>
+	/// <param name="minValue">The minimum value for the initialized attribute.</param>
+	/// <param name="maxValue">The maximum value for the initialized attribute.</param>
+	/// <param name="channels">The number of channels for the initialized attribute.</param>
+	/// <returns>A correctly initialized <see cref="Attribute"/>.</returns>
+	protected Attribute InitializeAttribute(
+		string attributeName,
+		int defaultValue,
+		int minValue = int.MinValue,
+		int maxValue = int.MaxValue,
+		int channels = 1)
+	{
+		Debug.Assert(!string.IsNullOrEmpty(attributeName), "attributeName should never be null or empty.");
+
+		var attribute = new Attribute(defaultValue, minValue, maxValue, channels);
+		AttributesMap.Add($"{GetType().Name}.{attributeName}", attribute);
+		attribute.OnValueChanged += AttributeOnValueChanged;
+		return attribute;
 	}
 
 	/// <summary>
