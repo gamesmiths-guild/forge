@@ -69,9 +69,9 @@ public readonly struct AttributeBasedFloat(
 	/// </summary>
 	/// <param name="effect">The source effect that will be used to capture source attributes from.</param>
 	/// <param name="target">The target enity that will be used to capture source attributes from.</param>
-	/// <param name="level">Optional custom level to use in the magnitude calculation.</param>
+	/// <param name="level">Level to use in the magnitude calculation.</param>
 	/// <returns>The calculated magnitude for this <see cref="AttributeBasedFloat"/>.</returns>
-	public readonly float CalculateMagnitude(GameplayEffect effect, IForgeEntity target, int? level = null)
+	public readonly float CalculateMagnitude(GameplayEffect effect, IForgeEntity target, int level)
 	{
 		Attribute? attribute = null;
 
@@ -115,9 +115,7 @@ public readonly struct AttributeBasedFloat(
 				break;
 		}
 
-		var evaluatedLevel = level ?? effect.Level;
-
-		return (Coefficient.GetValue(evaluatedLevel) * (PreMultiplyAdditiveValue.GetValue(evaluatedLevel) + magnitude))
-			+ PostMultiplyAdditiveValue.GetValue(evaluatedLevel);
+		return (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + magnitude))
+			+ PostMultiplyAdditiveValue.GetValue(level);
 	}
 }
