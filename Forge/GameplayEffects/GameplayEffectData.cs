@@ -96,23 +96,23 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 		Debug.Assert(
 			!(stackingData.HasValue
 			&& (stackingData.Value.StackPolicy == StackPolicy.AggregateByTarget !=
-				stackingData.Value.InstigatorDenialPolicy.HasValue)),
-			$"If {nameof(StackPolicy)} is set {StackPolicy.AggregateByTarget}, {nameof(StackInstigatorDenialPolicy)} must be defined. And not defined if otherwise.");
+				stackingData.Value.OwnerDenialPolicy.HasValue)),
+			$"If {nameof(StackPolicy)} is set {StackPolicy.AggregateByTarget}, {nameof(StackOwnerDenialPolicy)} must be defined. And not defined if otherwise.");
 
 		Debug.Assert(
 			!(stackingData.HasValue
 			&& ((stackingData.Value.StackPolicy == StackPolicy.AggregateByTarget &&
-				stackingData.Value.InstigatorDenialPolicy == StackInstigatorDenialPolicy.AlwaysAllow) !=
-				stackingData.Value.InstigatorOverridePolicy.HasValue)),
-			$"If {nameof(StackPolicy)} is set {StackPolicy.AggregateByTarget} and {nameof(StackInstigatorDenialPolicy)} is set to {StackInstigatorDenialPolicy.AlwaysAllow}, {nameof(StackInstigatorOverridePolicy)} must be defined. And not defined if otherwise.");
+				stackingData.Value.OwnerDenialPolicy == StackOwnerDenialPolicy.AlwaysAllow) !=
+				stackingData.Value.OwnerOverridePolicy.HasValue)),
+			$"If {nameof(StackPolicy)} is set {StackPolicy.AggregateByTarget} and {nameof(StackOwnerDenialPolicy)} is set to {StackOwnerDenialPolicy.AlwaysAllow}, {nameof(StackOwnerOverridePolicy)} must be defined. And not defined if otherwise.");
 
 		Debug.Assert(
 			!(stackingData.HasValue
 			&& ((stackingData.Value.StackPolicy == StackPolicy.AggregateByTarget &&
-				stackingData.Value.InstigatorOverridePolicy.HasValue &&
-				stackingData.Value.InstigatorOverridePolicy.Value == StackInstigatorOverridePolicy.Override) !=
-				stackingData.Value.InstigatorOverrideStackCountPolicy.HasValue)),
-			$"If {nameof(StackInstigatorOverridePolicy)} is set {StackInstigatorOverridePolicy.Override}, {nameof(StackInstigatorOverrideStackCountPolicy)} must be defined. And not defined if otherwise.");
+				stackingData.Value.OwnerOverridePolicy.HasValue &&
+				stackingData.Value.OwnerOverridePolicy.Value == StackOwnerOverridePolicy.Override) !=
+				stackingData.Value.OwnerOverrideStackCountPolicy.HasValue)),
+			$"If {nameof(StackOwnerOverridePolicy)} is set {StackOwnerOverridePolicy.Override}, {nameof(StackOwnerOverrideStackCountPolicy)} must be defined. And not defined if otherwise.");
 
 		Debug.Assert(
 			!(stackingData.HasValue

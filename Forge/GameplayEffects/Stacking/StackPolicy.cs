@@ -8,7 +8,7 @@ namespace Gamesmiths.Forge.GameplayEffects.Stacking;
 public enum StackPolicy : byte
 {
 	/// <summary>
-	/// Stacks are aggregated by source, each instigator has their own stack.
+	/// Stacks are aggregated by source, each owner has their own stack.
 	/// </summary>
 	AggregateBySource = 0,
 

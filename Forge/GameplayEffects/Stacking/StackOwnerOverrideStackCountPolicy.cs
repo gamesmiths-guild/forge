@@ -3,14 +3,14 @@
 namespace Gamesmiths.Forge.GameplayEffects.Stacking;
 
 /// <summary>
-/// Defines what happens with the stack count when a different instigator successfully applies a new stack of the
+/// Defines what happens with the stack count when a different owner successfully applies a new stack of the
 /// effect.
 /// </summary>
 /// <remarks>
-/// Only valid when <see cref="StackPolicy.AggregateByTarget"/> and <see cref="StackInstigatorOverridePolicy.Override"/>
+/// Only valid when <see cref="StackPolicy.AggregateByTarget"/> and <see cref="StackOwnerOverridePolicy.Override"/>
 /// are set.
 /// </remarks>
-public enum StackInstigatorOverrideStackCountPolicy : byte
+public enum StackOwnerOverrideStackCountPolicy : byte
 {
 	/// <summary>
 	/// Try to increases the stack if not maxed out.

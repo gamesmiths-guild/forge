@@ -7,9 +7,9 @@ namespace Gamesmiths.Forge.GameplayEffects;
 /// <summary>
 /// The context of the gameplay effect, representing who caused the effect using what.
 /// </summary>
-/// <param name="instigator">Who triggered the action that caused the effect.</param>
+/// <param name="owner">Who triggered the action that caused the effect.</param>
 /// <param name="effectCauser">What object or entity actually caused the effect.</param>
-public readonly struct GameplayEffectOwnership(IForgeEntity instigator, IForgeEntity effectCauser)
+public readonly struct GameplayEffectOwnership(IForgeEntity owner, IForgeEntity effectCauser)
 	: IEquatable<GameplayEffectOwnership>
 {
 	/// <summary>
@@ -18,7 +18,7 @@ public readonly struct GameplayEffectOwnership(IForgeEntity instigator, IForgeEn
 	/// <remarks>
 	/// Who caused the effect.
 	/// </remarks>
-	public IForgeEntity Owner { get; } = instigator;
+	public IForgeEntity Owner { get; } = owner;
 
 	/// <summary>
 	/// Gets the actual entity that caused the effect (eg. Weapon, Projectile, Trap, the Owner itself).

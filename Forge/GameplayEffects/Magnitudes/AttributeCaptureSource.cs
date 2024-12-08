@@ -8,7 +8,7 @@ namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 public enum AttributeCaptureSource : byte
 {
 	/// <summary>
-	/// The source instigator of the gameplay effect.
+	/// The source owner of the gameplay effect.
 	/// </summary>
 	Source = 0,
 

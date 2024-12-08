@@ -11,15 +11,15 @@ namespace Gamesmiths.Forge.GameplayEffects.Stacking;
 /// </summary>
 /// <param name="stackLimit">Max number of stacks.</param>
 /// <param name="initialStack">The initial number of stacks when first applied.</param>
-/// <param name="stackPolicy">How stacks aggregate based on target and instigator.</param>
+/// <param name="stackPolicy">How stacks aggregate based on target and owner.</param>
 /// <param name="stackLevelPolicy">How stacks aggregate based on effect level.</param>
 /// <param name="magnitudePolicy">How the magnitude value of the effect is handled.</param>
 /// <param name="overflowPolicy">What happens when the stack limit is reached.</param>
 /// <param name="expirationPolicy">What happens to stacks when the effect duration expires.</param>
-/// <param name="instigatorDenialPolicy">How to handle applications from different instigators.</param>
-/// <param name="instigatorOverridePolicy">How to handle the effect's instance instigator when accepting application
-/// from different instigators.</param>
-/// <param name="instigatorOverrideStackCountPolicy">How to handle the stack count when the instigator is overriden.
+/// <param name="ownerDenialPolicy">How to handle applications from different owner.</param>
+/// <param name="ownerOverridePolicy">How to handle the effect's instance owner when accepting application
+/// from different owner.</param>
+/// <param name="ownerOverrideStackCountPolicy">How to handle the stack count when the owner is overriden.
 /// </param>
 /// <param name="levelDenialPolicy">How to handle stack applications of different levels.</param>
 /// <param name="levelOverridePolicy">How to handle the effect's instance level when accepting applications of different
@@ -36,9 +36,9 @@ public readonly struct StackingData(
 	StackMagnitudePolicy magnitudePolicy,
 	StackOverflowPolicy overflowPolicy,
 	StackExpirationPolicy expirationPolicy,
-	StackInstigatorDenialPolicy? instigatorDenialPolicy = null,
-	StackInstigatorOverridePolicy? instigatorOverridePolicy = null,
-	StackInstigatorOverrideStackCountPolicy? instigatorOverrideStackCountPolicy = null,
+	StackOwnerDenialPolicy? ownerDenialPolicy = null,
+	StackOwnerOverridePolicy? ownerOverridePolicy = null,
+	StackOwnerOverrideStackCountPolicy? ownerOverrideStackCountPolicy = null,
 	LevelComparison? levelDenialPolicy = null,
 	LevelComparison? levelOverridePolicy = null,
 	StackLevelOverrideStackCountPolicy? levelOverrideStackCountPolicy = null,
@@ -85,30 +85,30 @@ public readonly struct StackingData(
 	public StackExpirationPolicy ExpirationPolicy { get; } = expirationPolicy;
 
 	/// <summary>
-	/// Gets the instigator denial policy for this stackable effect.
+	/// Gets the owner denial policy for this stackable effect.
 	/// </summary>
 	/// <remarks>
 	/// Only valid when <see cref="StackPolicy"/> == <see cref="StackPolicy.AggregateByTarget"/>.
 	/// </remarks>
-	public StackInstigatorDenialPolicy? InstigatorDenialPolicy { get; } = instigatorDenialPolicy;
+	public StackOwnerDenialPolicy? OwnerDenialPolicy { get; } = ownerDenialPolicy;
 
 	/// <summary>
-	/// Gets the instigator override policy for this stackable effect.
+	/// Gets the owner override policy for this stackable effect.
 	/// </summary>
 	/// <remarks>
 	/// Only valid when <see cref="StackPolicy"/> == <see cref="StackPolicy.AggregateByTarget"/>.
 	/// </remarks>
-	public StackInstigatorOverridePolicy? InstigatorOverridePolicy { get; } = instigatorOverridePolicy;
+	public StackOwnerOverridePolicy? OwnerOverridePolicy { get; } = ownerOverridePolicy;
 
 	/// <summary>
-	/// Gets the instigator override stack count policy for this stackable effect.
+	/// Gets the owner override stack count policy for this stackable effect.
 	/// </summary>
 	/// <remarks>
 	/// Only valid when <see cref="StackPolicy"/> == <see cref="StackPolicy.AggregateByTarget"/> and
-	/// <see cref="StackInstigatorOverridePolicy"/> == <see cref="StackInstigatorOverridePolicy.Override"/>.
+	/// <see cref="StackOwnerOverridePolicy"/> == <see cref="StackOwnerOverridePolicy.Override"/>.
 	/// </remarks>
-	public StackInstigatorOverrideStackCountPolicy? InstigatorOverrideStackCountPolicy { get; } =
-		instigatorOverrideStackCountPolicy;
+	public StackOwnerOverrideStackCountPolicy? OwnerOverrideStackCountPolicy { get; } =
+		ownerOverrideStackCountPolicy;
 
 	/// <summary>
 	/// Gets the level denial policy for this stackable effect.
@@ -171,9 +171,9 @@ public readonly struct StackingData(
 		hash.Add(MagnitudePolicy);
 		hash.Add(OverflowPolicy);
 		hash.Add(ExpirationPolicy);
-		hash.Add(InstigatorDenialPolicy);
-		hash.Add(InstigatorOverridePolicy);
-		hash.Add(InstigatorOverrideStackCountPolicy);
+		hash.Add(OwnerDenialPolicy);
+		hash.Add(OwnerOverridePolicy);
+		hash.Add(OwnerOverrideStackCountPolicy);
 		hash.Add(LevelDenialPolicy);
 		hash.Add(LevelOverridePolicy);
 		hash.Add(LevelOverrideStackCountPolicy);
@@ -205,9 +205,9 @@ public readonly struct StackingData(
 			&& MagnitudePolicy.Equals(other.MagnitudePolicy)
 			&& OverflowPolicy.Equals(other.OverflowPolicy)
 			&& ExpirationPolicy.Equals(other.ExpirationPolicy)
-			&& Nullable.Equals(InstigatorDenialPolicy, other.InstigatorDenialPolicy)
-			&& Nullable.Equals(InstigatorOverridePolicy, other.InstigatorOverridePolicy)
-			&& Nullable.Equals(InstigatorOverrideStackCountPolicy, other.InstigatorOverrideStackCountPolicy)
+			&& Nullable.Equals(OwnerDenialPolicy, other.OwnerDenialPolicy)
+			&& Nullable.Equals(OwnerOverridePolicy, other.OwnerOverridePolicy)
+			&& Nullable.Equals(OwnerOverrideStackCountPolicy, other.OwnerOverrideStackCountPolicy)
 			&& Nullable.Equals(LevelDenialPolicy, other.LevelDenialPolicy)
 			&& Nullable.Equals(LevelOverridePolicy, other.LevelOverridePolicy)
 			&& Nullable.Equals(LevelOverrideStackCountPolicy, other.LevelOverrideStackCountPolicy)

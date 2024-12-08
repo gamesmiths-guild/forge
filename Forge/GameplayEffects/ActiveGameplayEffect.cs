@@ -224,31 +224,31 @@ internal class ActiveGameplayEffect
 
 		GameplayEffect evaluatedGameplayEffect = GameplayEffectEvaluatedData.GameplayEffect;
 
-		if (stackingData.InstigatorDenialPolicy.HasValue)
+		if (stackingData.OwnerDenialPolicy.HasValue)
 		{
-			if (stackingData.InstigatorDenialPolicy.Value == StackInstigatorDenialPolicy.DenyIfDifferent &&
+			if (stackingData.OwnerDenialPolicy.Value == StackOwnerDenialPolicy.DenyIfDifferent &&
 				GameplayEffectEvaluatedData.GameplayEffect.Ownership != gameplayEffect.Ownership)
 			{
 				return false;
 			}
 
-			if (stackingData.InstigatorOverridePolicy == StackInstigatorOverridePolicy.Override &&
+			if (stackingData.OwnerOverridePolicy == StackOwnerOverridePolicy.Override &&
 				GameplayEffectEvaluatedData.GameplayEffect.Ownership != gameplayEffect.Ownership)
 			{
 				evaluatedGameplayEffect = gameplayEffect;
 				hasChanges = true;
 
 				Debug.Assert(
-					stackingData.InstigatorOverrideStackCountPolicy.HasValue,
-					"InstigatorOverrideStackCountPolicy should never be null at this point.");
+					stackingData.OwnerOverrideStackCountPolicy.HasValue,
+					"OwnerOverrideStackCountPolicy should never be null at this point.");
 
-				switch (stackingData.InstigatorOverrideStackCountPolicy.Value)
+				switch (stackingData.OwnerOverrideStackCountPolicy.Value)
 				{
-					case StackInstigatorOverrideStackCountPolicy.ResetStacks:
+					case StackOwnerOverrideStackCountPolicy.ResetStacks:
 						resetStacks = true;
 						break;
 
-					case StackInstigatorOverrideStackCountPolicy.IncreaseStacks:
+					case StackOwnerOverrideStackCountPolicy.IncreaseStacks:
 						break;
 				}
 			}
