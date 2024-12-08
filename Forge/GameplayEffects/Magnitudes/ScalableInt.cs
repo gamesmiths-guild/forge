@@ -10,7 +10,7 @@ namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 /// </summary>
 /// <param name="baseValue">The base value for this magnitude.</param>
 /// <param name="curve">The curve used for scaling.</param>
-public readonly struct ScalableInt(int baseValue, Curve curve) : IEquatable<ScalableInt>
+public readonly struct ScalableInt(int baseValue, Curve curve = default) : IEquatable<ScalableInt>
 {
 	/// <summary>
 	/// Gets the base value for this scalable int.

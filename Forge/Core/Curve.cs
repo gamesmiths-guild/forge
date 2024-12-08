@@ -17,9 +17,10 @@ public readonly struct Curve(CurveKey[] keys) : IEquatable<Curve>
 	/// <returns>The evaluated value.</returns>
 	public float Evaluate(float time)
 	{
-		if (_keys.Length == 0)
+		if (_keys is null || _keys.Length == 0)
 		{
-			return 1.0f; // Default scaling factor if no keys are defined
+			// Default scaling factor if no keys are defined.
+			return 1.0f;
 		}
 
 		if (time <= _keys[0].Time)
@@ -41,7 +42,8 @@ public readonly struct Curve(CurveKey[] keys) : IEquatable<Curve>
 			}
 		}
 
-		return 1.0f; // Fallback
+		// Fallback.
+		return 1.0f;
 	}
 
 	/// <inheritdoc/>
