@@ -59,11 +59,11 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 		{
 			switch (modifier.ModifierOperation)
 			{
-				case ModifierOperation.Flat:
+				case ModifierOperation.FlatBonus:
 					modifier.Attribute.ExecuteFlatModifier((int)modifier.Magnitude);
 					break;
 
-				case ModifierOperation.Percent:
+				case ModifierOperation.PercentBonus:
 					modifier.Attribute.ExecutePercentModifier(modifier.Magnitude);
 					break;
 

@@ -94,11 +94,11 @@ internal class ActiveGameplayEffect
 			{
 				switch (modifier.ModifierOperation)
 				{
-					case ModifierOperation.Flat:
+					case ModifierOperation.FlatBonus:
 						modifier.Attribute.AddFlatModifier((int)modifier.Magnitude, modifier.Channel);
 						break;
 
-					case ModifierOperation.Percent:
+					case ModifierOperation.PercentBonus:
 						modifier.Attribute.AddPercentModifier(modifier.Magnitude, modifier.Channel);
 						break;
 
@@ -118,11 +118,11 @@ internal class ActiveGameplayEffect
 			{
 				switch (modifier.ModifierOperation)
 				{
-					case ModifierOperation.Flat:
+					case ModifierOperation.FlatBonus:
 						modifier.Attribute.AddFlatModifier(-(int)modifier.Magnitude, modifier.Channel);
 						break;
 
-					case ModifierOperation.Percent:
+					case ModifierOperation.PercentBonus:
 						modifier.Attribute.AddPercentModifier(-modifier.Magnitude, modifier.Channel);
 						break;
 

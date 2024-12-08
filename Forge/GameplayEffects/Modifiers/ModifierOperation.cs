@@ -10,12 +10,12 @@ public enum ModifierOperation : byte
 	/// <summary>
 	/// A flat operation, adding or subtracing a value.
 	/// </summary>
-	Flat = 0,
+	FlatBonus = 0,
 
 	/// <summary>
-	/// A percentage operation to be multiplied to the value.
+	/// A percentage bonus operation, adding or subtracting a percentage of the current value.
 	/// </summary>
-	Percent = 1,
+	PercentBonus = 1,
 
 	/// <summary>
 	/// An override operation, completly overriding the current value.
