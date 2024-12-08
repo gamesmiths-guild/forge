@@ -16,7 +16,7 @@ public readonly struct Modifier(
 	StringKey attribute,
 	ModifierOperation operation,
 	ModifierMagnitude magnitude,
-	int channel)
+	int channel = 0)
 {
 	/// <summary>
 	/// Gets the attribute being modified by this modifier.
