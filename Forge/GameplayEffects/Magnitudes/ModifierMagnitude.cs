@@ -11,7 +11,7 @@ namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 /// CustomCalculationClass
 /// Setbycaller.
 /// </summary>
-public readonly struct ModifierMagnitude
+public readonly struct ModifierMagnitude : IEquatable<ModifierMagnitude>
 {
 	/// <summary>
 	/// Gets the type of magnitude calculation being used for this magnitude.
@@ -88,5 +88,59 @@ public readonly struct ModifierMagnitude
 			default:
 				return 0;
 		}
+	}
+
+	/// <inheritdoc/>
+	public override int GetHashCode()
+	{
+		var hash = default(HashCode);
+		hash.Add(MagnitudeCalculationType);
+		hash.Add(ScalableFloatMagnitude);
+		hash.Add(AttributeBasedFloat);
+
+		return hash.ToHashCode();
+	}
+
+	/// <inheritdoc/>
+	public override bool Equals(object? obj)
+	{
+		if (obj is ModifierMagnitude other)
+		{
+			return Equals(other);
+		}
+
+		return false;
+	}
+
+	/// <inheritdoc/>
+	public bool Equals(ModifierMagnitude other)
+	{
+		return MagnitudeCalculationType.Equals(other.MagnitudeCalculationType)
+			&& Nullable.Equals(ScalableFloatMagnitude, other.ScalableFloatMagnitude)
+			&& Nullable.Equals(AttributeBasedFloat, other.AttributeBasedFloat);
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="ModifierMagnitude"/> objects are equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="ModifierMagnitude"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="ModifierMagnitude"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal;
+	/// otherwise, <see langword="false"/>.</returns>
+	public static bool operator ==(ModifierMagnitude lhs, ModifierMagnitude rhs)
+	{
+		return lhs.Equals(rhs);
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="ModifierMagnitude"/> objects are not equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="ModifierMagnitude"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="ModifierMagnitude"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not
+	/// equal; otherwise, <see langword="false"/>.</returns>
+	public static bool operator !=(ModifierMagnitude lhs, ModifierMagnitude rhs)
+	{
+		return !(lhs == rhs);
 	}
 }

@@ -10,7 +10,7 @@ namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 /// </summary>
 /// <param name="baseValue">The base value for this magnitude.</param>
 /// <param name="curve">The curve used for scaling.</param>
-public readonly struct ScalableInt(int baseValue, Curve curve)
+public readonly struct ScalableInt(int baseValue, Curve curve) : IEquatable<ScalableInt>
 {
 	/// <summary>
 	/// Gets the base value for this scalable int.
@@ -31,5 +31,56 @@ public readonly struct ScalableInt(int baseValue, Curve curve)
 	{
 		var scalingFactor = ScalingCurve.Evaluate(time);
 		return (int)(BaseValue * scalingFactor);
+	}
+
+	/// <inheritdoc/>
+	public override int GetHashCode()
+	{
+		var hash = default(HashCode);
+		hash.Add(BaseValue);
+		hash.Add(ScalingCurve);
+		return hash.ToHashCode();
+	}
+
+	/// <inheritdoc/>
+	public override bool Equals(object? obj)
+	{
+		if (obj is ScalableInt other)
+		{
+			return Equals(other);
+		}
+
+		return false;
+	}
+
+	/// <inheritdoc/>
+	public bool Equals(ScalableInt other)
+	{
+		return BaseValue == other.BaseValue
+			&& ScalingCurve.Equals(other.ScalingCurve);
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="ScalableInt"/> objects are equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="ScalableInt"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="ScalableInt"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal;
+	/// otherwise, <see langword="false"/>.</returns>
+	public static bool operator ==(ScalableInt lhs, ScalableInt rhs)
+	{
+		return lhs.Equals(rhs);
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="ScalableInt"/> objects are not equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="ScalableInt"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="ScalableInt"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not
+	/// equal; otherwise, <see langword="false"/>.</returns>
+	public static bool operator !=(ScalableInt lhs, ScalableInt rhs)
+	{
+		return !(lhs == rhs);
 	}
 }

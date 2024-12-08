@@ -31,7 +31,7 @@ public readonly struct AttributeBasedFloat(
 	ScalableFloat coefficient,
 	ScalableFloat preMultiplyAdditiveValue,
 	ScalableFloat postMultiplyAdditiveValue,
-	int? finalChannel = null)
+	int? finalChannel = null) : IEquatable<AttributeBasedFloat>
 {
 	/// <summary>
 	/// Gets the capture definition for the backing attribute.
@@ -117,5 +117,65 @@ public readonly struct AttributeBasedFloat(
 
 		return (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + magnitude))
 			+ PostMultiplyAdditiveValue.GetValue(level);
+	}
+
+	/// <inheritdoc/>
+	public override int GetHashCode()
+	{
+		var hash = default(HashCode);
+		hash.Add(BackingAttribute);
+		hash.Add(AttributeCalculationType);
+		hash.Add(Coefficient);
+		hash.Add(PreMultiplyAdditiveValue);
+		hash.Add(PostMultiplyAdditiveValue);
+		hash.Add(FinalChannel);
+
+		return hash.ToHashCode();
+	}
+
+	/// <inheritdoc/>
+	public override bool Equals(object? obj)
+	{
+		if (obj is AttributeBasedFloat other)
+		{
+			return Equals(other);
+		}
+
+		return false;
+	}
+
+	/// <inheritdoc/>
+	public bool Equals(AttributeBasedFloat other)
+	{
+		return BackingAttribute.Equals(other.BackingAttribute)
+			&& AttributeCalculationType.Equals(other.AttributeCalculationType)
+			&& Coefficient.Equals(other.Coefficient)
+			&& PreMultiplyAdditiveValue.Equals(other.PreMultiplyAdditiveValue)
+			&& PostMultiplyAdditiveValue.Equals(other.PostMultiplyAdditiveValue)
+			&& Nullable.Equals(FinalChannel, other.FinalChannel);
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="AttributeBasedFloat"/> objects are equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="AttributeBasedFloat"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="AttributeBasedFloat"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal;
+	/// otherwise, <see langword="false"/>.</returns>
+	public static bool operator ==(AttributeBasedFloat lhs, AttributeBasedFloat rhs)
+	{
+		return lhs.Equals(rhs);
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="AttributeBasedFloat"/> objects are not equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="AttributeBasedFloat"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="AttributeBasedFloat"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not
+	/// equal; otherwise, <see langword="false"/>.</returns>
+	public static bool operator !=(AttributeBasedFloat lhs, AttributeBasedFloat rhs)
+	{
+		return !(lhs == rhs);
 	}
 }

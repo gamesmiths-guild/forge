@@ -1,6 +1,8 @@
 // Copyright © 2024 Gamesmiths Guild.
 
+using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
+using Gamesmiths.Forge.GameplayEffects.Periodic;
 
 namespace Gamesmiths.Forge.GameplayEffects.Stacking;
 
@@ -42,7 +44,7 @@ public readonly struct StackingData(
 	StackLevelOverrideStackCountPolicy? levelOverrideStackCountPolicy = null,
 	StackApplicationRefreshPolicy? applicationRefreshPolicy = null,
 	StackApplicationResetPeriodPolicy? applicationResetPeriodPolicy = null,
-	bool? executeOnSuccessfulApplication = null)
+	bool? executeOnSuccessfulApplication = null) : IEquatable<StackingData>
 {
 	/// <summary>
 	/// Gets the stack limit for this stackable effect.
@@ -138,7 +140,7 @@ public readonly struct StackingData(
 	/// Gets the application refresh policy for this stackable effect.
 	/// </summary>
 	/// <remarks>
-	/// Only valid for effects set as <see cref="Duration.DurationType.HasDuration"/>.
+	/// Only valid for effects set as <see cref="DurationType.HasDuration"/>.
 	/// </remarks>
 	public StackApplicationRefreshPolicy? ApplicationRefreshPolicy { get; } = applicationRefreshPolicy;
 
@@ -146,7 +148,7 @@ public readonly struct StackingData(
 	/// Gets the application reset period policy for this stackable effect.
 	/// </summary>
 	/// <remarks>
-	/// Only valid for effects that have <see cref="Periodic.PeriodicData"/>.
+	/// Only valid for effects that have <see cref="PeriodicData"/>.
 	/// </remarks>
 	public StackApplicationResetPeriodPolicy? ApplicationResetPeriodPolicy { get; } = applicationResetPeriodPolicy;
 
@@ -154,7 +156,87 @@ public readonly struct StackingData(
 	/// Gets a value indicating whether this periodic effect executes on successful stack application.
 	/// </summary>
 	/// <remarks>
-	/// Only valid for effects that have <see cref="Periodic.PeriodicData"/>.
+	/// Only valid for effects that have <see cref="PeriodicData"/>.
 	/// </remarks>
 	public bool? ExecuteOnSuccessfulApplication { get; } = executeOnSuccessfulApplication;
+
+	/// <inheritdoc/>
+	public override int GetHashCode()
+	{
+		var hash = default(HashCode);
+		hash.Add(StackLimit);
+		hash.Add(InitialStack);
+		hash.Add(StackPolicy);
+		hash.Add(StackLevelPolicy);
+		hash.Add(MagnitudePolicy);
+		hash.Add(OverflowPolicy);
+		hash.Add(ExpirationPolicy);
+		hash.Add(InstigatorDenialPolicy);
+		hash.Add(InstigatorOverridePolicy);
+		hash.Add(InstigatorOverrideStackCountPolicy);
+		hash.Add(LevelDenialPolicy);
+		hash.Add(LevelOverridePolicy);
+		hash.Add(LevelOverrideStackCountPolicy);
+		hash.Add(ApplicationRefreshPolicy);
+		hash.Add(ApplicationResetPeriodPolicy);
+		hash.Add(ExecuteOnSuccessfulApplication);
+
+		return hash.ToHashCode();
+	}
+
+	/// <inheritdoc/>
+	public override bool Equals(object? obj)
+	{
+		if (obj is StackingData other)
+		{
+			return Equals(other);
+		}
+
+		return false;
+	}
+
+	/// <inheritdoc/>
+	public bool Equals(StackingData other)
+	{
+		return StackLimit.Equals(other.StackLimit)
+			&& InitialStack.Equals(other.InitialStack)
+			&& StackPolicy.Equals(other.StackPolicy)
+			&& StackLevelPolicy.Equals(other.StackLevelPolicy)
+			&& MagnitudePolicy.Equals(other.MagnitudePolicy)
+			&& OverflowPolicy.Equals(other.OverflowPolicy)
+			&& ExpirationPolicy.Equals(other.ExpirationPolicy)
+			&& Nullable.Equals(InstigatorDenialPolicy, other.InstigatorDenialPolicy)
+			&& Nullable.Equals(InstigatorOverridePolicy, other.InstigatorOverridePolicy)
+			&& Nullable.Equals(InstigatorOverrideStackCountPolicy, other.InstigatorOverrideStackCountPolicy)
+			&& Nullable.Equals(LevelDenialPolicy, other.LevelDenialPolicy)
+			&& Nullable.Equals(LevelOverridePolicy, other.LevelOverridePolicy)
+			&& Nullable.Equals(LevelOverrideStackCountPolicy, other.LevelOverrideStackCountPolicy)
+			&& Nullable.Equals(ApplicationRefreshPolicy, other.ApplicationRefreshPolicy)
+			&& Nullable.Equals(ApplicationResetPeriodPolicy, other.ApplicationResetPeriodPolicy)
+			&& Nullable.Equals(ExecuteOnSuccessfulApplication, other.ExecuteOnSuccessfulApplication);
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="StackingData"/> objects are equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="StackingData"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="StackingData"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal;
+	/// otherwise, <see langword="false"/>.</returns>
+	public static bool operator ==(StackingData lhs, StackingData rhs)
+	{
+		return lhs.Equals(rhs);
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="StackingData"/> objects are not equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="StackingData"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="StackingData"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not
+	/// equal; otherwise, <see langword="false"/>.</returns>
+	public static bool operator !=(StackingData lhs, StackingData rhs)
+	{
+		return !(lhs == rhs);
+	}
 }

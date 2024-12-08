@@ -16,7 +16,7 @@ public readonly struct Modifier(
 	StringKey attribute,
 	ModifierOperation operation,
 	ModifierMagnitude magnitude,
-	int channel = 0)
+	int channel = 0) : IEquatable<Modifier>
 {
 	/// <summary>
 	/// Gets the attribute being modified by this modifier.
@@ -37,4 +37,59 @@ public readonly struct Modifier(
 	/// Gets which channel this modifier is being applied to.
 	/// </summary>
 	public int Channel { get; } = channel;
+
+	/// <inheritdoc/>
+	public override int GetHashCode()
+	{
+		var hash = default(HashCode);
+		hash.Add(Attribute);
+		hash.Add(Operation);
+		hash.Add(Magnitude);
+		hash.Add(Channel);
+		return hash.ToHashCode();
+	}
+
+	/// <inheritdoc/>
+	public override bool Equals(object? obj)
+	{
+		if (obj is Modifier other)
+		{
+			return Equals(other);
+		}
+
+		return false;
+	}
+
+	/// <inheritdoc/>
+	public bool Equals(Modifier other)
+	{
+		return Attribute == other.Attribute
+			&& Operation.Equals(other.Operation)
+			&& Magnitude.Equals(other.Magnitude)
+			&& Channel.Equals(other.Channel);
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="Modifier"/> objects are equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="Modifier"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="Modifier"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal;
+	/// otherwise, <see langword="false"/>.</returns>
+	public static bool operator ==(Modifier lhs, Modifier rhs)
+	{
+		return lhs.Equals(rhs);
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="Modifier"/> objects are not equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="Modifier"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="Modifier"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not
+	/// equal; otherwise, <see langword="false"/>.</returns>
+	public static bool operator !=(Modifier lhs, Modifier rhs)
+	{
+		return !(lhs == rhs);
+	}
 }

@@ -14,7 +14,7 @@ namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 public readonly struct AttributeCaptureDefinition(
 	StringKey attribute,
 	AttributeCaptureSource source,
-	bool snapshop = true)
+	bool snapshop = true) : IEquatable<AttributeCaptureDefinition>
 {
 	/// <summary>
 	/// Gets a key indicating which attribute is being captured.
@@ -44,5 +44,58 @@ public readonly struct AttributeCaptureDefinition(
 	public readonly Attribute GetAttribute(IForgeEntity source)
 	{
 		return source.Attributes[Attribute];
+	}
+
+	/// <inheritdoc/>
+	public override int GetHashCode()
+	{
+		var hash = default(HashCode);
+		hash.Add(Attribute);
+		hash.Add(Source);
+		hash.Add(Snapshot);
+		return hash.ToHashCode();
+	}
+
+	/// <inheritdoc/>
+	public override bool Equals(object? obj)
+	{
+		if (obj is AttributeCaptureDefinition other)
+		{
+			return Equals(other);
+		}
+
+		return false;
+	}
+
+	/// <inheritdoc/>
+	public bool Equals(AttributeCaptureDefinition other)
+	{
+		return Attribute.Equals(other.Attribute)
+			&& Source.Equals(other.Source)
+			&& Snapshot == other.Snapshot;
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="AttributeCaptureDefinition"/> objects are equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="AttributeCaptureDefinition"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="AttributeCaptureDefinition"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal;
+	/// otherwise, <see langword="false"/>.</returns>
+	public static bool operator ==(AttributeCaptureDefinition lhs, AttributeCaptureDefinition rhs)
+	{
+		return lhs.Equals(rhs);
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="AttributeCaptureDefinition"/> objects are not equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="AttributeCaptureDefinition"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="AttributeCaptureDefinition"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not
+	/// equal; otherwise, <see langword="false"/>.</returns>
+	public static bool operator !=(AttributeCaptureDefinition lhs, AttributeCaptureDefinition rhs)
+	{
+		return !(lhs == rhs);
 	}
 }
