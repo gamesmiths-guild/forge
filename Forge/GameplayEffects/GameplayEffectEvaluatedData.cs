@@ -137,7 +137,7 @@ internal readonly struct GameplayEffectEvaluatedData
 		if (modifier.Magnitude.AttributeBasedFloat.Value.BackingAttribute.Source ==
 				AttributeCaptureSource.Source)
 		{
-			attributeSourceOwner = GameplayEffect.Context.Instigator;
+			attributeSourceOwner = GameplayEffect.Ownership.Owner;
 		}
 
 		return modifier.Magnitude.AttributeBasedFloat.Value.BackingAttribute.GetAttribute(attributeSourceOwner);

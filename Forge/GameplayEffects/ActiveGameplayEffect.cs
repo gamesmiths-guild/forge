@@ -227,13 +227,13 @@ internal class ActiveGameplayEffect
 		if (stackingData.InstigatorDenialPolicy.HasValue)
 		{
 			if (stackingData.InstigatorDenialPolicy.Value == StackInstigatorDenialPolicy.DenyIfDifferent &&
-				GameplayEffectEvaluatedData.GameplayEffect.Context != gameplayEffect.Context)
+				GameplayEffectEvaluatedData.GameplayEffect.Ownership != gameplayEffect.Ownership)
 			{
 				return false;
 			}
 
 			if (stackingData.InstigatorOverridePolicy == StackInstigatorOverridePolicy.Override &&
-				GameplayEffectEvaluatedData.GameplayEffect.Context != gameplayEffect.Context)
+				GameplayEffectEvaluatedData.GameplayEffect.Ownership != gameplayEffect.Ownership)
 			{
 				evaluatedGameplayEffect = gameplayEffect;
 				hasChanges = true;

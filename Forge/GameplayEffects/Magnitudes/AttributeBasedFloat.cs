@@ -78,7 +78,7 @@ public readonly struct AttributeBasedFloat(
 		switch (BackingAttribute.Source)
 		{
 			case AttributeCaptureSource.Source:
-				attribute = effect.Context.Instigator.Attributes[BackingAttribute.Attribute];
+				attribute = effect.Ownership.Owner.Attributes[BackingAttribute.Attribute];
 				break;
 
 			case AttributeCaptureSource.Target:
