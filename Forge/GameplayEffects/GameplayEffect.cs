@@ -14,8 +14,6 @@ namespace Gamesmiths.Forge.GameplayEffects;
 /// <param name="level">The initial level for this effect.</param>
 public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnership ownership, int level = 1)
 {
-	private int _level = level;
-
 	/// <summary>
 	/// Event triggered when the level of this effect changes.
 	/// </summary>
@@ -34,15 +32,15 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 	/// <summary>
 	/// Gets the current level o this effect.
 	/// </summary>
-	public int Level { get; }
+	public int Level { get; private set; } = level;
 
 	/// <summary>
 	/// Level up this effect by exactly one level.
 	/// </summary>
 	public void LevelUp()
 	{
-		_level++;
-		OnLevelChanged?.Invoke(_level);
+		Level++;
+		OnLevelChanged?.Invoke(Level);
 	}
 
 	/// <summary>
@@ -51,8 +49,8 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 	/// <param name="level">The level for the effect to be set at.</param>
 	public void SetLevel(int level)
 	{
-		_level = level;
-		OnLevelChanged?.Invoke(_level);
+		Level = level;
+		OnLevelChanged?.Invoke(Level);
 	}
 
 	internal static void Execute(in GameplayEffectEvaluatedData effectEvaluatedData)
