@@ -88,7 +88,7 @@ public sealed class Attribute
 		Overflow = 0;
 		CurrentValue = BaseValue;
 
-		for (var i = 0; i < channels - 1; i++)
+		for (var i = 0; i < channels; i++)
 		{
 			_channels.Add(new ChannelData
 			{
@@ -273,7 +273,7 @@ public sealed class Attribute
 		}
 		else if (evaluatedValue < Min)
 		{
-			Overflow = Min - (int)evaluatedValue;
+			Overflow = (int)evaluatedValue - Min;
 		}
 		else
 		{
