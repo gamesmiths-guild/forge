@@ -55,10 +55,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(expectedResult);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(expectedResult);
-		target.Attributes[targetAttribute].Modifier.Should().Be(0);
-		target.Attributes[targetAttribute].Overflow.Should().Be(0);
+		TestAttribute(target, targetAttribute, [expectedResult, expectedResult, 0, 0]);
 	}
 
 	[Theory]
@@ -105,10 +102,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(expectedResult);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(expectedResult);
-		target.Attributes[targetAttribute].Modifier.Should().Be(0);
-		target.Attributes[targetAttribute].Overflow.Should().Be(0);
+		TestAttribute(target, targetAttribute, [expectedResult, expectedResult, 0, 0]);
 	}
 
 	[Theory]
@@ -151,10 +145,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(firstExpectedResult);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(firstExpectedResult);
-		target.Attributes[targetAttribute].Modifier.Should().Be(0);
-		target.Attributes[targetAttribute].Overflow.Should().Be(0);
+		TestAttribute(target, targetAttribute, [firstExpectedResult, firstExpectedResult, 0, 0]);
 
 		var effectData2 = new GameplayEffectData(
 			"Rank Up",
@@ -176,10 +167,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect2);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(secondExpectedResult);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(secondExpectedResult);
-		target.Attributes[targetAttribute].Modifier.Should().Be(0);
-		target.Attributes[targetAttribute].Overflow.Should().Be(0);
+		TestAttribute(target, targetAttribute, [secondExpectedResult, secondExpectedResult, 0, 0]);
 
 		var effectData3 = new GameplayEffectData(
 			"Rank Down",
@@ -201,10 +189,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect3);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(thirdExpectedResult);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(thirdExpectedResult);
-		target.Attributes[targetAttribute].Modifier.Should().Be(0);
-		target.Attributes[targetAttribute].Overflow.Should().Be(0);
+		TestAttribute(target, targetAttribute, [thirdExpectedResult, thirdExpectedResult, 0, 0]);
 
 		var effectData4 = new GameplayEffectData(
 			"Rank Fix",
@@ -226,10 +211,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect4);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(fourthExpectedResult);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(fourthExpectedResult);
-		target.Attributes[targetAttribute].Modifier.Should().Be(0);
-		target.Attributes[targetAttribute].Overflow.Should().Be(0);
+		TestAttribute(target, targetAttribute, [fourthExpectedResult, fourthExpectedResult, 0, 0]);
 	}
 
 	[Theory]
@@ -274,19 +256,13 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(firstExpectedResult);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(firstExpectedResult);
-		target.Attributes[targetAttribute].Modifier.Should().Be(0);
-		target.Attributes[targetAttribute].Overflow.Should().Be(0);
+		TestAttribute(target, targetAttribute, [firstExpectedResult, firstExpectedResult, 0, 0]);
 
 		effect.LevelUp();
 
 		target.GameplayEffectsManager.ApplyEffect(effect);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(secondExpectedResult);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(secondExpectedResult);
-		target.Attributes[targetAttribute].Modifier.Should().Be(0);
-		target.Attributes[targetAttribute].Overflow.Should().Be(0);
+		TestAttribute(target, targetAttribute, [secondExpectedResult, secondExpectedResult, 0, 0]);
 	}
 
 	[Theory]
@@ -333,17 +309,11 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(firstExpectedResults[0]);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(firstExpectedResults[1]);
-		target.Attributes[targetAttribute].Modifier.Should().Be(firstExpectedResults[2]);
-		target.Attributes[targetAttribute].Overflow.Should().Be(firstExpectedResults[3]);
+		TestAttribute(target, targetAttribute, firstExpectedResults);
 
 		effect.LevelUp();
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(secondExpectedResult[0]);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(secondExpectedResult[1]);
-		target.Attributes[targetAttribute].Modifier.Should().Be(secondExpectedResult[2]);
-		target.Attributes[targetAttribute].Overflow.Should().Be(secondExpectedResult[3]);
+		TestAttribute(target, targetAttribute, secondExpectedResult);
 	}
 
 	[Theory]
@@ -402,26 +372,17 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(firstExpectedResult);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(firstExpectedResult);
-		target.Attributes[targetAttribute].Modifier.Should().Be(0);
-		target.Attributes[targetAttribute].Overflow.Should().Be(0);
+		TestAttribute(target, targetAttribute, [firstExpectedResult, firstExpectedResult, 0, 0]);
 
 		target.GameplayEffectsManager.UpdateEffects(firstTimeUpdateDelta);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(secondExpectedResult);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(secondExpectedResult);
-		target.Attributes[targetAttribute].Modifier.Should().Be(0);
-		target.Attributes[targetAttribute].Overflow.Should().Be(0);
+		TestAttribute(target, targetAttribute, [secondExpectedResult, secondExpectedResult, 0, 0]);
 
 		effect.LevelUp();
 
 		target.GameplayEffectsManager.UpdateEffects(secondTimeUpdateDelta);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(thirdExpectedResult);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(thirdExpectedResult);
-		target.Attributes[targetAttribute].Modifier.Should().Be(0);
-		target.Attributes[targetAttribute].Overflow.Should().Be(0);
+		TestAttribute(target, targetAttribute, [thirdExpectedResult, thirdExpectedResult, 0, 0]);
 	}
 
 	[Theory]
@@ -461,20 +422,14 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(expectedResults[0]);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(expectedResults[1]);
-		target.Attributes[targetAttribute].Modifier.Should().Be(expectedResults[2]);
-		target.Attributes[targetAttribute].Overflow.Should().Be(expectedResults[3]);
+		TestAttribute(target, targetAttribute, expectedResults);
 
 		for (var i = 0f; i < simulatedFPS * totalSimulatedTime; i++)
 		{
 			target.GameplayEffectsManager.UpdateEffects(1f / simulatedFPS);
 		}
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(expectedResults[0]);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(expectedResults[1]);
-		target.Attributes[targetAttribute].Modifier.Should().Be(expectedResults[2]);
-		target.Attributes[targetAttribute].Overflow.Should().Be(expectedResults[3]);
+		TestAttribute(target, targetAttribute, expectedResults);
 	}
 
 	[Theory]
@@ -551,10 +506,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(firstExpectedResults[0]);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(firstExpectedResults[1]);
-		target.Attributes[targetAttribute].Modifier.Should().Be(firstExpectedResults[2]);
-		target.Attributes[targetAttribute].Overflow.Should().Be(firstExpectedResults[3]);
+		TestAttribute(target, targetAttribute, firstExpectedResults);
 
 		var effectData2 = new GameplayEffectData(
 			"Buff2",
@@ -576,10 +528,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect2);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(secondExpectedResults[0]);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(secondExpectedResults[1]);
-		target.Attributes[targetAttribute].Modifier.Should().Be(secondExpectedResults[2]);
-		target.Attributes[targetAttribute].Overflow.Should().Be(secondExpectedResults[3]);
+		TestAttribute(target, targetAttribute, secondExpectedResults);
 
 		var effectData3 = new GameplayEffectData(
 			"Buff3",
@@ -601,10 +550,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect3);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(thirdExpectedResults[0]);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(thirdExpectedResults[1]);
-		target.Attributes[targetAttribute].Modifier.Should().Be(thirdExpectedResults[2]);
-		target.Attributes[targetAttribute].Overflow.Should().Be(thirdExpectedResults[3]);
+		TestAttribute(target, targetAttribute, thirdExpectedResults);
 	}
 
 	[Theory]
@@ -720,59 +666,16 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(expectedResults[0]);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(expectedResults[1]);
-		target.Attributes[targetAttribute].Modifier.Should().Be(expectedResults[2]);
-		target.Attributes[targetAttribute].Overflow.Should().Be(expectedResults[3]);
+		TestAttribute(target, targetAttribute, expectedResults);
 	}
 
 	[Theory]
 	[Trait("Duration", null)]
-	[InlineData(
-		"TestAttributeSet.Attribute1",
-		10,
-		10f,
-		32,
-		5f,
-		new int[] { 11, 1, 10, 0 },
-		5f,
-		new int[] { 1, 1, 0, 0 })]
-	[InlineData(
-		"TestAttributeSet.Attribute2",
-		10,
-		60f,
-		1,
-		59f,
-		new int[] { 12, 2, 10, 0 },
-		2f,
-		new int[] { 2, 2, 0, 0 })]
-	[InlineData(
-		"TestAttributeSet.Attribute3",
-		10,
-		0.1f,
-		60,
-		0.05f,
-		new int[] { 13, 3, 10, 0 },
-		0.05f,
-		new int[] { 3, 3, 0, 0 })]
-	[InlineData(
-		"TestAttributeSet.Attribute5",
-		10,
-		1f,
-		300,
-		0.5f,
-		new int[] { 15, 5, 10, 0 },
-		300f,
-		new int[] { 5, 5, 0, 0 })]
-	[InlineData(
-		"TestAttributeSet.Attribute90",
-		10,
-		600f,
-		64,
-		1f,
-		new int[] { 99, 90, 10, 1 },
-		599f,
-		new int[] { 90, 90, 0, 0 })]
+	[InlineData("TestAttributeSet.Attribute1", 10, 10f, 32, 5f, new int[] { 11, 1, 10, 0 }, 5f, 1)]
+	[InlineData("TestAttributeSet.Attribute2", 10, 60f, 1, 59f, new int[] { 12, 2, 10, 0 }, 2f, 2)]
+	[InlineData("TestAttributeSet.Attribute3", 10, 0.1f, 60, 0.05f, new int[] { 13, 3, 10, 0 }, 0.05f, 3)]
+	[InlineData("TestAttributeSet.Attribute5", 10, 1f, 300, 0.5f, new int[] { 15, 5, 10, 0 }, 300f, 5)]
+	[InlineData("TestAttributeSet.Attribute90", 10, 600f, 64, 1f, new int[] { 99, 90, 10, 1 }, 599f, 90)]
 	public void Duration_effect_modifies_attribute_modifier_value_and_expire_after_duration_time(
 		string targetAttribute,
 		float modifierMagnitude,
@@ -781,7 +684,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float unexpiringPeriodOfTime,
 		int[] firstExpectedResults,
 		float expiringPeriodOfTime,
-		int[] lastExpectedResults)
+		int lastExpectedResult)
 	{
 		var owner = new Entity(_gameplayTagsManager);
 		var target = new Entity(_gameplayTagsManager);
@@ -806,32 +709,131 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		target.GameplayEffectsManager.ApplyEffect(effect);
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(firstExpectedResults[0]);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(firstExpectedResults[1]);
-		target.Attributes[targetAttribute].Modifier.Should().Be(firstExpectedResults[2]);
-		target.Attributes[targetAttribute].Overflow.Should().Be(firstExpectedResults[3]);
+		TestAttribute(target, targetAttribute, firstExpectedResults);
 
-		// Simulate 5 seconds.
 		for (var i = 0; i < simulatedFPS * unexpiringPeriodOfTime; i++)
 		{
 			target.GameplayEffectsManager.UpdateEffects(1f / simulatedFPS);
 		}
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(firstExpectedResults[0]);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(firstExpectedResults[1]);
-		target.Attributes[targetAttribute].Modifier.Should().Be(firstExpectedResults[2]);
-		target.Attributes[targetAttribute].Overflow.Should().Be(firstExpectedResults[3]);
+		TestAttribute(target, targetAttribute, firstExpectedResults);
 
-		// Simulate 5 more seconds.
 		for (var i = 0; i < simulatedFPS * expiringPeriodOfTime; i++)
 		{
 			target.GameplayEffectsManager.UpdateEffects(1 / simulatedFPS);
 		}
 
-		target.Attributes[targetAttribute].CurrentValue.Should().Be(lastExpectedResults[0]);
-		target.Attributes[targetAttribute].BaseValue.Should().Be(lastExpectedResults[1]);
-		target.Attributes[targetAttribute].Modifier.Should().Be(lastExpectedResults[2]);
-		target.Attributes[targetAttribute].Overflow.Should().Be(lastExpectedResults[3]);
+		TestAttribute(target, targetAttribute, [lastExpectedResult, lastExpectedResult, 0, 0]);
+	}
+
+	[Theory]
+	[Trait("Periodic", null)]
+	[InlineData("TestAttributeSet.Attribute1", 10, 32, 1f, 11, 1f, 21, 5f, 71)]
+	[InlineData("TestAttributeSet.Attribute2", 1, 64, 0.5f, 3, 1.66f, 6, 20f, 46)]
+	[InlineData("TestAttributeSet.Attribute3", 3, 128, 10f, 6, 9f, 6, 60f, 24)]
+	[InlineData("TestAttributeSet.Attribute5", 90, 1, 1f, 95, 9f, 99, 10f, 99)]
+	[InlineData("TestAttributeSet.Attribute90", -5, 32, 0.01f, 85, 0.05f, 60, 10f, 0)]
+	public void Periodic_effect_modifies_base_attribute_value(
+		string targetAttribute,
+		float modifierMagnitude,
+		float simulatedFPS,
+		float period,
+		int firstExpectedResult,
+		float firstPeriodOfTime,
+		int secondExpectedResult,
+		float secondPeriodOfTime,
+		int thirdExpectedResult)
+	{
+		var owner = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		var effectData = new GameplayEffectData(
+			"Buff",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(modifierMagnitude)))
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			new PeriodicData(new ScalableFloat(period), true));
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner, new Entity(_gameplayTagsManager)));
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, [firstExpectedResult, firstExpectedResult, 0, 0]);
+
+		target.GameplayEffectsManager.UpdateEffects(firstPeriodOfTime);
+
+		TestAttribute(target, targetAttribute, [secondExpectedResult, secondExpectedResult, 0, 0]);
+
+		for (var i = 0; i < simulatedFPS * secondPeriodOfTime; i++)
+		{
+			target.GameplayEffectsManager.UpdateEffects(1 / simulatedFPS);
+		}
+
+		TestAttribute(target, targetAttribute, [thirdExpectedResult, thirdExpectedResult, 0, 0]);
+	}
+
+	[Theory]
+	[Trait("Periodic", null)]
+	[InlineData("TestAttributeSet.Attribute1", 10, 1f, 11, 1f, 21)]
+	[InlineData("TestAttributeSet.Attribute2", 1, 0.1f, 3, 1f, 13)]
+	[InlineData("TestAttributeSet.Attribute3", 10, 60f, 13, 59f, 13)]
+	[InlineData("TestAttributeSet.Attribute5", 5, 1f, 10, 15.9f, 85)]
+	[InlineData("TestAttributeSet.Attribute90", -1, 0.5f, 89, 60f, 0)]
+	public void Snapshot_periodic_effect_modifies_base_attribute_with_same_value_even_after_level_up(
+		string targetAttribute,
+		float modifierMagnitude,
+		float period,
+		int firstExpectedResult,
+		float simulatedPeriodOfTime,
+		int secondExpectedResult)
+	{
+		var owner = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		var effectData = new GameplayEffectData(
+			"Buff",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(modifierMagnitude)))
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			new PeriodicData(new ScalableFloat(period), true));
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner, new Entity(_gameplayTagsManager)));
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, [firstExpectedResult, firstExpectedResult, 0, 0]);
+
+		effect.LevelUp();
+
+		target.GameplayEffectsManager.UpdateEffects(simulatedPeriodOfTime);
+
+		TestAttribute(target, targetAttribute, [secondExpectedResult, secondExpectedResult, 0, 0]);
+	}
+
+	private static void TestAttribute(Entity target, string targetAttribute, int[] expectedResults)
+	{
+		target.Attributes[targetAttribute].CurrentValue.Should().Be(expectedResults[0]);
+		target.Attributes[targetAttribute].BaseValue.Should().Be(expectedResults[1]);
+		target.Attributes[targetAttribute].Modifier.Should().Be(expectedResults[2]);
+		target.Attributes[targetAttribute].Overflow.Should().Be(expectedResults[3]);
 	}
 
 	private class TestAttributeSet : AttributeSet
