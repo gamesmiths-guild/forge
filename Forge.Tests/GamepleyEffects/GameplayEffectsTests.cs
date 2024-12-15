@@ -164,7 +164,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 					ModifierOperation.PercentBonus,
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
-						new ScalableFloat(secondEffectPercentMagnitude))) // 400% bonus
+						new ScalableFloat(secondEffectPercentMagnitude)))
 			],
 			new DurationData(DurationType.Instant),
 			null,
@@ -189,7 +189,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 					ModifierOperation.PercentBonus,
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
-						new ScalableFloat(thirdEffectPercentMagnitude))) // Divides by 3 (66% reduction)
+						new ScalableFloat(thirdEffectPercentMagnitude)))
 			],
 			new DurationData(DurationType.Instant),
 			null,
@@ -424,6 +424,416 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		target.Attributes[targetAttribute].Overflow.Should().Be(0);
 	}
 
+	[Theory]
+	[Trait("Infinite", null)]
+	[InlineData("TestAttributeSet.Attribute1", 10, 32f, 5f, new int[] { 11, 1, 10, 0 })]
+	[InlineData("TestAttributeSet.Attribute2", 1, 60f, 0.1f, new int[] { 3, 2, 1, 0 })]
+	[InlineData("TestAttributeSet.Attribute3", -10, 15f, 120f, new int[] { 0, 3, -10, -7 })]
+	[InlineData("TestAttributeSet.Attribute5", 20, 33f, 999f, new int[] { 25, 5, 20, 0 })]
+	[InlineData("TestAttributeSet.Attribute90", 100, 1f, 60f, new int[] { 99, 90, 100, 91 })]
+	public void Inifinite_effect_modify_attribute_modifier_value(
+		string targetAttribute,
+		float modifierBaseMagnitude,
+		float simulatedFPS,
+		float totalSimulatedTime,
+		int[] expectedResults)
+	{
+		var owner = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		var effectData = new GameplayEffectData(
+			"Buff",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(modifierBaseMagnitude)))
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner, new Entity(_gameplayTagsManager)));
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		target.Attributes[targetAttribute].CurrentValue.Should().Be(expectedResults[0]);
+		target.Attributes[targetAttribute].BaseValue.Should().Be(expectedResults[1]);
+		target.Attributes[targetAttribute].Modifier.Should().Be(expectedResults[2]);
+		target.Attributes[targetAttribute].Overflow.Should().Be(expectedResults[3]);
+
+		for (var i = 0f; i < simulatedFPS * totalSimulatedTime; i++)
+		{
+			target.GameplayEffectsManager.UpdateEffects(1f / simulatedFPS);
+		}
+
+		target.Attributes[targetAttribute].CurrentValue.Should().Be(expectedResults[0]);
+		target.Attributes[targetAttribute].BaseValue.Should().Be(expectedResults[1]);
+		target.Attributes[targetAttribute].Modifier.Should().Be(expectedResults[2]);
+		target.Attributes[targetAttribute].Overflow.Should().Be(expectedResults[3]);
+	}
+
+	[Theory]
+	[Trait("Infinite", null)]
+	[InlineData(
+		"TestAttributeSet.Attribute1",
+		4,
+		new int[] { 5, 1, 4, 0 },
+		4f,
+		new int[] { 25, 1, 24, 0 },
+		-0.66f,
+		new int[] { 21, 1, 20, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute2",
+		40,
+		new int[] { 42, 2, 40, 0 },
+		0.5f,
+		new int[] { 63, 2, 61, 0 },
+		-0.5f,
+		new int[] { 42, 2, 40, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute3",
+		47,
+		new int[] { 50, 3, 47, 0 },
+		-0.5f,
+		new int[] { 25, 3, 22, 0 },
+		-0.2f,
+		new int[] { 15, 3, 12, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute5",
+		45,
+		new int[] { 50, 5, 45, 0 },
+		1f,
+		new int[] { 99, 5, 95, 1 },
+		-1.5f,
+		new int[] { 25, 5, 20, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute90",
+		-10,
+		new int[] { 80, 90, -10, 0 },
+		-0.1f,
+		new int[] { 72, 90, -18, 0 },
+		-10f,
+		new int[] { 0, 90, -818, -728 })]
+	public void Infinite_effect_of_different_operations_update_modifier_value_accordingly(
+		string targetAttribute,
+		float firstEffectModifierBaseMagnitude,
+		int[] firstExpectedResults,
+		float secondEffectModifierBaseMagnitude,
+		int[] secondExpectedResults,
+		float thirdEffectModifierBaseMagnitude,
+		int[] thirdExpectedResults)
+	{
+		var owner = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		var effectData = new GameplayEffectData(
+			"Buff1",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(firstEffectModifierBaseMagnitude)))
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner, new Entity(_gameplayTagsManager)));
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		target.Attributes[targetAttribute].CurrentValue.Should().Be(firstExpectedResults[0]);
+		target.Attributes[targetAttribute].BaseValue.Should().Be(firstExpectedResults[1]);
+		target.Attributes[targetAttribute].Modifier.Should().Be(firstExpectedResults[2]);
+		target.Attributes[targetAttribute].Overflow.Should().Be(firstExpectedResults[3]);
+
+		var effectData2 = new GameplayEffectData(
+			"Buff2",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.PercentBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(secondEffectModifierBaseMagnitude)))
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			null);
+
+		var effect2 = new GameplayEffect(
+			effectData2,
+			new GameplayEffectOwnership(owner, new Entity(_gameplayTagsManager)));
+
+		target.GameplayEffectsManager.ApplyEffect(effect2);
+
+		target.Attributes[targetAttribute].CurrentValue.Should().Be(secondExpectedResults[0]);
+		target.Attributes[targetAttribute].BaseValue.Should().Be(secondExpectedResults[1]);
+		target.Attributes[targetAttribute].Modifier.Should().Be(secondExpectedResults[2]);
+		target.Attributes[targetAttribute].Overflow.Should().Be(secondExpectedResults[3]);
+
+		var effectData3 = new GameplayEffectData(
+			"Buff3",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.PercentBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(thirdEffectModifierBaseMagnitude)))
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			null);
+
+		var effect3 = new GameplayEffect(
+			effectData3,
+			new GameplayEffectOwnership(owner, new Entity(_gameplayTagsManager)));
+
+		target.GameplayEffectsManager.ApplyEffect(effect3);
+
+		target.Attributes[targetAttribute].CurrentValue.Should().Be(thirdExpectedResults[0]);
+		target.Attributes[targetAttribute].BaseValue.Should().Be(thirdExpectedResults[1]);
+		target.Attributes[targetAttribute].Modifier.Should().Be(thirdExpectedResults[2]);
+		target.Attributes[targetAttribute].Overflow.Should().Be(thirdExpectedResults[3]);
+	}
+
+	[Theory]
+	[Trait("Infinite", null)]
+	[InlineData(
+		"TestAttributeSet.Attribute1",
+		ModifierOperation.FlatBonus,
+		4,
+		0,
+		ModifierOperation.PercentBonus,
+		4f,
+		0,
+		ModifierOperation.PercentBonus,
+		-0.66f,
+		1,
+		new int[] { 8, 1, 7, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute2",
+		ModifierOperation.FlatBonus,
+		8,
+		1,
+		ModifierOperation.PercentBonus,
+		2f,
+		0,
+		ModifierOperation.PercentBonus,
+		2f,
+		1,
+		new int[] { 42, 2, 40, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute3",
+		ModifierOperation.FlatBonus,
+		17,
+		0,
+		ModifierOperation.PercentBonus,
+		1f,
+		0,
+		ModifierOperation.PercentBonus,
+		-1f,
+		1,
+		new int[] { 0, 3, -3, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute5",
+		ModifierOperation.FlatBonus,
+		20,
+		1,
+		ModifierOperation.PercentBonus,
+		-1f,
+		0,
+		ModifierOperation.PercentBonus,
+		0.5f,
+		1,
+		new int[] { 30, 5, 25, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute90",
+		ModifierOperation.FlatBonus,
+		-10,
+		0,
+		ModifierOperation.PercentBonus,
+		-1f,
+		0,
+		ModifierOperation.PercentBonus,
+		1f,
+		1,
+		new int[] { 0, 90, -90, 0 })]
+	public void Infinite_effect_computes_channels_accordingly(
+		string targetAttribute,
+		ModifierOperation firstModifierOperationType,
+		float firstModifierBaseMagnitude,
+		int firstChannel,
+		ModifierOperation secondModifierOperationType,
+		float secondModifierBaseMagnitude,
+		int secondChannel,
+		ModifierOperation thirdModifierOperationType,
+		float thirdModifierBaseMagnitude,
+		int thirdChannel,
+		int[] expectedResults)
+	{
+		var owner = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		var effectData = new GameplayEffectData(
+			"Buff",
+			[
+				new Modifier(
+					targetAttribute,
+					firstModifierOperationType,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(firstModifierBaseMagnitude)),
+					firstChannel),
+				new Modifier(
+					targetAttribute,
+					secondModifierOperationType,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(secondModifierBaseMagnitude)),
+					secondChannel),
+				new Modifier(
+					targetAttribute,
+					thirdModifierOperationType,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(thirdModifierBaseMagnitude)),
+					thirdChannel)
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner, new Entity(_gameplayTagsManager)));
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		target.Attributes[targetAttribute].CurrentValue.Should().Be(expectedResults[0]);
+		target.Attributes[targetAttribute].BaseValue.Should().Be(expectedResults[1]);
+		target.Attributes[targetAttribute].Modifier.Should().Be(expectedResults[2]);
+		target.Attributes[targetAttribute].Overflow.Should().Be(expectedResults[3]);
+	}
+
+	[Theory]
+	[Trait("Duration", null)]
+	[InlineData(
+		"TestAttributeSet.Attribute1",
+		10,
+		10f,
+		32,
+		5f,
+		new int[] { 11, 1, 10, 0 },
+		5f,
+		new int[] { 1, 1, 0, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute2",
+		10,
+		60f,
+		1,
+		59f,
+		new int[] { 12, 2, 10, 0 },
+		2f,
+		new int[] { 2, 2, 0, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute3",
+		10,
+		0.1f,
+		60,
+		0.05f,
+		new int[] { 13, 3, 10, 0 },
+		0.05f,
+		new int[] { 3, 3, 0, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute5",
+		10,
+		1f,
+		300,
+		0.5f,
+		new int[] { 15, 5, 10, 0 },
+		300f,
+		new int[] { 5, 5, 0, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute90",
+		10,
+		600f,
+		64,
+		1f,
+		new int[] { 99, 90, 10, 1 },
+		599f,
+		new int[] { 90, 90, 0, 0 })]
+	public void Duration_effect_modifies_attribute_modifier_value_and_expire_after_duration_time(
+		string targetAttribute,
+		float modifierMagnitude,
+		float baseDuration,
+		float simulatedFPS,
+		float unexpiringPeriodOfTime,
+		int[] firstExpectedResults,
+		float expiringPeriodOfTime,
+		int[] lastExpectedResults)
+	{
+		var owner = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		var effectData = new GameplayEffectData(
+			"Buff",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(modifierMagnitude)))
+			],
+			new DurationData(DurationType.HasDuration, new ScalableFloat(baseDuration)),
+			null,
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner, new Entity(_gameplayTagsManager)));
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		target.Attributes[targetAttribute].CurrentValue.Should().Be(firstExpectedResults[0]);
+		target.Attributes[targetAttribute].BaseValue.Should().Be(firstExpectedResults[1]);
+		target.Attributes[targetAttribute].Modifier.Should().Be(firstExpectedResults[2]);
+		target.Attributes[targetAttribute].Overflow.Should().Be(firstExpectedResults[3]);
+
+		// Simulate 5 seconds.
+		for (var i = 0; i < simulatedFPS * unexpiringPeriodOfTime; i++)
+		{
+			target.GameplayEffectsManager.UpdateEffects(1f / simulatedFPS);
+		}
+
+		target.Attributes[targetAttribute].CurrentValue.Should().Be(firstExpectedResults[0]);
+		target.Attributes[targetAttribute].BaseValue.Should().Be(firstExpectedResults[1]);
+		target.Attributes[targetAttribute].Modifier.Should().Be(firstExpectedResults[2]);
+		target.Attributes[targetAttribute].Overflow.Should().Be(firstExpectedResults[3]);
+
+		// Simulate 5 more seconds.
+		for (var i = 0; i < simulatedFPS * expiringPeriodOfTime; i++)
+		{
+			target.GameplayEffectsManager.UpdateEffects(1 / simulatedFPS);
+		}
+
+		target.Attributes[targetAttribute].CurrentValue.Should().Be(lastExpectedResults[0]);
+		target.Attributes[targetAttribute].BaseValue.Should().Be(lastExpectedResults[1]);
+		target.Attributes[targetAttribute].Modifier.Should().Be(lastExpectedResults[2]);
+		target.Attributes[targetAttribute].Overflow.Should().Be(lastExpectedResults[3]);
+	}
+
 	private class TestAttributeSet : AttributeSet
 	{
 		public Attribute Attribute1 { get; }
@@ -439,10 +849,10 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		public TestAttributeSet()
 		{
 			Attribute1 = InitializeAttribute(nameof(Attribute1), 1, 0, 99, 2);
-			Attribute2 = InitializeAttribute(nameof(Attribute2), 2, 0, 99);
-			Attribute3 = InitializeAttribute(nameof(Attribute3), 3, 0, 99);
-			Attribute5 = InitializeAttribute(nameof(Attribute5), 5, 0, 99);
-			Attribute90 = InitializeAttribute(nameof(Attribute90), 90, 0, 99);
+			Attribute2 = InitializeAttribute(nameof(Attribute2), 2, 0, 99, 2);
+			Attribute3 = InitializeAttribute(nameof(Attribute3), 3, 0, 99, 2);
+			Attribute5 = InitializeAttribute(nameof(Attribute5), 5, 0, 99, 2);
+			Attribute90 = InitializeAttribute(nameof(Attribute90), 90, 0, 99, 2);
 		}
 	}
 
