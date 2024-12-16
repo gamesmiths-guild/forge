@@ -72,6 +72,11 @@ public readonly struct Curve(CurveKey[] keys) : IEquatable<Curve>
 	/// <inheritdoc/>
 	public bool Equals(Curve other)
 	{
+		if (_keys is null)
+		{
+			return other._keys is null;
+		}
+
 		return _keys.SequenceEqual(other._keys);
 	}
 

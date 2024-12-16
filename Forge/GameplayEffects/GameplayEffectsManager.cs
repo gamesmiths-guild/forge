@@ -173,7 +173,7 @@ public class GameplayEffectsManager(IForgeEntity owner)
 	/// <returns>The matching stackable effect, or <see langword="null"/> if none are found.</returns>
 	private ActiveGameplayEffect? FindStackableEffect(GameplayEffect gameplayEffect)
 	{
-		return FilterEffectsByGameplayEffect(gameplayEffect).FirstOrDefault(x =>
+		return FilterEffectsByData(gameplayEffect.EffectData).FirstOrDefault(x =>
 			MatchesStackPolicy(x, gameplayEffect) &&
 			MatchesStackLevelPolicy(x, gameplayEffect));
 	}
