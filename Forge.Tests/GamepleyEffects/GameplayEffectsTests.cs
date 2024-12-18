@@ -1293,6 +1293,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 	[Theory]
 	[Trait("Stackable", null)]
+
+	// Effects with stack level policy Seggregate don't stack.
 	[InlineData(
 		new int[] { 6, 1, 5, 0 },
 		new int[] { 16, 1, 15, 0 },
@@ -1318,6 +1320,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		StackExpirationPolicy.ClearEntireStack,
 		StackOwnerDenialPolicy.AlwaysAllow,
 		StackOwnerOverridePolicy.KeepCurrent)]
+
+	// Effects with stack level policy Aggregate stack and recalculate.
 	[InlineData(
 		new int[] { 6, 1, 5, 0 },
 		new int[] { 21, 1, 20, 0 },
@@ -1346,6 +1350,68 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		StackOwnerOverrideStackCountPolicy.IncreaseStacks,
 		LevelComparison.None,
 		LevelComparison.Lower | LevelComparison.Equal | LevelComparison.Higher,
+		StackLevelOverrideStackCountPolicy.IncreaseStacks)]
+
+	// Effect denies stack from different owner.
+	[InlineData(
+		new int[] { 6, 1, 5, 0 },
+		new int[] { 6, 1, 5, 0 },
+		new int[] { 31, 1, 30, 0 },
+		new int[] { 31, 1, 30, 0 },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		1,
+		new object[] { new int[] { 2, 3, 0 } },
+		1,
+		new object[] { new int[] { 2, 3, 0 } },
+		"TestAttributeSet.Attribute1",
+		5f,
+		new float[] { 1, 2, 3 },
+		5,
+		1,
+		StackPolicy.AggregateByTarget,
+		StackLevelPolicy.AggregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		StackOwnerDenialPolicy.DenyIfDifferent,
+		null,
+		null,
+		LevelComparison.None,
+		LevelComparison.Lower | LevelComparison.Equal | LevelComparison.Higher,
+		StackLevelOverrideStackCountPolicy.IncreaseStacks)]
+
+	// Effect denies stacks from lower levels.
+	[InlineData(
+		new int[] { 6, 1, 5, 0 },
+		new int[] { 21, 1, 20, 0 },
+		new int[] { 46, 1, 45, 0 },
+		new int[] { 46, 1, 45, 0 },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		1,
+		new object[] { new int[] { 2, 2, 1 } },
+		1,
+		new object[] { new int[] { 3, 3, 0 } },
+		1,
+		new object[] { new int[] { 3, 3, 0 } },
+		"TestAttributeSet.Attribute1",
+		5f,
+		new float[] { 1, 2, 3 },
+		5,
+		1,
+		StackPolicy.AggregateByTarget,
+		StackLevelPolicy.AggregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		StackOwnerDenialPolicy.AlwaysAllow,
+		StackOwnerOverridePolicy.Override,
+		StackOwnerOverrideStackCountPolicy.IncreaseStacks,
+		LevelComparison.Lower,
+		LevelComparison.Equal | LevelComparison.Higher,
 		StackLevelOverrideStackCountPolicy.IncreaseStacks)]
 	public void Stackable_effect_with_different_levels_gives_expected_stack_data(
 		int[] firstExpectedResults,
