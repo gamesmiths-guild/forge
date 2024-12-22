@@ -1544,6 +1544,192 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 			owner2);
 	}
 
+	[Theory]
+	[Trait("Stackable", null)]
+
+	// Effect updates overrides stacks with new owner.
+	[InlineData(
+		new int[] { 3, 1, 2, 0 },
+		new int[] { 5, 1, 4, 0 },
+		new int[] { 6, 1, 5, 0 },
+		new int[] { 3, 1, 2, 0 },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		1,
+		new object[] { new int[] { 2, 1, 0 } },
+		1,
+		new object[] { new int[] { 1, 1, 1 } },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		"TestAttributeSet.Attribute1",
+		"TestAttributeSet.Attribute2",
+		3,
+		AttributeCaptureSource.Source,
+		AttributeBasedFloatCalculationType.AttributeMagnitude,
+		new float[] { 1, 0, 0 },
+		5,
+		1,
+		StackPolicy.AggregateByTarget,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		StackOwnerDenialPolicy.AlwaysAllow,
+		StackOwnerOverridePolicy.Override,
+		StackOwnerOverrideStackCountPolicy.ResetStacks)]
+	public void Stackable_attribute_based_effect_with_different_levels_gives_expected_stack_data(
+		int[] firstExpectedResults,
+		int[] secondExpectedResults,
+		int[] thirdExpectedResults,
+		int[] fourthExpectedResults,
+		int firstExpectedStackDataCount,
+		object[] firstExpectedStackData,
+		int secondExpectedStackDataCount,
+		object[] secondExpectedStackData,
+		int thirdExpectedStackDataCount,
+		object[] thirdExpectedStackData,
+		int fourthExpectedStackDataCount,
+		object[] fourthExpectedStackData,
+		string targetAttribute,
+		string backingAttribute,
+		int backingAttributeMagnitudeChange,
+		AttributeCaptureSource attributeCaptureSource,
+		AttributeBasedFloatCalculationType attributeBasedFloatCalculationType,
+		float[] attributeBasedFloatFormulaParameters,
+		int stackLimit,
+		int initialStack,
+		StackPolicy stackPolicy,
+		StackLevelPolicy stackLevelPolicy,
+		StackMagnitudePolicy magnitudePolicy,
+		StackOverflowPolicy overflowPolicy,
+		StackExpirationPolicy expirationPolicy,
+		StackOwnerDenialPolicy? ownerDenialPolicy = null,
+		StackOwnerOverridePolicy? ownerOverridePolicy = null,
+		StackOwnerOverrideStackCountPolicy? ownerOverrideStackCountPolicy = null,
+		LevelComparison? levelDenialPolicy = null,
+		LevelComparison? levelOverridePolicy = null,
+		StackLevelOverrideStackCountPolicy? levelOverrideStackCountPolicy = null,
+		StackApplicationRefreshPolicy? applicationRefreshPolicy = null,
+		StackApplicationResetPeriodPolicy? applicationResetPeriodPolicy = null,
+		bool? executeOnSuccessfulApplication = null)
+	{
+		var owner1 = new Entity(_gameplayTagsManager);
+		var owner2 = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		// Setup Owner2 by changing his attributes.
+		var levelUpEffectData = new GameplayEffectData(
+			"Level Up",
+			[
+				new Modifier(
+					backingAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(backingAttributeMagnitudeChange)))
+			],
+			new DurationData(DurationType.Instant),
+			null,
+			null);
+
+		var levelUpEffect = new GameplayEffect(
+			levelUpEffectData,
+			new GameplayEffectOwnership(owner2, new Entity(_gameplayTagsManager)));
+
+		owner2.GameplayEffectsManager.ApplyEffect(levelUpEffect);
+
+		// Setup test effect.
+		var effectData = new GameplayEffectData(
+			"Buff",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition(
+								backingAttribute,
+								attributeCaptureSource,
+								false),
+							attributeBasedFloatCalculationType,
+							new ScalableFloat(attributeBasedFloatFormulaParameters[0]),
+							new ScalableFloat(attributeBasedFloatFormulaParameters[1]),
+							new ScalableFloat(attributeBasedFloatFormulaParameters[2]))))
+			],
+			new DurationData(DurationType.Infinite),
+			new StackingData(
+				new ScalableInt(stackLimit),
+				new ScalableInt(initialStack),
+				stackPolicy,
+				stackLevelPolicy,
+				magnitudePolicy,
+				overflowPolicy,
+				expirationPolicy,
+				ownerDenialPolicy,
+				ownerOverridePolicy,
+				ownerOverrideStackCountPolicy,
+				levelDenialPolicy,
+				levelOverridePolicy,
+				levelOverrideStackCountPolicy,
+				applicationRefreshPolicy,
+				applicationResetPeriodPolicy,
+				executeOnSuccessfulApplication),
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner1, new Entity(_gameplayTagsManager)));
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, firstExpectedResults);
+
+		TestStackData(
+			target.GameplayEffectsManager.GetEffectInfo(effectData),
+			firstExpectedStackDataCount,
+			firstExpectedStackData,
+			owner1,
+			owner2);
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, secondExpectedResults);
+
+		TestStackData(
+			target.GameplayEffectsManager.GetEffectInfo(effectData),
+			secondExpectedStackDataCount,
+			secondExpectedStackData,
+			owner1,
+			owner2);
+
+		var effect2 = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner2, new Entity(_gameplayTagsManager)));
+
+		target.GameplayEffectsManager.ApplyEffect(effect2);
+
+		TestAttribute(target, targetAttribute, thirdExpectedResults);
+
+		TestStackData(
+			target.GameplayEffectsManager.GetEffectInfo(effectData),
+			thirdExpectedStackDataCount,
+			thirdExpectedStackData,
+			owner1,
+			owner2);
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, fourthExpectedResults);
+
+		TestStackData(
+			target.GameplayEffectsManager.GetEffectInfo(effectData),
+			fourthExpectedStackDataCount,
+			fourthExpectedStackData,
+			owner1,
+			owner2);
+	}
+
 	private static void TestStackData(
 		IEnumerable<GameplayEffectStackInstanceData> stackData,
 		int expectedStackDataCount,
