@@ -1986,6 +1986,85 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 			target);
 	}
 
+	[Theory]
+	[Trait("Duration", null)]
+	[InlineData(
+		"TestAttributeSet.Attribute1",
+		80f,
+		new int[] { 81, 1, 80, 0 },
+		new int[] { 99, 1, 160, 62 })]
+	[InlineData(
+		"TestAttributeSet.Attribute2",
+		10f,
+		new int[] { 12, 2, 10, 0 },
+		new int[] { 22, 2, 20, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute3",
+		-10f,
+		new int[] { 0, 3, -10, -7 },
+		new int[] { 0, 3, -20, -17 })]
+	[InlineData(
+		"TestAttributeSet.Attribute5",
+		200f,
+		new int[] { 99, 5, 200, 106 },
+		new int[] { 99, 5, 400, 306 })]
+	[InlineData(
+		"TestAttributeSet.Attribute90",
+		-45,
+		new int[] { 45, 90, -45, 0 },
+		new int[] { 0, 90, -90, 0 })]
+	public void Unapply_duration_effect_restores_original_attribute_values(
+		string targetAttribute,
+		float effectMagnitude,
+		int[] firstExpectedResults,
+		int[] secondExpectedResults)
+	{
+		var owner = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		var effectData = new GameplayEffectData(
+			"Buff",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(effectMagnitude)))
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner, owner));
+
+		var originalCurrentValue = target.Attributes[targetAttribute].CurrentValue;
+		var originalBaseValue = target.Attributes[targetAttribute].BaseValue;
+		var originalModifier = target.Attributes[targetAttribute].Modifier;
+		var originalOverflow = target.Attributes[targetAttribute].Overflow;
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, firstExpectedResults);
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, secondExpectedResults);
+
+		target.GameplayEffectsManager.UnapplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, firstExpectedResults);
+
+		target.GameplayEffectsManager.UnapplyEffect(effect);
+
+		TestAttribute(
+			target,
+			targetAttribute,
+			[originalCurrentValue, originalBaseValue, originalModifier, originalOverflow]);
+	}
+
 	private static void TestStackData(
 		IEnumerable<GameplayEffectStackInstanceData> stackData,
 		int expectedStackDataCount,
