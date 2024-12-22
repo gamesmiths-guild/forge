@@ -1167,6 +1167,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		new int[] { 11, 1, 10, 0 },
 		new int[] { 21, 1, 20, 0 },
 		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		1,
 		new object[] { new int[] { 2, 1, 0 } },
 		"TestAttributeSet.Attribute1",
 		10f,
@@ -1182,6 +1184,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 	[InlineData(
 		new int[] { 11, 1, 10, 0 },
 		new int[] { 11, 1, 10, 0 },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
 		1,
 		new object[] { new int[] { 2, 1, 0 } },
 		"TestAttributeSet.Attribute1",
@@ -1199,6 +1203,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		new int[] { 41, 1, 40, 0 },
 		new int[] { 51, 1, 50, 0 },
 		1,
+		new object[] { new int[] { 4, 1, 0 } },
+		1,
 		new object[] { new int[] { 5, 1, 0 } },
 		"TestAttributeSet.Attribute1",
 		10f,
@@ -1211,11 +1217,51 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		StackExpirationPolicy.ClearEntireStack,
 		StackOwnerDenialPolicy.AlwaysAllow,
 		StackOwnerOverridePolicy.KeepCurrent)]
+	[InlineData(
+		new int[] { 4, 1, 3, 0 },
+		new int[] { 4, 1, 3, 0 },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		"TestAttributeSet.Attribute1",
+		1,
+		3,
+		3,
+		StackPolicy.AggregateByTarget,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		StackOwnerDenialPolicy.AlwaysAllow,
+		StackOwnerOverridePolicy.Override,
+		StackOwnerOverrideStackCountPolicy.IncreaseStacks)]
+	[InlineData(
+		new int[] { 4, 1, 3, 0 },
+		new int[] { 4, 1, 3, 0 },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		1,
+		new object[] { new int[] { 3, 1, 1 } },
+		"TestAttributeSet.Attribute1",
+		1,
+		3,
+		3,
+		StackPolicy.AggregateByTarget,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.AllowApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		StackOwnerDenialPolicy.AlwaysAllow,
+		StackOwnerOverridePolicy.Override,
+		StackOwnerOverrideStackCountPolicy.IncreaseStacks)]
 	public void Stackable_effect_from_two_different_sources_gives_expected_stack_data(
 		int[] firstExpectedResults,
 		int[] secondExpectedResults,
-		int expectedStackDataCount,
-		object[] expectedStackData,
+		int firstExpectedStackDataCount,
+		object[] firstExpectedStackData,
+		int secondExpectedStackDataCount,
+		object[] secondExpectedStackData,
 		string targetAttribute,
 		float modifierMagnitude,
 		int stackLimit,
@@ -1275,6 +1321,13 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		TestAttribute(target, targetAttribute, firstExpectedResults);
 
+		TestStackData(
+			target.GameplayEffectsManager.GetEffectInfo(effectData),
+			firstExpectedStackDataCount,
+			firstExpectedStackData,
+			owner1,
+			owner2);
+
 		var effect2 = new GameplayEffect(
 			effectData,
 			new GameplayEffectOwnership(owner2, new Entity(_gameplayTagsManager)));
@@ -1285,8 +1338,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		TestStackData(
 			target.GameplayEffectsManager.GetEffectInfo(effectData),
-			expectedStackDataCount,
-			expectedStackData,
+			secondExpectedStackDataCount,
+			secondExpectedStackData,
 			owner1,
 			owner2);
 	}
