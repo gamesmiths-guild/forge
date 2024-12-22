@@ -150,12 +150,12 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 
 		Debug.Assert(
 			!(stackingData.HasValue
-				&& (stackingData.Value.ExecuteOnSuccessfulApplication.HasValue != PeriodicData.HasValue)),
+				&& (stackingData.Value.ExecuteOnSuccessfulApplication.HasValue != periodicData.HasValue)),
 			$"Both {nameof(PeriodicData)} and ExecuteOnSuccessfulApplication must be either defined or undefined.");
 
 		Debug.Assert(
 			!(stackingData.HasValue
-				&& (stackingData.Value.ApplicationResetPeriodPolicy.HasValue != PeriodicData.HasValue)),
+				&& (stackingData.Value.ApplicationResetPeriodPolicy.HasValue != periodicData.HasValue)),
 			$"Both {nameof(PeriodicData)} and {nameof(StackApplicationResetPeriodPolicy)} must be either defined or undefined.");
 
 		Debug.Assert(

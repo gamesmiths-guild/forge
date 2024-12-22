@@ -1577,7 +1577,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		StackOwnerDenialPolicy.AlwaysAllow,
 		StackOwnerOverridePolicy.Override,
 		StackOwnerOverrideStackCountPolicy.ResetStacks)]
-	public void Stackable_attribute_based_effect_with_different_levels_gives_expected_stack_data(
+	public void Stackable_attribute_based_effect_with_different_sources_gives_expected_stack_data(
 		int[] firstExpectedResults,
 		int[] secondExpectedResults,
 		int[] thirdExpectedResults,
@@ -1728,6 +1728,209 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 			fourthExpectedStackData,
 			owner1,
 			owner2);
+	}
+
+	[Theory]
+	[Trait("Stackable", null)]
+
+	[InlineData(
+		new int[] { 4, 4, 0, 0 },
+		new int[] { 64, 64, 0, 0 },
+		new int[] { 64, 64, 0, 0 },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		0,
+		new object[] { },
+		0,
+		new object[] { },
+		"TestAttributeSet.Attribute1",
+		1,
+		10f,
+		1f,
+		40f,
+		0f,
+		3,
+		3,
+		StackPolicy.AggregateBySource,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.RemoveSingleStackAndRefreshDuration,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
+		StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication,
+		false)]
+	[InlineData(
+		new int[] { 4, 4, 0, 0 },
+		new int[] { 40, 40, 0, 0 },
+		new int[] { 64, 64, 0, 0 },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		1,
+		new object[] { new int[] { 2, 1, 0 } },
+		0,
+		new object[] { },
+		"TestAttributeSet.Attribute1",
+		1,
+		10f,
+		1f,
+		13.54f,
+		43.54f,
+		3,
+		3,
+		StackPolicy.AggregateBySource,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.RemoveSingleStackAndRefreshDuration,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
+		StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication,
+		false)]
+	[InlineData(
+		new int[] { 4, 4, 0, 0 },
+		new int[] { 34, 34, 0, 0 },
+		new int[] { 34, 34, 0, 0 },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		0,
+		new object[] { },
+		0,
+		new object[] { },
+		"TestAttributeSet.Attribute1",
+		1,
+		10f,
+		1f,
+		13.54f,
+		43.54f,
+		3,
+		3,
+		StackPolicy.AggregateBySource,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
+		StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication,
+		false)]
+	public void Stackable_periodic_effect_with_duration_updates_correctly(
+		int[] firstExpectedResults,
+		int[] secondExpectedResults,
+		int[] thirdExpectedResults,
+		int firstExpectedStackDataCount,
+		object[] firstExpectedStackData,
+		int secondExpectedStackDataCount,
+		object[] secondExpectedStackData,
+		int thirdExpectedStackDataCount,
+		object[] thirdExpectedStackData,
+		string targetAttribute,
+		int modifierMagnitude,
+		float effectDutation,
+		float effectPeriod,
+		float firstPeriodOfTime,
+		float secondPeriodOfTime,
+		int stackLimit,
+		int initialStack,
+		StackPolicy stackPolicy,
+		StackLevelPolicy stackLevelPolicy,
+		StackMagnitudePolicy magnitudePolicy,
+		StackOverflowPolicy overflowPolicy,
+		StackExpirationPolicy expirationPolicy,
+		StackOwnerDenialPolicy? ownerDenialPolicy = null,
+		StackOwnerOverridePolicy? ownerOverridePolicy = null,
+		StackOwnerOverrideStackCountPolicy? ownerOverrideStackCountPolicy = null,
+		LevelComparison? levelDenialPolicy = null,
+		LevelComparison? levelOverridePolicy = null,
+		StackLevelOverrideStackCountPolicy? levelOverrideStackCountPolicy = null,
+		StackApplicationRefreshPolicy? applicationRefreshPolicy = null,
+		StackApplicationResetPeriodPolicy? applicationResetPeriodPolicy = null,
+		bool? executeOnSuccessfulApplication = null)
+	{
+		var owner = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		var effectData = new GameplayEffectData(
+			"Buff",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(modifierMagnitude)))
+			],
+			new DurationData(DurationType.HasDuration, new ScalableFloat(effectDutation)),
+			new StackingData(
+				new ScalableInt(stackLimit),
+				new ScalableInt(initialStack),
+				stackPolicy,
+				stackLevelPolicy,
+				magnitudePolicy,
+				overflowPolicy,
+				expirationPolicy,
+				ownerDenialPolicy,
+				ownerOverridePolicy,
+				ownerOverrideStackCountPolicy,
+				levelDenialPolicy,
+				levelOverridePolicy,
+				levelOverrideStackCountPolicy,
+				applicationRefreshPolicy,
+				applicationResetPeriodPolicy,
+				executeOnSuccessfulApplication),
+			new PeriodicData(new ScalableFloat(effectPeriod), true));
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner, owner));
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, firstExpectedResults);
+
+		TestStackData(
+			target.GameplayEffectsManager.GetEffectInfo(effectData),
+			firstExpectedStackDataCount,
+			firstExpectedStackData,
+			owner,
+			target);
+
+		target.GameplayEffectsManager.UpdateEffects(firstPeriodOfTime);
+
+		TestAttribute(target, targetAttribute, secondExpectedResults);
+
+		TestStackData(
+			target.GameplayEffectsManager.GetEffectInfo(effectData),
+			secondExpectedStackDataCount,
+			secondExpectedStackData,
+			owner,
+			target);
+
+		target.GameplayEffectsManager.UpdateEffects(secondPeriodOfTime);
+
+		TestAttribute(target, targetAttribute, thirdExpectedResults);
+
+		TestStackData(
+			target.GameplayEffectsManager.GetEffectInfo(effectData),
+			thirdExpectedStackDataCount,
+			thirdExpectedStackData,
+			owner,
+			target);
 	}
 
 	private static void TestStackData(
