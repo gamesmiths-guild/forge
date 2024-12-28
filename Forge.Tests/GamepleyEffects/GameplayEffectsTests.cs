@@ -2298,6 +2298,102 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 			[originalCurrentValue, originalBaseValue, originalModifier, originalOverflow]);
 	}
 
+	[Theory]
+	[Trait("Instant", null)]
+	[InlineData("TestAttributeSet.Attribute1", 10, 11)]
+	[InlineData("TestAttributeSet.Attribute1", -10, 0)]
+	[InlineData("TestAttributeSet.Attribute90", 25, 99)]
+	[InlineData("TestAttributeSet.Attribute3", 20, 23)]
+	[InlineData("TestAttributeSet.Attribute5", -2, 3)]
+	public void Set_by_caller_magnitude_modifies_attribute_accordingly(
+		string targetAttribute,
+		int effectMagnitude,
+		int expectedResult)
+	{
+		var owner = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		var setByCallerTag = GameplayTag.RequestTag(_gameplayTagsManager, "tag");
+
+		var effectData = new GameplayEffectData(
+			"Level Up",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.SetByCaller,
+						setByCallerFloat: new SetByCallerFloat(setByCallerTag)))
+			],
+			new DurationData(DurationType.Instant),
+			null,
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(
+				new Entity(_gameplayTagsManager),
+				owner));
+
+		effect.SetSetByCallerMagnitude(setByCallerTag, effectMagnitude);
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, [expectedResult, expectedResult, 0, 0]);
+	}
+
+	[Theory]
+	[Trait("Instant", null)]
+	[InlineData("TestAttributeSet.Attribute1", "TestAttributeSet.Attribute1", 1, 1, 0, 0, 2)]
+	[InlineData("TestAttributeSet.Attribute2", "TestAttributeSet.Attribute2", 3, 1, 0, 0, 10)]
+	[InlineData("TestAttributeSet.Attribute3", "TestAttributeSet.Attribute2", 2, 2, 1, 1, 14)]
+	[InlineData("TestAttributeSet.Attribute5", "TestAttributeSet.Attribute3", 2, 1, 0, -3, 11)]
+	[InlineData("TestAttributeSet.Attribute90", "TestAttributeSet.Attribute90", 0.5f, -1, 0, 0, 81)]
+	public void Custom_calculator_class_magnitude_modifies_attribute_accordingly(
+		string targetAttribute,
+		string customMagnitudeCalculatorAttribute,
+		float customMagnitudeCalculatorExpoent,
+		float coefficient,
+		float preMultiplyAdditiveValue,
+		float postMultiplyAdditiveValue,
+		int expectedResult)
+	{
+		var owner = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		var customCalculatorClass = new CustomMagnitudeCalculator(
+			customMagnitudeCalculatorAttribute,
+			customMagnitudeCalculatorExpoent);
+
+		var effectData = new GameplayEffectData(
+			"Level Up",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.CustomCalculatorClass,
+						customCalculationBasedFloat: new CustomCalculationBasedFloat(
+							customCalculatorClass,
+							new ScalableFloat(coefficient),
+							new ScalableFloat(preMultiplyAdditiveValue),
+							new ScalableFloat(postMultiplyAdditiveValue))))
+			],
+			new DurationData(DurationType.Instant),
+			null,
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(
+				new Entity(_gameplayTagsManager),
+				owner));
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, [expectedResult, expectedResult, 0, 0]);
+	}
+
 	private static void TestStackData(
 		IEnumerable<GameplayEffectStackInstanceData> stackData,
 		int expectedStackDataCount,
@@ -2370,6 +2466,18 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 			PlayerAttributeSet = new TestAttributeSet();
 			((IForgeEntity)this).AddAttributeSet(PlayerAttributeSet);
+		}
+	}
+
+	private class CustomMagnitudeCalculator(string attribute, float expoent) : IMagnitudeCalculator
+	{
+		private readonly string _attribute = attribute;
+
+		private readonly float _expoent = expoent;
+
+		public float CalculateBaseMagnitude(GameplayEffect effect)
+		{
+			return (float)Math.Pow(effect.Ownership.Owner.Attributes[_attribute].CurrentValue, _expoent);
 		}
 	}
 }

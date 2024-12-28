@@ -8,7 +8,7 @@ namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 public enum MagnitudeCalculationType : byte
 {
 	/// <summary>
-	/// Use <see cref="ScalableFloat"/> to calculate the magnitude. Scales with effect level.
+	/// Use <see cref="Magnitudes.ScalableFloat"/> to calculate the magnitude. Scales with effect level.
 	/// </summary>
 	ScalableFloat = 0,
 
@@ -16,4 +16,14 @@ public enum MagnitudeCalculationType : byte
 	/// Use <see cref="AttributeBasedFloat"/> to calculate the magnitude.
 	/// </summary>
 	AttributeBased = 1,
+
+	/// <summary>
+	/// Use a <see cref="IMagnitudeCalculator"/> for calculating the magnitude.
+	/// </summary>
+	CustomCalculatorClass = 2,
+
+	/// <summary>
+	/// Use <see cref="SetByCallerFloat"/> to let the caller set a custom magnitude.
+	/// </summary>
+	SetByCaller = 3,
 }

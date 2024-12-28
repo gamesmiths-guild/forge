@@ -8,8 +8,8 @@ using Attribute = Gamesmiths.Forge.Attributes.Attribute;
 namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 
 /// <summary>
-/// An attribute based float is a magnitude value thats associates an attribute from an entity. It's used in the general
-/// form of:
+/// An attribute based float is a magnitude value that's associates an attribute from an entity. It's used in the
+/// general form of:
 /// <code>
 /// finalValue = (coefficient * (attributeMagnitude + preMultiply)) + postMultiply;
 /// </code>

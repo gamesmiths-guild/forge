@@ -7,9 +7,6 @@ namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 
 /// <summary>
 /// Provides a magnitude for the <see cref="Modifiers.Modifier"/> in a <see cref="GameplayEffect"/>.
-/// TODO:
-/// CustomCalculationClass
-/// Setbycaller.
 /// </summary>
 public readonly struct ModifierMagnitude : IEquatable<ModifierMagnitude>
 {
@@ -36,6 +33,24 @@ public readonly struct ModifierMagnitude : IEquatable<ModifierMagnitude>
 	public readonly AttributeBasedFloat? AttributeBasedFloat { get; }
 
 	/// <summary>
+	/// Gets the <see cref="CustomCalculationBasedFloat"/> used for calculating this magnitude.
+	/// </summary>
+	/// /// <remarks>
+	/// Is only valid if <see cref="MagnitudeCalculationType"/> ==
+	/// <see cref="MagnitudeCalculationType.CustomCalculatorClass"/>.
+	/// </remarks>
+	public readonly CustomCalculationBasedFloat? CustomCalculationBasedFloat { get; }
+
+	/// <summary>
+	/// Gets the <see cref="SetByCallerFloat"/> used for calculating this magnitude.
+	/// </summary>
+	/// /// <remarks>
+	/// Is only valid if <see cref="MagnitudeCalculationType"/> ==
+	/// <see cref="MagnitudeCalculationType.SetByCaller"/>.
+	/// </remarks>
+	public readonly SetByCallerFloat? SetByCallerFloat { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="ModifierMagnitude"/> struct.
 	/// </summary>
 	/// <param name="magnitudeCalculationType">The type of calculation used for this magnitude.</param>
@@ -43,21 +58,37 @@ public readonly struct ModifierMagnitude : IEquatable<ModifierMagnitude>
 	/// <see cref="MagnitudeCalculationType.ScalableFloat"/>.</param>
 	/// <param name="attributeBasedFloat">The attribute based float used for this magnitude, if set as
 	/// <see cref="MagnitudeCalculationType.AttributeBased"/>.</param>
+	/// <param name="customCalculationBasedFloat">The custom calculation based float used for this magnitude, if set as
+	/// <see cref="MagnitudeCalculationType.CustomCalculatorClass"/>.</param>
+	/// <param name="setByCallerFloat">The set by caller float used for this magnitude, if set as
+	/// <see cref="MagnitudeCalculationType.SetByCaller"/>.</param>
 	public ModifierMagnitude(
 		MagnitudeCalculationType magnitudeCalculationType,
 		ScalableFloat? scalableFloatMagnitude = null,
-		AttributeBasedFloat? attributeBasedFloat = null)
+		AttributeBasedFloat? attributeBasedFloat = null,
+		CustomCalculationBasedFloat? customCalculationBasedFloat = null,
+		SetByCallerFloat? setByCallerFloat = null)
 	{
 		Debug.Assert(
 			(magnitudeCalculationType == MagnitudeCalculationType.ScalableFloat && scalableFloatMagnitude.HasValue
-					&& !attributeBasedFloat.HasValue)
+					&& !attributeBasedFloat.HasValue && !customCalculationBasedFloat.HasValue
+					&& !setByCallerFloat.HasValue)
 				|| (magnitudeCalculationType == MagnitudeCalculationType.AttributeBased && attributeBasedFloat.HasValue
-					&& !scalableFloatMagnitude.HasValue),
+					&& !scalableFloatMagnitude.HasValue && !customCalculationBasedFloat.HasValue
+					&& !setByCallerFloat.HasValue)
+				|| (magnitudeCalculationType == MagnitudeCalculationType.CustomCalculatorClass
+					&& customCalculationBasedFloat.HasValue && !scalableFloatMagnitude.HasValue
+					&& !attributeBasedFloat.HasValue && !setByCallerFloat.HasValue)
+				|| (magnitudeCalculationType == MagnitudeCalculationType.SetByCaller && setByCallerFloat.HasValue
+					&& !attributeBasedFloat.HasValue && !scalableFloatMagnitude.HasValue
+					&& !customCalculationBasedFloat.HasValue),
 			$"Invalid parameters for {nameof(magnitudeCalculationType)} == {magnitudeCalculationType}.");
 
 		MagnitudeCalculationType = magnitudeCalculationType;
 		ScalableFloatMagnitude = scalableFloatMagnitude;
 		AttributeBasedFloat = attributeBasedFloat;
+		CustomCalculationBasedFloat = customCalculationBasedFloat;
+		SetByCallerFloat = setByCallerFloat;
 	}
 
 	/// <summary>
@@ -84,6 +115,18 @@ public readonly struct ModifierMagnitude : IEquatable<ModifierMagnitude>
 					AttributeBasedFloat.HasValue,
 					$"{nameof(AttributeBasedFloat)} should always have a value at this point.");
 				return AttributeBasedFloat.Value.CalculateMagnitude(effect, target, level ?? effect.Level);
+
+			case MagnitudeCalculationType.CustomCalculatorClass:
+				Debug.Assert(
+					CustomCalculationBasedFloat.HasValue,
+					$"{nameof(CustomCalculationBasedFloat)} should always have a value at this point.");
+				return CustomCalculationBasedFloat.Value.CalculateMagnitude(effect, level ?? effect.Level);
+
+			case MagnitudeCalculationType.SetByCaller:
+				Debug.Assert(
+					SetByCallerFloat.HasValue,
+					$"{nameof(SetByCallerFloat)} should always have a value at this point.");
+				return effect.DataTag[SetByCallerFloat.Value.Tag];
 
 			default:
 				return 0;

@@ -1,7 +1,9 @@
 // Copyright © 2024 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.GameplayEffects.Magnitudes;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
+using Gamesmiths.Forge.GameplayTags;
 
 namespace Gamesmiths.Forge.GameplayEffects;
 
@@ -35,6 +37,11 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 	public int Level { get; private set; } = level;
 
 	/// <summary>
+	/// Gets the mapping for custom <see cref="SetByCallerFloat"/> magnitudes.
+	/// </summary>
+	public Dictionary<GameplayTag, float> DataTag { get; } = [];
+
+	/// <summary>
 	/// Level up this effect by exactly one level.
 	/// </summary>
 	public void LevelUp()
@@ -51,6 +58,16 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 	{
 		Level = level;
 		OnLevelChanged?.Invoke(Level);
+	}
+
+	/// <summary>
+	/// Sets a custom magnitude to be used by <see cref="SetByCallerFloat"/> magnitudes.
+	/// </summary>
+	/// <param name="identifierTag">Tag used to identify a custom value to be used.</param>
+	/// <param name="magnitude">The magnitude to be set for the given tag.</param>
+	public void SetSetByCallerMagnitude(GameplayTag identifierTag, float magnitude)
+	{
+		DataTag.Add(identifierTag, magnitude);
 	}
 
 	internal static void Execute(in GameplayEffectEvaluatedData effectEvaluatedData)
