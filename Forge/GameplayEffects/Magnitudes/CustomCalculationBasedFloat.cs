@@ -1,5 +1,7 @@
 // Copyright © 2024 Gamesmiths Guild.
 
+using Gamesmiths.Forge.Core;
+
 namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 
 /// <summary>
@@ -16,11 +18,14 @@ namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 /// <param name="coefficient">Value to be multiplied with the calculcuated magnitude.</param>
 /// <param name="preMultiplyAdditiveValue">Value to be added to the magnitude before multiplying the coeficient.</param>
 /// <param name="postMultiplyAdditiveValue">Value to be added to the magnitude after multiplying the coeficient.</param>
+/// <param name="lookupCurve">If provided, the final evaluated magnitude will be used as a lookup into this curve.
+/// </param>
 public readonly struct CustomCalculationBasedFloat(
 	IMagnitudeCalculator magnitudeCalculatorClass,
 	ScalableFloat coefficient,
 	ScalableFloat preMultiplyAdditiveValue,
-	ScalableFloat postMultiplyAdditiveValue) : IEquatable<CustomCalculationBasedFloat>
+	ScalableFloat postMultiplyAdditiveValue,
+	Curve? lookupCurve = null) : IEquatable<CustomCalculationBasedFloat>
 {
 	/// <summary>
 	/// Gets the magnitude calculator class used to calculate the magnitude.
@@ -43,6 +48,11 @@ public readonly struct CustomCalculationBasedFloat(
 	public ScalableFloat PostMultiplyAdditiveValue { get; } = postMultiplyAdditiveValue;
 
 	/// <summary>
+	/// Gets the curve entry to use as a lookup instead of directly using the evaluated magnitude.
+	/// </summary>
+	public Curve? LookupCurve { get; } = lookupCurve;
+
+	/// <summary>
 	/// Calculates the final magnitude based on the CustomCalculationBasedFloat configurations.
 	/// </summary>
 	/// <param name="effect">The source effect that will be used for calculating this magnitude.</param>
@@ -52,8 +62,15 @@ public readonly struct CustomCalculationBasedFloat(
 	{
 		var baseMagnitude = MagnitudeCalculatorClass.CalculateBaseMagnitude(effect);
 
-		return (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + baseMagnitude))
+		var finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + baseMagnitude))
 			+ PostMultiplyAdditiveValue.GetValue(level);
+
+		if (LookupCurve.HasValue)
+		{
+			finalMagnitude = LookupCurve.Value.Evaluate(finalMagnitude);
+		}
+
+		return finalMagnitude;
 	}
 
 	/// <inheritdoc/>

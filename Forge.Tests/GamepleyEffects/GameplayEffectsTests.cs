@@ -104,6 +104,57 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 	[Theory]
 	[Trait("Instant", null)]
+	[InlineData("TestAttributeSet.Attribute1", "TestAttributeSet.Attribute1", 2, 1, 2, 5)]
+	[InlineData("TestAttributeSet.Attribute1", "TestAttributeSet.Attribute2", 2, 1, 2, 4)]
+	[InlineData("TestAttributeSet.Attribute3", "TestAttributeSet.Attribute5", 1.5f, 2.2f, 3.5f, 4)]
+	[InlineData("TestAttributeSet.Attribute90", "TestAttributeSet.Attribute5", -1, 5, 2, 94)]
+	public void Attribute_based_effect_with_curve_modifies_values_based_on_curve_lookup(
+		string targetAttribute,
+		string backingAttribute,
+		float coefficient,
+		float preMultiplyAdditiveValue,
+		float postMultiplyAdditiveValue,
+		int expectedResult)
+	{
+		var owner = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		var effectData = new GameplayEffectData(
+			"Level Up",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source),
+							AttributeBasedFloatCalculationType.AttributeBaseValue,
+							new ScalableFloat(coefficient),
+							new ScalableFloat(preMultiplyAdditiveValue),
+							new ScalableFloat(postMultiplyAdditiveValue),
+							lookupCurve: new Curve(
+								[
+									new CurveKey(6, 4),
+									new CurveKey(8, 3),
+									new CurveKey(14, 1)
+								]))))
+			],
+			new DurationData(DurationType.Instant),
+			null,
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner, new Entity(_gameplayTagsManager)));
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, [expectedResult, expectedResult, 0, 0]);
+	}
+
+	[Theory]
+	[Trait("Instant", null)]
 	[InlineData("TestAttributeSet.Attribute1", 4, 5, 4, 25, -0.66f, 8, 42, 42)]
 	[InlineData("TestAttributeSet.Attribute2", 8, 10, 2, 30, -0.66f, 10, 99, 99)]
 	[InlineData("TestAttributeSet.Attribute3", 20, 23, 0.5f, 34, 1, 68, -10, 0)]
@@ -2378,6 +2429,65 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
 							new ScalableFloat(postMultiplyAdditiveValue))))
+			],
+			new DurationData(DurationType.Instant),
+			null,
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(
+				new Entity(_gameplayTagsManager),
+				owner));
+
+		target.GameplayEffectsManager.ApplyEffect(effect);
+
+		TestAttribute(target, targetAttribute, [expectedResult, expectedResult, 0, 0]);
+	}
+
+	[Theory]
+	[Trait("Instant", null)]
+	[InlineData("TestAttributeSet.Attribute1", "TestAttributeSet.Attribute1", 1, 1, 0, 0, 5)]
+	[InlineData("TestAttributeSet.Attribute2", "TestAttributeSet.Attribute2", 3, 1, 0, 0, 4)]
+	[InlineData("TestAttributeSet.Attribute3", "TestAttributeSet.Attribute2", 2, 2, 1, 1, 4)]
+	[InlineData("TestAttributeSet.Attribute5", "TestAttributeSet.Attribute3", 2, 1, 0, -3, 8)]
+	[InlineData("TestAttributeSet.Attribute90", "TestAttributeSet.Attribute90", 0.5f, -1, 0, 0, 94)]
+	public void Custom_calculator_class_magnitude_with_curve_modifies_attribute_accordingly(
+		string targetAttribute,
+		string customMagnitudeCalculatorAttribute,
+		float customMagnitudeCalculatorExpoent,
+		float coefficient,
+		float preMultiplyAdditiveValue,
+		float postMultiplyAdditiveValue,
+		int expectedResult)
+	{
+		var owner = new Entity(_gameplayTagsManager);
+		var target = new Entity(_gameplayTagsManager);
+
+		var customCalculatorClass = new CustomMagnitudeCalculator(
+			customMagnitudeCalculatorAttribute,
+			customMagnitudeCalculatorExpoent);
+
+		var effectData = new GameplayEffectData(
+			"Level Up",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.CustomCalculatorClass,
+						customCalculationBasedFloat: new CustomCalculationBasedFloat(
+							customCalculatorClass,
+							new ScalableFloat(coefficient),
+							new ScalableFloat(preMultiplyAdditiveValue),
+							new ScalableFloat(postMultiplyAdditiveValue),
+							new Curve(
+								[
+									new CurveKey(1, 4),
+									new CurveKey(6, 3),
+									new CurveKey(8, 2),
+									new CurveKey(11, 1),
+								]))))
 			],
 			new DurationData(DurationType.Instant),
 			null,

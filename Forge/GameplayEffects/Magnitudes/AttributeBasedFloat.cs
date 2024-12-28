@@ -25,13 +25,16 @@ namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 /// <param name="finalChannel">In case <paramref name="attributeCalculationType"/> ==
 /// <see cref="AttributeBasedFloatCalculationType.AttributeMagnitudeEvaluatedUpToChannel"/> a final channel for the
 /// calculation must be provided.</param>
+/// <param name="lookupCurve">If provided, the final evaluated magnitude will be used as a lookup into this curve.
+/// </param>
 public readonly struct AttributeBasedFloat(
 	AttributeCaptureDefinition backingAttribute,
 	AttributeBasedFloatCalculationType attributeCalculationType,
 	ScalableFloat coefficient,
 	ScalableFloat preMultiplyAdditiveValue,
 	ScalableFloat postMultiplyAdditiveValue,
-	int? finalChannel = null) : IEquatable<AttributeBasedFloat>
+	int? finalChannel = null,
+	Curve? lookupCurve = null) : IEquatable<AttributeBasedFloat>
 {
 	/// <summary>
 	/// Gets the capture definition for the backing attribute.
@@ -63,6 +66,11 @@ public readonly struct AttributeBasedFloat(
 	/// <see cref="AttributeBasedFloatCalculationType.AttributeMagnitudeEvaluatedUpToChannel"/>.
 	/// </summary>
 	public int? FinalChannel { get; } = finalChannel;
+
+	/// <summary>
+	/// Gets the curve entry to use as a lookup instead of directly using the evaluated magnitude.
+	/// </summary>
+	public Curve? LookupCurve { get; } = lookupCurve;
 
 	/// <summary>
 	/// Calculates the final magnitude based on the AttributeBasedFloat configurations.
@@ -115,8 +123,15 @@ public readonly struct AttributeBasedFloat(
 				break;
 		}
 
-		return (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + magnitude))
+		var finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + magnitude))
 			+ PostMultiplyAdditiveValue.GetValue(level);
+
+		if (LookupCurve.HasValue)
+		{
+			finalMagnitude = LookupCurve.Value.Evaluate(finalMagnitude);
+		}
+
+		return finalMagnitude;
 	}
 
 	/// <inheritdoc/>
