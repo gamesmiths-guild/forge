@@ -95,7 +95,7 @@ public readonly struct ModifierMagnitude : IEquatable<ModifierMagnitude>
 	/// Gets the calculated magnitude for a given <see cref="GameplayEffect"/> and this <see cref="ModifierMagnitude"/>
 	/// configurations.
 	/// </summary>
-	/// <param name="effect">The GameplayEffect to calculate the magnitude for.</param>
+	/// <param name="effect">The gameplay effect to calculate the magnitude for.</param>
 	/// <param name="target">The target which might be used for the magnitude calculation.</param>
 	/// <param name="level">An optional custom level used for magnitude calculation. Will use the effect's level if not
 	/// provided.</param>

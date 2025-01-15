@@ -29,9 +29,9 @@ internal class ActiveGameplayEffect
 		DurationType.HasDuration &&
 		RemainingDuration <= 0;
 
-	private GameplayEffectData EffectData => GameplayEffectEvaluatedData.GameplayEffect.EffectData;
+	internal GameplayEffectData EffectData => GameplayEffectEvaluatedData.GameplayEffect.EffectData;
 
-	private GameplayEffect GameplayEffect => GameplayEffectEvaluatedData.GameplayEffect;
+	internal GameplayEffect GameplayEffect => GameplayEffectEvaluatedData.GameplayEffect;
 
 	internal ActiveGameplayEffect(GameplayEffect gameplayEffect, IForgeEntity target)
 	{
@@ -299,6 +299,8 @@ internal class ActiveGameplayEffect
 
 	internal void RemoveStack()
 	{
+		GameplayEffectEvaluatedData.Target.GameplayEffectsManager.OnActiveGameplayEffectRemoved_InternalCall(this);
+
 		if (_stackCount == 1)
 		{
 			Unapply();

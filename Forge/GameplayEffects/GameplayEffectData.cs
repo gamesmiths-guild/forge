@@ -1,6 +1,7 @@
 // Copyright © 2024 Gamesmiths Guild.
 
 using System.Diagnostics;
+using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
@@ -52,6 +53,11 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 	public bool SnapshopLevel { get; }
 
 	/// <summary>
+	/// Gets the list of gameplay effect components that further customize this gameplay effect behaviour.
+	/// </summary>
+	public IGameplayEffectComponent[] GameplayEffectComponents { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="GameplayEffectData"/> struct.
 	/// </summary>
 	/// <param name="name">The name of this gameplay effect.</param>
@@ -61,13 +67,15 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 	/// <param name="periodicData">The periodic data for this gameplay effect, if it's periodic.</param>
 	/// <param name="snapshopLevel">Whether or not this gameplay effect snapshots the level at the momment of creation.
 	/// </param>
+	/// <param name="gameplayEffectComponents">The list of gameplay effects components for this gameplay effect.</param>
 	public GameplayEffectData(
 		string name,
 		Modifier[] modifiers,
 		DurationData durationData,
 		StackingData? stackingData,
 		PeriodicData? periodicData,
-		bool snapshopLevel = true)
+		bool snapshopLevel = true,
+		IGameplayEffectComponent[]? gameplayEffectComponents = null)
 	{
 		Debug.Assert(
 			!(periodicData.HasValue && durationData.Type == DurationType.Instant),
@@ -176,6 +184,7 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 		StackingData = stackingData;
 		PeriodicData = periodicData;
 		SnapshopLevel = snapshopLevel;
+		GameplayEffectComponents = gameplayEffectComponents ?? [];
 	}
 
 	/// <inheritdoc/>
@@ -190,6 +199,11 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 		foreach (Modifier modifier in Modifiers)
 		{
 			hash.Add(modifier);
+		}
+
+		foreach (IGameplayEffectComponent component in GameplayEffectComponents)
+		{
+			hash.Add(component);
 		}
 
 		return hash.ToHashCode();
@@ -214,7 +228,8 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 			&& Nullable.Equals(StackingData, other.StackingData)
 			&& Nullable.Equals(PeriodicData, other.PeriodicData)
 			&& SnapshopLevel == other.SnapshopLevel
-			&& Modifiers.SequenceEqual(other.Modifiers);
+			&& Modifiers.SequenceEqual(other.Modifiers)
+			&& GameplayEffectComponents.SequenceEqual(other.GameplayEffectComponents);
 	}
 
 	/// <summary>

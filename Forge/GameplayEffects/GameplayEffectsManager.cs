@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Stacking;
 
@@ -15,7 +16,10 @@ public class GameplayEffectsManager(IForgeEntity owner)
 {
 	private readonly List<ActiveGameplayEffect> _activeEffects = [];
 
-	private readonly IForgeEntity _owner = owner;
+	/// <summary>
+	/// Gets the owner of this gameplay effects manager.
+	/// </summary>
+	public IForgeEntity Owner { get; } = owner;
 
 	/// <summary>
 	/// Applies an effect to the owner of this manager.
@@ -23,9 +27,21 @@ public class GameplayEffectsManager(IForgeEntity owner)
 	/// <param name="gameplayEffect">The instance of the gameplay effect to be applied.</param>
 	public void ApplyEffect(GameplayEffect gameplayEffect)
 	{
+		if (!gameplayEffect.CanApply(Owner))
+		{
+			return;
+		}
+
 		if (gameplayEffect.EffectData.DurationData.Type == DurationType.Instant)
 		{
-			gameplayEffect.Execute(_owner);
+			var evaluatedData = new GameplayEffectEvaluatedData(gameplayEffect, Owner);
+
+			foreach (IGameplayEffectComponent component in gameplayEffect.EffectData.GameplayEffectComponents)
+			{
+				component.OnGameplayEffectApplied(Owner, in evaluatedData);
+			}
+
+			GameplayEffect.Execute(evaluatedData);
 			return;
 		}
 
@@ -39,9 +55,16 @@ public class GameplayEffectsManager(IForgeEntity owner)
 
 		if (stackableEffect is not null)
 		{
-			_ = stackableEffect.AddStack(gameplayEffect);
+			var successfulApplication = stackableEffect.AddStack(gameplayEffect);
 
-			// TODO: Trigger events when stack is applied or denied.
+			if (successfulApplication)
+			{
+				foreach (IGameplayEffectComponent component in stackableEffect.EffectData.GameplayEffectComponents)
+				{
+					component.OnGameplayEffectApplied(Owner, stackableEffect.GameplayEffectEvaluatedData);
+				}
+			}
+
 			return;
 		}
 
@@ -59,7 +82,7 @@ public class GameplayEffectsManager(IForgeEntity owner)
 		if (effectToRemove is not null)
 		{
 			effectToRemove.Unapply();
-			_activeEffects.Remove(effectToRemove);
+			RemoveActiveGameplayEffect(effectToRemove);
 		}
 	}
 
@@ -77,7 +100,7 @@ public class GameplayEffectsManager(IForgeEntity owner)
 		if (effectToRemove is not null)
 		{
 			effectToRemove.Unapply();
-			_activeEffects.Remove(effectToRemove);
+			RemoveActiveGameplayEffect(effectToRemove);
 		}
 	}
 
@@ -95,7 +118,10 @@ public class GameplayEffectsManager(IForgeEntity owner)
 			effect.Update(deltaTime);
 		}
 
-		_activeEffects.RemoveAll(x => x.IsExpired);
+		foreach (ActiveGameplayEffect expiredEffect in _activeEffects.Where(x => x.IsExpired).ToArray())
+		{
+			RemoveActiveGameplayEffect(expiredEffect);
+		}
 	}
 
 	/// <summary>
@@ -109,12 +135,29 @@ public class GameplayEffectsManager(IForgeEntity owner)
 		return ConvertToStackInstanceData(filteredEffects);
 	}
 
-	/// <summary>
-	/// Checks if the effect matches the stacking policy.
-	/// </summary>
-	/// <param name="existingEffect">The existing active effect to check.</param>
-	/// <param name="newEffect">The new gameplay effect being applied.</param>
-	/// <returns><see langword="true"/> if the stacking policy matches; otherwise, <see langword="false"/>.</returns>
+	internal void OnGameplayEffectExecuted_InternalCall(GameplayEffectEvaluatedData executedEffectEvaluatedData)
+	{
+		foreach (IGameplayEffectComponent component in
+			executedEffectEvaluatedData.GameplayEffect.EffectData.GameplayEffectComponents)
+		{
+			component.OnGameplayEffectExecuted(Owner, in executedEffectEvaluatedData);
+		}
+	}
+
+	internal void OnActiveGameplayEffectRemoved_InternalCall(ActiveGameplayEffect removedEffect)
+	{
+		foreach (IGameplayEffectComponent component in removedEffect.GameplayEffect.EffectData.GameplayEffectComponents)
+		{
+			component.OnActiveGameplayEffectRemoved(
+				Owner,
+				new ActiveEffectEvaluatedData(
+					removedEffect.GameplayEffectEvaluatedData,
+					removedEffect.RemainingDuration,
+					removedEffect.NextPeriodicTick,
+					removedEffect.ExecutionCount));
+		}
+	}
+
 	private static bool MatchesStackPolicy(ActiveGameplayEffect existingEffect, GameplayEffect newEffect)
 	{
 		Debug.Assert(
@@ -125,12 +168,6 @@ public class GameplayEffectsManager(IForgeEntity owner)
 			   existingEffect.GameplayEffectEvaluatedData.GameplayEffect.Ownership.Owner == newEffect.Ownership.Owner;
 	}
 
-	/// <summary>
-	/// Checks if the effect matches the stack level policy.
-	/// </summary>
-	/// <param name="existingEffect">The existing active effect to check.</param>
-	/// <param name="newEffect">The new gameplay effect being applied.</param>
-	/// <returns><see langword="true"/> if the stack level policy matches; otherwise, <see langword="false"/>.</returns>
 	private static bool MatchesStackLevelPolicy(ActiveGameplayEffect existingEffect, GameplayEffect newEffect)
 	{
 		Debug.Assert(
@@ -166,11 +203,6 @@ public class GameplayEffectsManager(IForgeEntity owner)
 		return _activeEffects.Where(x => x.GameplayEffectEvaluatedData.GameplayEffect == effect);
 	}
 
-	/// <summary>
-	/// Finds an existing stackable effect that matches the given effect's stacking policy.
-	/// </summary>
-	/// <param name="gameplayEffect">The gameplay effect to check for stackable matches.</param>
-	/// <returns>The matching stackable effect, or <see langword="null"/> if none are found.</returns>
 	private ActiveGameplayEffect? FindStackableEffect(GameplayEffect gameplayEffect)
 	{
 		return FilterEffectsByData(gameplayEffect.EffectData).FirstOrDefault(x =>
@@ -178,14 +210,38 @@ public class GameplayEffectsManager(IForgeEntity owner)
 			MatchesStackLevelPolicy(x, gameplayEffect));
 	}
 
-	/// <summary>
-	/// Applies a new effect to the owner.
-	/// </summary>
-	/// <param name="gameplayEffect">The gameplay effect to apply.</param>
 	private void ApplyNewEffect(GameplayEffect gameplayEffect)
 	{
-		var activeEffect = new ActiveGameplayEffect(gameplayEffect, _owner);
+		var activeEffect = new ActiveGameplayEffect(gameplayEffect, Owner);
 		_activeEffects.Add(activeEffect);
 		activeEffect.Apply();
+
+		foreach (IGameplayEffectComponent component in gameplayEffect.EffectData.GameplayEffectComponents)
+		{
+			component.OnActiveGameplayEffectAdded(
+				Owner,
+				new ActiveEffectEvaluatedData(
+					activeEffect.GameplayEffectEvaluatedData,
+					activeEffect.RemainingDuration,
+					activeEffect.NextPeriodicTick,
+					activeEffect.ExecutionCount));
+			component.OnGameplayEffectApplied(Owner, activeEffect.GameplayEffectEvaluatedData);
+		}
+	}
+
+	private void RemoveActiveGameplayEffect(ActiveGameplayEffect effectToRemove)
+	{
+		foreach (IGameplayEffectComponent component in effectToRemove.EffectData.GameplayEffectComponents)
+		{
+			component.OnActiveGameplayEffectRemoved(
+				Owner,
+				new ActiveEffectEvaluatedData(
+					effectToRemove.GameplayEffectEvaluatedData,
+					effectToRemove.RemainingDuration,
+					effectToRemove.NextPeriodicTick,
+					effectToRemove.ExecutionCount));
+		}
+
+		_activeEffects.Remove(effectToRemove);
 	}
 }

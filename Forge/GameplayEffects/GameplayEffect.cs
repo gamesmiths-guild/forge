@@ -1,6 +1,7 @@
 // Copyright © 2024 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
 using Gamesmiths.Forge.GameplayTags;
@@ -89,10 +90,21 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 					break;
 			}
 		}
+
+		effectEvaluatedData.Target.GameplayEffectsManager.OnGameplayEffectExecuted_InternalCall(effectEvaluatedData);
 	}
 
-	internal void Execute(IForgeEntity target)
+	internal bool CanApply(IForgeEntity target)
 	{
-		Execute(new GameplayEffectEvaluatedData(this, target));
+		foreach (IGameplayEffectComponent component in EffectData.GameplayEffectComponents)
+		{
+			GameplayEffect effect = this;
+			if (!component.CanApplyGameplayEffect(in target, in effect))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 }

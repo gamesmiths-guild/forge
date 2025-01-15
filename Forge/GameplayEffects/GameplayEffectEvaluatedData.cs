@@ -11,22 +11,56 @@ using Attribute = Gamesmiths.Forge.Attributes.Attribute;
 
 namespace Gamesmiths.Forge.GameplayEffects;
 
-internal readonly struct GameplayEffectEvaluatedData
+/// <summary>
+/// Represents the precomputed static data for a gameplay effect that has been applied.
+/// </summary>
+/// <remarks>
+/// Optimizes performance by avoiding repeated complex calculations and serves as data for event arguments.
+/// </remarks>
+public readonly struct GameplayEffectEvaluatedData
 {
+	/// <summary>
+	/// Gets the gameplay effect for this evaluated data.
+	/// </summary>
 	public GameplayEffect GameplayEffect { get; }
 
+	/// <summary>
+	/// Gets the target used for the evaluation of this gameplay effect.
+	/// </summary>
 	public IForgeEntity Target { get; }
 
+	/// <summary>
+	/// Gets the stack count of the effect at the moment of the evaluation.
+	/// </summary>
 	public int Stack { get; }
 
+	/// <summary>
+	/// Gets the level of the effect at the moment of the evaluation.
+	/// </summary>
 	public int Level { get; }
 
+	/// <summary>
+	/// Gets the duration of the effect at the moment of the evaluation.
+	/// </summary>
 	public float Duration { get; }
 
+	/// <summary>
+	/// Gets the period of the effect at the moment of the evaluation.
+	/// </summary>
 	public float Period { get; }
 
+	/// <summary>
+	/// Gets the evaluated data for the modifiers of the gameplay effect.
+	/// </summary>
 	public ModifierEvaluatedData[] ModifiersEvaluatedData { get; }
 
+	/// <summary>
+	/// Initializes a new instance of the <see cref="GameplayEffectEvaluatedData"/> struct.
+	/// </summary>
+	/// <param name="gameplayEffect">The taget gameplay effect of this evaluated data.</param>
+	/// <param name="target">The target of this evaluated data.</param>
+	/// <param name="stack">The stack for this evaluated data.</param>
+	/// <param name="level">The level for this evaluated data.</param>
 	public GameplayEffectEvaluatedData(
 		GameplayEffect gameplayEffect,
 		IForgeEntity target,
