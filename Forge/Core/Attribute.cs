@@ -2,7 +2,7 @@
 
 using System.Diagnostics;
 
-namespace Gamesmiths.Forge.Attributes;
+namespace Gamesmiths.Forge.Core;
 
 /// <summary>
 /// Represents a numeric property or characteristic of a gameplay object. Attributes can be used to model  a wide
@@ -110,9 +110,7 @@ public sealed class Attribute
 		UpdateCachedValues();
 
 		if (CurrentValue != oldValue)
-		{
 			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
-		}
 	}
 
 	internal void SetMaxValue(int newMaxValue)
@@ -126,9 +124,7 @@ public sealed class Attribute
 		UpdateCachedValues();
 
 		if (CurrentValue != oldValue)
-		{
 			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
-		}
 	}
 
 	internal void ExecuteOverride(int newValue)
@@ -140,9 +136,7 @@ public sealed class Attribute
 		UpdateCachedValues();
 
 		if (CurrentValue != oldValue)
-		{
 			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
-		}
 	}
 
 	internal void ExecuteFlatModifier(int value)
@@ -154,9 +148,7 @@ public sealed class Attribute
 		UpdateCachedValues();
 
 		if (CurrentValue != oldValue)
-		{
 			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
-		}
 	}
 
 	internal void ExecutePercentModifier(float value)
@@ -168,9 +160,7 @@ public sealed class Attribute
 		UpdateCachedValues();
 
 		if (CurrentValue != oldValue)
-		{
 			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
-		}
 	}
 
 	internal void AddOverride(int value, int channel)
@@ -182,9 +172,7 @@ public sealed class Attribute
 		UpdateCachedValues();
 
 		if (CurrentValue != oldValue)
-		{
 			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
-		}
 	}
 
 	internal void ClearOverride(int channel)
@@ -196,9 +184,7 @@ public sealed class Attribute
 		UpdateCachedValues();
 
 		if (CurrentValue != oldValue)
-		{
 			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
-		}
 	}
 
 	internal void AddFlatModifier(int value, int channel)
@@ -210,9 +196,7 @@ public sealed class Attribute
 		UpdateCachedValues();
 
 		if (CurrentValue != oldValue)
-		{
 			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
-		}
 	}
 
 	internal void AddPercentModifier(float value, int channel)
@@ -224,9 +208,7 @@ public sealed class Attribute
 		UpdateCachedValues();
 
 		if (CurrentValue != oldValue)
-		{
 			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
-		}
 	}
 
 	internal float CalculateMagnitudeUpToChannel(int finalChanel)
@@ -268,9 +250,7 @@ public sealed class Attribute
 		Modifier = (int)evaluatedValue - BaseValue;
 
 		if (evaluatedValue > Max)
-		{
 			Overflow = (int)evaluatedValue - Max;
-		}
 		else if (evaluatedValue < Min)
 		{
 			Overflow = (int)evaluatedValue - Min;

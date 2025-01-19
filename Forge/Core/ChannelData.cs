@@ -1,6 +1,6 @@
 // Copyright © 2024 Gamesmiths Guild.
 
-namespace Gamesmiths.Forge.Attributes;
+namespace Gamesmiths.Forge.Core;
 
 /// <summary>
 /// Channel configuration for Attributes.

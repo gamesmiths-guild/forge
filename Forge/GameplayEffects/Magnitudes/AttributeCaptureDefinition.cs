@@ -1,7 +1,7 @@
 // Copyright © 2024 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
-using Attribute = Gamesmiths.Forge.Attributes.Attribute;
+using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 

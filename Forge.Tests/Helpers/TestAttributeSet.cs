@@ -1,7 +1,7 @@
 // Copyright © 2024 Gamesmiths Guild.
 
-using Gamesmiths.Forge.Attributes;
-using Attribute = Gamesmiths.Forge.Attributes.Attribute;
+using Gamesmiths.Forge.Core;
+using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
 

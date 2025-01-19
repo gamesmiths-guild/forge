@@ -1,9 +1,8 @@
 // Copyright © 2024 Gamesmiths Guild.
 
 using System.Diagnostics;
-using Gamesmiths.Forge.Core;
 
-namespace Gamesmiths.Forge.Attributes;
+namespace Gamesmiths.Forge.Core;
 
 /// <summary>
 /// <para>A collection of attributes grouped together for cohesive management. Use this to organize attributes that

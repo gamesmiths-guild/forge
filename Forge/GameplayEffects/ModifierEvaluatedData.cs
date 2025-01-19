@@ -2,7 +2,7 @@
 
 using System.Diagnostics;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
-using Attribute = Gamesmiths.Forge.Attributes.Attribute;
+using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.GameplayEffects;
 
