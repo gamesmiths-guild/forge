@@ -10,18 +10,24 @@ public class TestEntity : IForgeEntity
 {
 	public TestAttributeSet PlayerAttributeSet { get; }
 
-	public GameplayEffectsManager GameplayEffectsManager { get; }
-
 	public Attributes Attributes { get; }
 
-	public GameplayTagContainer GameplayTags { get; }
+	public InheritableTags GameplayTags { get; }
+
+	public GameplayEffectsManager GameplayEffectsManager { get; }
 
 	public TestEntity(GameplayTagsManager tagsManager)
 	{
 		PlayerAttributeSet = new TestAttributeSet();
+		var originalTags = new GameplayTagContainer(
+			tagsManager,
+			[
+				GameplayTag.RequestTag(tagsManager, "enemy.undead.zombie"),
+				GameplayTag.RequestTag(tagsManager, "color.green")
+			]);
 
 		GameplayEffectsManager = new(this);
-		Attributes = new Attributes(PlayerAttributeSet);
-		GameplayTags = new(tagsManager);
+		Attributes = new(PlayerAttributeSet);
+		GameplayTags = new(originalTags);
 	}
 }
