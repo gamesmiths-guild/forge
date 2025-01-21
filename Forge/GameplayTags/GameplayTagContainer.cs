@@ -89,6 +89,10 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	public GameplayTagContainer(GameplayTagsManager gameplayTagsManager, HashSet<GameplayTag> sourceTags)
 		: this(gameplayTagsManager)
 	{
+		Debug.Assert(
+			sourceTags.All(x => x.GameplayTagsManager == gameplayTagsManager),
+			"All tags must have the same GameplayTagsManager.");
+
 		GameplayTags.UnionWith(sourceTags);
 		FillParentTags();
 	}
@@ -203,76 +207,6 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 
 		deserializedContainer.FillParentTags();
 		return true;
-	}
-
-	/// <summary>
-	/// Adds the given <see cref="GameplayTag"/> to this container.
-	/// </summary>
-	/// <param name="tag">The <see cref="GameplayTag"/> to be added to the container.</param>
-	public void AddTag(GameplayTag tag)
-	{
-		if (tag != GameplayTag.Empty && GameplayTags.Add(tag))
-		{
-			ParentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
-		}
-	}
-
-	/// <summary>
-	/// Removes a specific <see cref="GameplayTag"/> from the container, if present.
-	/// </summary>
-	/// <param name="tag">The <see cref="GameplayTag"/> to remove from the container.</param>
-	/// <param name="deferParentTags">Bypasses calling <see cref="FillParentTags"/> for performance reasons.
-	/// <para>If <see langword="true"/>, <see cref="FillParentTags"/> must be handled by the caller.</para></param>
-	/// <returns><see langword="true"/> if the tag was removed; otherwise, <see langword="false"/>.</returns>
-	public bool RemoveTag(GameplayTag tag, bool deferParentTags = false)
-	{
-		if (GameplayTags.Remove(tag))
-		{
-			if (!deferParentTags)
-			{
-				// Rebuild the parent table from scratch, as tags may provide the same parent tag.
-				FillParentTags();
-			}
-
-			return true;
-		}
-
-		return false;
-	}
-
-	/// <summary>
-	/// Removes all tags in <paramref name="otherContainer"/> from this container.
-	/// </summary>
-	/// <param name="otherContainer">A <see cref="GameplayTagContainer"/> with the tags to remove from the container.
-	/// </param>
-	public void RemoveTags(GameplayTagContainer otherContainer)
-	{
-		var changed = false;
-
-		foreach (GameplayTag tag in otherContainer)
-		{
-			changed = GameplayTags.Remove(tag) || changed;
-		}
-
-		if (changed)
-		{
-			// Rebuild once at the end.
-			FillParentTags();
-		}
-	}
-
-	/// <summary>
-	/// Clears all tags from the container while maintaining the internal capacity as specified.
-	/// </summary>
-	/// <param name="capacity">The desired initial capacity after the reset.</param>
-	public void Reset(int capacity)
-	{
-		GameplayTags.Clear();
-		GameplayTags.EnsureCapacity(capacity);
-
-		// On average, the size of ParentTags is comparable to that of GameplayTags.
-		ParentTags.Clear();
-		ParentTags.EnsureCapacity(capacity);
 	}
 
 	/// <summary>
@@ -451,31 +385,6 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 		return query.Matches(this);
 	}
 
-	/// <summary>
-	/// Merges all tags from another container into this one.
-	/// </summary>
-	/// <remarks>
-	/// NOTE: This operation effectively computes the union of the tags in this container and
-	/// <paramref name="otherContainer"/>.
-	/// </remarks>
-	/// <param name="otherContainer"><see cref="GameplayTagContainer"/> with tags to be included in this container.
-	/// </param>
-	public void AppendTags(GameplayTagContainer otherContainer)
-	{
-		GameplayTags.EnsureCapacity(GameplayTags.Count + otherContainer.GameplayTags.Count);
-		ParentTags.EnsureCapacity(ParentTags.Count + otherContainer.ParentTags.Count);
-
-		foreach (GameplayTag otherTag in otherContainer.GameplayTags)
-		{
-			GameplayTags.Add(otherTag);
-		}
-
-		foreach (GameplayTag otherTag in otherContainer.ParentTags)
-		{
-			ParentTags.Add(otherTag);
-		}
-	}
-
 	/// <inheritdoc />
 	public override string ToString()
 	{
@@ -543,6 +452,73 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	}
 
 #pragma warning disable T0009 // Internal Styling Rule T0009
+
+	internal void AddTag(GameplayTag tag)
+	{
+		if (tag != GameplayTag.Empty && GameplayTags.Add(tag))
+		{
+			ParentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
+		}
+	}
+
+	internal bool RemoveTag(GameplayTag tag, bool deferParentTags = false)
+	{
+		if (GameplayTags.Remove(tag))
+		{
+			if (!deferParentTags)
+			{
+				// Rebuild the parent table from scratch, as tags may provide the same parent tag.
+				FillParentTags();
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	internal void RemoveTags(GameplayTagContainer otherContainer)
+	{
+		var changed = false;
+
+		foreach (GameplayTag tag in otherContainer)
+		{
+			changed = GameplayTags.Remove(tag) || changed;
+		}
+
+		if (changed)
+		{
+			// Rebuild once at the end.
+			FillParentTags();
+		}
+	}
+
+	internal void Reset(int capacity)
+	{
+		GameplayTags.Clear();
+		GameplayTags.EnsureCapacity(capacity);
+
+		// On average, the size of ParentTags is comparable to that of GameplayTags.
+		ParentTags.Clear();
+		ParentTags.EnsureCapacity(capacity);
+	}
+
+	internal void AppendTags(GameplayTagContainer otherContainer)
+	{
+		GameplayTags.EnsureCapacity(GameplayTags.Count + otherContainer.GameplayTags.Count);
+		ParentTags.EnsureCapacity(ParentTags.Count + otherContainer.ParentTags.Count);
+
+		foreach (GameplayTag otherTag in otherContainer.GameplayTags)
+		{
+			GameplayTags.Add(otherTag);
+		}
+
+		foreach (GameplayTag otherTag in otherContainer.ParentTags)
+		{
+			ParentTags.Add(otherTag);
+		}
+	}
+
 	internal void AddTagFast(GameplayTag tag)
 	{
 		if (GameplayTags.Add(tag))

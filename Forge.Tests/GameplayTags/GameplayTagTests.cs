@@ -190,8 +190,7 @@ public class GameplayTagTests(GameplayTagsManagerFixture fixture) : IClassFixtur
 
 		GameplayTagContainer? tagContainer = tag.GetSingleTagContainer();
 
-		var tagContainerCheck = new GameplayTagContainer(_gameplayTagsManager);
-		tagContainerCheck.AddTag(tag);
+		var tagContainerCheck = new GameplayTagContainer(tag);
 
 		tagContainer.Should().BeEquivalentTo(tagContainerCheck);
 	}
@@ -265,12 +264,14 @@ public class GameplayTagTests(GameplayTagsManagerFixture fixture) : IClassFixtur
 
 		GameplayTagContainer? parentsContainer = tag.GetTagParents();
 
-		GameplayTagContainer? parentsContainerCheck = tag.GetSingleTagContainer();
+		var parents = new HashSet<GameplayTag>([tag]);
 
 		foreach (var parentTagKey in ExtractTagParents(tagKey))
 		{
-			parentsContainerCheck?.AddTag(GameplayTag.RequestTag(_gameplayTagsManager, parentTagKey));
+			parents.Add(GameplayTag.RequestTag(_gameplayTagsManager, parentTagKey));
 		}
+
+		var parentsContainerCheck = new GameplayTagContainer(_gameplayTagsManager, parents);
 
 		parentsContainer.Should().BeEquivalentTo(parentsContainerCheck);
 	}
@@ -492,12 +493,7 @@ public class GameplayTagTests(GameplayTagsManagerFixture fixture) : IClassFixtur
 	{
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey);
 
-		var tagContainer = new GameplayTagContainer(_gameplayTagsManager);
-
-		foreach (var containerKey in containerKeys)
-		{
-			tagContainer.AddTag(GameplayTag.RequestTag(_gameplayTagsManager, containerKey));
-		}
+		GameplayTagContainer tagContainer = BuildContainerFromStrings(containerKeys);
 
 		tag.MatchesAny(tagContainer).Should().BeTrue();
 	}
@@ -526,12 +522,7 @@ public class GameplayTagTests(GameplayTagsManagerFixture fixture) : IClassFixtur
 	{
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey);
 
-		var tagContainer = new GameplayTagContainer(_gameplayTagsManager);
-
-		foreach (var containerKey in containerKeys)
-		{
-			tagContainer.AddTag(GameplayTag.RequestTag(_gameplayTagsManager, containerKey));
-		}
+		GameplayTagContainer tagContainer = BuildContainerFromStrings(containerKeys);
 
 		tag.MatchesAny(tagContainer).Should().BeFalse();
 	}
@@ -570,12 +561,7 @@ public class GameplayTagTests(GameplayTagsManagerFixture fixture) : IClassFixtur
 	{
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey, false);
 
-		var tagContainer = new GameplayTagContainer(_gameplayTagsManager);
-
-		foreach (var containerKey in containerKeys)
-		{
-			tagContainer.AddTag(GameplayTag.RequestTag(_gameplayTagsManager, containerKey, false));
-		}
+		GameplayTagContainer tagContainer = BuildContainerFromStrings(containerKeys, false);
 
 		tag.MatchesAny(tagContainer).Should().BeFalse();
 	}
@@ -589,12 +575,7 @@ public class GameplayTagTests(GameplayTagsManagerFixture fixture) : IClassFixtur
 	[InlineData((object)new string[] { "enemy.humanoid.goblin", "color.dark" })]
 	public void Empty_tag_never_MatchAny_container(string[] containerKeys)
 	{
-		var tagContainer = new GameplayTagContainer(_gameplayTagsManager);
-
-		foreach (var containerKey in containerKeys)
-		{
-			tagContainer.AddTag(GameplayTag.RequestTag(_gameplayTagsManager, containerKey, false));
-		}
+		GameplayTagContainer tagContainer = BuildContainerFromStrings(containerKeys, false);
 
 		GameplayTag.Empty.MatchesAny(tagContainer).Should().BeFalse();
 	}
@@ -635,12 +616,7 @@ public class GameplayTagTests(GameplayTagsManagerFixture fixture) : IClassFixtur
 	{
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey);
 
-		var tagContainer = new GameplayTagContainer(_gameplayTagsManager);
-
-		foreach (var containerKey in containerKeys)
-		{
-			tagContainer.AddTag(GameplayTag.RequestTag(_gameplayTagsManager, containerKey));
-		}
+		GameplayTagContainer tagContainer = BuildContainerFromStrings(containerKeys);
 
 		tag.MatchesAnyExact(tagContainer).Should().BeTrue();
 	}
@@ -669,12 +645,7 @@ public class GameplayTagTests(GameplayTagsManagerFixture fixture) : IClassFixtur
 	{
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey);
 
-		var tagContainer = new GameplayTagContainer(_gameplayTagsManager);
-
-		foreach (var containerKey in containerKeys)
-		{
-			tagContainer.AddTag(GameplayTag.RequestTag(_gameplayTagsManager, containerKey));
-		}
+		GameplayTagContainer tagContainer = BuildContainerFromStrings(containerKeys);
 
 		tag.MatchesAnyExact(tagContainer).Should().BeFalse();
 	}
@@ -713,12 +684,7 @@ public class GameplayTagTests(GameplayTagsManagerFixture fixture) : IClassFixtur
 	{
 		var tag = GameplayTag.RequestTag(_gameplayTagsManager, tagKey, false);
 
-		var tagContainer = new GameplayTagContainer(_gameplayTagsManager);
-
-		foreach (var containerKey in containerKeys)
-		{
-			tagContainer.AddTag(GameplayTag.RequestTag(_gameplayTagsManager, containerKey, false));
-		}
+		GameplayTagContainer tagContainer = BuildContainerFromStrings(containerKeys, false);
 
 		tag.MatchesAnyExact(tagContainer).Should().BeFalse();
 	}
@@ -732,14 +698,26 @@ public class GameplayTagTests(GameplayTagsManagerFixture fixture) : IClassFixtur
 	[InlineData((object)new string[] { "enemy.humanoid.goblin", "color.dark" })]
 	public void Empty_tag_never_MatchAnyExact_container(string[] containerKeys)
 	{
-		var tagContainer = new GameplayTagContainer(_gameplayTagsManager);
-
-		foreach (var containerKey in containerKeys)
-		{
-			tagContainer.AddTag(GameplayTag.RequestTag(_gameplayTagsManager, containerKey, false));
-		}
+		GameplayTagContainer tagContainer = BuildContainerFromStrings(containerKeys, false);
 
 		GameplayTag.Empty.MatchesAnyExact(tagContainer).Should().BeFalse();
+	}
+
+	private GameplayTagContainer BuildContainerFromStrings(string[] keys, bool errorIfNotFound = true)
+	{
+		var set = new HashSet<GameplayTag>();
+
+		foreach (var key in keys)
+		{
+			var tag = GameplayTag.RequestTag(_gameplayTagsManager, key, errorIfNotFound);
+
+			if (tag.IsValid)
+			{
+				set.Add(tag);
+			}
+		}
+
+		return new GameplayTagContainer(_gameplayTagsManager, set);
 	}
 
 	[Theory]
