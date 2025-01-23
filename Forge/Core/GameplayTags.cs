@@ -44,7 +44,7 @@ public class GameplayTags
 	/// Adds a new base tag to the entity.
 	/// </summary>
 	/// <param name="tag">The new tag to be added.</param>
-	public void AddBaseTag(GameplayTag tag)
+	internal void AddBaseTag(GameplayTag tag)
 	{
 		BaseTags.AddTag(tag);
 		CombinedTags.AddTag(tag);
@@ -54,7 +54,7 @@ public class GameplayTags
 	/// Removes a base tag from the entity.
 	/// </summary>
 	/// <param name="tag">Tag to be removed.</param>
-	public void RemoveBaseTag(GameplayTag tag)
+	internal void RemoveBaseTag(GameplayTag tag)
 	{
 		BaseTags.RemoveTag(tag);
 
@@ -68,7 +68,7 @@ public class GameplayTags
 	/// Adds or increments a new modifier tag for the entity.
 	/// </summary>
 	/// <param name="tag">The new tag to be added or incremented.</param>
-	public void AddModifierTag(GameplayTag tag)
+	internal void AddModifierTag(GameplayTag tag)
 	{
 		if (_modifierTagCounts.TryGetValue(tag, out var count))
 		{
@@ -92,7 +92,7 @@ public class GameplayTags
 	/// Removes or decrements a modifier tag from the entity.
 	/// </summary>
 	/// <param name="tag">The tag to be removed or decremented.</param>
-	public void RemoveModifierTag(GameplayTag tag)
+	internal void RemoveModifierTag(GameplayTag tag)
 	{
 		if (!_modifierTagCounts.TryGetValue(tag, out var count))
 		{
