@@ -91,7 +91,7 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 			}
 		}
 
-		effectEvaluatedData.Target.GameplayEffectsManager.OnGameplayEffectExecuted_InternalCall(effectEvaluatedData);
+		effectEvaluatedData.Target.EffectsManager.OnGameplayEffectExecuted_InternalCall(effectEvaluatedData);
 	}
 
 	internal bool CanApply(IForgeEntity target)

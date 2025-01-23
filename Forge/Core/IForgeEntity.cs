@@ -15,12 +15,12 @@ public interface IForgeEntity
 	public Attributes Attributes { get; }
 
 	/// <summary>
-	/// Gets the gameplay tags of this entity.
+	/// Gets the tags manager of this entity.
 	/// </summary>
-	public InheritableTags GameplayTags { get; }
+	public GameplayTags TagsManager { get; }
 
 	/// <summary>
 	/// Gets the effects manager for this entity.
 	/// </summary>
-	public GameplayEffectsManager GameplayEffectsManager { get; }
+	public GameplayEffectsManager EffectsManager { get; }
 }

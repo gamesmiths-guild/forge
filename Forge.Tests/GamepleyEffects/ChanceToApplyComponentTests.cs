@@ -53,9 +53,9 @@ public class ChanceToApplyComponentTests(GameplayTagsManagerFixture fixture)
 				new TestEntity(_gameplayTagsManager),
 				owner));
 
-		target.GameplayEffectsManager.ApplyEffect(effect);
-		target.GameplayEffectsManager.ApplyEffect(effect);
-		target.GameplayEffectsManager.ApplyEffect(effect);
+		target.EffectsManager.ApplyEffect(effect);
+		target.EffectsManager.ApplyEffect(effect);
+		target.EffectsManager.ApplyEffect(effect);
 
 		TestUtils.TestAttribute(target, targetAttribute, [expectedResult, expectedResult, 0, 0]);
 	}
@@ -122,17 +122,17 @@ public class ChanceToApplyComponentTests(GameplayTagsManagerFixture fixture)
 				new TestEntity(_gameplayTagsManager),
 				owner));
 
-		target.GameplayEffectsManager.ApplyEffect(effect);
+		target.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(target, targetAttribute, [expectedResults[0], expectedResults[0], 0, 0]);
 
 		effect.LevelUp();
 
-		target.GameplayEffectsManager.ApplyEffect(effect);
+		target.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(target, targetAttribute, [expectedResults[1], expectedResults[1], 0, 0]);
 
 		effect.LevelUp();
 
-		target.GameplayEffectsManager.ApplyEffect(effect);
+		target.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(target, targetAttribute, [expectedResults[2], expectedResults[2], 0, 0]);
 	}
 

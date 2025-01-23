@@ -12,9 +12,9 @@ public class TestEntity : IForgeEntity
 
 	public Attributes Attributes { get; }
 
-	public InheritableTags GameplayTags { get; }
+	public Forge.Core.GameplayTags TagsManager { get; }
 
-	public GameplayEffectsManager GameplayEffectsManager { get; }
+	public GameplayEffectsManager EffectsManager { get; }
 
 	public TestEntity(GameplayTagsManager tagsManager)
 	{
@@ -26,8 +26,8 @@ public class TestEntity : IForgeEntity
 				GameplayTag.RequestTag(tagsManager, "color.green")
 			]);
 
-		GameplayEffectsManager = new(this);
+		EffectsManager = new(this);
 		Attributes = new(PlayerAttributeSet);
-		GameplayTags = new(originalTags);
+		TagsManager = new(originalTags);
 	}
 }
