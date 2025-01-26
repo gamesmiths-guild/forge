@@ -14,10 +14,14 @@ namespace Gamesmiths.Forge.GameplayTags;
 /// </summary>
 public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<GameplayTagContainer>
 {
+	private readonly HashSet<GameplayTag> _gameplayTags = [];
+
+	private readonly HashSet<GameplayTag> _parentTags = [];
+
 	/// <summary>
 	/// Gets the set of <see cref="GameplayTag"/>s in this container.
 	/// </summary>
-	public HashSet<GameplayTag> GameplayTags { get; } = [];
+	public IReadOnlySet<GameplayTag> GameplayTags => _gameplayTags;
 
 	/// <summary>
 	/// Gets a set of all parent tags, along with the current <see cref="GameplayTag"/>.
@@ -25,7 +29,7 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	/// <remarks>
 	/// Used to optimize parent tag lookups.
 	/// </remarks>
-	public HashSet<GameplayTag> ParentTags { get; } = [];
+	public IReadOnlySet<GameplayTag> ParentTags => _parentTags;
 
 	/// <summary>
 	/// Gets the number of explicitly added tags.
@@ -75,8 +79,8 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 	public GameplayTagContainer(GameplayTagContainer other)
 		: this(other.GameplayTagsManager)
 	{
-		GameplayTags.UnionWith(other.GameplayTags);
-		ParentTags.UnionWith(other.ParentTags);
+		_gameplayTags.UnionWith(other.GameplayTags);
+		_parentTags.UnionWith(other.ParentTags);
 	}
 
 	/// <summary>
@@ -93,7 +97,7 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 			sourceTags.All(x => x.GameplayTagsManager == gameplayTagsManager),
 			"All tags must have the same GameplayTagsManager.");
 
-		GameplayTags.UnionWith(sourceTags);
+		_gameplayTags.UnionWith(sourceTags);
 		FillParentTags();
 	}
 
@@ -192,7 +196,7 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 		}
 
 		var numTags = stream[1];
-		deserializedContainer.GameplayTags.EnsureCapacity(numTags);
+		deserializedContainer._gameplayTags.EnsureCapacity(numTags);
 
 		for (var i = 0; i < numTags; i++)
 		{
@@ -455,15 +459,15 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 
 	internal void AddTag(GameplayTag tag)
 	{
-		if (tag != GameplayTag.Empty && GameplayTags.Add(tag))
+		if (tag != GameplayTag.Empty && _gameplayTags.Add(tag))
 		{
-			ParentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
+			_parentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
 		}
 	}
 
 	internal bool RemoveTag(GameplayTag tag, bool deferParentTags = false)
 	{
-		if (GameplayTags.Remove(tag))
+		if (_gameplayTags.Remove(tag))
 		{
 			if (!deferParentTags)
 			{
@@ -483,7 +487,7 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 
 		foreach (GameplayTag tag in otherContainer)
 		{
-			changed = GameplayTags.Remove(tag) || changed;
+			changed = _gameplayTags.Remove(tag) || changed;
 		}
 
 		if (changed)
@@ -495,45 +499,45 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 
 	internal void Reset(int capacity)
 	{
-		GameplayTags.Clear();
-		GameplayTags.EnsureCapacity(capacity);
+		_gameplayTags.Clear();
+		_gameplayTags.EnsureCapacity(capacity);
 
 		// On average, the size of ParentTags is comparable to that of GameplayTags.
-		ParentTags.Clear();
-		ParentTags.EnsureCapacity(capacity);
+		_parentTags.Clear();
+		_parentTags.EnsureCapacity(capacity);
 	}
 
 	internal void AppendTags(GameplayTagContainer otherContainer)
 	{
-		GameplayTags.EnsureCapacity(GameplayTags.Count + otherContainer.GameplayTags.Count);
-		ParentTags.EnsureCapacity(ParentTags.Count + otherContainer.ParentTags.Count);
+		_gameplayTags.EnsureCapacity(GameplayTags.Count + otherContainer.GameplayTags.Count);
+		_parentTags.EnsureCapacity(ParentTags.Count + otherContainer.ParentTags.Count);
 
 		foreach (GameplayTag otherTag in otherContainer.GameplayTags)
 		{
-			GameplayTags.Add(otherTag);
+			_gameplayTags.Add(otherTag);
 		}
 
 		foreach (GameplayTag otherTag in otherContainer.ParentTags)
 		{
-			ParentTags.Add(otherTag);
+			_parentTags.Add(otherTag);
 		}
 	}
 
 	internal void AddTagFast(GameplayTag tag)
 	{
-		if (GameplayTags.Add(tag))
+		if (_gameplayTags.Add(tag))
 		{
-			ParentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
+			_parentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
 		}
 	}
 
 	internal GameplayTagContainer GetExplicitGameplayTagParents()
 	{
-		GameplayTagContainer resultContainer = new(GameplayTagsManager, GameplayTags);
+		GameplayTagContainer resultContainer = new(GameplayTagsManager, _gameplayTags);
 
 		foreach (GameplayTag tag in ParentTags)
 		{
-			resultContainer.GameplayTags.Add(tag);
+			resultContainer._gameplayTags.Add(tag);
 		}
 
 		return resultContainer;
@@ -542,13 +546,13 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 
 	private void FillParentTags()
 	{
-		ParentTags.Clear();
+		_parentTags.Clear();
 
 		if (GameplayTags.Count > 0)
 		{
 			foreach (GameplayTag tag in GameplayTags)
 			{
-				ParentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
+				_parentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
 			}
 		}
 	}
