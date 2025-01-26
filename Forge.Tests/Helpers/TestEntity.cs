@@ -12,7 +12,7 @@ public class TestEntity : IForgeEntity
 
 	public Attributes Attributes { get; }
 
-	public Forge.Core.GameplayTags TagsManager { get; }
+	public Forge.Core.GameplayTags GameplayTags { get; }
 
 	public GameplayEffectsManager EffectsManager { get; }
 
@@ -28,6 +28,6 @@ public class TestEntity : IForgeEntity
 
 		EffectsManager = new(this);
 		Attributes = new(PlayerAttributeSet);
-		TagsManager = new(originalTags);
+		GameplayTags = new(originalTags);
 	}
 }

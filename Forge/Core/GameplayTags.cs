@@ -51,6 +51,16 @@ public class GameplayTags
 	}
 
 	/// <summary>
+	/// Adds new base tags to the entity.
+	/// </summary>
+	/// <param name="tag">The container with all the new tag to be added.</param>
+	internal void AddBaseTags(GameplayTagContainer tag)
+	{
+		BaseTags.AppendTags(tag);
+		CombinedTags.AppendTags(tag);
+	}
+
+	/// <summary>
 	/// Removes a base tag from the entity.
 	/// </summary>
 	/// <param name="tag">Tag to be removed.</param>
@@ -65,7 +75,19 @@ public class GameplayTags
 	}
 
 	/// <summary>
-	/// Adds or increments a new modifier tag for the entity.
+	/// Removes base tags from the entity.
+	/// </summary>
+	/// <param name="tags">The container with all tags to be removed.</param>
+	internal void RemoveBaseTags(GameplayTagContainer tags)
+	{
+		foreach (GameplayTag tag in tags)
+		{
+			RemoveBaseTag(tag);
+		}
+	}
+
+	/// <summary>
+	/// Adds or increments a new modifier tag to the entity.
 	/// </summary>
 	/// <param name="tag">The new tag to be added or incremented.</param>
 	internal void AddModifierTag(GameplayTag tag)
@@ -85,6 +107,18 @@ public class GameplayTags
 			_modifierTagCounts[tag] = 1;
 			CombinedTags.AddTag(tag);
 			ModifierTags.AddTag(tag);
+		}
+	}
+
+	/// <summary>
+	/// Adds or increments new modifier tags to the entity.
+	/// </summary>
+	/// <param name="tags">A container with all the new tags to be added or incremented.</param>
+	internal void AddModifierTags(GameplayTagContainer tags)
+	{
+		foreach (GameplayTag tag in tags)
+		{
+			AddModifierTag(tag);
 		}
 	}
 
@@ -109,6 +143,18 @@ public class GameplayTags
 			{
 				CombinedTags.RemoveTag(tag);
 			}
+		}
+	}
+
+	/// <summary>
+	/// Removes or decrements modifier tags from the entity.
+	/// </summary>
+	/// <param name="tags">A container with all the tags to be removed or decremented.</param>
+	internal void RemoveModifierTags(GameplayTagContainer tags)
+	{
+		foreach (GameplayTag tag in tags)
+		{
+			RemoveModifierTag(tag);
 		}
 	}
 }

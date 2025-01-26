@@ -17,7 +17,7 @@ public interface IForgeEntity
 	/// <summary>
 	/// Gets the tags manager of this entity.
 	/// </summary>
-	public GameplayTags TagsManager { get; }
+	public GameplayTags GameplayTags { get; }
 
 	/// <summary>
 	/// Gets the effects manager for this entity.
