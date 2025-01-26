@@ -94,7 +94,7 @@ internal class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 		IsExplicitTag = isExplicit;
 
 		SingleTagContainer = new GameplayTagContainer(gameplayTagsManager);
-		SingleTagContainer.GameplayTags.Add(new GameplayTag(gameplayTagsManager, fullKey));
+		SingleTagContainer.InternalGameplayTags.Add(new GameplayTag(gameplayTagsManager, fullKey));
 
 		if (parentTagNode is null)
 		{
@@ -105,8 +105,8 @@ internal class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 
 		if (!parentContainer.IsEmpty)
 		{
-			SingleTagContainer.ParentTags.Add(parentContainer.Single());
-			SingleTagContainer.ParentTags.UnionWith(parentContainer.ParentTags);
+			SingleTagContainer.InternalParentTags.Add(parentContainer.Single());
+			SingleTagContainer.InternalParentTags.UnionWith(parentContainer.ParentTags);
 		}
 	}
 
