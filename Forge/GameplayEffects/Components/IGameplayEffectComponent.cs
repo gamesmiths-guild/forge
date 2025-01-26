@@ -17,7 +17,10 @@ public interface IGameplayEffectComponent
 	/// <param name="effect">The gameplay effect instance.</param>
 	/// <returns><see langword="true"/> if the gameplay effect can be applied;<see langword="false"/> otherwise.
 	/// </returns>
-	bool CanApplyGameplayEffect(in IForgeEntity target, in GameplayEffect effect);
+	bool CanApplyGameplayEffect(in IForgeEntity target, in GameplayEffect effect)
+	{
+		return true;
+	}
 
 	/// <summary>
 	/// Executes and implements extra functionality for when an <see cref="ActiveGameplayEffect"/> is added to a target.
@@ -27,7 +30,10 @@ public interface IGameplayEffectComponent
 	/// </remarks>
 	/// <param name="target">The target receiving the active gameplay effect.</param>
 	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect being applied.</param>
-	void OnActiveGameplayEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData);
+	void OnActiveGameplayEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		// This method is intentionally left blank.
+	}
 
 	/// <summary>
 	/// Executes and implements extra functionality for when an <see cref="ActiveGameplayEffect"/> is removed from a
@@ -39,7 +45,10 @@ public interface IGameplayEffectComponent
 	/// </remarks>
 	/// <param name="target">The target whose the active gameplay effect is being removed.</param>
 	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect being removed.</param>
-	void OnActiveGameplayEffectRemoved(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData);
+	void OnActiveGameplayEffectRemoved(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		// This method is intentionally left blank.
+	}
 
 	/// <summary>
 	/// Executes and implements extra functionality for when a gameplay effect is applied to a target.
@@ -51,7 +60,10 @@ public interface IGameplayEffectComponent
 	/// </remarks>
 	/// <param name="target">The target of the gampleplay effect.</param>
 	/// <param name="effectEvaluatedData">The evaluated data for the gameplay effect being applied.</param>
-	void OnGameplayEffectApplied(IForgeEntity target, in GameplayEffectEvaluatedData effectEvaluatedData);
+	void OnGameplayEffectApplied(IForgeEntity target, in GameplayEffectEvaluatedData effectEvaluatedData)
+	{
+		// This method is intentionally left blank.
+	}
 
 	/// <summary>
 	/// Executes and implements extra functionality for when a gameplay effect is executed on a target.
@@ -61,11 +73,17 @@ public interface IGameplayEffectComponent
 	/// </remarks>
 	/// <param name="target">The target of the gampleplay effect.</param>
 	/// <param name="effectEvaluatedData">The evaluated data for the gameplay effect being applied.</param>
-	void OnGameplayEffectExecuted(IForgeEntity target, in GameplayEffectEvaluatedData effectEvaluatedData);
+	void OnGameplayEffectExecuted(IForgeEntity target, in GameplayEffectEvaluatedData effectEvaluatedData)
+	{
+		// This method is intentionally left blank.
+	}
 
 	/// <summary>
 	/// Executes and implements extra functionality for whenever a gameplay effect changes. Be it's level or other
 	/// properties.
 	/// </summary>
-	void OnGameplayEffectChanged();
+	void OnGameplayEffectChanged()
+	{
+		// This method is intentionally left blank.
+	}
 }

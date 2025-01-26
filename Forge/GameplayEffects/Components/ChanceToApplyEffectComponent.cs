@@ -22,29 +22,4 @@ public class ChanceToApplyEffectComponent(IRandom randomProvider, ScalableFloat 
 	{
 		return _randomProvider.NextSingle() < _chance.GetValue(effect.Level);
 	}
-
-	/// <inheritdoc/>
-	public void OnActiveGameplayEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
-	{
-	}
-
-	/// <inheritdoc/>
-	public void OnActiveGameplayEffectRemoved(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
-	{
-	}
-
-	/// <inheritdoc/>
-	public void OnGameplayEffectApplied(IForgeEntity target, in GameplayEffectEvaluatedData effectEvaluatedData)
-	{
-	}
-
-	/// <inheritdoc/>
-	public void OnGameplayEffectChanged()
-	{
-	}
-
-	/// <inheritdoc/>
-	public void OnGameplayEffectExecuted(IForgeEntity target, in GameplayEffectEvaluatedData effectEvaluatedData)
-	{
-	}
 }
