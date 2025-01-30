@@ -68,7 +68,7 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 
 		GameplayTagsManager = tag.GameplayTagsManager;
 
-		AddTag(tag);
+		AddTagFast(tag);
 	}
 
 	/// <summary>
@@ -459,21 +459,29 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 
 	internal void AddTag(GameplayTag tag)
 	{
-		if (tag != GameplayTag.Empty && InternalGameplayTags.Add(tag))
+		if (tag.IsValid && InternalGameplayTags.Add(tag))
 		{
 			InternalParentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
 		}
 	}
 
-	internal bool RemoveTag(GameplayTag tag, bool deferParentTags = false)
+	internal void AddTagFast(GameplayTag tag)
+	{
+		if (InternalGameplayTags.Add(tag))
+		{
+			InternalParentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
+		}
+	}
+
+	internal HashSet<GameplayTag> RemoveTag(GameplayTag tag, bool deferParentTags = false)
 	{
 		var tagsToRemove = InternalGameplayTags
 			.Where(x => x.MatchesTag(tag))
-			.ToList();
+			.ToHashSet();
 
 		if (tagsToRemove.Count == 0)
 		{
-			return false;
+			return tagsToRemove;
 		}
 
 		foreach (GameplayTag tagToRemove in tagsToRemove)
@@ -487,7 +495,7 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 			FillParentTags();
 		}
 
-		return true;
+		return tagsToRemove;
 	}
 
 	internal bool RemoveTagExact(GameplayTag tag, bool deferParentTags = false)
@@ -506,20 +514,22 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 		return false;
 	}
 
-	internal void RemoveTags(GameplayTagContainer otherContainer)
+	internal HashSet<GameplayTag> RemoveTags(GameplayTagContainer otherContainer)
 	{
-		var changed = false;
+		var tagsRemoved = new HashSet<GameplayTag>();
 
 		foreach (GameplayTag tag in otherContainer)
 		{
-			changed = RemoveTag(tag, true) || changed;
+			tagsRemoved.UnionWith(RemoveTag(tag, true));
 		}
 
-		if (changed)
+		if (tagsRemoved.Count > 0)
 		{
 			// Rebuild once at the end.
 			FillParentTags();
 		}
+
+		return tagsRemoved;
 	}
 
 	internal void RemoveTagsExact(GameplayTagContainer otherContainer)
@@ -550,26 +560,8 @@ public sealed class GameplayTagContainer : IEnumerable<GameplayTag>, IEquatable<
 
 	internal void AppendTags(GameplayTagContainer otherContainer)
 	{
-		InternalGameplayTags.EnsureCapacity(InternalGameplayTags.Count + otherContainer.InternalGameplayTags.Count);
-		InternalParentTags.EnsureCapacity(InternalParentTags.Count + otherContainer.InternalParentTags.Count);
-
-		foreach (GameplayTag otherTag in otherContainer.InternalGameplayTags)
-		{
-			InternalGameplayTags.Add(otherTag);
-		}
-
-		foreach (GameplayTag otherTag in otherContainer.InternalParentTags)
-		{
-			InternalParentTags.Add(otherTag);
-		}
-	}
-
-	internal void AddTagFast(GameplayTag tag)
-	{
-		if (InternalGameplayTags.Add(tag))
-		{
-			InternalParentTags.UnionWith(GameplayTagsManager.ExtractParentTags(tag));
-		}
+		InternalGameplayTags.UnionWith(otherContainer.InternalGameplayTags);
+		InternalParentTags.UnionWith(otherContainer.InternalParentTags);
 	}
 
 	internal GameplayTagContainer GetExplicitGameplayTagParents()
