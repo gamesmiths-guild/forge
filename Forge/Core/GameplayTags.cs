@@ -18,12 +18,12 @@ public class GameplayTags
 	public GameplayTagContainer BaseTags { get; }
 
 	/// <summary>
-	/// Gets a container with the modifier tags for this entity.
+	/// Gets a container with the modifier tags for this entity (temporarily added tags).
 	/// </summary>
 	public GameplayTagContainer ModifierTags { get; }
 
 	/// <summary>
-	/// Gets a container with all tags from the entity.
+	/// Gets a container with all tags (base + modifier) from the entity.
 	/// </summary>
 	public GameplayTagContainer CombinedTags { get; }
 
@@ -40,80 +40,54 @@ public class GameplayTags
 		CombinedTags.AppendTags(BaseTags);
 	}
 
-	/// <summary>
-	/// Adds a new base tag to the entity.
-	/// </summary>
-	/// <param name="tag">The new tag to be added.</param>
 	internal void AddBaseTag(GameplayTag tag)
 	{
-		BaseTags.AddTag(tag);
-		CombinedTags.AddTag(tag);
+		BaseTags.AddTagFast(tag);
+		CombinedTags.AddTagFast(tag);
 	}
 
-	/// <summary>
-	/// Adds new base tags to the entity.
-	/// </summary>
-	/// <param name="tag">The container with all the new tag to be added.</param>
 	internal void AddBaseTags(GameplayTagContainer tag)
 	{
 		BaseTags.AppendTags(tag);
 		CombinedTags.AppendTags(tag);
 	}
 
-	/// <summary>
-	/// Removes a base tag from the entity.
-	/// </summary>
-	/// <param name="tag">Tag to be removed.</param>
 	internal void RemoveBaseTag(GameplayTag tag)
 	{
-		BaseTags.RemoveTag(tag);
-
-		if (!_modifierTagCounts.TryGetValue(tag, out var count) || count == 0)
+		foreach (GameplayTag removedTag in BaseTags.RemoveTag(tag))
 		{
-			CombinedTags.RemoveTag(tag);
-		}
-	}
-
-	/// <summary>
-	/// Removes base tags from the entity.
-	/// </summary>
-	/// <param name="tags">The container with all tags to be removed.</param>
-	internal void RemoveBaseTags(GameplayTagContainer tags)
-	{
-		foreach (GameplayTag tag in tags)
-		{
-			RemoveBaseTag(tag);
-		}
-	}
-
-	/// <summary>
-	/// Adds or increments a new modifier tag to the entity.
-	/// </summary>
-	/// <param name="tag">The new tag to be added or incremented.</param>
-	internal void AddModifierTag(GameplayTag tag)
-	{
-		if (_modifierTagCounts.TryGetValue(tag, out var count))
-		{
-			_modifierTagCounts[tag] = count++;
-
-			if (count == 1)
+			if (!_modifierTagCounts.TryGetValue(removedTag, out var count) || count == 0)
 			{
-				CombinedTags.AddTag(tag);
-				ModifierTags.AddTag(tag);
+				CombinedTags.RemoveTag(removedTag);
 			}
 		}
-		else
+	}
+
+	internal void RemoveBaseTags(GameplayTagContainer tags)
+	{
+		foreach (GameplayTag removedTag in BaseTags.RemoveTags(tags))
 		{
-			_modifierTagCounts[tag] = 1;
-			CombinedTags.AddTag(tag);
-			ModifierTags.AddTag(tag);
+			if (!_modifierTagCounts.TryGetValue(removedTag, out var count) || count == 0)
+			{
+				CombinedTags.RemoveTag(removedTag);
+			}
 		}
 	}
 
-	/// <summary>
-	/// Adds or increments new modifier tags to the entity.
-	/// </summary>
-	/// <param name="tags">A container with all the new tags to be added or incremented.</param>
+	internal void AddModifierTag(GameplayTag tag)
+	{
+		if (_modifierTagCounts.TryGetValue(tag, out var modifierTagCount))
+		{
+			_modifierTagCounts[tag] = modifierTagCount + 1;
+			return;
+		}
+
+		ModifierTags.AddTagFast(tag);
+		CombinedTags.AddTagFast(tag);
+
+		_modifierTagCounts[tag] = 1;
+	}
+
 	internal void AddModifierTags(GameplayTagContainer tags)
 	{
 		foreach (GameplayTag tag in tags)
@@ -122,34 +96,26 @@ public class GameplayTags
 		}
 	}
 
-	/// <summary>
-	/// Removes or decrements a modifier tag from the entity.
-	/// </summary>
-	/// <param name="tag">The tag to be removed or decremented.</param>
 	internal void RemoveModifierTag(GameplayTag tag)
 	{
-		if (!_modifierTagCounts.TryGetValue(tag, out var count))
+		if (!_modifierTagCounts.TryGetValue(tag, out var modifierTagCount))
 		{
 			return;
 		}
 
-		_modifierTagCounts[tag] = --count;
+		_modifierTagCounts[tag] = --modifierTagCount;
 
-		if (count == 0)
+		if (modifierTagCount == 0)
 		{
-			ModifierTags.RemoveTag(tag);
+			ModifierTags.RemoveTagExact(tag);
 
 			if (!BaseTags.HasTagExact(tag))
 			{
-				CombinedTags.RemoveTag(tag);
+				CombinedTags.RemoveTagExact(tag);
 			}
 		}
 	}
 
-	/// <summary>
-	/// Removes or decrements modifier tags from the entity.
-	/// </summary>
-	/// <param name="tags">A container with all the tags to be removed or decremented.</param>
 	internal void RemoveModifierTags(GameplayTagContainer tags)
 	{
 		foreach (GameplayTag tag in tags)
