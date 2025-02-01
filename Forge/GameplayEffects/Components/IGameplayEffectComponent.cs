@@ -51,6 +51,16 @@ public interface IGameplayEffectComponent
 	}
 
 	/// <summary>
+	/// Executes and implements extra functionality for whenever a gameplay effect is updated.
+	/// </summary>
+	/// <param name="target">The target of the gameplay effect.</param>
+	/// <param name="activeEffectEvaluatedData">>The evaluated data for the active effect being updated.</param>
+	void OnGameplayEffectUpdated(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		// This method is intentionally left blank.
+	}
+
+	/// <summary>
 	/// Executes and implements extra functionality for when a gameplay effect is applied to a target.
 	/// </summary>
 	/// <remarks>

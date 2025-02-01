@@ -116,6 +116,15 @@ public class GameplayEffectsManager(IForgeEntity owner)
 		foreach (ActiveGameplayEffect effect in _activeEffects)
 		{
 			effect.Update(deltaTime);
+
+			foreach (IGameplayEffectComponent component in effect.EffectData.GameplayEffectComponents)
+			{
+				component.OnGameplayEffectUpdated(Owner, new ActiveEffectEvaluatedData(
+					effect.GameplayEffectEvaluatedData,
+					effect.RemainingDuration,
+					effect.NextPeriodicTick,
+					effect.ExecutionCount));
+			}
 		}
 
 		foreach (ActiveGameplayEffect expiredEffect in _activeEffects.Where(x => x.IsExpired).ToArray())
