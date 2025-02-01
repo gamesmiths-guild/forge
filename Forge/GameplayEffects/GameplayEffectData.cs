@@ -178,6 +178,13 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 			!(durationData.Type == DurationType.Instant && !snapshopLevel),
 			$"Effects set as {DurationType.Instant} cannot be set as non Snapshot for Level.");
 
+		Debug.Assert(
+			gameplayEffectComponents is null ||
+			!Array.Exists(gameplayEffectComponents, x => x is ModifierTagsEffectComponent) ||
+			(Array.Exists(gameplayEffectComponents, x => x is ModifierTagsEffectComponent) &&
+			durationData.Type != DurationType.Instant),
+			$"Instant effects cannot apply tags from the {nameof(ModifierTagsEffectComponent)}.");
+
 		Name = name;
 		Modifiers = modifiers;
 		DurationData = durationData;
