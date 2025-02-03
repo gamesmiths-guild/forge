@@ -78,14 +78,20 @@ public class GameplayTags
 	{
 		if (_modifierTagCounts.TryGetValue(tag, out var modifierTagCount))
 		{
-			_modifierTagCounts[tag] = modifierTagCount + 1;
-			return;
+			_modifierTagCounts[tag] = ++modifierTagCount;
+
+			if (modifierTagCount != 1)
+			{
+				return;
+			}
+		}
+		else
+		{
+			_modifierTagCounts[tag] = 1;
 		}
 
 		ModifierTags.AddTagFast(tag);
 		CombinedTags.AddTagFast(tag);
-
-		_modifierTagCounts[tag] = 1;
 	}
 
 	internal void AddModifierTags(GameplayTagContainer tags)

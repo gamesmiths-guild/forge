@@ -30,6 +30,11 @@ public class ModifierTagsEffectComponent(GameplayTagContainer tagsToAdd) : IGame
 		IForgeEntity target,
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
+		if (activeEffectEvaluatedData.GameplayEffectEvaluatedData.Stack > 1)
+		{
+			return;
+		}
+
 		target.GameplayTags.RemoveModifierTags(_tagsToAdd);
 	}
 }
