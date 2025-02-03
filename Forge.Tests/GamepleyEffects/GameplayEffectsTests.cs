@@ -2269,6 +2269,213 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 	}
 
 	[Theory]
+	[Trait("Stackable", null)]
+	[InlineData(
+		new int[] { 31, 1, 30, 0 },
+		new int[] { 21, 1, 20, 0 },
+		new int[] { 11, 1, 10, 0 },
+		new int[] { 1, 1, 0, 0 },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		1,
+		new object[] { new int[] { 2, 1, 0 } },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		0,
+		new object[] { },
+		"TestAttributeSet.Attribute1",
+		10,
+		3,
+		3,
+		false,
+		StackPolicy.AggregateBySource,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.RemoveSingleStackAndRefreshDuration,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null)]
+	[InlineData(
+		new int[] { 31, 1, 30, 0 },
+		new int[] { 1, 1, 0, 0 },
+		new int[] { 1, 1, 0, 0 },
+		new int[] { 1, 1, 0, 0 },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		0,
+		new object[] { },
+		0,
+		new object[] { },
+		0,
+		new object[] { },
+		"TestAttributeSet.Attribute1",
+		10,
+		3,
+		3,
+		false,
+		StackPolicy.AggregateBySource,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null)]
+	[InlineData(
+		new int[] { 31, 1, 30, 0 },
+		new int[] { 1, 1, 0, 0 },
+		new int[] { 1, 1, 0, 0 },
+		new int[] { 1, 1, 0, 0 },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		0,
+		new object[] { },
+		0,
+		new object[] { },
+		0,
+		new object[] { },
+		"TestAttributeSet.Attribute1",
+		10,
+		3,
+		3,
+		true,
+		StackPolicy.AggregateBySource,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.RemoveSingleStackAndRefreshDuration,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null)]
+	public void Infinite_stackable_effect_unnaplies_correctly(
+		int[] firstExpectedResults,
+		int[] secondExpectedResults,
+		int[] thirdExpectedResults,
+		int[] fourthExpectedResults,
+		int firstExpectedStackDataCount,
+		object[] firstExpectedStackData,
+		int secondExpectedStackDataCount,
+		object[] secondExpectedStackData,
+		int thirdExpectedStackDataCount,
+		object[] thirdExpectedStackData,
+		int fourthExpectedStackDataCount,
+		object[] fourthExpectedStackData,
+		string targetAttribute,
+		int modifierMagnitude,
+		int stackLimit,
+		int initialStack,
+		bool forceUnapply,
+		StackPolicy stackPolicy,
+		StackLevelPolicy stackLevelPolicy,
+		StackMagnitudePolicy magnitudePolicy,
+		StackOverflowPolicy overflowPolicy,
+		StackExpirationPolicy expirationPolicy,
+		StackOwnerDenialPolicy? ownerDenialPolicy = null,
+		StackOwnerOverridePolicy? ownerOverridePolicy = null,
+		StackOwnerOverrideStackCountPolicy? ownerOverrideStackCountPolicy = null,
+		LevelComparison? levelDenialPolicy = null,
+		LevelComparison? levelOverridePolicy = null,
+		StackLevelOverrideStackCountPolicy? levelOverrideStackCountPolicy = null,
+		StackApplicationRefreshPolicy? applicationRefreshPolicy = null,
+		StackApplicationResetPeriodPolicy? applicationResetPeriodPolicy = null,
+		bool? executeOnSuccessfulApplication = null)
+	{
+		var owner = new TestEntity(_gameplayTagsManager);
+		var target = new TestEntity(_gameplayTagsManager);
+
+		var effectData = new GameplayEffectData(
+			"Buff",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(modifierMagnitude)))
+			],
+			new DurationData(DurationType.Infinite),
+			new StackingData(
+				new ScalableInt(stackLimit),
+				new ScalableInt(initialStack),
+				stackPolicy,
+				stackLevelPolicy,
+				magnitudePolicy,
+				overflowPolicy,
+				expirationPolicy,
+				ownerDenialPolicy,
+				ownerOverridePolicy,
+				ownerOverrideStackCountPolicy,
+				levelDenialPolicy,
+				levelOverridePolicy,
+				levelOverrideStackCountPolicy,
+				applicationRefreshPolicy,
+				applicationResetPeriodPolicy,
+				executeOnSuccessfulApplication),
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner, owner));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
+
+		TestUtils.TestStackData(
+			target.EffectsManager.GetEffectInfo(effectData),
+			firstExpectedStackDataCount,
+			firstExpectedStackData,
+			owner,
+			target);
+
+		target.EffectsManager.UnapplyEffect(effect, forceUnapply);
+
+		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
+
+		TestUtils.TestStackData(
+			target.EffectsManager.GetEffectInfo(effectData),
+			secondExpectedStackDataCount,
+			secondExpectedStackData,
+			owner,
+			target);
+
+		target.EffectsManager.UnapplyEffect(effect, forceUnapply);
+
+		TestUtils.TestAttribute(target, targetAttribute, thirdExpectedResults);
+
+		TestUtils.TestStackData(
+			target.EffectsManager.GetEffectInfo(effectData),
+			thirdExpectedStackDataCount,
+			thirdExpectedStackData,
+			owner,
+			target);
+
+		target.EffectsManager.UnapplyEffect(effect, forceUnapply);
+
+		TestUtils.TestAttribute(target, targetAttribute, fourthExpectedResults);
+
+		TestUtils.TestStackData(
+			target.EffectsManager.GetEffectInfo(effectData),
+			fourthExpectedStackDataCount,
+			fourthExpectedStackData,
+			owner,
+			target);
+	}
+
+	[Theory]
 	[Trait("Duration", null)]
 	[InlineData(
 		"TestAttributeSet.Attribute1",

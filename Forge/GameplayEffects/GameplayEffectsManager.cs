@@ -72,36 +72,30 @@ public class GameplayEffectsManager(IForgeEntity owner)
 	}
 
 	/// <summary>
-	/// Removes an application of a <see cref="GameplayEffect"/>.
+	/// Removes an application of a <see cref="GameplayEffect"/> or an stack if it's a stackable effect with
+	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.
 	/// </summary>
 	/// <param name="gameplayEffect">The instance of the gameplay effect to be removed.</param>
-	public void UnapplyEffect(GameplayEffect gameplayEffect)
+	/// <param name="forceUnapply">Forces unapplication even if <see cref="StackExpirationPolicy"/> is set to
+	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.</param>
+	public void UnapplyEffect(GameplayEffect gameplayEffect, bool forceUnapply = false)
 	{
-		ActiveGameplayEffect? effectToRemove = FilterEffectsByGameplayEffect(gameplayEffect).FirstOrDefault();
-
-		if (effectToRemove is not null)
-		{
-			effectToRemove.Unapply();
-			RemoveActiveGameplayEffect(effectToRemove);
-		}
+		RemoveStackOrUnapply(FilterEffectsByGameplayEffect(gameplayEffect).FirstOrDefault(), forceUnapply);
 	}
 
 	/// <summary>
-	/// Unapply an effect based on an <see cref="GameplayEffectData"/>.
+	/// Unapply an effect based on an <see cref="GameplayEffectData"/> or an stack if it's a stackable effect with
+	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.
 	/// </summary>
 	/// <remarks>
 	/// This method searches for the first instance of the given effect data it can find and removes it.
 	/// </remarks>
 	/// <param name="gameplayEffectData">Which gameplay effect data to look for to removal.</param>
-	public void UnapplyEffectData(GameplayEffectData gameplayEffectData)
+	/// /// <param name="forceUnapply">Forces unapplication even if <see cref="StackExpirationPolicy"/> is set to
+	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.</param>
+	public void UnapplyEffectData(GameplayEffectData gameplayEffectData, bool forceUnapply = false)
 	{
-		ActiveGameplayEffect? effectToRemove = FilterEffectsByData(gameplayEffectData).FirstOrDefault();
-
-		if (effectToRemove is not null)
-		{
-			effectToRemove.Unapply();
-			RemoveActiveGameplayEffect(effectToRemove);
-		}
+		RemoveStackOrUnapply(FilterEffectsByData(gameplayEffectData).FirstOrDefault(), forceUnapply);
 	}
 
 	/// <summary>
@@ -236,6 +230,33 @@ public class GameplayEffectsManager(IForgeEntity owner)
 					activeEffect.ExecutionCount));
 			component.OnGameplayEffectApplied(Owner, activeEffect.GameplayEffectEvaluatedData);
 		}
+	}
+
+	private void RemoveStackOrUnapply(ActiveGameplayEffect? effectToRemove, bool forceUnapply)
+	{
+		if (effectToRemove is null)
+		{
+			return;
+		}
+
+		if (!forceUnapply &&
+			effectToRemove.EffectData.StackingData.HasValue &&
+			effectToRemove.EffectData.StackingData.Value.ExpirationPolicy ==
+			StackExpirationPolicy.RemoveSingleStackAndRefreshDuration)
+		{
+			effectToRemove.RemoveStack();
+			effectToRemove.RemainingDuration = effectToRemove.GameplayEffectEvaluatedData.Duration;
+
+			if (effectToRemove.StackCount == 0)
+			{
+				RemoveActiveGameplayEffect(effectToRemove);
+			}
+
+			return;
+		}
+
+		effectToRemove.Unapply();
+		RemoveActiveGameplayEffect(effectToRemove);
 	}
 
 	private void RemoveActiveGameplayEffect(ActiveGameplayEffect effectToRemove)

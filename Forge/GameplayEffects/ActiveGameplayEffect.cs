@@ -15,15 +15,15 @@ internal class ActiveGameplayEffect
 
 	private double _internalTime;
 
-	private int _stackCount;
-
 	internal GameplayEffectEvaluatedData GameplayEffectEvaluatedData { get; private set; }
 
-	internal double RemainingDuration { get; private set; }
+	internal double RemainingDuration { get; set; }
 
 	internal double NextPeriodicTick { get; private set; }
 
 	internal int ExecutionCount { get; private set; }
+
+	internal int StackCount { get; private set; }
 
 	internal bool IsExpired => EffectData.DurationData.Type ==
 		DurationType.HasDuration &&
@@ -37,15 +37,15 @@ internal class ActiveGameplayEffect
 	{
 		if (gameplayEffect.EffectData.StackingData.HasValue)
 		{
-			_stackCount = gameplayEffect.EffectData.StackingData.Value.InitialStack.GetValue(
+			StackCount = gameplayEffect.EffectData.StackingData.Value.InitialStack.GetValue(
 				GameplayEffectEvaluatedData.Level);
 		}
 		else
 		{
-			_stackCount = 1;
+			StackCount = 1;
 		}
 
-		GameplayEffectEvaluatedData = new GameplayEffectEvaluatedData(gameplayEffect, target, _stackCount);
+		GameplayEffectEvaluatedData = new GameplayEffectEvaluatedData(gameplayEffect, target, StackCount);
 	}
 
 	internal void Apply(bool reApplication = false)
@@ -135,7 +135,7 @@ internal class ActiveGameplayEffect
 
 		if (!reApplication)
 		{
-			_stackCount = 0;
+			StackCount = 0;
 
 			foreach (ModifierEvaluatedData modifier in GameplayEffectEvaluatedData.ModifiersEvaluatedData)
 			{
@@ -216,7 +216,7 @@ internal class ActiveGameplayEffect
 
 		var stackLimit = stackingData.StackLimit.GetValue(evaluatedLevel);
 
-		if (_stackCount == stackLimit &&
+		if (StackCount == stackLimit &&
 			stackingData.OverflowPolicy == StackOverflowPolicy.DenyApplication)
 		{
 			return false;
@@ -260,15 +260,15 @@ internal class ActiveGameplayEffect
 		{
 			var initialStack = stackingData.InitialStack.GetValue(evaluatedLevel);
 
-			if (_stackCount != initialStack)
+			if (StackCount != initialStack)
 			{
-				_stackCount = initialStack;
+				StackCount = initialStack;
 				hasChanges = true;
 			}
 		}
-		else if (_stackCount < stackLimit)
+		else if (StackCount < stackLimit)
 		{
-			_stackCount = Math.Min(_stackCount + stacks, stackLimit);
+			StackCount = Math.Min(StackCount + stacks, stackLimit);
 			hasChanges = true;
 		}
 
@@ -301,13 +301,13 @@ internal class ActiveGameplayEffect
 	{
 		GameplayEffectEvaluatedData.Target.EffectsManager.OnActiveGameplayEffectRemoved_InternalCall(this);
 
-		if (_stackCount == 1)
+		if (StackCount == 1)
 		{
 			Unapply();
 			return;
 		}
 
-		_stackCount--;
+		StackCount--;
 		ReEvaluateAndReApply(GameplayEffectEvaluatedData.GameplayEffect);
 	}
 
@@ -325,11 +325,13 @@ internal class ActiveGameplayEffect
 					EffectData.StackingData.Value.ExpirationPolicy ==
 					StackExpirationPolicy.RemoveSingleStackAndRefreshDuration)
 				{
-					while (_stackCount >= 1 && RemainingDuration <= Epsilon)
+					while (StackCount >= 1 && RemainingDuration <= Epsilon)
 					{
 						RemoveStack();
 
-						if (_stackCount > 0)
+#pragma warning disable S2589 // Boolean expressions should not be gratuitous
+						if (StackCount > 0)
+#pragma warning restore S2589 // Boolean expressions should not be gratuitous
 						{
 							var periodicDelta = Math.Min(-RemainingDuration, GameplayEffectEvaluatedData.Duration);
 							ExecutePeriodicEffects(periodicDelta);
@@ -376,7 +378,7 @@ internal class ActiveGameplayEffect
 			new GameplayEffectEvaluatedData(
 				gameplayEffect,
 				GameplayEffectEvaluatedData.Target,
-				_stackCount,
+				StackCount,
 				level);
 
 		Apply(true);
