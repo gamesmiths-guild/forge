@@ -299,9 +299,11 @@ internal class ActiveGameplayEffect
 
 	internal void RemoveStack()
 	{
-		GameplayEffectEvaluatedData.Target.EffectsManager.OnActiveGameplayEffectRemoved_InternalCall(this);
+		var removed = StackCount == 1;
 
-		if (StackCount == 1)
+		GameplayEffectEvaluatedData.Target.EffectsManager.OnActiveGameplayEffectUnapplied_InternalCall(this, removed);
+
+		if (removed)
 		{
 			Unapply();
 			return;

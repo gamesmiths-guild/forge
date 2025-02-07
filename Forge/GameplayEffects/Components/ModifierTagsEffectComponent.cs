@@ -26,11 +26,12 @@ public class ModifierTagsEffectComponent(GameplayTagContainer tagsToAdd) : IGame
 	}
 
 	/// <inheritdoc/>
-	public void OnActiveGameplayEffectRemoved(
+	public void OnActiveGameplayEffectUnapplied(
 		IForgeEntity target,
-		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+		in ActiveEffectEvaluatedData activeEffectEvaluatedData,
+		bool removed)
 	{
-		if (activeEffectEvaluatedData.GameplayEffectEvaluatedData.Stack > 1)
+		if (!removed)
 		{
 			return;
 		}

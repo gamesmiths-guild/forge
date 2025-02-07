@@ -259,6 +259,36 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 		entity.GameplayTags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
 
+	[Theory]
+	[Trait("Stackable", null)]
+	[InlineData(new string[] { "color.dark.green" }, 3)]
+	[InlineData(new string[] { "color.red", "color.dark.red", "color" }, 5)]
+	[InlineData(new string[] { "color.green", "item.equipment.weapon.axe" }, 1)]
+	[InlineData(new string[] { "item.equipment.weapon.axe", "enemy.undead" }, 2)]
+	public void Stackable_effects_removes_tags_when_forcibly_removed(string[] tagKeys, int stacks)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+
+		GameplayEffectData effectData = CreateSimpleStackableEffectData(tagKeys, stacks);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		var baseTagsContainer = new GameplayTagContainer(entity.GameplayTags.BaseTags);
+		GameplayTagContainer modifierTagsContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
+
+		var validationTags = new HashSet<GameplayTag>(baseTagsContainer.GameplayTags);
+		validationTags.UnionWith(StringToGameplayTag(tagKeys));
+		var validationContainer = new GameplayTagContainer(_gameplayTagsManager, validationTags);
+
+		entity.EffectsManager.ApplyEffect(effect);
+
+		entity.GameplayTags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.GameplayTags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
+
+		entity.EffectsManager.UnapplyEffect(effect, true);
+		entity.GameplayTags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
+		entity.GameplayTags.ModifierTags.IsEmpty.Should().BeTrue();
+	}
+
 	private GameplayEffectData CreateDurationEffectData(string[] tagKeys, float duration)
 	{
 		HashSet<GameplayTag> tags = StringToGameplayTag(tagKeys);

@@ -29,23 +29,27 @@ public interface IGameplayEffectComponent
 	/// Note that only effects with duration can be added as active gameplay effects.
 	/// </remarks>
 	/// <param name="target">The target receiving the active gameplay effect.</param>
-	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect being applied.</param>
+	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect being added.</param>
 	void OnActiveGameplayEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
 		// This method is intentionally left blank.
 	}
 
 	/// <summary>
-	/// Executes and implements extra functionality for when an <see cref="ActiveGameplayEffect"/> is removed from a
+	/// Executes and implements extra functionality for when an <see cref="ActiveGameplayEffect"/> is unapplied from a
 	/// target. It's also called when a single stack is removed. The <paramref name="activeEffectEvaluatedData"/> data
 	/// contains the number of stacks just before it's removed, so it's never going to be zero.
 	/// </summary>
 	/// <remarks>
-	/// Note that only effects with duration can be added as active gameplay effects.
+	/// Note that only effects with duration can be unappled.
 	/// </remarks>
 	/// <param name="target">The target whose the active gameplay effect is being removed.</param>
-	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect being removed.</param>
-	void OnActiveGameplayEffectRemoved(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect being removed.</param>>
+	/// <param name="removed">Whether the active effect was completely removed or just got a stack unapply.</param>>
+	void OnActiveGameplayEffectUnapplied(
+		IForgeEntity target,
+		in ActiveEffectEvaluatedData activeEffectEvaluatedData,
+		bool removed)
 	{
 		// This method is intentionally left blank.
 	}
