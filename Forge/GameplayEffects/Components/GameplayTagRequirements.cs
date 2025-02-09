@@ -33,7 +33,7 @@ public readonly struct GameplayTagRequirements(
 	/// <summary>
 	/// Gets a value indicating whether this requirements have no required and ignored tags definied.
 	/// </summary>
-	public readonly bool IsEmpty => RequireTags.IsEmpty && IgnoreTags.IsEmpty;
+	public readonly bool IsEmpty => RequireTags.IsEmpty && IgnoreTags.IsEmpty && TagQuery.IsEmpty;
 
 	/// <summary>
 	/// Validates if the target container meets the requirements.

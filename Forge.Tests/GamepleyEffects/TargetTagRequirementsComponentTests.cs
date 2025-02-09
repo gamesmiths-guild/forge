@@ -314,6 +314,122 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 			entity);
 	}
 
+	[Fact]
+	[Trait("Can Apply", null)]
+	public void Effect_meets_application_requirements_with_query()
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+
+		var query = new GameplayTagQuery();
+		query.Build(new GameplayTagQueryExpression(_gameplayTagsManager)
+			.AllExpressionsMatch()
+				.AddExpression(new GameplayTagQueryExpression(_gameplayTagsManager)
+					.AnyTagsMatch()
+						.AddTag("color.green")
+						.AddTag("color.blue"))
+				.AddExpression(new GameplayTagQueryExpression(_gameplayTagsManager)
+					.NoExpressionsMatch()
+						.AddExpression(new GameplayTagQueryExpression(_gameplayTagsManager)
+							.AllTagsMatch()
+								.AddTag("color.green")
+								.AddTag("color.blue"))
+						.AddExpression(new GameplayTagQueryExpression(_gameplayTagsManager)
+							.AnyTagsMatch()
+								.AddTag("color.red"))));
+
+		var effectData = new GameplayEffectData(
+			"Tag Requirements Effect with Query",
+			[],
+			new DurationData(DurationType.Infinite),
+			null,
+			null,
+			gameplayEffectComponents:
+			[
+				new TargetTagRequirementsEffectComponent(
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagContainer(_gameplayTagsManager),
+						query),
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagQuery()),
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagQuery()))
+			]);
+
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			1,
+			[new int[] { 1, 1, 0 }],
+			entity,
+			entity);
+	}
+
+	[Fact]
+	[Trait("Can't Apply", null)]
+	public void Effect_does_not_meet_application_requirements_with_query()
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+
+		var query = new GameplayTagQuery();
+		query.Build(new GameplayTagQueryExpression(_gameplayTagsManager)
+			.AllExpressionsMatch()
+				.AddExpression(new GameplayTagQueryExpression(_gameplayTagsManager)
+					.AnyTagsMatch()
+						.AddTag("color.green")
+						.AddTag("color.blue"))
+				.AddExpression(new GameplayTagQueryExpression(_gameplayTagsManager)
+					.NoExpressionsMatch()
+						.AddExpression(new GameplayTagQueryExpression(_gameplayTagsManager)
+							.AllTagsMatch()
+								.AddTag("color.green")
+								.AddTag("color.blue"))
+						.AddExpression(new GameplayTagQueryExpression(_gameplayTagsManager)
+							.AnyTagsMatch()
+								.AddTag("enemy.undead"))));
+
+		var effectData = new GameplayEffectData(
+			"Tag Requirements Effect with Query",
+			[],
+			new DurationData(DurationType.Infinite),
+			null,
+			null,
+			gameplayEffectComponents:
+			[
+				new TargetTagRequirementsEffectComponent(
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagContainer(_gameplayTagsManager),
+						query),
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagQuery()),
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagQuery()))
+			]);
+
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			0,
+			[],
+			entity,
+			entity);
+	}
+
 	private GameplayEffectData CreateTagRequirementsEffectData(
 		string[]?[] aplicationTagKeys,
 		string[]?[] removalTagKeys)
