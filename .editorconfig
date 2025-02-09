@@ -320,7 +320,7 @@ dotnet_naming_symbols.const_fields.applicable_accessibilities = public, internal
 dotnet_naming_symbols.const_fields.required_modifiers = const
 
 dotnet_naming_symbols.private_or_internal_event.applicable_kinds = event
-dotnet_naming_symbols.private_or_internal_event.applicable_accessibilities = internal, private, private_protected
+dotnet_naming_symbols.private_or_internal_event.applicable_accessibilities = private, private_protected
 dotnet_naming_symbols.private_or_internal_event.required_modifiers =
 
 # Naming styles

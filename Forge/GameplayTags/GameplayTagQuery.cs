@@ -37,7 +37,7 @@ public class GameplayTagQuery
 	/// </summary>
 	internal List<byte> QueryTokenStream { get; private set; } = [];
 
-	private bool IsEmpty => QueryTokenStream.Count == 0;
+	internal bool IsEmpty => QueryTokenStream.Count == 0;
 
 	/// <summary>
 	/// Static function to assemble and return a query.

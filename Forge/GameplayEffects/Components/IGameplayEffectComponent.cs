@@ -59,7 +59,7 @@ public interface IGameplayEffectComponent
 	/// </summary>
 	/// <param name="target">The target of the gameplay effect.</param>
 	/// <param name="activeEffectEvaluatedData">>The evaluated data for the active effect being updated.</param>
-	void OnGameplayEffectUpdated(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	void OnActiveGameplayEffectUpdated(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
 		// This method is intentionally left blank.
 	}

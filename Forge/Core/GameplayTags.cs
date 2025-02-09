@@ -12,6 +12,8 @@ public class GameplayTags
 {
 	private readonly Dictionary<GameplayTag, int> _modifierTagCounts = [];
 
+	internal event Action<GameplayTagContainer>? OnTagsChanged;
+
 	/// <summary>
 	/// Gets a container with the base tags for this entity.
 	/// </summary>
@@ -42,14 +44,28 @@ public class GameplayTags
 
 	internal void AddBaseTag(GameplayTag tag)
 	{
+		if (BaseTags.HasTag(tag))
+		{
+			return;
+		}
+
 		BaseTags.AddTagFast(tag);
 		CombinedTags.AddTagFast(tag);
+
+		OnTagsChanged?.Invoke(CombinedTags);
 	}
 
-	internal void AddBaseTags(GameplayTagContainer tag)
+	internal void AddBaseTags(GameplayTagContainer tags)
 	{
-		BaseTags.AppendTags(tag);
-		CombinedTags.AppendTags(tag);
+		if (BaseTags.HasAllExact(tags))
+		{
+			return;
+		}
+
+		BaseTags.AppendTags(tags);
+		CombinedTags.AppendTags(tags);
+
+		OnTagsChanged?.Invoke(CombinedTags);
 	}
 
 	internal void RemoveBaseTag(GameplayTag tag)
@@ -92,6 +108,8 @@ public class GameplayTags
 
 		ModifierTags.AddTagFast(tag);
 		CombinedTags.AddTagFast(tag);
+
+		OnTagsChanged?.Invoke(CombinedTags);
 	}
 
 	internal void AddModifierTags(GameplayTagContainer tags)
@@ -119,6 +137,8 @@ public class GameplayTags
 			{
 				CombinedTags.RemoveTagExact(tag);
 			}
+
+			OnTagsChanged?.Invoke(CombinedTags);
 		}
 	}
 
