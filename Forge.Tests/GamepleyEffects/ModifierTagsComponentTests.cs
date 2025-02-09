@@ -33,7 +33,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 		GameplayTagContainer modifierTagsContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		var validationTags = new HashSet<GameplayTag>(baseTagsContainer.GameplayTags);
-		validationTags.UnionWith(StringToGameplayTag(tagKeys));
+		validationTags.UnionWith(TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys));
 		var validationContainer = new GameplayTagContainer(_gameplayTagsManager, validationTags);
 
 		entity.EffectsManager.ApplyEffect(effect);
@@ -67,7 +67,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 		GameplayTagContainer modifierTagsContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		var validationTags = new HashSet<GameplayTag>(baseTagsContainer.GameplayTags);
-		validationTags.UnionWith(StringToGameplayTag(tagKeys));
+		validationTags.UnionWith(TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys));
 		var validationContainer = new GameplayTagContainer(_gameplayTagsManager, validationTags);
 
 		entity.EffectsManager.ApplyEffect(effect1);
@@ -113,7 +113,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 		GameplayTagContainer modifierTagsContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		var validationTags = new HashSet<GameplayTag>(baseTagsContainer.GameplayTags);
-		validationTags.UnionWith(StringToGameplayTag(tagKeys));
+		validationTags.UnionWith(TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys));
 		var validationContainer = new GameplayTagContainer(_gameplayTagsManager, validationTags);
 
 		entity.EffectsManager.ApplyEffect(effect);
@@ -145,7 +145,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 		GameplayTagContainer modifierTagsContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		var validationTags = new HashSet<GameplayTag>(baseTagsContainer.GameplayTags);
-		validationTags.UnionWith(StringToGameplayTag(tagKeys));
+		validationTags.UnionWith(TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys));
 		var validationContainer = new GameplayTagContainer(_gameplayTagsManager, validationTags);
 
 		entity.EffectsManager.ApplyEffect(effect);
@@ -239,7 +239,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 		GameplayTagContainer modifierTagsContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		var validationTags = new HashSet<GameplayTag>(baseTagsContainer.GameplayTags);
-		validationTags.UnionWith(StringToGameplayTag(tagKeys));
+		validationTags.UnionWith(TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys));
 		var validationContainer = new GameplayTagContainer(_gameplayTagsManager, validationTags);
 
 		entity.EffectsManager.ApplyEffect(effect);
@@ -276,7 +276,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 		GameplayTagContainer modifierTagsContainer = _gameplayTagsManager.RequestTagContainer(tagKeys);
 
 		var validationTags = new HashSet<GameplayTag>(baseTagsContainer.GameplayTags);
-		validationTags.UnionWith(StringToGameplayTag(tagKeys));
+		validationTags.UnionWith(TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys));
 		var validationContainer = new GameplayTagContainer(_gameplayTagsManager, validationTags);
 
 		entity.EffectsManager.ApplyEffect(effect);
@@ -291,7 +291,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 
 	private GameplayEffectData CreateDurationEffectData(string[] tagKeys, float duration)
 	{
-		HashSet<GameplayTag> tags = StringToGameplayTag(tagKeys);
+		HashSet<GameplayTag> tags = TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys);
 
 		return new GameplayEffectData(
 			"Test Effect",
@@ -307,7 +307,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 
 	private GameplayEffectData CreateInfiniteDurationEffectData(string[] tagKeys)
 	{
-		HashSet<GameplayTag> tags = StringToGameplayTag(tagKeys);
+		HashSet<GameplayTag> tags = TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys);
 
 		return new GameplayEffectData(
 			"Test Effect",
@@ -323,7 +323,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 
 	private GameplayEffectData CreateSimpleStackableEffectData(string[] tagKeys, int stacks)
 	{
-		HashSet<GameplayTag> tags = StringToGameplayTag(tagKeys);
+		HashSet<GameplayTag> tags = TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys);
 
 		return new GameplayEffectData(
 			"Test Effect",
@@ -342,17 +342,5 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 			[
 				new ModifierTagsEffectComponent(new GameplayTagContainer(_gameplayTagsManager, tags))
 			]);
-	}
-
-	private HashSet<GameplayTag> StringToGameplayTag(string[] keys)
-	{
-		var tags = new HashSet<GameplayTag>();
-
-		foreach (var key in keys)
-		{
-			tags.Add(GameplayTag.RequestTag(_gameplayTagsManager, key));
-		}
-
-		return tags;
 	}
 }

@@ -78,7 +78,7 @@ public class TargetTagRequirementsEffectComponent(
 		Debug.Assert(_target is not null, "Target should never be null at this point.");
 		Debug.Assert(_effect is not null, "Effect should never be null at this point.");
 
-		if (!RemovalTagRequirements.IsEmpty && !RemovalTagRequirements.RequirementsMet(tags))
+		if (!RemovalTagRequirements.IsEmpty && RemovalTagRequirements.RequirementsMet(tags))
 		{
 			_target.EffectsManager.UnapplyEffect(_effect, true);
 			return;

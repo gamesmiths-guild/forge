@@ -1,0 +1,373 @@
+// Copyright © 2024 Gamesmiths Guild.
+
+using Gamesmiths.Forge.GameplayEffects;
+using Gamesmiths.Forge.GameplayEffects.Components;
+using Gamesmiths.Forge.GameplayEffects.Duration;
+using Gamesmiths.Forge.GameplayEffects.Magnitudes;
+using Gamesmiths.Forge.GameplayEffects.Stacking;
+using Gamesmiths.Forge.GameplayTags;
+using Gamesmiths.Forge.Tests.GameplayTags;
+using Gamesmiths.Forge.Tests.Helpers;
+
+namespace Gamesmiths.Forge.Tests.GamepleyEffects;
+
+public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixture)
+	: IClassFixture<GameplayTagsManagerFixture>
+{
+	private readonly GameplayTagsManager _gameplayTagsManager = fixture.GameplayTagsManager;
+
+	[Theory]
+	[Trait("Can Apply", null)]
+	[InlineData(
+		new string[] { "color.green" },
+		new string[] { "color.red", "color.blue" },
+		null,
+		null)]
+	[InlineData(
+		new string[] { "color", "enemy.undead" },
+		new string[] { "color.dark.green" },
+		null,
+		null)]
+	[InlineData(
+		null,
+		null,
+		new string[] { "color.dark.green" },
+		new string[] { "color.green" })]
+	public void Effect_meets_application_requirements(
+		string[]? requiredAplicationTagKeys,
+		string[]? ignoreApplicationTagKeys,
+		string[]? requiredRemovalTagKeys,
+		string[]? ignoreRemovalTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateTagRequirementsEffectData(
+			[requiredAplicationTagKeys, ignoreApplicationTagKeys],
+			[requiredRemovalTagKeys, ignoreRemovalTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			1,
+			[new int[] { 3, 1, 0 }],
+			entity,
+			entity);
+	}
+
+	[Theory]
+	[Trait("Can't Apply", null)]
+	[InlineData(
+		new string[] { "color.red", "color.blue" },
+		new string[] { "color.green" },
+		null,
+		null)]
+	[InlineData(
+		null,
+		new string[] { "enemy" },
+		null,
+		null)]
+	[InlineData(
+		null,
+		null,
+		new string[] { "color.green" },
+		null)]
+	[InlineData(
+		null,
+		null,
+		new string[] { "color" },
+		null)]
+	public void Effect_does_not_meet_application_requirements(
+		string[]? requiredAplicationTagKeys,
+		string[]? ignoreApplicationTagKeys,
+		string[]? requiredRemovalTagKeys,
+		string[]? ignoreRemovalTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateTagRequirementsEffectData(
+			[requiredAplicationTagKeys, ignoreApplicationTagKeys],
+			[requiredRemovalTagKeys, ignoreRemovalTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			0,
+			[],
+			entity,
+			entity);
+	}
+
+	[Theory]
+	[Trait("Can Apply", null)]
+	[InlineData(
+		new string[] { "color.dark.green" },
+		new string[] { "color.green", "color.dark.green" },
+		null,
+		null,
+		null)]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		new string[] { "color.green", "item.equipment.weapon.axe" },
+		null,
+		null,
+		null)]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		new string[] { "color.green" },
+		new string[] { "color.red", "color.blue" },
+		null,
+		null)]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe", "color.dark.green" },
+		new string[] { "color.dark", "item.equipment.weapon" },
+		null,
+		null,
+		null)]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		null,
+		null,
+		new string[] { "item.equipment.weapon.sword" },
+		new string[] { "item.equipment" })]
+	public void Effect_meets_application_requirements_with_modifier_tags(
+		string[] modifierTagKeys,
+		string[]? requiredAplicationTagKeys,
+		string[]? ignoreApplicationTagKeys,
+		string[]? requiredRemovalTagKeys,
+		string[]? ignoreRemovalTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateTagRequirementsEffectData(
+			[requiredAplicationTagKeys, ignoreApplicationTagKeys],
+			[requiredRemovalTagKeys, ignoreRemovalTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
+		var modifierTagEffect = new GameplayEffect(modifierTagEffectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		entity.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			1,
+			[new int[] { 3, 1, 0 }],
+			entity,
+			entity);
+	}
+
+	[Theory]
+	[Trait("Can't Apply", null)]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		new string[] { "color.red", "color.blue" },
+		new string[] { "color.green" },
+		null,
+		null)]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		null,
+		new string[] { "item.equipment.weapon.axe" },
+		null,
+		null)]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		null,
+		null,
+		new string[] { "item.equipment.weapon" },
+		null)]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		null,
+		null,
+		new string[] { "color" },
+		null)]
+	public void Effect_does_not_meet_application_requirements_with_modifier_tags(
+		string[] modifierTagKeys,
+		string[]? requiredAplicationTagKeys,
+		string[]? ignoreApplicationTagKeys,
+		string[]? requiredRemovalTagKeys,
+		string[]? ignoreRemovalTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateTagRequirementsEffectData(
+			[requiredAplicationTagKeys, ignoreApplicationTagKeys],
+			[requiredRemovalTagKeys, ignoreRemovalTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
+		var modifierTagEffect = new GameplayEffect(modifierTagEffectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		entity.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			0,
+			[],
+			entity,
+			entity);
+	}
+
+	[Theory]
+	[Trait("Removed", null)]
+	[InlineData(
+		new string[] { "color.dark.green" },
+		null,
+		null,
+		new string[] { "color.dark.green" },
+		null)]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		null,
+		null,
+		new string[] { "item.equipment.weapon" },
+		null)]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe", "color.dark.green" },
+		null,
+		null,
+		new string[] { "item.equipment", "color.dark" },
+		null)]
+	public void Effect_gets_removed_after_modifier_tag_is_applied(
+		string[] modifierTagKeys,
+		string[]? requiredAplicationTagKeys,
+		string[]? ignoreApplicationTagKeys,
+		string[]? requiredRemovalTagKeys,
+		string[]? ignoreRemovalTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateTagRequirementsEffectData(
+			[requiredAplicationTagKeys, ignoreApplicationTagKeys],
+			[requiredRemovalTagKeys, ignoreRemovalTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
+		var modifierTagEffect = new GameplayEffect(modifierTagEffectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(effect);
+		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			0,
+			[],
+			entity,
+			entity);
+	}
+
+	[Theory]
+	[Trait("Removed", null)]
+	[InlineData(
+		new string[] { "color.dark.green" },
+		null,
+		null,
+		null,
+		new string[] { "color.dark.green" })]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		null,
+		null,
+		null,
+		new string[] { "item.equipment.weapon" })]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe", "color.dark.green" },
+		null,
+		null,
+		null,
+		new string[] { "item.equipment", "color.dark" })]
+	public void Effect_gets_removed_after_modifier_tag_is_removed(
+		string[] modifierTagKeys,
+		string[]? requiredAplicationTagKeys,
+		string[]? ignoreApplicationTagKeys,
+		string[]? requiredRemovalTagKeys,
+		string[]? ignoreRemovalTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateTagRequirementsEffectData(
+			[requiredAplicationTagKeys, ignoreApplicationTagKeys],
+			[requiredRemovalTagKeys, ignoreRemovalTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
+		var modifierTagEffect = new GameplayEffect(modifierTagEffectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		entity.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			1,
+			[new int[] { 3, 1, 0 }],
+			entity,
+			entity);
+
+		entity.EffectsManager.UnapplyEffect(modifierTagEffect);
+
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			0,
+			[],
+			entity,
+			entity);
+	}
+
+	private GameplayEffectData CreateTagRequirementsEffectData(
+		string[]?[] aplicationTagKeys,
+		string[]?[] removalTagKeys)
+	{
+		HashSet<GameplayTag> requiredApplicationTags = TestUtils.StringToGameplayTag(_gameplayTagsManager, aplicationTagKeys[0]);
+		HashSet<GameplayTag> ignoreApplicationTags = TestUtils.StringToGameplayTag(_gameplayTagsManager, aplicationTagKeys[1]);
+
+		HashSet<GameplayTag> requiredRemovalTags = TestUtils.StringToGameplayTag(_gameplayTagsManager, removalTagKeys[0]);
+		HashSet<GameplayTag> ignoreRemovalTags = TestUtils.StringToGameplayTag(_gameplayTagsManager, removalTagKeys[1]);
+
+		return new GameplayEffectData(
+			"Tag Requirements Effect",
+			[],
+			new DurationData(DurationType.Infinite),
+			new StackingData(
+				new ScalableInt(3),
+				new ScalableInt(3),
+				StackPolicy.AggregateBySource,
+				StackLevelPolicy.SegregateLevels,
+				StackMagnitudePolicy.Sum,
+				StackOverflowPolicy.DenyApplication,
+				StackExpirationPolicy.RemoveSingleStackAndRefreshDuration),
+			null,
+			gameplayEffectComponents:
+			[
+				new TargetTagRequirementsEffectComponent(
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager, requiredApplicationTags),
+						new GameplayTagContainer(_gameplayTagsManager, ignoreApplicationTags),
+						new GameplayTagQuery()),
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager, requiredRemovalTags),
+						new GameplayTagContainer(_gameplayTagsManager, ignoreRemovalTags),
+						new GameplayTagQuery()),
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagQuery()))
+			]);
+	}
+
+	private GameplayEffectData CreateModifierTagEffectData(string[] tagKeys)
+	{
+		HashSet<GameplayTag> tags = TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys);
+
+		return new GameplayEffectData(
+			"Modifier Tags Effect",
+			[],
+			new DurationData(DurationType.Infinite),
+			null,
+			null,
+			gameplayEffectComponents:
+			[
+				new ModifierTagsEffectComponent(new GameplayTagContainer(_gameplayTagsManager, tags))
+			]);
+	}
+}

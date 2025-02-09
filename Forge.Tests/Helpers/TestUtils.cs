@@ -2,6 +2,7 @@
 
 using FluentAssertions;
 using Gamesmiths.Forge.GameplayEffects;
+using Gamesmiths.Forge.GameplayTags;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
 
@@ -34,5 +35,22 @@ public static class TestUtils
 		target.Attributes[targetAttribute].BaseValue.Should().Be(expectedResults[1]);
 		target.Attributes[targetAttribute].Modifier.Should().Be(expectedResults[2]);
 		target.Attributes[targetAttribute].Overflow.Should().Be(expectedResults[3]);
+	}
+
+	public static HashSet<GameplayTag> StringToGameplayTag(GameplayTagsManager gameplayTagsManager, string[]? keys)
+	{
+		if (keys is null)
+		{
+			return [];
+		}
+
+		var tags = new HashSet<GameplayTag>();
+
+		foreach (var key in keys)
+		{
+			tags.Add(GameplayTag.RequestTag(gameplayTagsManager, key));
+		}
+
+		return tags;
 	}
 }
