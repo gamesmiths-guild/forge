@@ -18,6 +18,8 @@ public class ActiveGameplayEffect
 
 	private double _internalTime;
 
+	private bool _isInhibited;
+
 	internal GameplayEffectEvaluatedData GameplayEffectEvaluatedData { get; private set; }
 
 	internal double RemainingDuration { get; set; }
@@ -51,12 +53,13 @@ public class ActiveGameplayEffect
 		GameplayEffectEvaluatedData = new GameplayEffectEvaluatedData(gameplayEffect, target, StackCount);
 	}
 
-	internal void Apply(bool reApplication = false)
+	internal void Apply(bool reApplication = false, bool inhibited = false)
 	{
 		if (!reApplication)
 		{
 			ExecutionCount = 0;
 			_internalTime = 0;
+			_isInhibited = inhibited;
 			RemainingDuration = GameplayEffectEvaluatedData.Duration;
 		}
 
@@ -80,7 +83,7 @@ public class ActiveGameplayEffect
 		if (EffectData.PeriodicData.HasValue)
 		{
 			if (EffectData.PeriodicData.Value.ExecuteOnApplication &&
-				!reApplication)
+				!reApplication && !_isInhibited)
 			{
 				GameplayEffect.Execute(GameplayEffectEvaluatedData);
 				ExecutionCount++;
@@ -91,49 +94,17 @@ public class ActiveGameplayEffect
 				NextPeriodicTick = GameplayEffectEvaluatedData.Period;
 			}
 		}
-		else
+		else if (!_isInhibited)
 		{
-			foreach (ModifierEvaluatedData modifier in GameplayEffectEvaluatedData.ModifiersEvaluatedData)
-			{
-				switch (modifier.ModifierOperation)
-				{
-					case ModifierOperation.FlatBonus:
-						modifier.Attribute.AddFlatModifier((int)modifier.Magnitude, modifier.Channel);
-						break;
-
-					case ModifierOperation.PercentBonus:
-						modifier.Attribute.AddPercentModifier(modifier.Magnitude, modifier.Channel);
-						break;
-
-					case ModifierOperation.Override:
-						modifier.Attribute.AddOverride((int)modifier.Magnitude, modifier.Channel);
-						break;
-				}
-			}
+			ApplyModifiers();
 		}
 	}
 
 	internal void Unapply(bool reApplication = false)
 	{
-		if (!EffectData.PeriodicData.HasValue)
+		if (!EffectData.PeriodicData.HasValue && !_isInhibited)
 		{
-			foreach (ModifierEvaluatedData modifier in GameplayEffectEvaluatedData.ModifiersEvaluatedData)
-			{
-				switch (modifier.ModifierOperation)
-				{
-					case ModifierOperation.FlatBonus:
-						modifier.Attribute.AddFlatModifier(-(int)modifier.Magnitude, modifier.Channel);
-						break;
-
-					case ModifierOperation.PercentBonus:
-						modifier.Attribute.AddPercentModifier(-modifier.Magnitude, modifier.Channel);
-						break;
-
-					case ModifierOperation.Override:
-						modifier.Attribute.ClearOverride(modifier.Channel);
-						break;
-				}
-			}
+			ApplyModifiers(true);
 		}
 
 		if (!reApplication)
@@ -291,7 +262,7 @@ public class ActiveGameplayEffect
 			NextPeriodicTick = GameplayEffectEvaluatedData.Period;
 		}
 
-		if (stackingData.ExecuteOnSuccessfulApplication == true)
+		if (stackingData.ExecuteOnSuccessfulApplication == true && !_isInhibited)
 		{
 			GameplayEffect.Execute(GameplayEffectEvaluatedData);
 			ExecutionCount++;
@@ -360,6 +331,23 @@ public class ActiveGameplayEffect
 		}
 	}
 
+	internal void SetInhibit(bool value)
+	{
+		if (_isInhibited == value)
+		{
+			return;
+		}
+
+		_isInhibited = value;
+
+		if (EffectData.PeriodicData.HasValue)
+		{
+			return;
+		}
+
+		ApplyModifiers(_isInhibited);
+	}
+
 	private void ExecutePeriodicEffects(double deltaTime)
 	{
 		_internalTime += deltaTime;
@@ -368,8 +356,12 @@ public class ActiveGameplayEffect
 		{
 			while (_internalTime >= NextPeriodicTick - Epsilon)
 			{
-				GameplayEffect.Execute(GameplayEffectEvaluatedData);
-				ExecutionCount++;
+				if (!_isInhibited)
+				{
+					GameplayEffect.Execute(GameplayEffectEvaluatedData);
+					ExecutionCount++;
+				}
+
 				NextPeriodicTick += GameplayEffectEvaluatedData.Period;
 			}
 		}
@@ -386,7 +378,30 @@ public class ActiveGameplayEffect
 				StackCount,
 				level);
 
-		Apply(true);
+		Apply(reApplication: true);
+	}
+
+	private void ApplyModifiers(bool unapply = false)
+	{
+		var multiplier = unapply ? -1 : 1;
+
+		foreach (ModifierEvaluatedData modifier in GameplayEffectEvaluatedData.ModifiersEvaluatedData)
+		{
+			switch (modifier.ModifierOperation)
+			{
+				case ModifierOperation.FlatBonus:
+					modifier.Attribute.AddFlatModifier(multiplier * (int)modifier.Magnitude, modifier.Channel);
+					break;
+
+				case ModifierOperation.PercentBonus:
+					modifier.Attribute.AddPercentModifier(multiplier * modifier.Magnitude, modifier.Channel);
+					break;
+
+				case ModifierOperation.Override:
+					modifier.Attribute.AddOverride(multiplier * (int)modifier.Magnitude, modifier.Channel);
+					break;
+			}
+		}
 	}
 
 	private void Attribute_OnValueChanged(Attribute attribute, int change)

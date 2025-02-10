@@ -18,11 +18,12 @@ public class ModifierTagsEffectComponent(GameplayTagContainer tagsToAdd) : IGame
 	private readonly GameplayTagContainer _tagsToAdd = tagsToAdd;
 
 	/// <inheritdoc/>
-	public void OnActiveGameplayEffectAdded(
+	public bool OnActiveGameplayEffectAdded(
 		IForgeEntity target,
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
 		target.GameplayTags.AddModifierTags(_tagsToAdd);
+		return true;
 	}
 
 	/// <inheritdoc/>

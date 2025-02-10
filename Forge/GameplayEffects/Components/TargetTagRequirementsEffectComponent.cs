@@ -49,7 +49,7 @@ public class TargetTagRequirementsEffectComponent(
 	}
 
 	/// <inheritdoc/>
-	public void OnActiveGameplayEffectAdded(
+	public bool OnActiveGameplayEffectAdded(
 		IForgeEntity target,
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
@@ -57,6 +57,8 @@ public class TargetTagRequirementsEffectComponent(
 		_effect = activeEffectEvaluatedData.ActiveGameplayEffect;
 
 		target.GameplayTags.OnTagsChanged += GameplayTags_OnTagsChanged;
+
+		return OngoingTagRequirements.RequirementsMet(_target.GameplayTags.CombinedTags);
 	}
 
 	/// <inheritdoc/>
@@ -89,9 +91,6 @@ public class TargetTagRequirementsEffectComponent(
 			return;
 		}
 
-		if (OngoingTagRequirements.RequirementsMet(tags))
-		{
-			// TODO: Toggle effect Inhibition.
-		}
+		_effect.SetInhibit(OngoingTagRequirements.RequirementsMet(tags));
 	}
 }

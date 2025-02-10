@@ -231,12 +231,11 @@ public class GameplayEffectsManager(IForgeEntity owner)
 	private void ApplyNewEffect(GameplayEffect gameplayEffect)
 	{
 		var activeEffect = new ActiveGameplayEffect(gameplayEffect, Owner);
-		_activeEffects.Add(activeEffect);
-		activeEffect.Apply();
+		var remainActive = true;
 
 		foreach (IGameplayEffectComponent component in gameplayEffect.EffectData.GameplayEffectComponents)
 		{
-			component.OnActiveGameplayEffectAdded(
+			remainActive &= component.OnActiveGameplayEffectAdded(
 				Owner,
 				new ActiveEffectEvaluatedData(
 					activeEffect,
@@ -246,6 +245,9 @@ public class GameplayEffectsManager(IForgeEntity owner)
 					activeEffect.ExecutionCount));
 			component.OnGameplayEffectApplied(Owner, activeEffect.GameplayEffectEvaluatedData);
 		}
+
+		_activeEffects.Add(activeEffect);
+		activeEffect.Apply(inhibited: !remainActive);
 	}
 
 	private void RemoveStackOrUnapply(ActiveGameplayEffect? effectToRemove, bool forceUnapply)
