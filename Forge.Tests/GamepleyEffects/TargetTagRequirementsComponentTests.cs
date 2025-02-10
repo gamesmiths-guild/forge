@@ -4,6 +4,8 @@ using Gamesmiths.Forge.GameplayEffects;
 using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
+using Gamesmiths.Forge.GameplayEffects.Modifiers;
+using Gamesmiths.Forge.GameplayEffects.Periodic;
 using Gamesmiths.Forge.GameplayEffects.Stacking;
 using Gamesmiths.Forge.GameplayTags;
 using Gamesmiths.Forge.Tests.GameplayTags;
@@ -430,6 +432,360 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 			entity);
 	}
 
+	[Theory]
+	[Trait("Ongoing", null)]
+	[InlineData(
+		new string[] { "color.green" },
+		null)]
+	[InlineData(
+		null,
+		new string[] { "color.red" })]
+	[InlineData(
+		new string[] { "color.green" },
+		new string[] { "color.red", "color.blue" })]
+	[InlineData(
+		new string[] { "color", "enemy.undead" },
+		new string[] { "color.dark.green" })]
+	public void Effect_with_ongoing_requirement_initializes_normally(
+		string[]? requiredOngoingTagKeys,
+		string[]? ignoreOngoingTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateOngoingRequirementsEffectData(
+			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			1,
+			[new int[] { 1, 1, 0 }],
+			entity,
+			entity);
+
+		entity.EffectsManager.UnapplyEffect(effect);
+
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			0,
+			[],
+			entity,
+			entity);
+	}
+
+	[Theory]
+	[Trait("Ongoing", null)]
+	[InlineData(
+		new string[] { "color.red" },
+		null)]
+	[InlineData(
+		null,
+		new string[] { "color.green" })]
+	[InlineData(
+		new string[] { "color.red", "color.blue" },
+		new string[] { "color.green" })]
+	[InlineData(
+		new string[] { "color.dark.green" },
+		new string[] { "color", "enemy.undead" })]
+	public void Effect_without_ongoing_requirement_initializes_inhibited(
+		string[]? requiredOngoingTagKeys,
+		string[]? ignoreOngoingTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateOngoingRequirementsEffectData(
+			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			1,
+			[new int[] { 1, 1, 0 }],
+			entity,
+			entity);
+
+		entity.EffectsManager.UnapplyEffect(effect);
+
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			0,
+			[],
+			entity,
+			entity);
+	}
+
+	[Theory]
+	[Trait("Ongoing", null)]
+	[InlineData(
+		new string[] { "color.dark.green" },
+		null,
+		new string[] { "color.dark.green" })]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		null,
+		new string[] { "item" })]
+	[InlineData(
+		new string[] { "color.red", "color.blue" },
+		null,
+		new string[] { "color.red", "color.blue" })]
+	[InlineData(
+		new string[] { "color.dark.green", "item.equipment.weapon.axe" },
+		null,
+		new string[] { "color.dark", "item.equipment.weapon" })]
+	public void Effect_with_ongoing_requirement_gets_inhibited_after_modifier_tag_application(
+		string[] modifierTagKeys,
+		string[]? requiredOngoingTagKeys,
+		string[]? ignoreOngoingTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateOngoingRequirementsEffectData(
+			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
+		var modifierTagEffect = new GameplayEffect(modifierTagEffectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+
+		entity.EffectsManager.UnapplyEffect(modifierTagEffect);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+	}
+
+	[Theory]
+	[Trait("Ongoing", null)]
+	[InlineData(
+		new string[] { "color.dark.green" },
+		new string[] { "color.dark.green" },
+		null)]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		new string[] { "item" },
+		null)]
+	[InlineData(
+		new string[] { "color.red", "color.blue" },
+		new string[] { "color.red", "color.blue" },
+		null)]
+	[InlineData(
+		new string[] { "color.dark.green", "item.equipment.weapon.axe" },
+		new string[] { "color.dark", "item.equipment.weapon" },
+		null)]
+	public void Effect_with_ongoing_requirement_gets_inhibited_after_modifier_tag_removal(
+		string[] modifierTagKeys,
+		string[]? requiredOngoingTagKeys,
+		string[]? ignoreOngoingTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateOngoingRequirementsEffectData(
+			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
+		var modifierTagEffect = new GameplayEffect(modifierTagEffectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		entity.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		entity.EffectsManager.UnapplyEffect(modifierTagEffect);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	[Theory]
+	[Trait("Ongoing Periodic", null)]
+	[InlineData(
+		new string[] { "color.green" },
+		null)]
+	[InlineData(
+		null,
+		new string[] { "color.red" })]
+	[InlineData(
+		new string[] { "color.green" },
+		new string[] { "color.red", "color.blue" })]
+	[InlineData(
+		new string[] { "color", "enemy.undead" },
+		new string[] { "color.dark.green" })]
+	public void Periodic_effect_with_ongoing_requirement_executes_normally(
+		string[]? requiredOngoingTagKeys,
+		string[]? ignoreOngoingTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
+			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			1,
+			[new int[] { 1, 1, 0 }],
+			entity,
+			entity);
+
+		entity.EffectsManager.UpdateEffects(3f);
+
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
+
+		entity.EffectsManager.UnapplyEffect(effect);
+
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			0,
+			[],
+			entity,
+			entity);
+	}
+
+	[Theory]
+	[Trait("Ongoing Periodic", null)]
+	[InlineData(
+		new string[] { "color.red" },
+		null)]
+	[InlineData(
+		null,
+		new string[] { "color.green" })]
+	[InlineData(
+		new string[] { "color.red", "color.blue" },
+		new string[] { "color.green" })]
+	[InlineData(
+		new string[] { "color.dark.green" },
+		new string[] { "color", "enemy.undead" })]
+	public void Periodic_effect_without_ongoing_requirement_does_not_execute(
+		string[]? requiredOngoingTagKeys,
+		string[]? ignoreOngoingTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
+			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(effect);
+		entity.EffectsManager.UpdateEffects(100f);
+
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			1,
+			[new int[] { 1, 1, 0 }],
+			entity,
+			entity);
+
+		entity.EffectsManager.UnapplyEffect(effect);
+
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestStackData(
+			entity.EffectsManager.GetEffectInfo(effectData),
+			0,
+			[],
+			entity,
+			entity);
+	}
+
+	[Theory]
+	[Trait("Ongoing Periodic", null)]
+	[InlineData(
+		new string[] { "color.dark.green" },
+		null,
+		new string[] { "color.dark.green" })]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		null,
+		new string[] { "item" })]
+	[InlineData(
+		new string[] { "color.red", "color.blue" },
+		null,
+		new string[] { "color.red", "color.blue" })]
+	[InlineData(
+		new string[] { "color.dark.green", "item.equipment.weapon.axe" },
+		null,
+		new string[] { "color.dark", "item.equipment.weapon" })]
+	public void Periodic_effect_with_ongoing_requirement_gets_inhibited_after_modifier_tag_application(
+		string[] modifierTagKeys,
+		string[]? requiredOngoingTagKeys,
+		string[]? ignoreOngoingTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
+			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
+		var modifierTagEffect = new GameplayEffect(modifierTagEffectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
+
+		entity.EffectsManager.UpdateEffects(3f);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
+
+		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		entity.EffectsManager.UpdateEffects(3f);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
+
+		entity.EffectsManager.UnapplyEffect(modifierTagEffect);
+		entity.EffectsManager.UpdateEffects(3f);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [71, 71, 0, 0]);
+	}
+
+	[Theory]
+	[Trait("Ongoing Periodic", null)]
+	[InlineData(
+		new string[] { "color.dark.green" },
+		new string[] { "color.dark.green" },
+		null)]
+	[InlineData(
+		new string[] { "item.equipment.weapon.axe" },
+		new string[] { "item" },
+		null)]
+	[InlineData(
+		new string[] { "color.red", "color.blue" },
+		new string[] { "color.red", "color.blue" },
+		null)]
+	[InlineData(
+		new string[] { "color.dark.green", "item.equipment.weapon.axe" },
+		new string[] { "color.dark", "item.equipment.weapon" },
+		null)]
+	public void Periodic_effect_with_ongoing_requirement_gets_inhibited_after_modifier_tag_removal(
+		string[] modifierTagKeys,
+		string[]? requiredOngoingTagKeys,
+		string[]? ignoreOngoingTagKeys)
+	{
+		var entity = new TestEntity(_gameplayTagsManager);
+		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
+			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
+		var modifierTagEffect = new GameplayEffect(modifierTagEffectData, new GameplayEffectOwnership(entity, entity));
+
+		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		entity.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
+
+		entity.EffectsManager.UpdateEffects(3f);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
+
+		entity.EffectsManager.UnapplyEffect(modifierTagEffect);
+		entity.EffectsManager.UpdateEffects(3f);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
+
+		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		entity.EffectsManager.UpdateEffects(3f);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [71, 71, 0, 0]);
+	}
+
 	private GameplayEffectData CreateTagRequirementsEffectData(
 		string[]?[] aplicationTagKeys,
 		string[]?[] removalTagKeys)
@@ -467,6 +823,80 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 					new GameplayTagRequirements(
 						new GameplayTagContainer(_gameplayTagsManager),
 						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagQuery()))
+			]);
+	}
+
+	private GameplayEffectData CreateOngoingRequirementsEffectData(
+		string[]?[] ongoingTagKeys)
+	{
+		HashSet<GameplayTag> requiredOngoingTags = TestUtils.StringToGameplayTag(_gameplayTagsManager, ongoingTagKeys[0]);
+		HashSet<GameplayTag> ignoreOngoingTags = TestUtils.StringToGameplayTag(_gameplayTagsManager, ongoingTagKeys[1]);
+
+		return new GameplayEffectData(
+			"Tag Requirements Effect",
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(10)))
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			null,
+			gameplayEffectComponents:
+			[
+				new TargetTagRequirementsEffectComponent(
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagQuery()),
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagQuery()),
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager, requiredOngoingTags),
+						new GameplayTagContainer(_gameplayTagsManager, ignoreOngoingTags),
+						new GameplayTagQuery()))
+			]);
+	}
+
+	private GameplayEffectData CreateOngoingRequirementsPeriodicEffectData(
+		string[]?[] ongoingTagKeys)
+	{
+		HashSet<GameplayTag> requiredOngoingTags = TestUtils.StringToGameplayTag(_gameplayTagsManager, ongoingTagKeys[0]);
+		HashSet<GameplayTag> ignoreOngoingTags = TestUtils.StringToGameplayTag(_gameplayTagsManager, ongoingTagKeys[1]);
+
+		return new GameplayEffectData(
+			"Tag Requirements Effect",
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(10)))
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			new PeriodicData(new ScalableFloat(1), true),
+			gameplayEffectComponents:
+			[
+				new TargetTagRequirementsEffectComponent(
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagQuery()),
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagContainer(_gameplayTagsManager),
+						new GameplayTagQuery()),
+					new GameplayTagRequirements(
+						new GameplayTagContainer(_gameplayTagsManager, requiredOngoingTags),
+						new GameplayTagContainer(_gameplayTagsManager, ignoreOngoingTags),
 						new GameplayTagQuery()))
 			]);
 	}

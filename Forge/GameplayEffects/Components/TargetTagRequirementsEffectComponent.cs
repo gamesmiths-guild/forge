@@ -58,7 +58,7 @@ public class TargetTagRequirementsEffectComponent(
 
 		target.GameplayTags.OnTagsChanged += GameplayTags_OnTagsChanged;
 
-		return OngoingTagRequirements.RequirementsMet(_target.GameplayTags.CombinedTags);
+		return OngoingTagRequirements.IsEmpty || OngoingTagRequirements.RequirementsMet(_target.GameplayTags.CombinedTags);
 	}
 
 	/// <inheritdoc/>
@@ -91,6 +91,6 @@ public class TargetTagRequirementsEffectComponent(
 			return;
 		}
 
-		_effect.SetInhibit(OngoingTagRequirements.RequirementsMet(tags));
+		_effect.SetInhibit(!OngoingTagRequirements.RequirementsMet(tags));
 	}
 }
