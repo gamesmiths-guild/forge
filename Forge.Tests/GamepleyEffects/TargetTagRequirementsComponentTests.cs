@@ -700,46 +700,110 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 	[InlineData(
 		new string[] { "color.dark.green" },
 		null,
-		new string[] { "color.dark.green" })]
+		new string[] { "color.dark.green" },
+		PeriodInhibitionRemovedPolicy.NeverReset,
+		3f,
+		3f,
+		3f,
+		new int[] { 11, 11, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 71, 71, 0, 0 })]
 	[InlineData(
 		new string[] { "item.equipment.weapon.axe" },
 		null,
-		new string[] { "item" })]
+		new string[] { "item" },
+		PeriodInhibitionRemovedPolicy.NeverReset,
+		3f,
+		3f,
+		3f,
+		new int[] { 11, 11, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 71, 71, 0, 0 })]
 	[InlineData(
 		new string[] { "color.red", "color.blue" },
 		null,
-		new string[] { "color.red", "color.blue" })]
+		new string[] { "color.red", "color.blue" },
+		PeriodInhibitionRemovedPolicy.NeverReset,
+		3f,
+		3f,
+		3f,
+		new int[] { 11, 11, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 71, 71, 0, 0 })]
 	[InlineData(
 		new string[] { "color.dark.green", "item.equipment.weapon.axe" },
 		null,
-		new string[] { "color.dark", "item.equipment.weapon" })]
+		new string[] { "color.dark", "item.equipment.weapon" },
+		PeriodInhibitionRemovedPolicy.NeverReset,
+		3f,
+		3f,
+		3f,
+		new int[] { 11, 11, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 71, 71, 0, 0 })]
+	[InlineData(
+		new string[] { "color.red" },
+		null,
+		new string[] { "color.red" },
+		PeriodInhibitionRemovedPolicy.ResetPeriod,
+		3f,
+		3.5f,
+		2.5f,
+		new int[] { 11, 11, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 61, 61, 0, 0 })]
+	[InlineData(
+		new string[] { "color.red" },
+		null,
+		new string[] { "color.red" },
+		PeriodInhibitionRemovedPolicy.ExecuteAndResetPeriod,
+		3f,
+		3.5f,
+		1f,
+		new int[] { 11, 11, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 61, 61, 0, 0 })]
 	public void Periodic_effect_with_ongoing_requirement_gets_inhibited_after_modifier_tag_application(
 		string[] modifierTagKeys,
 		string[]? requiredOngoingTagKeys,
-		string[]? ignoreOngoingTagKeys)
+		string[]? ignoreOngoingTagKeys,
+		PeriodInhibitionRemovedPolicy periodInhibitionRemovedPolicy,
+		float firstUpdatePeriod,
+		float secondUpdatePeriod,
+		float thirdUpdatePeriod,
+		int[] firstExpectedResults,
+		int[] secondExpectedResults,
+		int[] thirdExpectedResults,
+		int[] fourthExpectedResults)
 	{
 		var entity = new TestEntity(_gameplayTagsManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
 			[requiredOngoingTagKeys, ignoreOngoingTagKeys],
-			PeriodInhibitionRemovedPolicy.NeverReset);
+			periodInhibitionRemovedPolicy);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
 		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
 		var modifierTagEffect = new GameplayEffect(modifierTagEffectData, new GameplayEffectOwnership(entity, entity));
 
 		entity.EffectsManager.ApplyEffect(effect);
-		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", firstExpectedResults);
 
-		entity.EffectsManager.UpdateEffects(3f);
-		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
+		entity.EffectsManager.UpdateEffects(firstUpdatePeriod);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", secondExpectedResults);
 
 		entity.EffectsManager.ApplyEffect(modifierTagEffect);
-		entity.EffectsManager.UpdateEffects(3f);
-		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
+		entity.EffectsManager.UpdateEffects(secondUpdatePeriod);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", thirdExpectedResults);
 
 		entity.EffectsManager.UnapplyEffect(modifierTagEffect);
-		entity.EffectsManager.UpdateEffects(3f);
-		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [71, 71, 0, 0]);
+		entity.EffectsManager.UpdateEffects(thirdUpdatePeriod);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", fourthExpectedResults);
 	}
 
 	[Theory]
@@ -747,28 +811,92 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 	[InlineData(
 		new string[] { "color.dark.green" },
 		new string[] { "color.dark.green" },
-		null)]
+		null,
+		PeriodInhibitionRemovedPolicy.NeverReset,
+		3f,
+		3f,
+		3f,
+		new int[] { 11, 11, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 71, 71, 0, 0 })]
 	[InlineData(
 		new string[] { "item.equipment.weapon.axe" },
 		new string[] { "item" },
-		null)]
+		null,
+		PeriodInhibitionRemovedPolicy.NeverReset,
+		3f,
+		3f,
+		3f,
+		new int[] { 11, 11, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 71, 71, 0, 0 })]
 	[InlineData(
 		new string[] { "color.red", "color.blue" },
 		new string[] { "color.red", "color.blue" },
-		null)]
+		null,
+		PeriodInhibitionRemovedPolicy.NeverReset,
+		3f,
+		3f,
+		3f,
+		new int[] { 11, 11, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 71, 71, 0, 0 })]
 	[InlineData(
 		new string[] { "color.dark.green", "item.equipment.weapon.axe" },
 		new string[] { "color.dark", "item.equipment.weapon" },
-		null)]
+		null,
+		PeriodInhibitionRemovedPolicy.NeverReset,
+		3f,
+		3f,
+		3f,
+		new int[] { 11, 11, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 71, 71, 0, 0 })]
+	[InlineData(
+		new string[] { "color.red" },
+		new string[] { "color.red" },
+		null,
+		PeriodInhibitionRemovedPolicy.ResetPeriod,
+		3f,
+		3.5f,
+		2.5f,
+		new int[] { 11, 11, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 61, 61, 0, 0 })]
+	[InlineData(
+		new string[] { "color.red" },
+		new string[] { "color.red" },
+		null,
+		PeriodInhibitionRemovedPolicy.ExecuteAndResetPeriod,
+		3f,
+		3.5f,
+		1f,
+		new int[] { 11, 11, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 41, 41, 0, 0 },
+		new int[] { 61, 61, 0, 0 })]
 	public void Periodic_effect_with_ongoing_requirement_gets_inhibited_after_modifier_tag_removal(
 		string[] modifierTagKeys,
 		string[]? requiredOngoingTagKeys,
-		string[]? ignoreOngoingTagKeys)
+		string[]? ignoreOngoingTagKeys,
+		PeriodInhibitionRemovedPolicy periodInhibitionRemovedPolicy,
+		float firstUpdatePeriod,
+		float secondUpdatePeriod,
+		float thirdUpdatePeriod,
+		int[] firstExpectedResults,
+		int[] secondExpectedResults,
+		int[] thirdExpectedResults,
+		int[] fourthExpectedResults)
 	{
 		var entity = new TestEntity(_gameplayTagsManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
 			[requiredOngoingTagKeys, ignoreOngoingTagKeys],
-			PeriodInhibitionRemovedPolicy.NeverReset);
+			periodInhibitionRemovedPolicy);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
 		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
@@ -776,18 +904,18 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 
 		entity.EffectsManager.ApplyEffect(modifierTagEffect);
 		entity.EffectsManager.ApplyEffect(effect);
-		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", firstExpectedResults);
 
-		entity.EffectsManager.UpdateEffects(3f);
-		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
+		entity.EffectsManager.UpdateEffects(firstUpdatePeriod);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", secondExpectedResults);
 
 		entity.EffectsManager.UnapplyEffect(modifierTagEffect);
-		entity.EffectsManager.UpdateEffects(3f);
-		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
+		entity.EffectsManager.UpdateEffects(secondUpdatePeriod);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", thirdExpectedResults);
 
 		entity.EffectsManager.ApplyEffect(modifierTagEffect);
-		entity.EffectsManager.UpdateEffects(3f);
-		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [71, 71, 0, 0]);
+		entity.EffectsManager.UpdateEffects(thirdUpdatePeriod);
+		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", fourthExpectedResults);
 	}
 
 	private GameplayEffectData CreateTagRequirementsEffectData(
