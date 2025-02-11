@@ -620,7 +620,8 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 	{
 		var entity = new TestEntity(_gameplayTagsManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
-			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
+			[requiredOngoingTagKeys, ignoreOngoingTagKeys],
+			PeriodInhibitionRemovedPolicy.NeverReset);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
 		entity.EffectsManager.ApplyEffect(effect);
@@ -668,7 +669,8 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 	{
 		var entity = new TestEntity(_gameplayTagsManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
-			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
+			[requiredOngoingTagKeys, ignoreOngoingTagKeys],
+			PeriodInhibitionRemovedPolicy.NeverReset);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
 		entity.EffectsManager.ApplyEffect(effect);
@@ -718,7 +720,8 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 	{
 		var entity = new TestEntity(_gameplayTagsManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
-			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
+			[requiredOngoingTagKeys, ignoreOngoingTagKeys],
+			PeriodInhibitionRemovedPolicy.NeverReset);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
 		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
@@ -764,7 +767,8 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 	{
 		var entity = new TestEntity(_gameplayTagsManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
-			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
+			[requiredOngoingTagKeys, ignoreOngoingTagKeys],
+			PeriodInhibitionRemovedPolicy.NeverReset);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
 		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
@@ -865,7 +869,8 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 	}
 
 	private GameplayEffectData CreateOngoingRequirementsPeriodicEffectData(
-		string[]?[] ongoingTagKeys)
+		string[]?[] ongoingTagKeys,
+		PeriodInhibitionRemovedPolicy periodInhibitionRemovedPolicy)
 	{
 		HashSet<GameplayTag> requiredOngoingTags = TestUtils.StringToGameplayTag(_gameplayTagsManager, ongoingTagKeys[0]);
 		HashSet<GameplayTag> ignoreOngoingTags = TestUtils.StringToGameplayTag(_gameplayTagsManager, ongoingTagKeys[1]);
@@ -882,7 +887,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 			],
 			new DurationData(DurationType.Infinite),
 			null,
-			new PeriodicData(new ScalableFloat(1), true),
+			new PeriodicData(new ScalableFloat(1), true, periodInhibitionRemovedPolicy),
 			gameplayEffectComponents:
 			[
 				new TargetTagRequirementsEffectComponent(

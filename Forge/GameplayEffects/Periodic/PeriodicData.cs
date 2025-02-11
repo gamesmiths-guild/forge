@@ -8,8 +8,12 @@ namespace Gamesmiths.Forge.GameplayEffects.Periodic;
 /// The periodic data for a Gameplay Effect.
 /// </summary>
 /// <param name="period">The duration for the periodic triggers for the effect.</param>
-/// <param name="executeOnApplication">Should the periodic effect trigger on application?.</param>
-public readonly struct PeriodicData(ScalableFloat period, bool executeOnApplication) : IEquatable<PeriodicData>
+/// <param name="executeOnApplication">If the periodic effect should trigger on application.</param>
+/// <param name="periodInhibitionRemovedPolicy">How to handle periods when inhibition is removed.</param>
+public readonly struct PeriodicData(
+	ScalableFloat period,
+	bool executeOnApplication,
+	PeriodInhibitionRemovedPolicy periodInhibitionRemovedPolicy) : IEquatable<PeriodicData>
 {
 	/// <summary>
 	/// Gets the period duration for the periodic effect.
@@ -21,12 +25,18 @@ public readonly struct PeriodicData(ScalableFloat period, bool executeOnApplicat
 	/// </summary>
 	public bool ExecuteOnApplication { get; } = executeOnApplication;
 
+	/// <summary>
+	/// Gets a value for the policy to use when the period inhibition is removed.
+	/// </summary>
+	public PeriodInhibitionRemovedPolicy PeriodInhibitionRemovedPolicy { get; } = periodInhibitionRemovedPolicy;
+
 	/// <inheritdoc/>
 	public override int GetHashCode()
 	{
 		var hash = default(HashCode);
 		hash.Add(Period);
 		hash.Add(ExecuteOnApplication);
+		hash.Add(PeriodInhibitionRemovedPolicy);
 
 		return hash.ToHashCode();
 	}
@@ -46,7 +56,8 @@ public readonly struct PeriodicData(ScalableFloat period, bool executeOnApplicat
 	public bool Equals(PeriodicData other)
 	{
 		return Period == other.Period
-			&& ExecuteOnApplication.Equals(other.ExecuteOnApplication);
+			&& ExecuteOnApplication.Equals(other.ExecuteOnApplication)
+			&& PeriodInhibitionRemovedPolicy == other.PeriodInhibitionRemovedPolicy;
 	}
 
 	/// <summary>

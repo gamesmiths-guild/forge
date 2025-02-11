@@ -4,6 +4,7 @@ using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
+using Gamesmiths.Forge.GameplayEffects.Periodic;
 using Gamesmiths.Forge.GameplayEffects.Stacking;
 using Attribute = Gamesmiths.Forge.Core.Attribute;
 
@@ -85,8 +86,7 @@ public class ActiveGameplayEffect
 			if (EffectData.PeriodicData.Value.ExecuteOnApplication &&
 				!reApplication && !_isInhibited)
 			{
-				GameplayEffect.Execute(GameplayEffectEvaluatedData);
-				ExecutionCount++;
+				Execute();
 			}
 
 			if (!reApplication)
@@ -264,8 +264,7 @@ public class ActiveGameplayEffect
 
 		if (stackingData.ExecuteOnSuccessfulApplication == true && !_isInhibited)
 		{
-			GameplayEffect.Execute(GameplayEffectEvaluatedData);
-			ExecutionCount++;
+			Execute();
 		}
 
 		return true;
@@ -342,6 +341,23 @@ public class ActiveGameplayEffect
 
 		if (EffectData.PeriodicData.HasValue)
 		{
+			if (_isInhibited)
+			{
+				return;
+			}
+
+			if (EffectData.PeriodicData.Value.PeriodInhibitionRemovedPolicy
+				== PeriodInhibitionRemovedPolicy.ExecuteAndResetPeriod)
+			{
+				Execute();
+			}
+
+			if (EffectData.PeriodicData.Value.PeriodInhibitionRemovedPolicy
+				!= PeriodInhibitionRemovedPolicy.NeverReset)
+			{
+				NextPeriodicTick = _internalTime + GameplayEffectEvaluatedData.Period;
+			}
+
 			return;
 		}
 
@@ -358,8 +374,7 @@ public class ActiveGameplayEffect
 			{
 				if (!_isInhibited)
 				{
-					GameplayEffect.Execute(GameplayEffectEvaluatedData);
-					ExecutionCount++;
+					Execute();
 				}
 
 				NextPeriodicTick += GameplayEffectEvaluatedData.Period;
@@ -402,6 +417,12 @@ public class ActiveGameplayEffect
 					break;
 			}
 		}
+	}
+
+	private void Execute()
+	{
+		GameplayEffect.Execute(GameplayEffectEvaluatedData);
+		ExecutionCount++;
 	}
 
 	private void Attribute_OnValueChanged(Attribute attribute, int change)

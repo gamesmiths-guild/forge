@@ -409,7 +409,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 						new CurveKey(1, periodicLevel1Multiplier),
 						new CurveKey(2, periodicLevel2Multiplier),
 					])),
-				true),
+				true,
+				PeriodInhibitionRemovedPolicy.NeverReset),
 			false);
 
 		var effect = new GameplayEffect(
@@ -801,7 +802,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 			],
 			new DurationData(DurationType.Infinite),
 			null,
-			new PeriodicData(new ScalableFloat(period), true));
+			new PeriodicData(new ScalableFloat(period), true, PeriodInhibitionRemovedPolicy.NeverReset));
 
 		var effect = new GameplayEffect(
 			effectData,
@@ -851,7 +852,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 			],
 			new DurationData(DurationType.Infinite),
 			null,
-			new PeriodicData(new ScalableFloat(period), true));
+			new PeriodicData(new ScalableFloat(period), true, PeriodInhibitionRemovedPolicy.NeverReset));
 
 		var effect = new GameplayEffect(
 			effectData,
@@ -981,7 +982,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 			],
 			new DurationData(DurationType.Infinite),
 			null,
-			new PeriodicData(new ScalableFloat(period), true));
+			new PeriodicData(new ScalableFloat(period), true, PeriodInhibitionRemovedPolicy.NeverReset));
 
 		var effect = new GameplayEffect(
 			effectData,
@@ -1188,7 +1189,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 			],
 			new DurationData(DurationType.HasDuration, new ScalableFloat(duration)),
 			null,
-			new PeriodicData(new ScalableFloat(period), true));
+			new PeriodicData(new ScalableFloat(period), true, PeriodInhibitionRemovedPolicy.NeverReset));
 
 		var effect = new GameplayEffect(
 			effectData,
@@ -2217,7 +2218,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 				applicationRefreshPolicy,
 				applicationResetPeriodPolicy,
 				executeOnSuccessfulApplication),
-			new PeriodicData(new ScalableFloat(effectPeriod), true));
+			new PeriodicData(new ScalableFloat(effectPeriod), true, PeriodInhibitionRemovedPolicy.NeverReset));
 
 		var effect = new GameplayEffect(
 			effectData,
