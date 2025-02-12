@@ -85,12 +85,6 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 			!(durationData.Type != DurationType.HasDuration && durationData.Duration.HasValue),
 			$"Can't set duration if {nameof(DurationType)} is set to {durationData.Type}.");
 
-		// TODO: Implement some kind of support for override on non-instant effects.
-		Debug.Assert(
-			!(durationData.Type != DurationType.Instant && !periodicData.HasValue
-			&& Array.Exists(modifiers, x => x.Operation == ModifierOperation.Override)),
-			$"Only {DurationType.Instant} or Periodic effects can have operation of type {ModifierOperation.Override}.");
-
 		Debug.Assert(
 			!(stackingData.HasValue && durationData.Type == DurationType.Instant),
 			$"{DurationType.Instant} effects can't have stacks.");

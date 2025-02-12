@@ -313,6 +313,73 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 	[Theory]
 	[Trait("Duration", null)]
+	[InlineData("TestAttributeSet.Attribute1", 10, 12, new int[] { 11, 1, 10, 0 }, new int[] { 12, 1, 11, 0 })]
+	[InlineData("TestAttributeSet.Attribute2", 5, 3, new int[] { 7, 2, 5, 0 }, new int[] { 3, 2, 1, 0 })]
+	[InlineData("TestAttributeSet.Attribute3", 40, 1, new int[] { 43, 3, 40, 0 }, new int[] { 1, 3, -2, 0 })]
+	[InlineData("TestAttributeSet.Attribute5", 10, -10, new int[] { 15, 5, 10, 0 }, new int[] { 0, 5, -15, -10 })]
+	[InlineData("TestAttributeSet.Attribute90", 1, 15, new int[] { 91, 90, 1, 0 }, new int[] { 15, 90, -75, 0 })]
+	[InlineData("TestAttributeSet.Attribute90", 1, -40, new int[] { 91, 90, 1, 0 }, new int[] { 0, 90, -130, -40 })]
+	public void Override_values_are_applied_temporarily(
+		string targetAttribute,
+		float flatMagnitude,
+		float overrideMagnitude,
+		int[] firstExpectedResults,
+		int[] secondExpectedResult)
+	{
+		var owner = new TestEntity(_gameplayTagsManager);
+		var target = new TestEntity(_gameplayTagsManager);
+
+		var flatBonusEffectData = new GameplayEffectData(
+			"FlatBonus",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(flatMagnitude)))
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			null);
+
+		var overrideEffectData = new GameplayEffectData(
+			"Override effect",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.Override,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(overrideMagnitude)))
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			null);
+
+		var effect1 = new GameplayEffect(
+			flatBonusEffectData,
+			new GameplayEffectOwnership(owner, owner));
+
+		var effect2 = new GameplayEffect(
+			overrideEffectData,
+			new GameplayEffectOwnership(owner, owner));
+
+		target.EffectsManager.ApplyEffect(effect1);
+
+		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
+
+		target.EffectsManager.ApplyEffect(effect2);
+
+		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResult);
+
+		target.EffectsManager.UnapplyEffect(effect2);
+
+		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
+	}
+
+	[Theory]
+	[Trait("Duration", null)]
 	[InlineData("TestAttributeSet.Attribute1", 10, 1, 2, new int[] { 11, 1, 10, 0 }, new int[] { 21, 1, 20, 0 })]
 	[InlineData("TestAttributeSet.Attribute2", 5, 1, 2.5f, new int[] { 7, 2, 5, 0 }, new int[] { 14, 2, 12, 0 })]
 	[InlineData("TestAttributeSet.Attribute3", 40, 1, 0.2f, new int[] { 43, 3, 40, 0 }, new int[] { 11, 3, 8, 0 })]

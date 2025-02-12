@@ -413,7 +413,13 @@ public class ActiveGameplayEffect
 					break;
 
 				case ModifierOperation.Override:
-					modifier.Attribute.AddOverride(multiplier * (int)modifier.Magnitude, modifier.Channel);
+					if (multiplier == 1)
+					{
+						modifier.Attribute.AddOverride((int)modifier.Magnitude, modifier.Channel);
+						break;
+					}
+
+					modifier.Attribute.ClearOverride(modifier.Channel);
 					break;
 			}
 		}
