@@ -13,13 +13,15 @@ namespace Gamesmiths.Forge.GameplayEffects;
 /// <summary>
 /// Represents an active gameplay effect that is currently affecting an entity.
 /// </summary>
-public class ActiveGameplayEffect
+internal class ActiveGameplayEffect
 {
 	private const double Epsilon = 0.00001;
 
 	private double _internalTime;
 
 	private bool _isInhibited;
+
+	internal ActiveGameplayEffectHandle Handle { get; }
 
 	internal GameplayEffectEvaluatedData GameplayEffectEvaluatedData { get; private set; }
 
@@ -41,6 +43,8 @@ public class ActiveGameplayEffect
 
 	internal ActiveGameplayEffect(GameplayEffect gameplayEffect, IForgeEntity target)
 	{
+		Handle = new ActiveGameplayEffectHandle(this);
+
 		if (gameplayEffect.EffectData.StackingData.HasValue)
 		{
 			StackCount = gameplayEffect.EffectData.StackingData.Value.InitialStack.GetValue(

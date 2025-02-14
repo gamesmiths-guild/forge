@@ -1,5 +1,6 @@
 // Copyright © 2024 Gamesmiths Guild.
 
+using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayEffects;
 using Gamesmiths.Forge.GameplayEffects.Duration;
@@ -369,11 +370,12 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
-		target.EffectsManager.ApplyEffect(effect2);
+		ActiveGameplayEffectHandle? activeEffect2handle = target.EffectsManager.ApplyEffect(effect2);
+		Debug.Assert(activeEffect2handle is not null, "Effect handle should have a value.");
 
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResult);
 
-		target.EffectsManager.UnapplyEffect(effect2);
+		target.EffectsManager.UnapplyEffect(activeEffect2handle);
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 	}
@@ -2498,7 +2500,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 			effectData,
 			new GameplayEffectOwnership(owner, owner));
 
-		target.EffectsManager.ApplyEffect(effect);
+		ActiveGameplayEffectHandle? effectHandle = target.EffectsManager.ApplyEffect(effect);
+		Debug.Assert(effectHandle is not null, "Effect handle should not be null.");
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
@@ -2509,7 +2512,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 			owner,
 			target);
 
-		target.EffectsManager.UnapplyEffect(effect, forceUnapply);
+		target.EffectsManager.UnapplyEffect(effectHandle, forceUnapply);
 
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
 
@@ -2520,7 +2523,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 			owner,
 			target);
 
-		target.EffectsManager.UnapplyEffect(effect, forceUnapply);
+		target.EffectsManager.UnapplyEffect(effectHandle, forceUnapply);
 
 		TestUtils.TestAttribute(target, targetAttribute, thirdExpectedResults);
 
@@ -2531,7 +2534,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 			owner,
 			target);
 
-		target.EffectsManager.UnapplyEffect(effect, forceUnapply);
+		target.EffectsManager.UnapplyEffect(effectHandle, forceUnapply);
 
 		TestUtils.TestAttribute(target, targetAttribute, fourthExpectedResults);
 
@@ -2602,19 +2605,21 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		var originalModifier = target.Attributes[targetAttribute].Modifier;
 		var originalOverflow = target.Attributes[targetAttribute].Overflow;
 
-		target.EffectsManager.ApplyEffect(effect);
+		ActiveGameplayEffectHandle? activeEffectHandle1 = target.EffectsManager.ApplyEffect(effect);
+		Debug.Assert(activeEffectHandle1 is not null, "Effect handle should not be null.");
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
-		target.EffectsManager.ApplyEffect(effect);
+		ActiveGameplayEffectHandle? activeEffectHandle2 = target.EffectsManager.ApplyEffect(effect);
+		Debug.Assert(activeEffectHandle2 is not null, "Effect handle should not be null.");
 
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
 
-		target.EffectsManager.UnapplyEffect(effect);
+		target.EffectsManager.UnapplyEffect(activeEffectHandle1);
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
-		target.EffectsManager.UnapplyEffect(effect);
+		target.EffectsManager.UnapplyEffect(activeEffectHandle2);
 
 		TestUtils.TestAttribute(
 			target,

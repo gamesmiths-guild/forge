@@ -25,11 +25,13 @@ public class GameplayEffectsManager(IForgeEntity owner)
 	/// Applies an effect to the owner of this manager.
 	/// </summary>
 	/// <param name="gameplayEffect">The instance of the gameplay effect to be applied.</param>
-	public void ApplyEffect(GameplayEffect gameplayEffect)
+	/// <returns>A handle to the applied effect if it was successfully applied as an <see cref="ActiveGameplayEffect"/>.
+	/// </returns>
+	public ActiveGameplayEffectHandle? ApplyEffect(GameplayEffect gameplayEffect)
 	{
 		if (!gameplayEffect.CanApply(Owner))
 		{
-			return;
+			return null;
 		}
 
 		if (gameplayEffect.EffectData.DurationData.Type == DurationType.Instant)
@@ -42,13 +44,12 @@ public class GameplayEffectsManager(IForgeEntity owner)
 			}
 
 			GameplayEffect.Execute(evaluatedData);
-			return;
+			return null;
 		}
 
 		if (!gameplayEffect.EffectData.StackingData.HasValue)
 		{
-			ApplyNewEffect(gameplayEffect);
-			return;
+			return ApplyNewEffect(gameplayEffect).Handle;
 		}
 
 		ActiveGameplayEffect? stackableEffect = FindStackableEffect(gameplayEffect);
@@ -65,10 +66,10 @@ public class GameplayEffectsManager(IForgeEntity owner)
 				}
 			}
 
-			return;
+			return stackableEffect.Handle;
 		}
 
-		ApplyNewEffect(gameplayEffect);
+		return ApplyNewEffect(gameplayEffect).Handle;
 	}
 
 	/// <summary>
@@ -78,9 +79,9 @@ public class GameplayEffectsManager(IForgeEntity owner)
 	/// <param name="activeGameplayEffect">The instance of the active gameplay effect to be removed.</param>
 	/// <param name="forceUnapply">Forces unapplication even if <see cref="StackExpirationPolicy"/> is set to
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.</param>
-	public void UnapplyEffect(ActiveGameplayEffect activeGameplayEffect, bool forceUnapply = false)
+	public void UnapplyEffect(ActiveGameplayEffectHandle activeGameplayEffect, bool forceUnapply = false)
 	{
-		RemoveStackOrUnapply(activeGameplayEffect, forceUnapply);
+		RemoveStackOrUnapply(activeGameplayEffect.ActiveGameplayEffect, forceUnapply);
 	}
 
 	/// <summary>
@@ -126,7 +127,7 @@ public class GameplayEffectsManager(IForgeEntity owner)
 			foreach (IGameplayEffectComponent component in effect.EffectData.GameplayEffectComponents)
 			{
 				component.OnActiveGameplayEffectUpdated(Owner, new ActiveEffectEvaluatedData(
-					effect,
+					effect.Handle,
 					effect.GameplayEffectEvaluatedData,
 					effect.RemainingDuration,
 					effect.NextPeriodicTick,
@@ -167,7 +168,7 @@ public class GameplayEffectsManager(IForgeEntity owner)
 			component.OnActiveGameplayEffectUnapplied(
 				Owner,
 				new ActiveEffectEvaluatedData(
-					removedEffect,
+					removedEffect.Handle,
 					removedEffect.GameplayEffectEvaluatedData,
 					removedEffect.RemainingDuration,
 					removedEffect.NextPeriodicTick,
@@ -228,7 +229,7 @@ public class GameplayEffectsManager(IForgeEntity owner)
 			MatchesStackLevelPolicy(x, gameplayEffect));
 	}
 
-	private void ApplyNewEffect(GameplayEffect gameplayEffect)
+	private ActiveGameplayEffect ApplyNewEffect(GameplayEffect gameplayEffect)
 	{
 		var activeEffect = new ActiveGameplayEffect(gameplayEffect, Owner);
 		var remainActive = true;
@@ -238,7 +239,7 @@ public class GameplayEffectsManager(IForgeEntity owner)
 			remainActive &= component.OnActiveGameplayEffectAdded(
 				Owner,
 				new ActiveEffectEvaluatedData(
-					activeEffect,
+					activeEffect.Handle,
 					activeEffect.GameplayEffectEvaluatedData,
 					activeEffect.RemainingDuration,
 					activeEffect.NextPeriodicTick,
@@ -248,6 +249,8 @@ public class GameplayEffectsManager(IForgeEntity owner)
 
 		_activeEffects.Add(activeEffect);
 		activeEffect.Apply(inhibited: !remainActive);
+
+		return activeEffect;
 	}
 
 	private void RemoveStackOrUnapply(ActiveGameplayEffect? effectToRemove, bool forceUnapply)
@@ -284,7 +287,7 @@ public class GameplayEffectsManager(IForgeEntity owner)
 			component.OnActiveGameplayEffectUnapplied(
 				Owner,
 				new ActiveEffectEvaluatedData(
-					effectToRemove,
+					effectToRemove.Handle,
 					effectToRemove.GameplayEffectEvaluatedData,
 					effectToRemove.RemainingDuration,
 					effectToRemove.NextPeriodicTick,
@@ -293,5 +296,6 @@ public class GameplayEffectsManager(IForgeEntity owner)
 		}
 
 		_activeEffects.Remove(effectToRemove);
+		effectToRemove.Handle.Free();
 	}
 }

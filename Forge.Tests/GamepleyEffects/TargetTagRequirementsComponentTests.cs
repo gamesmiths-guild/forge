@@ -1,5 +1,6 @@
 // Copyright © 2024 Gamesmiths Guild.
 
+using System.Diagnostics;
 using Gamesmiths.Forge.GameplayEffects;
 using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Duration;
@@ -296,7 +297,9 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
 		var modifierTagEffect = new GameplayEffect(modifierTagEffectData, new GameplayEffectOwnership(entity, entity));
 
-		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		ActiveGameplayEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		Debug.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
+
 		entity.EffectsManager.ApplyEffect(effect);
 
 		TestUtils.TestStackData(
@@ -306,7 +309,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 			entity,
 			entity);
 
-		entity.EffectsManager.UnapplyEffect(modifierTagEffect);
+		entity.EffectsManager.UnapplyEffect(activeModifierEffectHandle);
 
 		TestUtils.TestStackData(
 			entity.EffectsManager.GetEffectInfo(effectData),
@@ -455,7 +458,8 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
-		entity.EffectsManager.ApplyEffect(effect);
+		ActiveGameplayEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
+		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 		TestUtils.TestStackData(
@@ -465,7 +469,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 			entity,
 			entity);
 
-		entity.EffectsManager.UnapplyEffect(effect);
+		entity.EffectsManager.UnapplyEffect(activeEffectHandle);
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
@@ -499,7 +503,8 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
-		entity.EffectsManager.ApplyEffect(effect);
+		ActiveGameplayEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
+		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
@@ -509,7 +514,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 			entity,
 			entity);
 
-		entity.EffectsManager.UnapplyEffect(effect);
+		entity.EffectsManager.UnapplyEffect(activeEffectHandle);
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
@@ -554,10 +559,12 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		entity.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 
-		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		ActiveGameplayEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		Debug.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
+
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 
-		entity.EffectsManager.UnapplyEffect(modifierTagEffect);
+		entity.EffectsManager.UnapplyEffect(activeModifierEffectHandle);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 	}
 
@@ -592,11 +599,13 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
 		var modifierTagEffect = new GameplayEffect(modifierTagEffectData, new GameplayEffectOwnership(entity, entity));
 
-		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		ActiveGameplayEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		Debug.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
+
 		entity.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 
-		entity.EffectsManager.UnapplyEffect(modifierTagEffect);
+		entity.EffectsManager.UnapplyEffect(activeModifierEffectHandle);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 	}
 
@@ -624,7 +633,8 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 			PeriodInhibitionRemovedPolicy.NeverReset);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
-		entity.EffectsManager.ApplyEffect(effect);
+		ActiveGameplayEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
+		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
 		TestUtils.TestStackData(
@@ -638,7 +648,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
 
-		entity.EffectsManager.UnapplyEffect(effect);
+		entity.EffectsManager.UnapplyEffect(activeEffectHandle);
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
 		TestUtils.TestStackData(
@@ -673,7 +683,9 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 			PeriodInhibitionRemovedPolicy.NeverReset);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
-		entity.EffectsManager.ApplyEffect(effect);
+		ActiveGameplayEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
+		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
+
 		entity.EffectsManager.UpdateEffects(100f);
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
@@ -684,7 +696,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 			entity,
 			entity);
 
-		entity.EffectsManager.UnapplyEffect(effect);
+		entity.EffectsManager.UnapplyEffect(activeEffectHandle);
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
@@ -797,11 +809,13 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		entity.EffectsManager.UpdateEffects(firstUpdatePeriod);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", secondExpectedResults);
 
-		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		ActiveGameplayEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		Debug.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
+
 		entity.EffectsManager.UpdateEffects(secondUpdatePeriod);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", thirdExpectedResults);
 
-		entity.EffectsManager.UnapplyEffect(modifierTagEffect);
+		entity.EffectsManager.UnapplyEffect(activeModifierEffectHandle);
 		entity.EffectsManager.UpdateEffects(thirdUpdatePeriod);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", fourthExpectedResults);
 	}
@@ -902,14 +916,16 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		GameplayEffectData modifierTagEffectData = CreateModifierTagEffectData(modifierTagKeys);
 		var modifierTagEffect = new GameplayEffect(modifierTagEffectData, new GameplayEffectOwnership(entity, entity));
 
-		entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		ActiveGameplayEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
+		Debug.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
+
 		entity.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", firstExpectedResults);
 
 		entity.EffectsManager.UpdateEffects(firstUpdatePeriod);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", secondExpectedResults);
 
-		entity.EffectsManager.UnapplyEffect(modifierTagEffect);
+		entity.EffectsManager.UnapplyEffect(activeModifierEffectHandle);
 		entity.EffectsManager.UpdateEffects(secondUpdatePeriod);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", thirdExpectedResults);
 

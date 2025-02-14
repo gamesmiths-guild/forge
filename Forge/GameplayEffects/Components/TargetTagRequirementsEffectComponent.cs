@@ -22,7 +22,7 @@ public class TargetTagRequirementsEffectComponent(
 {
 	private IForgeEntity? _target;
 
-	private ActiveGameplayEffect? _effect;
+	private ActiveGameplayEffectHandle? _effectHandle;
 
 	private GameplayTagRequirements ApplicationTagRequirements { get; } = applicationTagRequirements;
 
@@ -54,7 +54,7 @@ public class TargetTagRequirementsEffectComponent(
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
 		_target = target;
-		_effect = activeEffectEvaluatedData.ActiveGameplayEffect;
+		_effectHandle = activeEffectEvaluatedData.ActiveGameplayEffectHandle;
 
 		target.GameplayTags.OnTagsChanged += GameplayTags_OnTagsChanged;
 
@@ -70,7 +70,7 @@ public class TargetTagRequirementsEffectComponent(
 		if (removed)
 		{
 			_target = null;
-			_effect = null;
+			_effectHandle = null;
 			target.GameplayTags.OnTagsChanged -= GameplayTags_OnTagsChanged;
 		}
 	}
@@ -78,11 +78,11 @@ public class TargetTagRequirementsEffectComponent(
 	private void GameplayTags_OnTagsChanged(GameplayTagContainer tags)
 	{
 		Debug.Assert(_target is not null, "Target should never be null at this point.");
-		Debug.Assert(_effect is not null, "Effect should never be null at this point.");
+		Debug.Assert(_effectHandle is not null, "Effect handle should never be null at this point.");
 
 		if (!RemovalTagRequirements.IsEmpty && RemovalTagRequirements.RequirementsMet(tags))
 		{
-			_target.EffectsManager.UnapplyEffect(_effect, true);
+			_target.EffectsManager.UnapplyEffect(_effectHandle, true);
 			return;
 		}
 
@@ -91,6 +91,6 @@ public class TargetTagRequirementsEffectComponent(
 			return;
 		}
 
-		_effect.SetInhibit(!OngoingTagRequirements.RequirementsMet(tags));
+		_effectHandle.SetInhibit(!OngoingTagRequirements.RequirementsMet(tags));
 	}
 }

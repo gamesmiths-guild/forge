@@ -1,5 +1,6 @@
 // Copyright © 2024 Gamesmiths Guild.
 
+using System.Diagnostics;
 using FluentAssertions;
 using Gamesmiths.Forge.GameplayEffects;
 using Gamesmiths.Forge.GameplayEffects.Components;
@@ -116,7 +117,9 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 		validationTags.UnionWith(TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys));
 		var validationContainer = new GameplayTagContainer(_gameplayTagsManager, validationTags);
 
-		entity.EffectsManager.ApplyEffect(effect);
+		ActiveGameplayEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
+		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
+
 		entity.GameplayTags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.GameplayTags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
@@ -124,7 +127,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 		entity.GameplayTags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.GameplayTags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(effect);
+		entity.EffectsManager.UnapplyEffect(activeEffectHandle);
 		entity.GameplayTags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.GameplayTags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
@@ -242,19 +245,20 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 		validationTags.UnionWith(TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys));
 		var validationContainer = new GameplayTagContainer(_gameplayTagsManager, validationTags);
 
-		entity.EffectsManager.ApplyEffect(effect);
+		ActiveGameplayEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
+		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.GameplayTags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.GameplayTags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		for (var i = 0; i < stacks - 1; i++)
 		{
-			entity.EffectsManager.UnapplyEffect(effect);
+			entity.EffectsManager.UnapplyEffect(activeEffectHandle);
 			entity.GameplayTags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 			entity.GameplayTags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 		}
 
-		entity.EffectsManager.UnapplyEffect(effect);
+		entity.EffectsManager.UnapplyEffect(activeEffectHandle);
 		entity.GameplayTags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.GameplayTags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
@@ -279,12 +283,13 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 		validationTags.UnionWith(TestUtils.StringToGameplayTag(_gameplayTagsManager, tagKeys));
 		var validationContainer = new GameplayTagContainer(_gameplayTagsManager, validationTags);
 
-		entity.EffectsManager.ApplyEffect(effect);
+		ActiveGameplayEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
+		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.GameplayTags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.GameplayTags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(effect, true);
+		entity.EffectsManager.UnapplyEffect(activeEffectHandle, true);
 		entity.GameplayTags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.GameplayTags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
