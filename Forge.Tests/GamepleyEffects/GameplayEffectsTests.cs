@@ -313,7 +313,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 	}
 
 	[Theory]
-	[Trait("Duration", null)]
+	[Trait("Override", null)]
 	[InlineData("TestAttributeSet.Attribute1", 10, 12, new int[] { 11, 1, 10, 0 }, new int[] { 12, 1, 11, 0 })]
 	[InlineData("TestAttributeSet.Attribute2", 5, 3, new int[] { 7, 2, 5, 0 }, new int[] { 3, 2, 1, 0 })]
 	[InlineData("TestAttributeSet.Attribute3", 40, 1, new int[] { 43, 3, 40, 0 }, new int[] { 1, 3, -2, 0 })]
@@ -378,6 +378,144 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		target.EffectsManager.UnapplyEffect(activeEffect2handle);
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
+	}
+
+	[Theory]
+	[Trait("Override", null)]
+	[InlineData(
+		"TestAttributeSet.Attribute1",
+		10,
+		0,
+		11,
+		0,
+		12,
+		0,
+		13,
+		0,
+		new int[] { 10, 1, 9, 0 },
+		new int[] { 11, 1, 10, 0 },
+		new int[] { 12, 1, 11, 0 },
+		new int[] { 13, 1, 12, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute1",
+		10,
+		1,
+		11,
+		0,
+		12,
+		0,
+		13,
+		0,
+		new int[] { 10, 1, 9, 0 },
+		new int[] { 10, 1, 9, 0 },
+		new int[] { 10, 1, 9, 0 },
+		new int[] { 10, 1, 9, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute1",
+		10,
+		1,
+		11,
+		0,
+		12,
+		0,
+		13,
+		1,
+		new int[] { 10, 1, 9, 0 },
+		new int[] { 10, 1, 9, 0 },
+		new int[] { 10, 1, 9, 0 },
+		new int[] { 13, 1, 12, 0 })]
+	public void Multiple_override_values_are_applied_and_removed_correctly(
+		string targetAttribute,
+		float overrideMagnitude1,
+		int channel1,
+		float overrideMagnitude2,
+		int channel2,
+		float overrideMagnitude3,
+		int channel3,
+		float overrideMagnitude4,
+		int channel4,
+		int[] expectedResults1,
+		int[] expectedResults2,
+		int[] expectedResults3,
+		int[] expectedResults4)
+	{
+		var owner = new TestEntity(_gameplayTagsManager);
+		var target = new TestEntity(_gameplayTagsManager);
+
+		GameplayEffectData effectData1 =
+			CreateOverrideEffect("Override effect 1", targetAttribute, overrideMagnitude1, channel1);
+		GameplayEffectData effectData2 =
+			CreateOverrideEffect("Override effect 2", targetAttribute, overrideMagnitude2, channel2);
+		GameplayEffectData effectData3 =
+			CreateOverrideEffect("Override effect 3", targetAttribute, overrideMagnitude3, channel3);
+		GameplayEffectData effectData4 =
+			CreateOverrideEffect("Override effect 4", targetAttribute, overrideMagnitude4, channel4);
+
+		var effect1 = new GameplayEffect(effectData1, new GameplayEffectOwnership(owner, owner));
+		var effect2 = new GameplayEffect(effectData2, new GameplayEffectOwnership(owner, owner));
+		var effect3 = new GameplayEffect(effectData3, new GameplayEffectOwnership(owner, owner));
+		var effect4 = new GameplayEffect(effectData4, new GameplayEffectOwnership(owner, owner));
+
+		target.EffectsManager.ApplyEffect(effect1);
+		TestUtils.TestAttribute(target, targetAttribute, expectedResults1); // 1
+
+		ActiveGameplayEffectHandle? activeEffect2Handle1 = target.EffectsManager.ApplyEffect(effect2);
+		Debug.Assert(activeEffect2Handle1 is not null, "Effect handle should have a value.");
+		TestUtils.TestAttribute(target, targetAttribute, expectedResults2); // 1,2
+
+		ActiveGameplayEffectHandle? activeEffect3Handle = target.EffectsManager.ApplyEffect(effect3);
+		Debug.Assert(activeEffect3Handle is not null, "Effect handle should have a value.");
+		TestUtils.TestAttribute(target, targetAttribute, expectedResults3); // 1,2,3
+
+		ActiveGameplayEffectHandle? activeEffect4Handle = target.EffectsManager.ApplyEffect(effect4);
+		Debug.Assert(activeEffect4Handle is not null, "Effect handle should have a value.");
+		TestUtils.TestAttribute(target, targetAttribute, expectedResults4); // 1,2,3,4
+
+		ActiveGameplayEffectHandle? activeEffect1Handle = target.EffectsManager.ApplyEffect(effect1);
+		Debug.Assert(activeEffect1Handle is not null, "Effect handle should have a value.");
+
+		TestUtils.TestAttribute(target, targetAttribute, expectedResults1); // 1,2,3,4,1
+
+		target.EffectsManager.UnapplyEffect(activeEffect1Handle);
+		TestUtils.TestAttribute(target, targetAttribute, expectedResults4); // 1,2,3,4
+
+		target.EffectsManager.UnapplyEffect(activeEffect2Handle1);
+		TestUtils.TestAttribute(target, targetAttribute, expectedResults4); // 1,3,4
+
+		target.EffectsManager.UnapplyEffect(activeEffect4Handle);
+		TestUtils.TestAttribute(target, targetAttribute, expectedResults3); // 1,3
+
+		ActiveGameplayEffectHandle? activeEffect2Handle2 = target.EffectsManager.ApplyEffect(effect2);
+		Debug.Assert(activeEffect2Handle2 is not null, "Effect handle should have a value.");
+		TestUtils.TestAttribute(target, targetAttribute, expectedResults2); // 1,3,2
+
+		target.EffectsManager.UnapplyEffect(activeEffect3Handle);
+		TestUtils.TestAttribute(target, targetAttribute, expectedResults2); // 1,2
+
+		target.EffectsManager.UnapplyEffect(activeEffect2Handle2);
+		TestUtils.TestAttribute(target, targetAttribute, expectedResults1); // 1
+
+		static GameplayEffectData CreateOverrideEffect(
+			string effectName,
+			string targetAttribute,
+			float overrideMagnitude,
+			int channel)
+		{
+			return new GameplayEffectData(
+				effectName,
+				[
+					new Modifier(
+						targetAttribute,
+						ModifierOperation.Override,
+						new ModifierMagnitude(
+							MagnitudeCalculationType.ScalableFloat,
+							new ScalableFloat(overrideMagnitude)),
+						channel)
+				],
+				new DurationData(DurationType.Infinite),
+				null,
+				null);
+		}
 	}
 
 	[Theory]

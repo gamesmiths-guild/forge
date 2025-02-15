@@ -417,13 +417,17 @@ internal class ActiveGameplayEffect
 					break;
 
 				case ModifierOperation.Override:
+					Debug.Assert(
+						modifier.AttributeOverride is not null,
+						"AttributeOverrideData should never be null at this point.");
+
 					if (multiplier == 1)
 					{
-						modifier.Attribute.AddOverride((int)modifier.Magnitude, modifier.Channel);
+						modifier.Attribute.AddOverride(modifier.AttributeOverride);
 						break;
 					}
 
-					modifier.Attribute.ClearOverride(modifier.Channel);
+					modifier.Attribute.ClearOverride(modifier.AttributeOverride);
 					break;
 			}
 		}

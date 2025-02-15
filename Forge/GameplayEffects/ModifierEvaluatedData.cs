@@ -1,6 +1,7 @@
 // Copyright © 2024 Gamesmiths Guild.
 
 using System.Diagnostics;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
 using Attribute = Gamesmiths.Forge.Core.Attribute;
 
@@ -45,6 +46,11 @@ public readonly struct ModifierEvaluatedData
 	public Attribute? BackingAttribute { get; }
 
 	/// <summary>
+	/// Gets the attribute override data if this modifier is an override.
+	/// </summary>
+	public AttributeOverride? AttributeOverride { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="ModifierEvaluatedData"/> struct.
 	/// </summary>
 	/// <param name="attribute">The target attribute of this modifier.</param>
@@ -71,5 +77,10 @@ public readonly struct ModifierEvaluatedData
 		Channel = channel;
 		Snapshot = snapshot;
 		BackingAttribute = backingAttribute;
+
+		if (modifierOperation == ModifierOperation.Override)
+		{
+			AttributeOverride = new AttributeOverride((int)magnitude, channel);
+		}
 	}
 }

@@ -13,6 +13,8 @@ public sealed class Attribute
 {
 	private readonly List<ChannelData> _channels = [];
 
+	private readonly LinkedList<AttributeOverride> _attributeOverrides = [];
+
 	/// <summary>
 	/// Event triggered when this Attribute receives any changes in its <see cref="CurrentValue"/>.
 	/// </summary>
@@ -173,11 +175,13 @@ public sealed class Attribute
 		}
 	}
 
-	internal void AddOverride(int value, int channel)
+	internal void AddOverride(AttributeOverride attributeOverrideData)
 	{
+		_attributeOverrides.AddFirst(attributeOverrideData);
+
 		var oldValue = CurrentValue;
 
-		_channels[channel].Override = value;
+		_channels[attributeOverrideData.Channel].Override = attributeOverrideData.Magnitude;
 
 		UpdateCachedValues();
 
@@ -187,11 +191,21 @@ public sealed class Attribute
 		}
 	}
 
-	internal void ClearOverride(int channel)
+	internal void ClearOverride(in AttributeOverride attributeOverride)
 	{
 		var oldValue = CurrentValue;
+		var channel = attributeOverride.Channel;
 
-		_channels[channel].Override = null;
+		_attributeOverrides.Remove(attributeOverride);
+
+		if (_attributeOverrides.Any(x => x.Channel == channel))
+		{
+			_channels[channel].Override = _attributeOverrides.First(x => x.Channel == channel).Magnitude;
+		}
+		else
+		{
+			_channels[channel].Override = null;
+		}
 
 		UpdateCachedValues();
 
