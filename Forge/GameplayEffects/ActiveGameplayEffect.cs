@@ -435,7 +435,8 @@ internal class ActiveGameplayEffect
 
 	private void Execute()
 	{
-		GameplayEffect.Execute(GameplayEffectEvaluatedData);
+		GameplayEffectEvaluatedData effectEvaluatedData = GameplayEffectEvaluatedData;
+		GameplayEffect.Execute(in effectEvaluatedData);
 		ExecutionCount++;
 	}
 
