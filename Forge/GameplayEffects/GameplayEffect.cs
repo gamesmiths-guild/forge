@@ -1,10 +1,11 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
 using Gamesmiths.Forge.GameplayTags;
+using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.GameplayEffects;
 
@@ -73,6 +74,25 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 
 	internal static void Execute(in GameplayEffectEvaluatedData effectEvaluatedData)
 	{
+		var attributeChanges = new Dictionary<Attribute, int>();
+
+		void OnValueChangedHandler(Attribute attribute, int change)
+		{
+			attributeChanges[attribute] += change;
+		}
+
+		foreach (Attribute? attribute in
+			effectEvaluatedData.GameplayEffect.EffectData.GameplayCues.Select(x => x.MagnitudeAttribute))
+		{
+			if (attribute is null)
+			{
+				continue;
+			}
+
+			attributeChanges.TryAdd(attribute, 0);
+			attribute.OnValueChanged += OnValueChangedHandler;
+		}
+
 		foreach (ModifierEvaluatedData modifier in effectEvaluatedData.ModifiersEvaluatedData)
 		{
 			switch (modifier.ModifierOperation)
@@ -91,7 +111,13 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 			}
 		}
 
-		effectEvaluatedData.Target.EffectsManager.OnGameplayEffectExecuted_InternalCall(effectEvaluatedData);
+		foreach (Attribute attribute in attributeChanges.Keys)
+		{
+			attribute.OnValueChanged -= OnValueChangedHandler;
+		}
+
+		effectEvaluatedData.Target.EffectsManager.OnGameplayEffectExecuted_InternalCall(
+			effectEvaluatedData, attributeChanges);
 	}
 
 	internal bool CanApply(IForgeEntity target)

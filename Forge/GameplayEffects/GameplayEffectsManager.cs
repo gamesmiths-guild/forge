@@ -1,10 +1,12 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Stacking;
+using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.GameplayEffects;
 
@@ -12,8 +14,11 @@ namespace Gamesmiths.Forge.GameplayEffects;
 /// Manages the <see cref="GameplayEffect"/> application and instances of an entity.
 /// </summary>
 /// <param name="owner">The owner of this manager.</param>
-public class GameplayEffectsManager(IForgeEntity owner)
+/// <param name="cuesManager">The gameplay cues manager to be used to trigger cues by this effects manager.</param>
+public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cuesManager)
 {
+	private readonly GameplayCuesManager _cuesManager = cuesManager;
+
 	private readonly List<ActiveGameplayEffect> _activeEffects = [];
 
 	/// <summary>
@@ -43,7 +48,7 @@ public class GameplayEffectsManager(IForgeEntity owner)
 				component.OnGameplayEffectApplied(Owner, in evaluatedData);
 			}
 
-			GameplayEffect.Execute(evaluatedData);
+			GameplayEffect.Execute(in evaluatedData);
 			return null;
 		}
 
@@ -152,12 +157,43 @@ public class GameplayEffectsManager(IForgeEntity owner)
 		return ConvertToStackInstanceData(filteredEffects);
 	}
 
-	internal void OnGameplayEffectExecuted_InternalCall(GameplayEffectEvaluatedData executedEffectEvaluatedData)
+	internal void OnGameplayEffectExecuted_InternalCall(
+		GameplayEffectEvaluatedData executedEffectEvaluatedData,
+		Dictionary<Attribute, int> attributeChanges)
 	{
-		foreach (IGameplayEffectComponent component in
-			executedEffectEvaluatedData.GameplayEffect.EffectData.GameplayEffectComponents)
+		GameplayEffectData effectData = executedEffectEvaluatedData.GameplayEffect.EffectData;
+
+		foreach (IGameplayEffectComponent component in effectData.GameplayEffectComponents)
 		{
 			component.OnGameplayEffectExecuted(Owner, in executedEffectEvaluatedData);
+		}
+
+		if (effectData.RequireModifierSuccessToTriggerCue &&
+			!attributeChanges.Values.Any(x => x != 0))
+		{
+			return;
+		}
+
+		foreach (GameplayCueData cueData in effectData.GameplayCues)
+		{
+			var magnitude = executedEffectEvaluatedData.Level;
+
+			if (cueData.MagnitudeAttribute is not null)
+			{
+				Debug.Assert(
+					attributeChanges.ContainsKey(cueData.MagnitudeAttribute),
+					"attributeChanges should always contains a configured MagnitudeAttribute.");
+
+				magnitude = attributeChanges[cueData.MagnitudeAttribute];
+			}
+
+			_cuesManager.ExecuteCue(
+				cueData.CueKey,
+				executedEffectEvaluatedData.Target,
+				new GameplayCueParameters(
+					magnitude,
+					cueData.NormalizedMagnitude(magnitude),
+					executedEffectEvaluatedData.GameplayEffect.Ownership.Source));
 		}
 	}
 

@@ -1,22 +1,27 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
 using FluentAssertions;
+using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects;
 using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
 using Gamesmiths.Forge.GameplayEffects.Stacking;
 using Gamesmiths.Forge.GameplayTags;
+using Gamesmiths.Forge.Tests.GameplayCues;
 using Gamesmiths.Forge.Tests.GameplayTags;
 using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.GamepleyEffects;
 
-public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
-	: IClassFixture<GameplayTagsManagerFixture>
+public class ModifierTagsComponentTests(
+	GameplayTagsManagerFixture tagsManagerFixture,
+	GameplayCuesManagerFixture cuesManagerFixture)
+	: IClassFixture<GameplayTagsManagerFixture>, IClassFixture<GameplayCuesManagerFixture>
 {
-	private readonly GameplayTagsManager _gameplayTagsManager = fixture.GameplayTagsManager;
+	private readonly GameplayTagsManager _gameplayTagsManager = tagsManagerFixture.GameplayTagsManager;
+	private readonly GameplayCuesManager _gameplayCuesManager = cuesManagerFixture.GameplayCuesManager;
 
 	[Theory]
 	[Trait("Expiration", null)]
@@ -26,7 +31,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 	[InlineData(new string[] { "item.equipment.weapon.axe", "enemy.undead" }, 0.1f)]
 	public void Duration_effect_adds_tags_temporarily(string[] tagKeys, float duration)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateDurationEffectData(tagKeys, duration);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
@@ -58,7 +63,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 	[InlineData(new string[] { "item.equipment.weapon.axe", "enemy.undead" }, 0.1f)]
 	public void Multiple_instances_keep_tags_until_all_expire(string[] tagKeys, float duration)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		GameplayEffectData effectData = CreateDurationEffectData(tagKeys, duration);
 		var effect1 = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
@@ -106,7 +111,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 	[InlineData((object)new string[] { "item.equipment.weapon.axe", "enemy.undead" })]
 	public void Manual_removal_removes_tags_instantly(string[] tagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateInfiniteDurationEffectData(tagKeys);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
@@ -140,7 +145,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 	[InlineData(new string[] { "item.equipment.weapon.axe", "enemy.undead" }, 0.1f)]
 	public void Expired_effect_can_be_reapplied(string[] tagKeys, float duration)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateDurationEffectData(tagKeys, duration);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
@@ -192,7 +197,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 		float effect1SmallerDuration,
 		float effect2BiggerDuration)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		GameplayEffectData effectData1 = CreateDurationEffectData(tagKeys1, effect1SmallerDuration);
 		GameplayEffectData effectData2 = CreateDurationEffectData(tagKeys2, effect2BiggerDuration);
@@ -233,7 +238,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 	[InlineData(new string[] { "item.equipment.weapon.axe", "enemy.undead" }, 2)]
 	public void Stackable_effects_keep_tags_until_completely_removed(string[] tagKeys, int stacks)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		GameplayEffectData effectData = CreateSimpleStackableEffectData(tagKeys, stacks);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
@@ -271,7 +276,7 @@ public class ModifierTagsComponentTests(GameplayTagsManagerFixture fixture)
 	[InlineData(new string[] { "item.equipment.weapon.axe", "enemy.undead" }, 2)]
 	public void Stackable_effects_removes_tags_when_forcibly_removed(string[] tagKeys, int stacks)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		GameplayEffectData effectData = CreateSimpleStackableEffectData(tagKeys, stacks);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));

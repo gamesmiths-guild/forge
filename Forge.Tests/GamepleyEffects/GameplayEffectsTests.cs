@@ -1,7 +1,8 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
@@ -9,14 +10,19 @@ using Gamesmiths.Forge.GameplayEffects.Modifiers;
 using Gamesmiths.Forge.GameplayEffects.Periodic;
 using Gamesmiths.Forge.GameplayEffects.Stacking;
 using Gamesmiths.Forge.GameplayTags;
+using Gamesmiths.Forge.Tests.GameplayCues;
 using Gamesmiths.Forge.Tests.GameplayTags;
 using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.GamepleyEffects;
 
-public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFixture<GameplayTagsManagerFixture>
+public class GameplayEffectsTests(
+	GameplayTagsManagerFixture tagsManagerFixture,
+	GameplayCuesManagerFixture cuesManagerFixture)
+	: IClassFixture<GameplayTagsManagerFixture>, IClassFixture<GameplayCuesManagerFixture>
 {
-	private readonly GameplayTagsManager _gameplayTagsManager = fixture.GameplayTagsManager;
+	private readonly GameplayTagsManager _gameplayTagsManager = tagsManagerFixture.GameplayTagsManager;
+	private readonly GameplayCuesManager _gameplayCuesManager = cuesManagerFixture.GameplayCuesManager;
 
 	[Theory]
 	[Trait("Instant", null)]
@@ -30,8 +36,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		int effectMagnitude,
 		int expectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Level Up",
@@ -48,7 +54,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		var effect = new GameplayEffect(
 			effectData,
 			new GameplayEffectOwnership(
-				new TestEntity(_gameplayTagsManager),
+				new TestEntity(_gameplayTagsManager, _gameplayCuesManager),
 				owner));
 
 		target.EffectsManager.ApplyEffect(effect);
@@ -70,8 +76,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float postMultiplyAdditiveValue,
 		int expectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Level Up",
@@ -94,7 +100,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -115,8 +121,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float postMultiplyAdditiveValue,
 		int expectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Level Up",
@@ -145,7 +151,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -169,8 +175,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float fourthEffectOverrideMagnitude,
 		int fourthExpectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Level Up",
@@ -188,7 +194,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -210,7 +216,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect2 = new GameplayEffect(
 			effectData2,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect2);
 
@@ -232,7 +238,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect3 = new GameplayEffect(
 			effectData3,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect3);
 
@@ -254,7 +260,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect4 = new GameplayEffect(
 			effectData4,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect4);
 
@@ -276,8 +282,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		int firstExpectedResult,
 		int secondExpectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Level Up",
@@ -299,7 +305,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -327,8 +333,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		int[] firstExpectedResults,
 		int[] secondExpectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var flatBonusEffectData = new GameplayEffectData(
 			"FlatBonus",
@@ -439,8 +445,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		int[] expectedResults3,
 		int[] expectedResults4)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		GameplayEffectData effectData1 =
 			CreateOverrideEffect("Override effect 1", targetAttribute, overrideMagnitude1, channel1);
@@ -534,8 +540,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		int[] firstExpectedResults,
 		int[] secondExpectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Level Up",
@@ -558,7 +564,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -591,8 +597,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float secondTimeUpdateDelta,
 		int thirdExpectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -622,7 +628,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -653,8 +659,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float totalSimulatedTime,
 		int[] expectedResults)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -672,7 +678,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -737,8 +743,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float thirdEffectModifierBaseMagnitude,
 		int[] thirdExpectedResults)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff1",
@@ -756,7 +762,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -778,7 +784,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect2 = new GameplayEffect(
 			effectData2,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect2);
 
@@ -800,7 +806,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect3 = new GameplayEffect(
 			effectData3,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect3);
 
@@ -882,8 +888,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		int thirdChannel,
 		int[] expectedResults)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -916,7 +922,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -940,8 +946,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float expiringPeriodOfTime,
 		int lastExpectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -957,7 +963,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -996,8 +1002,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float secondPeriodOfTime,
 		int thirdExpectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -1013,7 +1019,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -1046,8 +1052,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float simulatedPeriodOfTime,
 		int secondExpectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -1063,7 +1069,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -1169,8 +1175,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float thirdSimulatedPeriodOfTime,
 		int fifthTargetExpectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -1193,7 +1199,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -1219,7 +1225,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect2 = new GameplayEffect(
 			effectData2,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		owner.EffectsManager.ApplyEffect(effect2);
 
@@ -1303,8 +1309,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		int secondOwnerExpectedResult,
 		int[] thirdTargetExpectedResults)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -1327,7 +1333,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -1349,7 +1355,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect2 = new GameplayEffect(
 			effectData2,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		owner.EffectsManager.ApplyEffect(effect2);
 
@@ -1383,8 +1389,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float secondPeriodOfTime,
 		int thirdExpectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -1400,7 +1406,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -1538,9 +1544,9 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		StackApplicationResetPeriodPolicy? applicationResetPeriodPolicy = null,
 		bool? executeOnSuccessfulApplication = null)
 	{
-		var owner1 = new TestEntity(_gameplayTagsManager);
-		var owner2 = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner1 = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var owner2 = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -1572,7 +1578,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner1, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner1, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -1587,7 +1593,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect2 = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner2, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner2, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect2);
 
@@ -1756,9 +1762,9 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		StackApplicationResetPeriodPolicy? applicationResetPeriodPolicy = null,
 		bool? executeOnSuccessfulApplication = null)
 	{
-		var owner1 = new TestEntity(_gameplayTagsManager);
-		var owner2 = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner1 = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var owner2 = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -1797,7 +1803,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner1, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner1, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -1812,7 +1818,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect2 = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner2, new TestEntity(_gameplayTagsManager)),
+			new GameplayEffectOwnership(owner2, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)),
 			2);
 
 		target.EffectsManager.ApplyEffect(effect2);
@@ -1828,7 +1834,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect3 = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner1, new TestEntity(_gameplayTagsManager)),
+			new GameplayEffectOwnership(owner1, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)),
 			3);
 
 		target.EffectsManager.ApplyEffect(effect3);
@@ -1923,9 +1929,9 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		StackApplicationResetPeriodPolicy? applicationResetPeriodPolicy = null,
 		bool? executeOnSuccessfulApplication = null)
 	{
-		var owner1 = new TestEntity(_gameplayTagsManager);
-		var owner2 = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner1 = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var owner2 = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		// Setup Owner2 by changing his attributes.
 		var levelUpEffectData = new GameplayEffectData(
@@ -1944,7 +1950,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var levelUpEffect = new GameplayEffect(
 			levelUpEffectData,
-			new GameplayEffectOwnership(owner2, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner2, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		owner2.EffectsManager.ApplyEffect(levelUpEffect);
 
@@ -1989,7 +1995,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner1, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner1, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect);
 
@@ -2015,7 +2021,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 
 		var effect2 = new GameplayEffect(
 			effectData,
-			new GameplayEffectOwnership(owner2, new TestEntity(_gameplayTagsManager)));
+			new GameplayEffectOwnership(owner2, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
 
 		target.EffectsManager.ApplyEffect(effect2);
 
@@ -2394,8 +2400,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		StackApplicationResetPeriodPolicy? applicationResetPeriodPolicy = null,
 		bool? executeOnSuccessfulApplication = null)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -2601,8 +2607,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		StackApplicationResetPeriodPolicy? applicationResetPeriodPolicy = null,
 		bool? executeOnSuccessfulApplication = null)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -2717,8 +2723,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		int[] firstExpectedResults,
 		int[] secondExpectedResults)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Buff",
@@ -2777,8 +2783,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		int effectMagnitude,
 		int expectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var setByCallerTag = GameplayTag.RequestTag(_gameplayTagsManager, "tag");
 
@@ -2799,7 +2805,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		var effect = new GameplayEffect(
 			effectData,
 			new GameplayEffectOwnership(
-				new TestEntity(_gameplayTagsManager),
+				new TestEntity(_gameplayTagsManager, _gameplayCuesManager),
 				owner));
 
 		effect.SetSetByCallerMagnitude(setByCallerTag, effectMagnitude);
@@ -2825,8 +2831,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float postMultiplyAdditiveValue,
 		int expectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
@@ -2853,7 +2859,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		var effect = new GameplayEffect(
 			effectData,
 			new GameplayEffectOwnership(
-				new TestEntity(_gameplayTagsManager),
+				new TestEntity(_gameplayTagsManager, _gameplayCuesManager),
 				owner));
 
 		target.EffectsManager.ApplyEffect(effect);
@@ -2877,8 +2883,8 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		float postMultiplyAdditiveValue,
 		int expectedResult)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
@@ -2912,7 +2918,7 @@ public class GameplayEffectsTests(GameplayTagsManagerFixture fixture) : IClassFi
 		var effect = new GameplayEffect(
 			effectData,
 			new GameplayEffectOwnership(
-				new TestEntity(_gameplayTagsManager),
+				new TestEntity(_gameplayTagsManager, _gameplayCuesManager),
 				owner));
 
 		target.EffectsManager.ApplyEffect(effect);

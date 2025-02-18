@@ -1,6 +1,7 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects;
 using Gamesmiths.Forge.GameplayTags;
 
@@ -16,7 +17,7 @@ public class TestEntity : IForgeEntity
 
 	public GameplayEffectsManager EffectsManager { get; }
 
-	public TestEntity(GameplayTagsManager tagsManager)
+	public TestEntity(GameplayTagsManager tagsManager, GameplayCuesManager cuesManager)
 	{
 		PlayerAttributeSet = new TestAttributeSet();
 		var originalTags = new GameplayTagContainer(
@@ -26,7 +27,7 @@ public class TestEntity : IForgeEntity
 				GameplayTag.RequestTag(tagsManager, "color.green")
 			]);
 
-		EffectsManager = new(this);
+		EffectsManager = new(this, cuesManager);
 		Attributes = new(PlayerAttributeSet);
 		GameplayTags = new(originalTags);
 	}

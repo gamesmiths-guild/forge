@@ -1,21 +1,26 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects;
 using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
 using Gamesmiths.Forge.GameplayTags;
+using Gamesmiths.Forge.Tests.GameplayCues;
 using Gamesmiths.Forge.Tests.GameplayTags;
 using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.GamepleyEffects;
 
-public class ChanceToApplyComponentTests(GameplayTagsManagerFixture fixture)
-	: IClassFixture<GameplayTagsManagerFixture>
+public class ChanceToApplyComponentTests(
+	GameplayTagsManagerFixture tagsManagerFixture,
+	GameplayCuesManagerFixture cuesManagerFixture)
+	: IClassFixture<GameplayTagsManagerFixture>, IClassFixture<GameplayCuesManagerFixture>
 {
-	private readonly GameplayTagsManager _gameplayTagsManager = fixture.GameplayTagsManager;
+	private readonly GameplayTagsManager _gameplayTagsManager = tagsManagerFixture.GameplayTagsManager;
+	private readonly GameplayCuesManager _gameplayCuesManager = cuesManagerFixture.GameplayCuesManager;
 
 	[Theory]
 	[Trait("Instant", null)]
@@ -29,8 +34,8 @@ public class ChanceToApplyComponentTests(GameplayTagsManagerFixture fixture)
 		float chance,
 		float[] randomValues)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Level Up",
@@ -50,7 +55,7 @@ public class ChanceToApplyComponentTests(GameplayTagsManagerFixture fixture)
 		var effect = new GameplayEffect(
 			effectData,
 			new GameplayEffectOwnership(
-				new TestEntity(_gameplayTagsManager),
+				new TestEntity(_gameplayTagsManager, _gameplayCuesManager),
 				owner));
 
 		target.EffectsManager.ApplyEffect(effect);
@@ -91,8 +96,8 @@ public class ChanceToApplyComponentTests(GameplayTagsManagerFixture fixture)
 		float[] levelChanceMultipliers,
 		float[] randomValues)
 	{
-		var owner = new TestEntity(_gameplayTagsManager);
-		var target = new TestEntity(_gameplayTagsManager);
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var effectData = new GameplayEffectData(
 			"Level Up",
@@ -119,7 +124,7 @@ public class ChanceToApplyComponentTests(GameplayTagsManagerFixture fixture)
 		var effect = new GameplayEffect(
 			effectData,
 			new GameplayEffectOwnership(
-				new TestEntity(_gameplayTagsManager),
+				new TestEntity(_gameplayTagsManager, _gameplayCuesManager),
 				owner));
 
 		target.EffectsManager.ApplyEffect(effect);

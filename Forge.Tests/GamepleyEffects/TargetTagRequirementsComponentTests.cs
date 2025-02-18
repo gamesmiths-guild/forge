@@ -1,6 +1,7 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
+using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects;
 using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Duration;
@@ -9,15 +10,19 @@ using Gamesmiths.Forge.GameplayEffects.Modifiers;
 using Gamesmiths.Forge.GameplayEffects.Periodic;
 using Gamesmiths.Forge.GameplayEffects.Stacking;
 using Gamesmiths.Forge.GameplayTags;
+using Gamesmiths.Forge.Tests.GameplayCues;
 using Gamesmiths.Forge.Tests.GameplayTags;
 using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.GamepleyEffects;
 
-public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixture)
-	: IClassFixture<GameplayTagsManagerFixture>
+public class TargetTagRequirementsComponentTests(
+	GameplayTagsManagerFixture tagsManagerFixture,
+	GameplayCuesManagerFixture cuesManagerFixture)
+	: IClassFixture<GameplayTagsManagerFixture>, IClassFixture<GameplayCuesManagerFixture>
 {
-	private readonly GameplayTagsManager _gameplayTagsManager = fixture.GameplayTagsManager;
+	private readonly GameplayTagsManager _gameplayTagsManager = tagsManagerFixture.GameplayTagsManager;
+	private readonly GameplayCuesManager _gameplayCuesManager = cuesManagerFixture.GameplayCuesManager;
 
 	[Theory]
 	[Trait("Can Apply", null)]
@@ -42,7 +47,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		string[]? requiredRemovalTagKeys,
 		string[]? ignoreRemovalTagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateTagRequirementsEffectData(
 			[requiredAplicationTagKeys, ignoreApplicationTagKeys],
 			[requiredRemovalTagKeys, ignoreRemovalTagKeys]);
@@ -86,7 +91,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		string[]? requiredRemovalTagKeys,
 		string[]? ignoreRemovalTagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateTagRequirementsEffectData(
 			[requiredAplicationTagKeys, ignoreApplicationTagKeys],
 			[requiredRemovalTagKeys, ignoreRemovalTagKeys]);
@@ -141,7 +146,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		string[]? requiredRemovalTagKeys,
 		string[]? ignoreRemovalTagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateTagRequirementsEffectData(
 			[requiredAplicationTagKeys, ignoreApplicationTagKeys],
 			[requiredRemovalTagKeys, ignoreRemovalTagKeys]);
@@ -194,7 +199,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		string[]? requiredRemovalTagKeys,
 		string[]? ignoreRemovalTagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateTagRequirementsEffectData(
 			[requiredAplicationTagKeys, ignoreApplicationTagKeys],
 			[requiredRemovalTagKeys, ignoreRemovalTagKeys]);
@@ -241,7 +246,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		string[]? requiredRemovalTagKeys,
 		string[]? ignoreRemovalTagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateTagRequirementsEffectData(
 			[requiredAplicationTagKeys, ignoreApplicationTagKeys],
 			[requiredRemovalTagKeys, ignoreRemovalTagKeys]);
@@ -288,7 +293,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		string[]? requiredRemovalTagKeys,
 		string[]? ignoreRemovalTagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateTagRequirementsEffectData(
 			[requiredAplicationTagKeys, ignoreApplicationTagKeys],
 			[requiredRemovalTagKeys, ignoreRemovalTagKeys]);
@@ -323,7 +328,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 	[Trait("Can Apply", null)]
 	public void Effect_meets_application_requirements_with_query()
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var query = new GameplayTagQuery();
 		query.Build(new GameplayTagQueryExpression(_gameplayTagsManager)
@@ -381,7 +386,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 	[Trait("Can't Apply", null)]
 	public void Effect_does_not_meet_application_requirements_with_query()
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 
 		var query = new GameplayTagQuery();
 		query.Build(new GameplayTagQueryExpression(_gameplayTagsManager)
@@ -453,7 +458,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		string[]? requiredOngoingTagKeys,
 		string[]? ignoreOngoingTagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsEffectData(
 			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
@@ -498,7 +503,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		string[]? requiredOngoingTagKeys,
 		string[]? ignoreOngoingTagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsEffectData(
 			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
@@ -548,7 +553,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		string[]? requiredOngoingTagKeys,
 		string[]? ignoreOngoingTagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsEffectData(
 			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
@@ -591,7 +596,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		string[]? requiredOngoingTagKeys,
 		string[]? ignoreOngoingTagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsEffectData(
 			[requiredOngoingTagKeys, ignoreOngoingTagKeys]);
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
@@ -627,7 +632,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		string[]? requiredOngoingTagKeys,
 		string[]? ignoreOngoingTagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
 			[requiredOngoingTagKeys, ignoreOngoingTagKeys],
 			PeriodInhibitionRemovedPolicy.NeverReset);
@@ -677,7 +682,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		string[]? requiredOngoingTagKeys,
 		string[]? ignoreOngoingTagKeys)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
 			[requiredOngoingTagKeys, ignoreOngoingTagKeys],
 			PeriodInhibitionRemovedPolicy.NeverReset);
@@ -794,7 +799,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		int[] thirdExpectedResults,
 		int[] fourthExpectedResults)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
 			[requiredOngoingTagKeys, ignoreOngoingTagKeys],
 			periodInhibitionRemovedPolicy);
@@ -907,7 +912,7 @@ public class TargetTagRequirementsComponentTests(GameplayTagsManagerFixture fixt
 		int[] thirdExpectedResults,
 		int[] fourthExpectedResults)
 	{
-		var entity = new TestEntity(_gameplayTagsManager);
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateOngoingRequirementsPeriodicEffectData(
 			[requiredOngoingTagKeys, ignoreOngoingTagKeys],
 			periodInhibitionRemovedPolicy);
