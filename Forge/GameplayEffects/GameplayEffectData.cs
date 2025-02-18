@@ -1,6 +1,7 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
+using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
@@ -58,6 +59,21 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 	public IGameplayEffectComponent[] GameplayEffectComponents { get; }
 
 	/// <summary>
+	/// Gets a value indicating whether this gameplay effect requires the modifier to be successful to trigger cues.
+	/// </summary>
+	public bool RequireModifierSuccessToTriggerCue { get; }
+
+	/// <summary>
+	/// Gets a value indicating whether this gameplay effect suppresses stacking cues.
+	/// </summary>
+	public bool SuppressStackingCues { get; }
+
+	/// <summary>
+	/// Gets the gameplay cues associated with this effect.
+	/// </summary>
+	public GameplayCueData[] GameplayCues { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="GameplayEffectData"/> struct.
 	/// </summary>
 	/// <param name="name">The name of this gameplay effect.</param>
@@ -68,6 +84,10 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 	/// <param name="snapshopLevel">Whether or not this gameplay effect snapshots the level at the momment of creation.
 	/// </param>
 	/// <param name="gameplayEffectComponents">The list of gameplay effects components for this gameplay effect.</param>
+	/// <param name="requireModifierSuccessToTriggerCue">Wheter or not trigger cues only when modifiers are successfully
+	/// applied.</param>
+	/// <param name="suppressStackingCues">Whether or not to trigger cues when applying stacks.</param>
+	/// <param name="gameplayCues">The gameplay cues associated with this effect.</param>
 	public GameplayEffectData(
 		string name,
 		Modifier[] modifiers,
@@ -75,7 +95,10 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 		StackingData? stackingData,
 		PeriodicData? periodicData,
 		bool snapshopLevel = true,
-		IGameplayEffectComponent[]? gameplayEffectComponents = null)
+		IGameplayEffectComponent[]? gameplayEffectComponents = null,
+		bool requireModifierSuccessToTriggerCue = false,
+		bool suppressStackingCues = false,
+		GameplayCueData[]? gameplayCues = null)
 	{
 		Debug.Assert(
 			!(periodicData.HasValue && durationData.Type == DurationType.Instant),
@@ -186,6 +209,9 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 		PeriodicData = periodicData;
 		SnapshopLevel = snapshopLevel;
 		GameplayEffectComponents = gameplayEffectComponents ?? [];
+		RequireModifierSuccessToTriggerCue = requireModifierSuccessToTriggerCue;
+		SuppressStackingCues = suppressStackingCues;
+		GameplayCues = gameplayCues ?? [];
 	}
 
 	/// <inheritdoc/>
@@ -197,6 +223,9 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 		hash.Add(StackingData);
 		hash.Add(PeriodicData);
 		hash.Add(SnapshopLevel);
+		hash.Add(RequireModifierSuccessToTriggerCue);
+		hash.Add(SuppressStackingCues);
+
 		foreach (Modifier modifier in Modifiers)
 		{
 			hash.Add(modifier);
@@ -205,6 +234,11 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 		foreach (IGameplayEffectComponent component in GameplayEffectComponents)
 		{
 			hash.Add(component);
+		}
+
+		foreach (GameplayCueData cue in GameplayCues)
+		{
+			hash.Add(cue);
 		}
 
 		return hash.ToHashCode();
@@ -229,8 +263,11 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 			&& Nullable.Equals(StackingData, other.StackingData)
 			&& Nullable.Equals(PeriodicData, other.PeriodicData)
 			&& SnapshopLevel == other.SnapshopLevel
+			&& RequireModifierSuccessToTriggerCue == other.RequireModifierSuccessToTriggerCue
+			&& SuppressStackingCues == other.SuppressStackingCues
 			&& Modifiers.SequenceEqual(other.Modifiers)
-			&& GameplayEffectComponents.SequenceEqual(other.GameplayEffectComponents);
+			&& GameplayEffectComponents.SequenceEqual(other.GameplayEffectComponents)
+			&& GameplayCues.SequenceEqual(other.GameplayCues);
 	}
 
 	/// <summary>
