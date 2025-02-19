@@ -76,11 +76,6 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 	{
 		var attributeChanges = new Dictionary<Attribute, int>();
 
-		void OnValueChangedHandler(Attribute attribute, int change)
-		{
-			attributeChanges[attribute] += change;
-		}
-
 		foreach (Attribute? attribute in
 			effectEvaluatedData.GameplayEffect.EffectData.GameplayCues.Select(x => x.MagnitudeAttribute))
 		{
@@ -89,8 +84,7 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 				continue;
 			}
 
-			attributeChanges.TryAdd(attribute, 0);
-			attribute.OnValueChanged += OnValueChangedHandler;
+			attributeChanges.TryAdd(attribute, attribute.CurrentValue);
 		}
 
 		foreach (ModifierEvaluatedData modifier in effectEvaluatedData.ModifiersEvaluatedData)
@@ -113,7 +107,7 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 
 		foreach (Attribute attribute in attributeChanges.Keys)
 		{
-			attribute.OnValueChanged -= OnValueChangedHandler;
+			attributeChanges[attribute] = attribute.CurrentValue - attributeChanges[attribute];
 		}
 
 		effectEvaluatedData.Target.EffectsManager.OnGameplayEffectExecuted_InternalCall(
