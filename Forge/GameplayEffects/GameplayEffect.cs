@@ -74,18 +74,7 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 
 	internal static void Execute(in GameplayEffectEvaluatedData effectEvaluatedData)
 	{
-		var attributeChanges = new Dictionary<Attribute, int>();
-
-		foreach (Attribute? attribute in
-			effectEvaluatedData.GameplayEffect.EffectData.GameplayCues.Select(x => x.MagnitudeAttribute))
-		{
-			if (attribute is null)
-			{
-				continue;
-			}
-
-			attributeChanges.TryAdd(attribute, attribute.CurrentValue);
-		}
+		Dictionary<Attribute, int> attributeChanges = InitializeAttributeChanges(in effectEvaluatedData);
 
 		foreach (ModifierEvaluatedData modifier in effectEvaluatedData.ModifiersEvaluatedData)
 		{
@@ -105,10 +94,7 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 			}
 		}
 
-		foreach (Attribute attribute in attributeChanges.Keys)
-		{
-			attributeChanges[attribute] = attribute.CurrentValue - attributeChanges[attribute];
-		}
+		UpdateAttributeChanges(attributeChanges);
 
 		effectEvaluatedData.Target.EffectsManager.OnGameplayEffectExecuted_InternalCall(
 			effectEvaluatedData, attributeChanges);
@@ -126,5 +112,32 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 		}
 
 		return true;
+	}
+
+	private static Dictionary<Attribute, int> InitializeAttributeChanges(
+		in GameplayEffectEvaluatedData effectEvaluatedData)
+	{
+		var attributeChanges = new Dictionary<Attribute, int>();
+
+		foreach (Attribute? attribute in
+			effectEvaluatedData.GameplayEffect.EffectData.GameplayCues.Select(x => x.MagnitudeAttribute))
+		{
+			if (attribute is null)
+			{
+				continue;
+			}
+
+			attributeChanges.TryAdd(attribute, attribute.CurrentValue);
+		}
+
+		return attributeChanges;
+	}
+
+	private static void UpdateAttributeChanges(Dictionary<Attribute, int> attributeChanges)
+	{
+		foreach (Attribute attribute in attributeChanges.Keys)
+		{
+			attributeChanges[attribute] = attribute.CurrentValue - attributeChanges[attribute];
+		}
 	}
 }
