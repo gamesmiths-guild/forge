@@ -80,6 +80,8 @@ public sealed class GameplayCuesManager
 			return;
 		}
 
+		_activeCues.TryAdd(cueKey, []);
+
 		foreach (IGameplayCue cue in cues)
 		{
 			cue.OnApply(target, parameters);

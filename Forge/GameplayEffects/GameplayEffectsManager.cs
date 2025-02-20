@@ -168,7 +168,7 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 			component.OnGameplayEffectExecuted(Owner, in executedEffectEvaluatedData);
 		}
 
-		HandleExecuteCues(executedEffectEvaluatedData, attributeChanges);
+		GameplayCueUtils.ExecuteCues(in _cuesManager, in executedEffectEvaluatedData, in attributeChanges);
 	}
 
 	internal void OnActiveGameplayEffectUnapplied_InternalCall(ActiveGameplayEffect removedEffect, bool removed)
@@ -242,6 +242,11 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 	private ActiveGameplayEffect ApplyNewEffect(GameplayEffect gameplayEffect)
 	{
 		var activeEffect = new ActiveGameplayEffect(gameplayEffect, Owner);
+		_activeEffects.Add(activeEffect);
+
+		Dictionary<Attribute, int> attributeChanges =
+			GameplayCueUtils.InitializeAttributeChanges(activeEffect.GameplayEffectEvaluatedData);
+
 		var remainActive = true;
 
 		foreach (IGameplayEffectComponent component in gameplayEffect.EffectData.GameplayEffectComponents)
@@ -257,8 +262,12 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 			component.OnGameplayEffectApplied(Owner, activeEffect.GameplayEffectEvaluatedData);
 		}
 
-		_activeEffects.Add(activeEffect);
 		activeEffect.Apply(inhibited: !remainActive);
+
+		GameplayCueUtils.UpdateAttributeChanges(attributeChanges);
+
+		GameplayEffectEvaluatedData effectEvaluatedData = activeEffect.GameplayEffectEvaluatedData;
+		GameplayCueUtils.AddCues(in _cuesManager, in effectEvaluatedData, in attributeChanges);
 
 		return activeEffect;
 	}
@@ -307,40 +316,5 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 
 		_activeEffects.Remove(effectToRemove);
 		effectToRemove.Handle.Free();
-	}
-
-	private void HandleExecuteCues(
-		GameplayEffectEvaluatedData executedEffectEvaluatedData,
-		Dictionary<Attribute, int> attributeChanges)
-	{
-		GameplayEffectData effectData = executedEffectEvaluatedData.GameplayEffect.EffectData;
-
-		if (effectData.RequireModifierSuccessToTriggerCue &&
-		!attributeChanges.Values.Any(x => x != 0))
-		{
-			return;
-		}
-
-		foreach (GameplayCueData cueData in effectData.GameplayCues)
-		{
-			var magnitude = executedEffectEvaluatedData.Level;
-
-			if (cueData.MagnitudeAttribute is not null)
-			{
-				Debug.Assert(
-					attributeChanges.ContainsKey(cueData.MagnitudeAttribute),
-					"attributeChanges should always contains a configured MagnitudeAttribute.");
-
-				magnitude = attributeChanges[cueData.MagnitudeAttribute];
-			}
-
-			_cuesManager.ExecuteCue(
-				cueData.CueKey,
-				executedEffectEvaluatedData.Target,
-				new GameplayCueParameters(
-					magnitude,
-					cueData.NormalizedMagnitude(magnitude),
-					executedEffectEvaluatedData.GameplayEffect.Ownership.Source));
-		}
 	}
 }
