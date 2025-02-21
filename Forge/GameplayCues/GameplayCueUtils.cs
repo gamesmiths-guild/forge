@@ -63,13 +63,14 @@ internal static class GameplayCueUtils
 
 	internal static void RemoveCues(
 		in GameplayCuesManager cuesManager,
-		in GameplayEffectEvaluatedData effectEvaluatedData)
+		in GameplayEffectEvaluatedData effectEvaluatedData,
+		bool interrupted)
 	{
 		GameplayEffectData effectData = effectEvaluatedData.GameplayEffect.EffectData;
 
 		foreach (GameplayCueData cueData in effectData.GameplayCues)
 		{
-			cuesManager.RemoveCue(cueData.CueKey, effectEvaluatedData.Target, false);
+			cuesManager.RemoveCue(cueData.CueKey, effectEvaluatedData.Target, interrupted);
 		}
 	}
 

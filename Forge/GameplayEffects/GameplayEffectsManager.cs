@@ -142,7 +142,7 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 
 		foreach (ActiveGameplayEffect expiredEffect in _activeEffects.Where(x => x.IsExpired).ToArray())
 		{
-			RemoveActiveGameplayEffect(expiredEffect);
+			RemoveActiveGameplayEffect(expiredEffect, false);
 		}
 	}
 
@@ -289,17 +289,17 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 
 			if (effectToRemove.StackCount == 0)
 			{
-				RemoveActiveGameplayEffect(effectToRemove);
+				RemoveActiveGameplayEffect(effectToRemove, false);
 			}
 
 			return;
 		}
 
 		effectToRemove.Unapply();
-		RemoveActiveGameplayEffect(effectToRemove);
+		RemoveActiveGameplayEffect(effectToRemove, forceUnapply);
 	}
 
-	private void RemoveActiveGameplayEffect(ActiveGameplayEffect effectToRemove)
+	private void RemoveActiveGameplayEffect(ActiveGameplayEffect effectToRemove, bool interrupted)
 	{
 		GameplayEffectEvaluatedData effectEvaluatedData = effectToRemove.GameplayEffectEvaluatedData;
 
@@ -319,6 +319,6 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 		_activeEffects.Remove(effectToRemove);
 		effectToRemove.Handle.Free();
 
-		GameplayCueUtils.RemoveCues(in _cuesManager, in effectEvaluatedData);
+		GameplayCueUtils.RemoveCues(in _cuesManager, in effectEvaluatedData, interrupted);
 	}
 }
