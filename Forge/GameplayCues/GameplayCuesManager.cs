@@ -9,7 +9,6 @@ namespace Gamesmiths.Forge.GameplayCues;
 /// </summary>
 public sealed class GameplayCuesManager
 {
-	private readonly Dictionary<StringKey, HashSet<IGameplayCue>> _activeCues = [];
 	private readonly Dictionary<StringKey, HashSet<IGameplayCue>> _registeredCues = [];
 
 	/// <summary>
@@ -80,12 +79,9 @@ public sealed class GameplayCuesManager
 			return;
 		}
 
-		_activeCues.TryAdd(cueKey, []);
-
 		foreach (IGameplayCue cue in cues)
 		{
 			cue.OnApply(target, parameters);
-			_activeCues[cueKey].Add(cue);
 		}
 	}
 
@@ -97,7 +93,7 @@ public sealed class GameplayCuesManager
 	/// <param name="interrupted">Whether this removal is the result of an interruption.</param>
 	public void RemoveCue(StringKey cueKey, IForgeEntity? target, bool interrupted)
 	{
-		if (!_activeCues.Remove(cueKey, out HashSet<IGameplayCue>? cues))
+		if (!_registeredCues.TryGetValue(cueKey, out HashSet<IGameplayCue>? cues))
 		{
 			return;
 		}

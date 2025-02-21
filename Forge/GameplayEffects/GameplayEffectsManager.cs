@@ -301,13 +301,15 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 
 	private void RemoveActiveGameplayEffect(ActiveGameplayEffect effectToRemove)
 	{
+		GameplayEffectEvaluatedData effectEvaluatedData = effectToRemove.GameplayEffectEvaluatedData;
+
 		foreach (IGameplayEffectComponent component in effectToRemove.EffectData.GameplayEffectComponents)
 		{
 			component.OnActiveGameplayEffectUnapplied(
 				Owner,
 				new ActiveEffectEvaluatedData(
 					effectToRemove.Handle,
-					effectToRemove.GameplayEffectEvaluatedData,
+					effectEvaluatedData,
 					effectToRemove.RemainingDuration,
 					effectToRemove.NextPeriodicTick,
 					effectToRemove.ExecutionCount),
@@ -316,5 +318,7 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 
 		_activeEffects.Remove(effectToRemove);
 		effectToRemove.Handle.Free();
+
+		GameplayCueUtils.RemoveCues(in _cuesManager, in effectEvaluatedData);
 	}
 }
