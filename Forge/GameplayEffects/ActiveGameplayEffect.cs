@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
@@ -278,7 +278,7 @@ internal class ActiveGameplayEffect
 	{
 		var removed = StackCount == 1;
 
-		GameplayEffectEvaluatedData.Target.EffectsManager.OnActiveGameplayEffectUnapplied_InternalCall(this, removed);
+		GameplayEffectEvaluatedData.Target.EffectsManager.OnActiveGameplayEffectUnapplied_InternalCall(this);
 
 		if (removed)
 		{

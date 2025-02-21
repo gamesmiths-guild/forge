@@ -142,7 +142,7 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 
 		foreach (ActiveGameplayEffect expiredEffect in _activeEffects.Where(x => x.IsExpired).ToArray())
 		{
-			RemoveActiveGameplayEffect(expiredEffect, true);
+			RemoveActiveGameplayEffect(expiredEffect);
 		}
 	}
 
@@ -171,7 +171,7 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 		GameplayCueUtils.ExecuteCues(in _cuesManager, in executedEffectEvaluatedData, in attributeChanges);
 	}
 
-	internal void OnActiveGameplayEffectUnapplied_InternalCall(ActiveGameplayEffect removedEffect, bool removed)
+	internal void OnActiveGameplayEffectUnapplied_InternalCall(ActiveGameplayEffect removedEffect)
 	{
 		foreach (IGameplayEffectComponent component in removedEffect.GameplayEffect.EffectData.GameplayEffectComponents)
 		{
@@ -183,7 +183,7 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 					removedEffect.RemainingDuration,
 					removedEffect.NextPeriodicTick,
 					removedEffect.ExecutionCount),
-				removed);
+				false);
 		}
 	}
 
@@ -289,17 +289,17 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 
 			if (effectToRemove.StackCount == 0)
 			{
-				RemoveActiveGameplayEffect(effectToRemove, false);
+				RemoveActiveGameplayEffect(effectToRemove);
 			}
 
 			return;
 		}
 
 		effectToRemove.Unapply();
-		RemoveActiveGameplayEffect(effectToRemove, true);
+		RemoveActiveGameplayEffect(effectToRemove);
 	}
 
-	private void RemoveActiveGameplayEffect(ActiveGameplayEffect effectToRemove, bool removed)
+	private void RemoveActiveGameplayEffect(ActiveGameplayEffect effectToRemove)
 	{
 		foreach (IGameplayEffectComponent component in effectToRemove.EffectData.GameplayEffectComponents)
 		{
@@ -311,7 +311,7 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 					effectToRemove.RemainingDuration,
 					effectToRemove.NextPeriodicTick,
 					effectToRemove.ExecutionCount),
-				removed);
+				true);
 		}
 
 		_activeEffects.Remove(effectToRemove);
