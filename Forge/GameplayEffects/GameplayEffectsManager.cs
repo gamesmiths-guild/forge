@@ -128,16 +128,6 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 		foreach (ActiveGameplayEffect effect in _activeEffects)
 		{
 			effect.Update(deltaTime);
-
-			foreach (IGameplayEffectComponent component in effect.EffectData.GameplayEffectComponents)
-			{
-				component.OnActiveGameplayEffectUpdated(Owner, new ActiveEffectEvaluatedData(
-					effect.Handle,
-					effect.GameplayEffectEvaluatedData,
-					effect.RemainingDuration,
-					effect.NextPeriodicTick,
-					effect.ExecutionCount));
-			}
 		}
 
 		foreach (ActiveGameplayEffect expiredEffect in _activeEffects.Where(x => x.IsExpired).ToArray())
@@ -187,6 +177,20 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 		}
 	}
 
+	internal void OnActiveGameplayEffectChanged_InternalCall(ActiveGameplayEffect removedEffect)
+	{
+		foreach (IGameplayEffectComponent component in removedEffect.GameplayEffect.EffectData.GameplayEffectComponents)
+		{
+			component.OnActiveGameplayEffectChanged(
+				Owner,
+				new ActiveEffectEvaluatedData(
+					removedEffect.Handle,
+					removedEffect.GameplayEffectEvaluatedData,
+					removedEffect.RemainingDuration,
+					removedEffect.NextPeriodicTick,
+					removedEffect.ExecutionCount));
+		}
+	}
 	private static bool MatchesStackPolicy(ActiveGameplayEffect existingEffect, GameplayEffect newEffect)
 	{
 		Debug.Assert(

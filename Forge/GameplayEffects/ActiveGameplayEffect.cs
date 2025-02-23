@@ -398,6 +398,8 @@ internal class ActiveGameplayEffect
 				level);
 
 		Apply(reApplication: true);
+
+		GameplayEffectEvaluatedData.Target.EffectsManager.OnActiveGameplayEffectChanged_InternalCall(this);
 	}
 
 	private void ApplyModifiers(bool unapply = false)

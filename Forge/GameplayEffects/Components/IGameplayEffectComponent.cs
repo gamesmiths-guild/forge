@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
 
@@ -57,11 +57,12 @@ public interface IGameplayEffectComponent
 	}
 
 	/// <summary>
-	/// Executes and implements extra functionality for whenever a gameplay effect is updated.
+	/// Executes and implements extra functionality for whenever a gameplay effect changes. Be it's level, modifier
+	/// values, stacks or inhibition.
 	/// </summary>
 	/// <param name="target">The target of the gameplay effect.</param>
-	/// <param name="activeEffectEvaluatedData">>The evaluated data for the active effect being updated.</param>
-	void OnActiveGameplayEffectUpdated(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	/// <param name="activeEffectEvaluatedData">>The evaluated data for the active effect being changed.</param>
+	void OnActiveGameplayEffectChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
 		// This method is intentionally left blank.
 	}
@@ -90,15 +91,6 @@ public interface IGameplayEffectComponent
 	/// <param name="target">The target of the gampleplay effect.</param>
 	/// <param name="effectEvaluatedData">The evaluated data for the gameplay effect being applied.</param>
 	void OnGameplayEffectExecuted(IForgeEntity target, in GameplayEffectEvaluatedData effectEvaluatedData)
-	{
-		// This method is intentionally left blank.
-	}
-
-	/// <summary>
-	/// Executes and implements extra functionality for whenever a gameplay effect changes. Be it's level or other
-	/// properties.
-	/// </summary>
-	void OnGameplayEffectChanged()
 	{
 		// This method is intentionally left blank.
 	}
