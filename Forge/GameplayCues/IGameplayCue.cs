@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
 
@@ -36,5 +36,5 @@ public interface IGameplayCue
 	/// </summary>
 	/// <param name="target">The cue's target.</param>
 	/// <param name="parameters">Optional parameters for the gameplay cue execution.</param>
-	void WhileActive(IForgeEntity? target, GameplayCueParameters? parameters);
+	void OnUpdate(IForgeEntity? target, GameplayCueParameters? parameters);
 }

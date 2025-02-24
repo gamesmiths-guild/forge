@@ -149,7 +149,7 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 
 	internal void OnGameplayEffectExecuted_InternalCall(
 		GameplayEffectEvaluatedData executedEffectEvaluatedData,
-		Dictionary<Attribute, int> attributeChanges)
+		Dictionary<Attribute, int> attributeDeltas)
 	{
 		GameplayEffectData effectData = executedEffectEvaluatedData.GameplayEffect.EffectData;
 
@@ -158,7 +158,7 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 			component.OnGameplayEffectExecuted(Owner, in executedEffectEvaluatedData);
 		}
 
-		GameplayCueUtils.ExecuteCues(in _cuesManager, in executedEffectEvaluatedData, in attributeChanges);
+		_cuesManager.ExecuteCues(in executedEffectEvaluatedData, in attributeDeltas);
 	}
 
 	internal void OnActiveGameplayEffectUnapplied_InternalCall(ActiveGameplayEffect removedEffect)
@@ -191,6 +191,14 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 					removedEffect.ExecutionCount));
 		}
 	}
+
+	internal void TriggerCuesUpdate_InternalCall(
+		in GameplayEffectEvaluatedData effectEvaluatedData,
+		in Dictionary<Attribute, int> attributeDeltas)
+	{
+		_cuesManager.UpdateCues(in effectEvaluatedData, in attributeDeltas);
+	}
+
 	private static bool MatchesStackPolicy(ActiveGameplayEffect existingEffect, GameplayEffect newEffect)
 	{
 		Debug.Assert(
@@ -248,8 +256,8 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 		var activeEffect = new ActiveGameplayEffect(gameplayEffect, Owner);
 		_activeEffects.Add(activeEffect);
 
-		Dictionary<Attribute, int> attributeChanges =
-			GameplayCueUtils.InitializeAttributeChanges(activeEffect.GameplayEffectEvaluatedData);
+		Dictionary<Attribute, int> attributeDeltas =
+			GameplayCuesManager.CreateInitialAttributeDeltas(activeEffect.GameplayEffectEvaluatedData);
 
 		var remainActive = true;
 
@@ -268,10 +276,10 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 
 		activeEffect.Apply(inhibited: !remainActive);
 
-		GameplayCueUtils.UpdateAttributeChanges(attributeChanges);
+		GameplayCuesManager.ComputeAttributeDeltas(attributeDeltas);
 
 		GameplayEffectEvaluatedData effectEvaluatedData = activeEffect.GameplayEffectEvaluatedData;
-		GameplayCueUtils.AddCues(in _cuesManager, in effectEvaluatedData, in attributeChanges);
+		_cuesManager.AddCues(in effectEvaluatedData, in attributeDeltas);
 
 		return activeEffect;
 	}
@@ -323,6 +331,6 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 		_activeEffects.Remove(effectToRemove);
 		effectToRemove.Handle.Free();
 
-		GameplayCueUtils.RemoveCues(in _cuesManager, in effectEvaluatedData, interrupted);
+		_cuesManager.RemoveCues(in effectEvaluatedData, interrupted);
 	}
 }

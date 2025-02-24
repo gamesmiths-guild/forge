@@ -75,8 +75,8 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 
 	internal static void Execute(in GameplayEffectEvaluatedData effectEvaluatedData)
 	{
-		Dictionary<Attribute, int> attributeChanges =
-			GameplayCueUtils.InitializeAttributeChanges(in effectEvaluatedData);
+		Dictionary<Attribute, int> attributeDeltas =
+			GameplayCuesManager.CreateInitialAttributeDeltas(in effectEvaluatedData);
 
 		foreach (ModifierEvaluatedData modifier in effectEvaluatedData.ModifiersEvaluatedData)
 		{
@@ -96,10 +96,10 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 			}
 		}
 
-		GameplayCueUtils.UpdateAttributeChanges(attributeChanges);
+		GameplayCuesManager.ComputeAttributeDeltas(attributeDeltas);
 
 		effectEvaluatedData.Target.EffectsManager.OnGameplayEffectExecuted_InternalCall(
-			effectEvaluatedData, attributeChanges);
+			effectEvaluatedData, attributeDeltas);
 	}
 
 	internal bool CanApply(IForgeEntity target)

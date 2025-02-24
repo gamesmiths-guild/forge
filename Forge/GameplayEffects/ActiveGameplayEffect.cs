@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
 using Gamesmiths.Forge.GameplayEffects.Periodic;
@@ -252,7 +253,18 @@ internal class ActiveGameplayEffect
 
 		if (hasChanges)
 		{
-			ReEvaluateAndReApply(evaluatedGameplayEffect, evaluatedLevel);
+			ReapplyEffect(evaluatedGameplayEffect, evaluatedLevel, true);
+		}
+		else
+		{
+			GameplayEffectEvaluatedData effectEvaluatedData = GameplayEffectEvaluatedData;
+
+			Dictionary<Attribute, int> attributeDeltas =
+				GameplayCuesManager.CreateInitialAttributeDeltas(in effectEvaluatedData, true);
+
+			effectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(
+				in effectEvaluatedData,
+				attributeDeltas);
 		}
 
 		if (stackingData.ApplicationRefreshPolicy == StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication)
@@ -287,7 +299,7 @@ internal class ActiveGameplayEffect
 		}
 
 		StackCount--;
-		ReEvaluateAndReApply(GameplayEffectEvaluatedData.GameplayEffect);
+		ReapplyEffect(GameplayEffectEvaluatedData.GameplayEffect, isStackingCall: true);
 	}
 
 	internal void Update(double deltaTime)
@@ -386,8 +398,17 @@ internal class ActiveGameplayEffect
 		}
 	}
 
-	private void ReEvaluateAndReApply(GameplayEffect gameplayEffect, int? level = null)
+	private void ReapplyEffect(GameplayEffect gameplayEffect, int? level = null, bool isStackingCall = false)
 	{
+		var suppressCues = GameplayEffectEvaluatedData.GameplayEffect.EffectData.SuppressStackingCues && isStackingCall;
+
+		Dictionary<Attribute, int>? attributeDeltas = null;
+		if (!suppressCues)
+		{
+			GameplayEffectEvaluatedData effectEvaluatedData = GameplayEffectEvaluatedData;
+			attributeDeltas = GameplayCuesManager.CreateInitialAttributeDeltas(in effectEvaluatedData);
+		}
+
 		Unapply(true);
 
 		GameplayEffectEvaluatedData =
@@ -400,6 +421,14 @@ internal class ActiveGameplayEffect
 		Apply(reApplication: true);
 
 		GameplayEffectEvaluatedData.Target.EffectsManager.OnActiveGameplayEffectChanged_InternalCall(this);
+
+		if (attributeDeltas is not null)
+		{
+			GameplayEffectEvaluatedData effectEvaluatedData = GameplayEffectEvaluatedData;
+
+			GameplayCuesManager.ComputeAttributeDeltas(attributeDeltas);
+			GameplayEffectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData, in attributeDeltas);
+		}
 	}
 
 	private void ApplyModifiers(bool unapply = false)
@@ -445,12 +474,12 @@ internal class ActiveGameplayEffect
 	private void Attribute_OnValueChanged(Attribute attribute, int change)
 	{
 		// This could be optimized by re-evaluating only the modifiers with the attribute that changed.
-		ReEvaluateAndReApply(GameplayEffectEvaluatedData.GameplayEffect);
+		ReapplyEffect(GameplayEffectEvaluatedData.GameplayEffect);
 	}
 
 	private void GameplayEffect_OnLevelChanged(int obj)
 	{
 		// This one has to re-calculate everything that uses ScalableFloats.
-		ReEvaluateAndReApply(GameplayEffectEvaluatedData.GameplayEffect);
+		ReapplyEffect(GameplayEffectEvaluatedData.GameplayEffect);
 	}
 }
