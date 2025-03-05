@@ -251,17 +251,34 @@ public sealed class GameplayCuesManager
 		in GameplayEffectEvaluatedData effectEvaluatedData,
 		in Dictionary<Attribute, int> attributeDeltas)
 	{
-		var magnitude = effectEvaluatedData.Level;
-
-		if (cueData.MagnitudeAttribute is not null)
+		switch (cueData.MagnitudeType)
 		{
-			Debug.Assert(
-				attributeDeltas.ContainsKey(cueData.MagnitudeAttribute),
-				"attributeDeltas should always contains a configured MagnitudeAttribute.");
+			default:
+				return effectEvaluatedData.Level;
 
-			magnitude = attributeDeltas[cueData.MagnitudeAttribute];
+			case CueMagnitudeType.StackCount:
+				return effectEvaluatedData.Stack;
+
+			case CueMagnitudeType.AttributeDelta:
+				Debug.Assert(
+					cueData.MagnitudeAttribute is not null,
+					"Cues with CueMagnitudeType.AttributeMagnitude must contains a configured MagnitudeAttribute.");
+				Debug.Assert(
+					attributeDeltas.ContainsKey(cueData.MagnitudeAttribute),
+					"attributeDeltas should always contains a configured MagnitudeAttribute.");
+				return attributeDeltas[cueData.MagnitudeAttribute];
+
+			case CueMagnitudeType.AttributeCurrentValue:
+				Debug.Assert(
+					cueData.MagnitudeAttribute is not null,
+					"Cues with CueMagnitudeType.AttributeMagnitude must contains a configured MagnitudeAttribute.");
+				return cueData.MagnitudeAttribute.CurrentValue;
+
+			case CueMagnitudeType.AttributeModifier:
+				Debug.Assert(
+					cueData.MagnitudeAttribute is not null,
+					"Cues with CueMagnitudeType.AttributeMagnitude must contains a configured MagnitudeAttribute.");
+				return cueData.MagnitudeAttribute.Modifier;
 		}
-
-		return magnitude;
 	}
 }

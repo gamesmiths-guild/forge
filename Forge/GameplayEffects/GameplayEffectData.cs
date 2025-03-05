@@ -212,6 +212,19 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 		RequireModifierSuccessToTriggerCue = requireModifierSuccessToTriggerCue;
 		SuppressStackingCues = suppressStackingCues;
 		GameplayCues = gameplayCues ?? [];
+
+#if DEBUG
+		foreach (CueMagnitudeType magnitudeType in GameplayCues.Select(x => x.MagnitudeType))
+		{
+			Debug.Assert(
+				magnitudeType != CueMagnitudeType.StackCount || !suppressStackingCues,
+				"StackCount magnitude type is not allowed when SuppressStackingCues is set to true.");
+
+			Debug.Assert(
+				magnitudeType != CueMagnitudeType.StackCount || stackingData.HasValue,
+				"StackCount magnitude type can only be used if StackingData is configured.");
+		}
+#endif
 	}
 
 	/// <inheritdoc/>

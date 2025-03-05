@@ -11,6 +11,7 @@ namespace Gamesmiths.Forge.GameplayCues;
 /// <param name="cueKey">The key for the gameplay cue.</param>
 /// <param name="minValue">The minimum value used for this cue's normalized magnitude calculation.</param>
 /// <param name="maxValue">The maximum value used for this cue's normalized magnitude calculation.</param>
+/// <param name="magnitudeType">The type of magnitude to be used for this cue.</param>
 /// <param name="magnitudeAttribute">The modified attribute to be used as magnitude. If <see langword="null"/> the
 /// effect level will be used instead.
 /// </param>
@@ -18,6 +19,7 @@ public readonly struct GameplayCueData(
 	StringKey cueKey,
 	int minValue,
 	int maxValue,
+	CueMagnitudeType magnitudeType,
 	Attribute? magnitudeAttribute = null)
 {
 	/// <summary>
@@ -34,6 +36,11 @@ public readonly struct GameplayCueData(
 	/// Gets the maximum value used for this cue's normalized magnitude calculation.
 	/// </summary>
 	public int MaxValue { get; } = maxValue;
+
+	/// <summary>
+	/// Gets the type of magnitude to be used for this cue.
+	/// </summary>
+	public CueMagnitudeType MagnitudeType { get; } = magnitudeType;
 
 	/// <summary>
 	/// Gets the attribute to be used as magnitude modifier. If <see langword="null"/> the effect level will be used
