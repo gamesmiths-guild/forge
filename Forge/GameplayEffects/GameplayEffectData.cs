@@ -214,15 +214,22 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 		GameplayCues = gameplayCues ?? [];
 
 #if DEBUG
-		foreach (CueMagnitudeType magnitudeType in GameplayCues.Select(x => x.MagnitudeType))
+		foreach (GameplayCueData cue in GameplayCues)
 		{
 			Debug.Assert(
-				magnitudeType != CueMagnitudeType.StackCount || !suppressStackingCues,
+				cue.MagnitudeType != CueMagnitudeType.StackCount || !suppressStackingCues,
 				"StackCount magnitude type is not allowed when SuppressStackingCues is set to true.");
 
 			Debug.Assert(
-				magnitudeType != CueMagnitudeType.StackCount || stackingData.HasValue,
+				cue.MagnitudeType != CueMagnitudeType.StackCount || stackingData.HasValue,
 				"StackCount magnitude type can only be used if StackingData is configured.");
+
+			Debug.Assert(
+				(cue.MagnitudeType != CueMagnitudeType.AttributeDelta
+					&& cue.MagnitudeType != CueMagnitudeType.AttributeCurrentValue
+					&& cue.MagnitudeType != CueMagnitudeType.AttributeModifier)
+				|| cue.MagnitudeAttribute is not null,
+				"Attribute magnitudes type must have a configured MagnitudeAttribute.");
 		}
 #endif
 	}

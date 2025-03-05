@@ -40,6 +40,7 @@ public class GameplayCueTests(
 			new object[] { "TestAttributeSet.Attribute1", 3f },
 		},
 		false,
+		false,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute1" },
@@ -55,9 +56,135 @@ public class GameplayCueTests(
 			new object[] { 0, 2, 3, 0.3f, false },
 			new object[] { 1, 2, 2, 0.4f, false },
 		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 3f },
+		},
+		false,
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 5, CueMagnitudeType.EffectLevel },
+			new object[] { 2, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute2" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 3, 0.3f, false },
+			new object[] { 1, 1, 1, 0.2f, false },
+			new object[] { 2, 1, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 2, 3, 0.3f, false },
+			new object[] { 1, 2, 2, 0.4f, false },
+			new object[] { 2, 2, 0, 0f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 3f },
+			new object[] { "TestAttributeSet.Attribute1", 2f },
+		},
+		true,
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 5, CueMagnitudeType.EffectLevel },
+			new object[] { 2, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute2" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 5, 0.5f, false },
+			new object[] { 1, 1, 1, 0.2f, false },
+			new object[] { 2, 1, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 2, 5, 0.5f, false },
+			new object[] { 1, 2, 2, 0.4f, false },
+			new object[] { 2, 2, 0, 0f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 99f },
+		},
+		false,
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.AttributeCurrentValue, "TestAttributeSet.Attribute1" },
+			new object[] { 2, 0, 10, CueMagnitudeType.AttributeModifier, "TestAttributeSet.Attribute1" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 98, 1f, false },
+			new object[] { 1, 1, 99, 1f, false },
+			new object[] { 2, 1, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 2, 0, 0f, false },
+			new object[] { 1, 2, 99, 1f, false },
+			new object[] { 2, 2, 0, 0f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 99f },
+		},
+		true,
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.AttributeCurrentValue, "TestAttributeSet.Attribute1" },
+			new object[] { 2, 0, 10, CueMagnitudeType.AttributeModifier, "TestAttributeSet.Attribute1" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 98, 1f, false },
+			new object[] { 1, 1, 99, 1f, false },
+			new object[] { 2, 1, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 98, 1f, false },
+			new object[] { 1, 1, 99, 1f, false },
+			new object[] { 2, 1, 0, 0f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 1f },
+			new object[] { "TestAttributeSet.Attribute2", 2f },
+		},
+		false,
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute2" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, false },
+			new object[] { 1, 2, 2, 0.2f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 2, 1, 0.1f, false },
+			new object[] { 1, 4, 2, 0.2f, false },
+		})]
 	public void Instant_effect_triggers_execute_cues_with_expected_results(
 		object[] modifiersData,
 		bool requireModifierSuccessToTriggerCue,
+		bool suppressStackingCues,
 		object[] cueDatas,
 		object[] cueTestDatas1,
 		object[] cueTestDatas2)
@@ -66,6 +193,7 @@ public class GameplayCueTests(
 		GameplayEffectData effectData = CreateInstantEffectData(
 			CreateModifiers(modifiersData),
 			requireModifierSuccessToTriggerCue,
+			suppressStackingCues,
 			CreateCueDatas(entity, cueDatas));
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
@@ -148,6 +276,7 @@ public class GameplayCueTests(
 	private static GameplayEffectData CreateInstantEffectData(
 		Modifier[] modifiers,
 		bool requireModifierSuccessToTriggerCue,
+		bool suppressStackingCues,
 		GameplayCueData[] cues)
 	{
 		return new GameplayEffectData(
@@ -157,6 +286,7 @@ public class GameplayCueTests(
 			null,
 			null,
 			requireModifierSuccessToTriggerCue: requireModifierSuccessToTriggerCue,
+			suppressStackingCues: suppressStackingCues,
 			gameplayCues: cues);
 	}
 
