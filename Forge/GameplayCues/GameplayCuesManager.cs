@@ -3,6 +3,7 @@
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayEffects;
+using Gamesmiths.Forge.GameplayEffects.Modifiers;
 using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.GameplayCues;
@@ -132,6 +133,15 @@ public sealed class GameplayCuesManager
 	{
 		var attributeDeltas = new Dictionary<Attribute, int>();
 
+		// Add all attributes that are modified by the effect.
+		foreach (Modifier modifier in effectEvaluatedData.GameplayEffect.EffectData.Modifiers)
+		{
+			Attribute attribute = effectEvaluatedData.Target.Attributes[modifier.Attribute];
+
+			attributeDeltas.TryAdd(attribute, initializeWithZero ? 0 : attribute.CurrentValue);
+		}
+
+		// Then add all attributes that are used as magnitude for cues.
 		foreach (Attribute? attribute in
 			effectEvaluatedData.GameplayEffect.EffectData.GameplayCues.Select(x => x.MagnitudeAttribute))
 		{

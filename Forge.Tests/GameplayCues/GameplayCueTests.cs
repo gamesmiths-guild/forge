@@ -254,6 +254,28 @@ public class GameplayCueTests(
 			new object[] { 1, 1, 1, 0.2f, false },
 		})]
 	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 5f },
+		},
+		true,
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute2" },
+			new object[] { 1, 0, 5, CueMagnitudeType.EffectLevel },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 1, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, false },
+			new object[] { 1, 1, 1, 0.2f, false },
+		})]
+	[InlineData(
 		new object[] { },
 		false,
 		false,
@@ -538,7 +560,7 @@ public class GameplayCueTests(
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
 		ResetCues();
-		_ = entity.EffectsManager.ApplyEffect(effect);
+		entity.EffectsManager.ApplyEffect(effect);
 		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas1);
 		TestCueExecutionData(TestCueExecutionType.Execution, executionCueTestDatas1);
 
