@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using FluentAssertions;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects;
 using Gamesmiths.Forge.GameplayEffects.Duration;
@@ -324,6 +325,7 @@ public class GameplayCueTests(
 		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
 		GameplayEffectData effectData = CreateInfiniteEffectData(
 			CreateModifiers(modifiersData),
+			true,
 			requireModifierSuccessToTriggerCue,
 			suppressStackingCues,
 			CreateCueDatas(entity, cueDatas));
@@ -575,6 +577,260 @@ public class GameplayCueTests(
 		TestCueExecutionData(TestCueExecutionType.Execution, executionCueTestDatas3);
 	}
 
+	[Theory]
+	[Trait("Update", null)]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 1f },
+		},
+		false,
+		false,
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.EffectLevel },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, true },
+			new object[] { 1, 1, 2, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, false },
+			new object[] { 1, 1, 1, 0.1f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, false },
+			new object[] { 1, 1, 2, 0.2f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 1f },
+		},
+		false,
+		true,
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.EffectLevel },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, true },
+			new object[] { 1, 1, 2, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, false },
+			new object[] { 1, 1, 1, 0.1f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, false },
+			new object[] { 1, 1, 2, 0.2f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 1f },
+		},
+		true,
+		false,
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.EffectLevel },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, false },
+			new object[] { 1, 1, 1, 0.1f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, false },
+			new object[] { 1, 0, 0, 0f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 99f },
+		},
+		false,
+		false,
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.EffectLevel },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 98, 1f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 98, 1f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 2, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 98, 1f, false },
+			new object[] { 1, 1, 1, 0.1f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, false },
+			new object[] { 1, 1, 2, 0.2f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 99f },
+		},
+		false,
+		true,
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeDelta, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.EffectLevel },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 98, 1f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 98, 1f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 98, 1f, false },
+			new object[] { 1, 1, 1, 0.1f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, false },
+			new object[] { 1, 0, 0, 0f, false },
+		})]
+	public void Infinite_effect_triggers_update_cues_when_level_up_with_expected_results(
+		object[] modifiersData,
+		bool snapshotLevel,
+		bool requireModifierSuccessToTriggerCue,
+		bool suppressStackingCues,
+		object[] cueDatas,
+		object[] applicationCueTestDatas1,
+		object[] updateCueTestDatas1,
+		object[] applicationCueTestDatas2,
+		object[] updateCueTestDatas2,
+		object[] applicationCueTestDatas3,
+		object[] updateCueTestDatas3)
+	{
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		GameplayEffectData effectData = CreateInfiniteEffectData(
+			CreateModifiers(modifiersData),
+			snapshotLevel,
+			requireModifierSuccessToTriggerCue,
+			suppressStackingCues,
+			CreateCueDatas(entity, cueDatas));
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		ResetCues();
+		ActiveGameplayEffectHandle? activeEffectHandler = entity.EffectsManager.ApplyEffect(effect);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas1);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas1);
+
+		effect.LevelUp();
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas2);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas2);
+
+		Debug.Assert(activeEffectHandler is not null, "Effect should not be null here.");
+		entity.EffectsManager.UnapplyEffect(activeEffectHandler);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas3);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas3);
+	}
+
 	private static GameplayEffectData CreateInstantEffectData(
 		Modifier[] modifiers,
 		bool requireModifierSuccessToTriggerCue,
@@ -594,6 +850,7 @@ public class GameplayCueTests(
 
 	private static GameplayEffectData CreateInfiniteEffectData(
 		Modifier[] modifiers,
+		bool snapshotLevel,
 		bool requireModifierSuccessToTriggerCue,
 		bool suppressStackingCues,
 		GameplayCueData[] cues)
@@ -604,6 +861,7 @@ public class GameplayCueTests(
 			new DurationData(DurationType.Infinite),
 			null,
 			null,
+			snapshopLevel: snapshotLevel,
 			requireModifierSuccessToTriggerCue: requireModifierSuccessToTriggerCue,
 			suppressStackingCues: suppressStackingCues,
 			gameplayCues: cues);
@@ -669,12 +927,15 @@ public class GameplayCueTests(
 		for (var i = 0; i < modifiersData.Length; i++)
 		{
 			var modifierData = (object[])modifiersData[i];
+
 			result[i] = new Modifier(
 				(string)modifierData[0],
 				ModifierOperation.FlatBonus,
 				new ModifierMagnitude(
 					MagnitudeCalculationType.ScalableFloat,
-					new ScalableFloat((float)modifierData[1])));
+					new ScalableFloat(
+						(float)modifierData[1],
+						new Curve([new CurveKey(1, 1), new CurveKey(2, 2)]))));
 		}
 
 		return result;
