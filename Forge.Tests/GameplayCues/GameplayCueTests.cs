@@ -55,7 +55,7 @@ public class GameplayCueTests(
 		},
 		new object[]
 		{
-			new object[] { 0, 2, 3, 0.3f, false },
+			new object[] { 0, 2, 6, 0.6f, false },
 			new object[] { 1, 2, 2, 0.4f, false },
 		})]
 	[InlineData(
@@ -79,7 +79,7 @@ public class GameplayCueTests(
 		},
 		new object[]
 		{
-			new object[] { 0, 2, 3, 0.3f, false },
+			new object[] { 0, 2, 6, 0.6f, false },
 			new object[] { 1, 2, 2, 0.4f, false },
 			new object[] { 2, 2, 0, 0f, false },
 		})]
@@ -105,7 +105,7 @@ public class GameplayCueTests(
 		},
 		new object[]
 		{
-			new object[] { 0, 2, 5, 0.5f, false },
+			new object[] { 0, 2, 10, 1f, false },
 			new object[] { 1, 2, 2, 0.4f, false },
 			new object[] { 2, 2, 0, 0f, false },
 		})]
@@ -180,8 +180,8 @@ public class GameplayCueTests(
 		},
 		new object[]
 		{
-			new object[] { 0, 2, 1, 0.1f, false },
-			new object[] { 1, 4, 2, 0.2f, false },
+			new object[] { 0, 2, 2, 0.2f, false },
+			new object[] { 1, 4, 4, 0.4f, false },
 		})]
 	[InlineData(
 		new object[] { },
