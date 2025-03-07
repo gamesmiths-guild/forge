@@ -133,7 +133,7 @@ public sealed class GameplayCuesManager
 	{
 		var attributeDeltas = new Dictionary<Attribute, int>();
 
-		// Add all attributes that are modified by the effect.
+		// Add all attributes that are directly modified by the effect.
 		foreach (Modifier modifier in effectEvaluatedData.GameplayEffect.EffectData.Modifiers)
 		{
 			Attribute attribute = effectEvaluatedData.Target.Attributes[modifier.Attribute];
