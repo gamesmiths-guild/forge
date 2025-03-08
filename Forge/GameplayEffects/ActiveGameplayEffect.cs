@@ -67,11 +67,11 @@ internal class ActiveGameplayEffect
 			_internalTime = 0;
 			_isInhibited = inhibited;
 			RemainingDuration = GameplayEffectEvaluatedData.Duration;
-		}
 
-		if (!EffectData.SnapshopLevel)
-		{
-			GameplayEffect.OnLevelChanged += GameplayEffect_OnLevelChanged;
+			if (!EffectData.SnapshopLevel)
+			{
+				GameplayEffect.OnLevelChanged += GameplayEffect_OnLevelChanged;
+			}
 		}
 
 		foreach (ModifierEvaluatedData modifier in GameplayEffectEvaluatedData.ModifiersEvaluatedData)

@@ -225,11 +225,11 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 				"StackCount magnitude type can only be used if StackingData is configured.");
 
 			Debug.Assert(
-				(cue.MagnitudeType != CueMagnitudeType.AttributeDelta
-					&& cue.MagnitudeType != CueMagnitudeType.AttributeCurrentValue
-					&& cue.MagnitudeType != CueMagnitudeType.AttributeModifier)
-				|| cue.MagnitudeAttribute is not null,
-				"Attribute magnitudes type must have a configured MagnitudeAttribute.");
+				cue.MagnitudeType == CueMagnitudeType.AttributeDelta
+					|| cue.MagnitudeType == CueMagnitudeType.AttributeCurrentValue
+					|| cue.MagnitudeType == CueMagnitudeType.AttributeModifier
+					|| cue.MagnitudeAttribute is null,
+				"Attribute magnitudes type must have a configured MagnitudeAttribute, and not configured otherwise.");
 		}
 #endif
 	}
