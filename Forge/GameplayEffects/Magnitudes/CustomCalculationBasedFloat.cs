@@ -1,6 +1,7 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.GameplayEffects.Calculator;
 
 namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 
@@ -21,7 +22,7 @@ namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 /// <param name="lookupCurve">If provided, the final evaluated magnitude will be used as a lookup into this curve.
 /// </param>
 public readonly struct CustomCalculationBasedFloat(
-	IMagnitudeCalculator magnitudeCalculatorClass,
+	CustomModifierMagnitudeCalculator magnitudeCalculatorClass,
 	ScalableFloat coefficient,
 	ScalableFloat preMultiplyAdditiveValue,
 	ScalableFloat postMultiplyAdditiveValue,
@@ -30,7 +31,7 @@ public readonly struct CustomCalculationBasedFloat(
 	/// <summary>
 	/// Gets the magnitude calculator class used to calculate the magnitude.
 	/// </summary>
-	public IMagnitudeCalculator MagnitudeCalculatorClass { get; } = magnitudeCalculatorClass;
+	public CustomModifierMagnitudeCalculator MagnitudeCalculatorClass { get; } = magnitudeCalculatorClass;
 
 	/// <summary>
 	/// Gets the coeficient to be multiplied with the captured magnitude.
@@ -56,11 +57,12 @@ public readonly struct CustomCalculationBasedFloat(
 	/// Calculates the final magnitude based on the CustomCalculationBasedFloat configurations.
 	/// </summary>
 	/// <param name="effect">The source effect that will be used for calculating this magnitude.</param>
+	/// <param name="target">The target of the effect to be used for calcuilating this magnitude.</param>
 	/// <param name="level">Level to use in the final magnitude calculation.</param>
 	/// <returns>The calculated magnitude for this <see cref="CustomCalculationBasedFloat"/>.</returns>
-	public float CalculateMagnitude(in GameplayEffect effect, int level)
+	public float CalculateMagnitude(in GameplayEffect effect, IForgeEntity target, int level)
 	{
-		var baseMagnitude = MagnitudeCalculatorClass.CalculateBaseMagnitude(effect);
+		var baseMagnitude = MagnitudeCalculatorClass.CalculateBaseMagnitude(effect, target);
 
 		var finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + baseMagnitude))
 			+ PostMultiplyAdditiveValue.GetValue(level);

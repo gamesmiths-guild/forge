@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
@@ -109,16 +109,16 @@ public readonly struct GameplayEffectEvaluatedData
 			modifiersEvaluatedData[i] = new ModifierEvaluatedData(
 				Target.Attributes[modifier.Attribute],
 				modifier.Operation,
-				EvaluateModifierMagnitude(modifier),
+				EvaluateModifierMagnitude(modifier.Magnitude),
 				modifier.Channel,
-				EvaluateModifierSnapshop(modifier),
-				EvaluateModifierBackingAttribute(modifier));
+				EvaluateModifierSnapshop(modifier.Magnitude),
+				EvaluateModifierBackingAttribute(modifier.Magnitude));
 		}
 
 		return modifiersEvaluatedData;
 	}
 
-	private float EvaluateModifierMagnitude(Modifier modifier)
+	private float EvaluateModifierMagnitude(ModifierMagnitude modifierMagnitude)
 	{
 		float stackMultiplier = Stack;
 		if (GameplayEffect.EffectData.StackingData.HasValue &&
@@ -127,53 +127,111 @@ public readonly struct GameplayEffectEvaluatedData
 			stackMultiplier = 1;
 		}
 
-		return modifier.Magnitude.GetMagnitude(GameplayEffect, Target, Level) * stackMultiplier;
+		return modifierMagnitude.GetMagnitude(GameplayEffect, Target, Level) * stackMultiplier;
 	}
 
-	private bool EvaluateModifierSnapshop(Modifier modifier)
+	private bool EvaluateModifierSnapshop(ModifierMagnitude modifierMagnitude)
 	{
 		if (GameplayEffect.EffectData.DurationData.Type == DurationType.Instant)
 		{
 			return true;
 		}
 
-		if (modifier.Magnitude.MagnitudeCalculationType != MagnitudeCalculationType.AttributeBased)
+		if (modifierMagnitude.MagnitudeCalculationType == MagnitudeCalculationType.CustomCalculatorClass)
+		{
+			Debug.Assert(
+				modifierMagnitude.CustomCalculationBasedFloat.HasValue,
+				"CustomCalculationBasedFloat should always have a value at this point.");
+
+			List<AttributeCaptureDefinition> attributesToCapture =
+				modifierMagnitude.CustomCalculationBasedFloat.Value.MagnitudeCalculatorClass.AttributesToCapture;
+			return attributesToCapture.TrueForAll(x => x.Snapshot);
+		}
+
+		if (modifierMagnitude.MagnitudeCalculationType != MagnitudeCalculationType.AttributeBased)
 		{
 			return true;
 		}
 
 		Debug.Assert(
-			modifier.Magnitude.AttributeBasedFloat.HasValue,
+			modifierMagnitude.AttributeBasedFloat.HasValue,
 			"AttributeBasedFloat should always have a value at this point.");
 
-		return modifier.Magnitude.AttributeBasedFloat.Value.BackingAttribute.Snapshot;
+		return modifierMagnitude.AttributeBasedFloat.Value.BackingAttribute.Snapshot;
 	}
 
-	private Attribute? EvaluateModifierBackingAttribute(Modifier modifier)
+	private Attribute[] EvaluateModifierBackingAttribute(ModifierMagnitude modifierMagnitude)
 	{
-		if (GameplayEffect.EffectData.DurationData.Type == DurationType.Instant
-			|| modifier.Magnitude.MagnitudeCalculationType != MagnitudeCalculationType.AttributeBased)
+		if (GameplayEffect.EffectData.DurationData.Type == DurationType.Instant)
 		{
-			return null;
+			return [];
 		}
 
-		Debug.Assert(
-			modifier.Magnitude.AttributeBasedFloat.HasValue,
-			"AttributeBasedFloat should always have a value at this point.");
-
-		if (modifier.Magnitude.AttributeBasedFloat.Value.BackingAttribute.Snapshot)
+		if (modifierMagnitude.MagnitudeCalculationType == MagnitudeCalculationType.AttributeBased)
 		{
-			return null;
+			Debug.Assert(
+				modifierMagnitude.AttributeBasedFloat.HasValue,
+				"AttributeBasedFloat should always have a value at this point.");
+
+			if (TryGetBackingAttribute(
+				modifierMagnitude.AttributeBasedFloat.Value.BackingAttribute,
+				out Attribute? backingAttribute))
+			{
+				Debug.Assert(
+						backingAttribute is not null,
+						"backingAttribute should never be null at this point.");
+
+				return [backingAttribute];
+			}
+
+			return [];
+		}
+
+		if (modifierMagnitude.MagnitudeCalculationType == MagnitudeCalculationType.CustomCalculatorClass)
+		{
+			Debug.Assert(
+				modifierMagnitude.CustomCalculationBasedFloat.HasValue,
+				"CustomCalculationBasedFloat should always have a value at this point.");
+
+			var attributeList = new List<Attribute>();
+
+			foreach (AttributeCaptureDefinition attributeSource in
+				modifierMagnitude.CustomCalculationBasedFloat.Value.MagnitudeCalculatorClass.AttributesToCapture)
+			{
+				if (TryGetBackingAttribute(attributeSource, out Attribute? backingAttribute))
+				{
+					Debug.Assert(
+						backingAttribute is not null,
+						"backingAttribute should never be null at this point.");
+
+					attributeList.Add(backingAttribute);
+				}
+			}
+
+			return [.. attributeList];
+		}
+
+		return [];
+	}
+
+	private bool TryGetBackingAttribute(AttributeCaptureDefinition attributeSource, out Attribute? backingAttribute)
+	{
+		backingAttribute = null;
+
+		if (attributeSource.Snapshot)
+		{
+			return false;
 		}
 
 		IForgeEntity attributeSourceOwner = Target;
 
-		if (modifier.Magnitude.AttributeBasedFloat.Value.BackingAttribute.Source ==
-				AttributeCaptureSource.Source)
+		if (attributeSource.Source == AttributeCaptureSource.Source)
 		{
 			attributeSourceOwner = GameplayEffect.Ownership.Owner;
 		}
 
-		return modifier.Magnitude.AttributeBasedFloat.Value.BackingAttribute.GetAttribute(attributeSourceOwner);
+		backingAttribute = attributeSource.GetAttribute(attributeSourceOwner);
+
+		return true;
 	}
 }

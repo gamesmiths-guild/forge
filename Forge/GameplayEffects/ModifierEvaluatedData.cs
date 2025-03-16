@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
@@ -41,9 +41,9 @@ public readonly struct ModifierEvaluatedData
 	public bool Snapshot { get; }
 
 	/// <summary>
-	/// Gets the backing attribute for this modifier in case there is one.
+	/// Gets the backing attributes for this modifier in case there is one.
 	/// </summary>
-	public Attribute? BackingAttribute { get; }
+	public Attribute[] BackingAttributes { get; }
 
 	/// <summary>
 	/// Gets the attribute override data if this modifier is an override.
@@ -58,14 +58,14 @@ public readonly struct ModifierEvaluatedData
 	/// <param name="magnitude">The final evaluated magnitude.</param>
 	/// <param name="channel">The final channel for this modifier.</param>
 	/// <param name="snapshot">Wheter this modifier snapshots or not.</param>
-	/// <param name="backingAttribute">A target backing attribute if there is one.</param>
+	/// <param name="backingAttribute">An array of target backing attributes if existent.</param>
 	internal ModifierEvaluatedData(
 		Attribute attribute,
 		ModifierOperation modifierOperation,
 		float magnitude,
 		int channel,
 		bool snapshot,
-		Attribute? backingAttribute = null)
+		Attribute[] backingAttribute)
 	{
 		Debug.Assert(
 			snapshot || backingAttribute is not null,
@@ -76,7 +76,7 @@ public readonly struct ModifierEvaluatedData
 		Magnitude = magnitude;
 		Channel = channel;
 		Snapshot = snapshot;
-		BackingAttribute = backingAttribute;
+		BackingAttributes = backingAttribute;
 
 		if (modifierOperation == ModifierOperation.Override)
 		{

@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
@@ -120,7 +120,7 @@ public readonly struct ModifierMagnitude : IEquatable<ModifierMagnitude>
 				Debug.Assert(
 					CustomCalculationBasedFloat.HasValue,
 					$"{nameof(CustomCalculationBasedFloat)} should always have a value at this point.");
-				return CustomCalculationBasedFloat.Value.CalculateMagnitude(effect, level ?? effect.Level);
+				return CustomCalculationBasedFloat.Value.CalculateMagnitude(effect, target, level ?? effect.Level);
 
 			case MagnitudeCalculationType.SetByCaller:
 				Debug.Assert(

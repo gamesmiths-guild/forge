@@ -79,11 +79,10 @@ internal class ActiveGameplayEffect
 			{
 				if (!modifier.Snapshot)
 				{
-					Debug.Assert(
-							modifier.BackingAttribute is not null,
-							"All non-snapshots modifiers should have a BackingAttribute set.");
-
-					attributesToSubscribe.Add(modifier.BackingAttribute);
+					foreach (Attribute attribute in modifier.BackingAttributes)
+					{
+						attributesToSubscribe.Add(attribute);
+					}
 				}
 			}
 
@@ -127,11 +126,10 @@ internal class ActiveGameplayEffect
 			{
 				if (!modifier.Snapshot)
 				{
-					Debug.Assert(
-						modifier.BackingAttribute is not null,
-						"All non-snapshots modifiers should have a BackingAttribute set.");
-
-					modifier.BackingAttribute.OnValueChanged -= Attribute_OnValueChanged;
+					foreach (Attribute attribute in modifier.BackingAttributes)
+					{
+						attribute.OnValueChanged -= Attribute_OnValueChanged;
+					}
 				}
 			}
 
