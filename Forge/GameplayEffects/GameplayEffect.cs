@@ -1,12 +1,10 @@
 // Copyright © 2025 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
-using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
 using Gamesmiths.Forge.GameplayTags;
-using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.GameplayEffects;
 
@@ -75,9 +73,6 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 
 	internal static void Execute(in GameplayEffectEvaluatedData effectEvaluatedData)
 	{
-		Dictionary<Attribute, int> attributeDeltas =
-			GameplayCuesManager.CreateInitialAttributeDeltas(in effectEvaluatedData);
-
 		foreach (ModifierEvaluatedData modifier in effectEvaluatedData.ModifiersEvaluatedData)
 		{
 			switch (modifier.ModifierOperation)
@@ -96,10 +91,9 @@ public class GameplayEffect(GameplayEffectData effectData, GameplayEffectOwnersh
 			}
 		}
 
-		GameplayCuesManager.ComputeAttributeDeltas(attributeDeltas);
+		effectEvaluatedData.Target.EffectsManager.OnGameplayEffectExecuted_InternalCall(effectEvaluatedData);
 
-		effectEvaluatedData.Target.EffectsManager.OnGameplayEffectExecuted_InternalCall(
-			effectEvaluatedData, attributeDeltas);
+		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 	}
 
 	internal bool CanApply(IForgeEntity target)

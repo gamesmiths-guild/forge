@@ -21,7 +21,7 @@ public enum CueMagnitudeType
 	/// The delta applied to the a target attribute from the effect that triggered the cue will be used as the cue's
 	/// magnitude.
 	/// </summary>
-	AttributeDelta = 2,
+	AttributeValueChange = 2,
 
 	/// <summary>
 	/// The current value of the target attribute will be used as the cue's magnitude.

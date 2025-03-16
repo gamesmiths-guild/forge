@@ -3,8 +3,6 @@
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayEffects;
-using Gamesmiths.Forge.GameplayEffects.Modifiers;
-using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.GameplayCues;
 
@@ -76,7 +74,7 @@ public sealed class GameplayCuesManager
 	/// <param name="cueKey">The key for the cue to be triggered.</param>
 	/// <param name="target">An optional target for the cue.</param>
 	/// <param name="parameters">The optional parameters for the cue.</param>>
-	public void AddCue(StringKey cueKey, IForgeEntity? target, GameplayCueParameters? parameters)
+	public void ApplyCue(StringKey cueKey, IForgeEntity? target, GameplayCueParameters? parameters)
 	{
 		if (!_registeredCues.TryGetValue(cueKey, out HashSet<IGameplayCue>? cues))
 		{
@@ -127,59 +125,21 @@ public sealed class GameplayCuesManager
 		}
 	}
 
-	internal static Dictionary<Attribute, int> CreateInitialAttributeDeltas(
-		in GameplayEffectEvaluatedData effectEvaluatedData,
-		bool initializeWithZero = false)
-	{
-		var attributeDeltas = new Dictionary<Attribute, int>();
-
-		// Add all attributes that are directly modified by the effect.
-		foreach (Modifier modifier in effectEvaluatedData.GameplayEffect.EffectData.Modifiers)
-		{
-			Attribute attribute = effectEvaluatedData.Target.Attributes[modifier.Attribute];
-
-			attributeDeltas.TryAdd(attribute, initializeWithZero ? 0 : attribute.CurrentValue);
-		}
-
-		// Then add all attributes that are used as magnitude for cues.
-		foreach (Attribute? attribute in
-			effectEvaluatedData.GameplayEffect.EffectData.GameplayCues.Select(x => x.MagnitudeAttribute))
-		{
-			if (attribute is null)
-			{
-				continue;
-			}
-
-			attributeDeltas.TryAdd(attribute, initializeWithZero ? 0 : attribute.CurrentValue);
-		}
-
-		return attributeDeltas;
-	}
-
-	internal static void ComputeAttributeDeltas(Dictionary<Attribute, int> attributeDeltas)
-	{
-		foreach (Attribute attribute in attributeDeltas.Keys)
-		{
-			attributeDeltas[attribute] = attribute.CurrentValue - attributeDeltas[attribute];
-		}
-	}
-
-	internal void AddCues(
-		in GameplayEffectEvaluatedData effectEvaluatedData,
-		in Dictionary<Attribute, int> attributeDeltas)
+	internal void ApplyCues(in GameplayEffectEvaluatedData effectEvaluatedData)
 	{
 		GameplayEffectData effectData = effectEvaluatedData.GameplayEffect.EffectData;
 
-		if (!ShouldTriggerCue(in effectData, in attributeDeltas))
+		Attributes targetAttributes = effectEvaluatedData.Target.Attributes;
+		if (!ShouldTriggerCue(in effectData, in targetAttributes))
 		{
 			return;
 		}
 
 		foreach (GameplayCueData cueData in effectData.GameplayCues)
 		{
-			var magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData, in attributeDeltas);
+			var magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
 
-			AddCue(
+			ApplyCue(
 				cueData.CueKey,
 				effectEvaluatedData.Target,
 				new GameplayCueParameters(
@@ -199,20 +159,19 @@ public sealed class GameplayCuesManager
 		}
 	}
 
-	internal void ExecuteCues(
-		in GameplayEffectEvaluatedData effectEvaluatedData,
-		in Dictionary<Attribute, int> attributeDeltas)
+	internal void ExecuteCues(in GameplayEffectEvaluatedData effectEvaluatedData)
 	{
 		GameplayEffectData effectData = effectEvaluatedData.GameplayEffect.EffectData;
 
-		if (!ShouldTriggerCue(in effectData, in attributeDeltas))
+		Attributes targetAttributes = effectEvaluatedData.Target.Attributes;
+		if (!ShouldTriggerCue(in effectData, in targetAttributes))
 		{
 			return;
 		}
 
 		foreach (GameplayCueData cueData in effectData.GameplayCues)
 		{
-			var magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData, in attributeDeltas);
+			var magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
 
 			ExecuteCue(
 				cueData.CueKey,
@@ -224,20 +183,19 @@ public sealed class GameplayCuesManager
 		}
 	}
 
-	internal void UpdateCues(
-		in GameplayEffectEvaluatedData effectEvaluatedData,
-		in Dictionary<Attribute, int> attributeDeltas)
+	internal void UpdateCues(in GameplayEffectEvaluatedData effectEvaluatedData)
 	{
 		GameplayEffectData effectData = effectEvaluatedData.GameplayEffect.EffectData;
 
-		if (!ShouldTriggerCue(in effectData, in attributeDeltas))
+		Attributes targetAttributes = effectEvaluatedData.Target.Attributes;
+		if (!ShouldTriggerCue(in effectData, in targetAttributes))
 		{
 			return;
 		}
 
 		foreach (GameplayCueData cueData in effectData.GameplayCues)
 		{
-			var magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData, in attributeDeltas);
+			var magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
 
 			UpdateCue(
 				cueData.CueKey,
@@ -251,15 +209,14 @@ public sealed class GameplayCuesManager
 
 	private static bool ShouldTriggerCue(
 		in GameplayEffectData effectData,
-		in Dictionary<Attribute, int> attributeDeltas)
+		in Attributes attributes)
 	{
-		return !effectData.RequireModifierSuccessToTriggerCue || attributeDeltas.Values.Any(x => x != 0);
+		return !effectData.RequireModifierSuccessToTriggerCue || attributes.Any(x => x.PendingValueChange != 0);
 	}
 
 	private static int CalculateMagnitude(
 		in GameplayCueData cueData,
-		in GameplayEffectEvaluatedData effectEvaluatedData,
-		in Dictionary<Attribute, int> attributeDeltas)
+		in GameplayEffectEvaluatedData effectEvaluatedData)
 	{
 		switch (cueData.MagnitudeType)
 		{
@@ -269,14 +226,11 @@ public sealed class GameplayCuesManager
 			case CueMagnitudeType.StackCount:
 				return effectEvaluatedData.Stack;
 
-			case CueMagnitudeType.AttributeDelta:
+			case CueMagnitudeType.AttributeValueChange:
 				Debug.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeMagnitude must contains a configured MagnitudeAttribute.");
-				Debug.Assert(
-					attributeDeltas.ContainsKey(cueData.MagnitudeAttribute),
-					"attributeDeltas should always contains a configured MagnitudeAttribute.");
-				return attributeDeltas[cueData.MagnitudeAttribute];
+				return cueData.MagnitudeAttribute.PendingValueChange;
 
 			case CueMagnitudeType.AttributeCurrentValue:
 				Debug.Assert(

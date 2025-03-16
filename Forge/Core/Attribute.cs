@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
 
@@ -65,6 +65,8 @@ public sealed class Attribute
 	/// </remarks>
 	public int Overflow { get; private set; }
 
+	internal int PendingValueChange { get; private set; }
+
 	internal Attribute(
 		int defaultValue,
 		int minValue,
@@ -82,6 +84,8 @@ public sealed class Attribute
 		Debug.Assert(
 			channels > 0,
 			"There should be at least one channel.");
+
+		PendingValueChange = 0;
 
 		Min = minValue;
 		Max = maxValue;
@@ -113,7 +117,7 @@ public sealed class Attribute
 
 		if (CurrentValue != oldValue)
 		{
-			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
+			PendingValueChange += CurrentValue - oldValue;
 		}
 	}
 
@@ -129,7 +133,7 @@ public sealed class Attribute
 
 		if (CurrentValue != oldValue)
 		{
-			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
+			PendingValueChange += CurrentValue - oldValue;
 		}
 	}
 
@@ -143,7 +147,7 @@ public sealed class Attribute
 
 		if (CurrentValue != oldValue)
 		{
-			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
+			PendingValueChange += CurrentValue - oldValue;
 		}
 	}
 
@@ -157,7 +161,7 @@ public sealed class Attribute
 
 		if (CurrentValue != oldValue)
 		{
-			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
+			PendingValueChange += CurrentValue - oldValue;
 		}
 	}
 
@@ -171,7 +175,7 @@ public sealed class Attribute
 
 		if (CurrentValue != oldValue)
 		{
-			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
+			PendingValueChange += CurrentValue - oldValue;
 		}
 	}
 
@@ -187,7 +191,7 @@ public sealed class Attribute
 
 		if (CurrentValue != oldValue)
 		{
-			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
+			PendingValueChange += CurrentValue - oldValue;
 		}
 	}
 
@@ -211,7 +215,7 @@ public sealed class Attribute
 
 		if (CurrentValue != oldValue)
 		{
-			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
+			PendingValueChange += CurrentValue - oldValue;
 		}
 	}
 
@@ -225,7 +229,7 @@ public sealed class Attribute
 
 		if (CurrentValue != oldValue)
 		{
-			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
+			PendingValueChange += CurrentValue - oldValue;
 		}
 	}
 
@@ -239,7 +243,7 @@ public sealed class Attribute
 
 		if (CurrentValue != oldValue)
 		{
-			OnValueChanged?.Invoke(this, CurrentValue - oldValue);
+			PendingValueChange += CurrentValue - oldValue;
 		}
 	}
 
@@ -261,6 +265,16 @@ public sealed class Attribute
 		}
 
 		return Math.Clamp((int)evaluatedValue, Min, Max);
+	}
+
+	internal void ApplyPendingValueChanges()
+	{
+		if (PendingValueChange != 0)
+		{
+			var cache = PendingValueChange;
+			PendingValueChange = 0;
+			OnValueChanged?.Invoke(this, cache);
+		}
 	}
 
 	private void UpdateCachedValues()

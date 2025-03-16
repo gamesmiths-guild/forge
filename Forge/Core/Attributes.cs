@@ -1,5 +1,6 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
+using System.Collections;
 using System.Diagnostics;
 
 namespace Gamesmiths.Forge.Core;
@@ -8,7 +9,7 @@ namespace Gamesmiths.Forge.Core;
 /// Container class which handles and manages all <see cref="AttributeSet"/>s and <see cref="Attribute"/>s of an entity.
 /// Attributes can be accessed with the indexer.
 /// </summary>
-public class Attributes
+public class Attributes : IEnumerable<Attribute>
 {
 	private readonly Dictionary<StringKey, Attribute> _attributes = [];
 
@@ -65,6 +66,28 @@ public class Attributes
 		foreach (KeyValuePair<StringKey, Attribute> attribute in attributeSet.AttributesMap)
 		{
 			_attributes.Add(attribute.Key, attribute.Value);
+		}
+	}
+
+	/// <inheritdoc/>
+	public IEnumerator<Attribute> GetEnumerator()
+	{
+		return _attributes.Values.GetEnumerator();
+	}
+
+	/// <inheritdoc/>
+	IEnumerator IEnumerable.GetEnumerator()
+	{
+		return _attributes.Values.GetEnumerator();
+	}
+
+#pragma warning disable T0009 // Internal Styling Rule T0009
+	internal void ApplyPendingValueChanges()
+#pragma warning restore T0009
+	{
+		foreach (Attribute attribute in _attributes.Values)
+		{
+			attribute.ApplyPendingValueChanges();
 		}
 	}
 }

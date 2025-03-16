@@ -2,7 +2,6 @@
 
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
-using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
 using Gamesmiths.Forge.GameplayEffects.Periodic;
@@ -72,17 +71,25 @@ internal class ActiveGameplayEffect
 			{
 				GameplayEffect.OnLevelChanged += GameplayEffect_OnLevelChanged;
 			}
-		}
 
-		foreach (ModifierEvaluatedData modifier in GameplayEffectEvaluatedData.ModifiersEvaluatedData)
-		{
-			if (!modifier.Snapshot && !reApplication)
+			// Maybe save this in a private field? TrackedAttributes.
+			var attributesToSubscribe = new HashSet<Attribute>();
+
+			foreach (ModifierEvaluatedData modifier in GameplayEffectEvaluatedData.ModifiersEvaluatedData)
 			{
-				Debug.Assert(
-						modifier.BackingAttribute is not null,
-						"All non-snapshots modifiers should have a BackingAttribute set.");
+				if (!modifier.Snapshot)
+				{
+					Debug.Assert(
+							modifier.BackingAttribute is not null,
+							"All non-snapshots modifiers should have a BackingAttribute set.");
 
-				modifier.BackingAttribute.OnValueChanged += Attribute_OnValueChanged;
+					attributesToSubscribe.Add(modifier.BackingAttribute);
+				}
+			}
+
+			foreach (Attribute attribute in attributesToSubscribe)
+			{
+				attribute.OnValueChanged += Attribute_OnValueChanged;
 			}
 		}
 
@@ -258,13 +265,7 @@ internal class ActiveGameplayEffect
 		else
 		{
 			GameplayEffectEvaluatedData effectEvaluatedData = GameplayEffectEvaluatedData;
-
-			Dictionary<Attribute, int> attributeDeltas =
-				GameplayCuesManager.CreateInitialAttributeDeltas(in effectEvaluatedData, true);
-
-			effectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(
-				in effectEvaluatedData,
-				attributeDeltas);
+			effectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData);
 		}
 
 		if (stackingData.ApplicationRefreshPolicy == StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication)
@@ -344,6 +345,8 @@ internal class ActiveGameplayEffect
 		{
 			ExecutePeriodicEffects(deltaTime);
 		}
+
+		GameplayEffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 	}
 
 	internal void SetInhibit(bool value)
@@ -400,15 +403,6 @@ internal class ActiveGameplayEffect
 
 	private void ReapplyEffect(GameplayEffect gameplayEffect, int? level = null, bool isStackingCall = false)
 	{
-		var suppressCues = GameplayEffectEvaluatedData.GameplayEffect.EffectData.SuppressStackingCues && isStackingCall;
-
-		Dictionary<Attribute, int>? attributeDeltas = null;
-		if (!suppressCues)
-		{
-			GameplayEffectEvaluatedData effectEvaluatedData = GameplayEffectEvaluatedData;
-			attributeDeltas = GameplayCuesManager.CreateInitialAttributeDeltas(in effectEvaluatedData);
-		}
-
 		Unapply(true);
 
 		GameplayEffectEvaluatedData =
@@ -422,13 +416,14 @@ internal class ActiveGameplayEffect
 
 		GameplayEffectEvaluatedData.Target.EffectsManager.OnActiveGameplayEffectChanged_InternalCall(this);
 
-		if (attributeDeltas is not null)
-		{
-			GameplayEffectEvaluatedData effectEvaluatedData = GameplayEffectEvaluatedData;
+		GameplayEffectEvaluatedData effectEvaluatedData = GameplayEffectEvaluatedData;
 
-			GameplayCuesManager.ComputeAttributeDeltas(attributeDeltas);
-			GameplayEffectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData, in attributeDeltas);
+		if (!GameplayEffectEvaluatedData.GameplayEffect.EffectData.SuppressStackingCues || !isStackingCall)
+		{
+			GameplayEffectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData);
 		}
+
+		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 	}
 
 	private void ApplyModifiers(bool unapply = false)

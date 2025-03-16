@@ -26,6 +26,10 @@ public class GameplayCuesManagerFixture
 
 	internal class TestCue : IGameplayCue
 	{
+		public event Action? OnApplied;
+
+		public event Action? OnExecuted;
+
 		public CueExecutionData ApplyData { get; private set; }
 
 		public CueExecutionData ExecuteData { get; private set; }
@@ -57,6 +61,8 @@ public class GameplayCuesManagerFixture
 			};
 
 			Applied = true;
+
+			OnApplied?.Invoke();
 		}
 
 		public void OnExecute(IForgeEntity? target, GameplayCueParameters? parameters)
@@ -72,6 +78,8 @@ public class GameplayCuesManagerFixture
 				NormalizedValue = parameters.Value.NormalizedMagnitude,
 				Count = ExecuteData.Count + 1,
 			};
+
+			OnExecuted?.Invoke();
 		}
 
 		public void OnRemove(IForgeEntity? target, bool interrupted)

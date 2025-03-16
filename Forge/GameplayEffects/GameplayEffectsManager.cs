@@ -6,7 +6,6 @@ using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Stacking;
-using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.GameplayEffects;
 
@@ -147,9 +146,7 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 		return ConvertToStackInstanceData(filteredEffects);
 	}
 
-	internal void OnGameplayEffectExecuted_InternalCall(
-		GameplayEffectEvaluatedData executedEffectEvaluatedData,
-		Dictionary<Attribute, int> attributeDeltas)
+	internal void OnGameplayEffectExecuted_InternalCall(GameplayEffectEvaluatedData executedEffectEvaluatedData)
 	{
 		GameplayEffectData effectData = executedEffectEvaluatedData.GameplayEffect.EffectData;
 
@@ -158,7 +155,7 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 			component.OnGameplayEffectExecuted(Owner, in executedEffectEvaluatedData);
 		}
 
-		_cuesManager.ExecuteCues(in executedEffectEvaluatedData, in attributeDeltas);
+		_cuesManager.ExecuteCues(in executedEffectEvaluatedData);
 	}
 
 	internal void OnActiveGameplayEffectUnapplied_InternalCall(ActiveGameplayEffect removedEffect)
@@ -192,11 +189,9 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 		}
 	}
 
-	internal void TriggerCuesUpdate_InternalCall(
-		in GameplayEffectEvaluatedData effectEvaluatedData,
-		in Dictionary<Attribute, int> attributeDeltas)
+	internal void TriggerCuesUpdate_InternalCall(in GameplayEffectEvaluatedData effectEvaluatedData)
 	{
-		_cuesManager.UpdateCues(in effectEvaluatedData, in attributeDeltas);
+		_cuesManager.UpdateCues(in effectEvaluatedData);
 	}
 
 	private static bool MatchesStackPolicy(ActiveGameplayEffect existingEffect, GameplayEffect newEffect)
@@ -256,9 +251,6 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 		var activeEffect = new ActiveGameplayEffect(gameplayEffect, Owner);
 		_activeEffects.Add(activeEffect);
 
-		Dictionary<Attribute, int> attributeDeltas =
-			GameplayCuesManager.CreateInitialAttributeDeltas(activeEffect.GameplayEffectEvaluatedData);
-
 		var remainActive = true;
 
 		foreach (IGameplayEffectComponent component in gameplayEffect.EffectData.GameplayEffectComponents)
@@ -274,12 +266,25 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 			component.OnGameplayEffectApplied(Owner, activeEffect.GameplayEffectEvaluatedData);
 		}
 
+		GameplayEffectEvaluatedData effectEvaluatedData = activeEffect.GameplayEffectEvaluatedData;
+
+		var triggerApplyCuesEarly = gameplayEffect.EffectData.PeriodicData.HasValue
+			&& gameplayEffect.EffectData.PeriodicData.Value.ExecuteOnApplication
+			&& remainActive;
+
+		if (triggerApplyCuesEarly)
+		{
+			_cuesManager.ApplyCues(in effectEvaluatedData);
+		}
+
 		activeEffect.Apply(inhibited: !remainActive);
 
-		GameplayCuesManager.ComputeAttributeDeltas(attributeDeltas);
+		if (!triggerApplyCuesEarly)
+		{
+			_cuesManager.ApplyCues(in effectEvaluatedData);
+		}
 
-		GameplayEffectEvaluatedData effectEvaluatedData = activeEffect.GameplayEffectEvaluatedData;
-		_cuesManager.AddCues(in effectEvaluatedData, in attributeDeltas);
+		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 
 		return activeEffect;
 	}
@@ -330,6 +335,8 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 
 		_activeEffects.Remove(effectToRemove);
 		effectToRemove.Handle.Free();
+
+		effectToRemove.GameplayEffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 
 		_cuesManager.RemoveCues(in effectEvaluatedData, interrupted);
 	}
