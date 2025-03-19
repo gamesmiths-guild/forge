@@ -72,21 +72,7 @@ internal class ActiveGameplayEffect
 				GameplayEffect.OnLevelChanged += GameplayEffect_OnLevelChanged;
 			}
 
-			// Maybe save this in a private field? TrackedAttributes.
-			var attributesToSubscribe = new HashSet<Attribute>();
-
-			foreach (ModifierEvaluatedData modifier in GameplayEffectEvaluatedData.ModifiersEvaluatedData)
-			{
-				if (!modifier.Snapshot)
-				{
-					foreach (Attribute attribute in modifier.BackingAttributes)
-					{
-						attributesToSubscribe.Add(attribute);
-					}
-				}
-			}
-
-			foreach (Attribute attribute in attributesToSubscribe)
+			foreach (Attribute attribute in GameplayEffectEvaluatedData.AttributesToCapture)
 			{
 				attribute.OnValueChanged += Attribute_OnValueChanged;
 			}
@@ -122,15 +108,9 @@ internal class ActiveGameplayEffect
 		{
 			StackCount = 0;
 
-			foreach (ModifierEvaluatedData modifier in GameplayEffectEvaluatedData.ModifiersEvaluatedData)
+			foreach (Attribute attribute in GameplayEffectEvaluatedData.AttributesToCapture)
 			{
-				if (!modifier.Snapshot)
-				{
-					foreach (Attribute attribute in modifier.BackingAttributes)
-					{
-						attribute.OnValueChanged -= Attribute_OnValueChanged;
-					}
-				}
+				attribute.OnValueChanged -= Attribute_OnValueChanged;
 			}
 
 			if (!EffectData.SnapshopLevel)

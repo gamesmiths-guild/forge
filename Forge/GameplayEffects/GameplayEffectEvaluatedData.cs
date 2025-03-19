@@ -55,6 +55,11 @@ public readonly struct GameplayEffectEvaluatedData
 	public ModifierEvaluatedData[] ModifiersEvaluatedData { get; }
 
 	/// <summary>
+	/// Gets an array of the attributes to be captured by an active effect.
+	/// </summary>
+	public Attribute[] AttributesToCapture { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="GameplayEffectEvaluatedData"/> struct.
 	/// </summary>
 	/// <param name="gameplayEffect">The taget gameplay effect of this evaluated data.</param>
@@ -76,7 +81,8 @@ public readonly struct GameplayEffectEvaluatedData
 		Period = EvaluatePeriod(gameplayEffect.EffectData.PeriodicData);
 
 		// Modifiers should be evaluated last because their evaluation requires already evaluated values.
-		ModifiersEvaluatedData = EvaluateModifiers(gameplayEffect.EffectData.Modifiers);
+		ModifiersEvaluatedData = EvaluateModifiers();
+		AttributesToCapture = EvaluateAttributesToCapture();
 	}
 
 	private float EvaluateDuration(DurationData durationData)
@@ -99,23 +105,41 @@ public readonly struct GameplayEffectEvaluatedData
 		return periodicData.Value.Period.GetValue(Level);
 	}
 
-	private ModifierEvaluatedData[] EvaluateModifiers(Modifier[] modifiers)
+	private ModifierEvaluatedData[] EvaluateModifiers()
 	{
-		var modifiersEvaluatedData = new ModifierEvaluatedData[modifiers.Length];
+		var modifiersEvaluatedData = new List<ModifierEvaluatedData>(GameplayEffect.EffectData.Modifiers.Length);
 
-		for (var i = 0; i < modifiers.Length; i++)
+		foreach (Modifier modifier in GameplayEffect.EffectData.Modifiers)
 		{
-			Modifier modifier = modifiers[i];
-			modifiersEvaluatedData[i] = new ModifierEvaluatedData(
-				Target.Attributes[modifier.Attribute],
-				modifier.Operation,
-				EvaluateModifierMagnitude(modifier.Magnitude),
-				modifier.Channel,
-				EvaluateModifierSnapshop(modifier.Magnitude),
-				EvaluateModifierBackingAttribute(modifier.Magnitude));
+			modifiersEvaluatedData.Add(
+				new ModifierEvaluatedData(
+					Target.Attributes[modifier.Attribute],
+					modifier.Operation,
+					EvaluateModifierMagnitude(modifier.Magnitude),
+					modifier.Channel));
 		}
 
-		return modifiersEvaluatedData;
+		foreach (Execution execution in GameplayEffect.EffectData.Executions)
+		{
+			modifiersEvaluatedData.AddRange(execution.CalculatorClass.CalculateExecution(GameplayEffect, Target));
+		}
+
+		return [.. modifiersEvaluatedData];
+	}
+
+	private Attribute[] EvaluateAttributesToCapture()
+	{
+		var attributesToCapture = new List<Attribute>();
+
+		foreach (ModifierMagnitude modifierMagnitude in GameplayEffect.EffectData.Modifiers.Select(x => x.Magnitude))
+		{
+			if (!IsModifierSnapshop(modifierMagnitude))
+			{
+				attributesToCapture.AddRange(CaptureModifierBackingAttribute(modifierMagnitude));
+			}
+		}
+
+		return [.. attributesToCapture];
 	}
 
 	private float EvaluateModifierMagnitude(ModifierMagnitude modifierMagnitude)
@@ -130,7 +154,7 @@ public readonly struct GameplayEffectEvaluatedData
 		return modifierMagnitude.GetMagnitude(GameplayEffect, Target, Level) * stackMultiplier;
 	}
 
-	private bool EvaluateModifierSnapshop(ModifierMagnitude modifierMagnitude)
+	private bool IsModifierSnapshop(ModifierMagnitude modifierMagnitude)
 	{
 		if (GameplayEffect.EffectData.DurationData.Type == DurationType.Instant)
 		{
@@ -160,7 +184,7 @@ public readonly struct GameplayEffectEvaluatedData
 		return modifierMagnitude.AttributeBasedFloat.Value.BackingAttribute.Snapshot;
 	}
 
-	private Attribute[] EvaluateModifierBackingAttribute(ModifierMagnitude modifierMagnitude)
+	private Attribute[] CaptureModifierBackingAttribute(ModifierMagnitude modifierMagnitude)
 	{
 		if (GameplayEffect.EffectData.DurationData.Type == DurationType.Instant)
 		{

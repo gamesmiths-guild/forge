@@ -1,6 +1,5 @@
 // Copyright © 2025 Gamesmiths Guild.
 
-using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
 using Attribute = Gamesmiths.Forge.Core.Attribute;
@@ -36,16 +35,6 @@ public readonly struct ModifierEvaluatedData
 	public int Channel { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether this modifier is set to snapshot.
-	/// </summary>
-	public bool Snapshot { get; }
-
-	/// <summary>
-	/// Gets the backing attributes for this modifier in case there is one.
-	/// </summary>
-	public Attribute[] BackingAttributes { get; }
-
-	/// <summary>
 	/// Gets the attribute override data if this modifier is an override.
 	/// </summary>
 	public AttributeOverride? AttributeOverride { get; }
@@ -57,26 +46,16 @@ public readonly struct ModifierEvaluatedData
 	/// <param name="modifierOperation">The type of modifier operation.</param>
 	/// <param name="magnitude">The final evaluated magnitude.</param>
 	/// <param name="channel">The final channel for this modifier.</param>
-	/// <param name="snapshot">Wheter this modifier snapshots or not.</param>
-	/// <param name="backingAttribute">An array of target backing attributes if existent.</param>
-	internal ModifierEvaluatedData(
+	public ModifierEvaluatedData(
 		Attribute attribute,
 		ModifierOperation modifierOperation,
 		float magnitude,
-		int channel,
-		bool snapshot,
-		Attribute[] backingAttribute)
+		int channel)
 	{
-		Debug.Assert(
-			snapshot || backingAttribute is not null,
-			"All non-snapshots modifiers should have a BackingAttribute set.");
-
 		Attribute = attribute;
 		ModifierOperation = modifierOperation;
 		Magnitude = magnitude;
 		Channel = channel;
-		Snapshot = snapshot;
-		BackingAttributes = backingAttribute;
 
 		if (modifierOperation == ModifierOperation.Override)
 		{
