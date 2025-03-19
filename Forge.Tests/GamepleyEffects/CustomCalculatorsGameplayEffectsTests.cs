@@ -15,7 +15,7 @@ using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.GamepleyEffects;
 
-public class CustomCalculatorGameplayEffectsTests(
+public class CustomCalculatorsGameplayEffectsTests(
 	GameplayTagsManagerFixture tagsManagerFixture,
 	GameplayCuesManagerFixture cuesManagerFixture)
 		: IClassFixture<GameplayTagsManagerFixture>, IClassFixture<GameplayCuesManagerFixture>
