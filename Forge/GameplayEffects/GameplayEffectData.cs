@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using Gamesmiths.Forge.GameplayCues;
+using Gamesmiths.Forge.GameplayEffects.Calculator;
 using Gamesmiths.Forge.GameplayEffects.Components;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
@@ -17,15 +18,19 @@ namespace Gamesmiths.Forge.GameplayEffects;
 public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 {
 	/// <summary>
-	/// Gets the list of modifiers of this gameplay effect.
-	/// </summary>
-	/// TODO: public List <Executions> Executions { get; } = new ().
-	public Modifier[] Modifiers { get; }
-
-	/// <summary>
 	/// Gets the name of this gameplay effect.
 	/// </summary>
 	public string Name { get; }
+
+	/// <summary>
+	/// Gets the list of custom executions for this gameplay effect.
+	/// </summary>
+	public Execution[] Executions { get; }
+
+	/// <summary>
+	/// Gets the list of modifiers of this gameplay effect.
+	/// </summary>
+	public Modifier[] Modifiers { get; }
 
 	/// <summary>
 	/// Gets the <see cref="DurationData"/> for this gameplay effect.
@@ -87,6 +92,7 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 	/// <param name="requireModifierSuccessToTriggerCue">Wheter or not trigger cues only when modifiers are successfully
 	/// applied.</param>
 	/// <param name="suppressStackingCues">Whether or not to trigger cues when applying stacks.</param>
+	/// <param name="executions">The list of custom executions for this gameplay effect.</param>
 	/// <param name="gameplayCues">The gameplay cues associated with this effect.</param>
 	public GameplayEffectData(
 		string name,
@@ -98,6 +104,7 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 		IGameplayEffectComponent[]? gameplayEffectComponents = null,
 		bool requireModifierSuccessToTriggerCue = false,
 		bool suppressStackingCues = false,
+		Execution[]? executions = null,
 		GameplayCueData[]? gameplayCues = null)
 	{
 		Debug.Assert(
@@ -211,6 +218,7 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 		GameplayEffectComponents = gameplayEffectComponents ?? [];
 		RequireModifierSuccessToTriggerCue = requireModifierSuccessToTriggerCue;
 		SuppressStackingCues = suppressStackingCues;
+		Executions = executions ?? [];
 		GameplayCues = gameplayCues ?? [];
 
 #if DEBUG
@@ -245,6 +253,11 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 		hash.Add(SnapshopLevel);
 		hash.Add(RequireModifierSuccessToTriggerCue);
 		hash.Add(SuppressStackingCues);
+
+		foreach (Execution execution in Executions)
+		{
+			hash.Add(execution);
+		}
 
 		foreach (Modifier modifier in Modifiers)
 		{
@@ -285,6 +298,7 @@ public readonly struct GameplayEffectData : IEquatable<GameplayEffectData>
 			&& SnapshopLevel == other.SnapshopLevel
 			&& RequireModifierSuccessToTriggerCue == other.RequireModifierSuccessToTriggerCue
 			&& SuppressStackingCues == other.SuppressStackingCues
+			&& Executions.SequenceEqual(other.Executions)
 			&& Modifiers.SequenceEqual(other.Modifiers)
 			&& GameplayEffectComponents.SequenceEqual(other.GameplayEffectComponents)
 			&& GameplayCues.SequenceEqual(other.GameplayCues);

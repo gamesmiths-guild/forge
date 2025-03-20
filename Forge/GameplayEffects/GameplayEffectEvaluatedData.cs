@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.GameplayEffects.Calculator;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
@@ -82,6 +83,13 @@ public readonly struct GameplayEffectEvaluatedData
 
 		// Modifiers should be evaluated last because their evaluation requires already evaluated values.
 		ModifiersEvaluatedData = EvaluateModifiers();
+
+		if (gameplayEffect.EffectData.DurationData.Type == DurationType.Instant)
+		{
+			AttributesToCapture = [];
+			return;
+		}
+
 		AttributesToCapture = EvaluateAttributesToCapture();
 	}
 
@@ -121,7 +129,7 @@ public readonly struct GameplayEffectEvaluatedData
 
 		foreach (Execution execution in GameplayEffect.EffectData.Executions)
 		{
-			modifiersEvaluatedData.AddRange(execution.CalculatorClass.CalculateExecution(GameplayEffect, Target));
+			modifiersEvaluatedData.AddRange(execution.CalculateExecution(GameplayEffect, Target));
 		}
 
 		return [.. modifiersEvaluatedData];
@@ -136,6 +144,20 @@ public readonly struct GameplayEffectEvaluatedData
 			if (!IsModifierSnapshop(modifierMagnitude))
 			{
 				attributesToCapture.AddRange(CaptureModifierBackingAttribute(modifierMagnitude));
+			}
+		}
+
+		foreach (Execution execution in GameplayEffect.EffectData.Executions)
+		{
+			foreach (AttributeCaptureDefinition attributeCaptureDefinition in execution.AttributesToCapture)
+			{
+				if (!attributeCaptureDefinition.Snapshot)
+				{
+					IForgeEntity attributeSource = attributeCaptureDefinition.Source
+						== AttributeCaptureSource.Source ? GameplayEffect.Ownership.Source : Target;
+
+					attributesToCapture.Add(attributeCaptureDefinition.GetAttribute(attributeSource));
+				}
 			}
 		}
 
