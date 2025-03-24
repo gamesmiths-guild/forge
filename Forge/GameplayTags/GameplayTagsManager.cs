@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
 using System.Globalization;
@@ -40,7 +40,10 @@ public sealed class GameplayTagsManager
 	/// </summary>
 	public int NumBitsForContainerSize { get; } = 6;
 
-	internal GameplayTagNode RootNode { get; }
+	/// <summary>
+	/// Gets the root node for the tag tree.
+	/// </summary>
+	public GameplayTagNode RootNode { get; }
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="GameplayTagsManager"/> class from a list of strings.
@@ -235,14 +238,14 @@ public sealed class GameplayTagsManager
 		while (fixedString.StartsWith('.'))
 		{
 			errorStringBuilder.AppendLine("Tag keys can't start with '.'");
-			fixedString = fixedString.Remove(0, 1);
+			fixedString = fixedString[1..];
 			isValid = false;
 		}
 
 		while (fixedString.EndsWith('.'))
 		{
 			errorStringBuilder.AppendLine("Tag keys can't end with '.'");
-			fixedString = fixedString.Remove(fixedString.Length - 1);
+			fixedString = fixedString[..^1];
 			isValid = false;
 		}
 

@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
 
@@ -7,7 +7,7 @@ namespace Gamesmiths.Forge.GameplayTags;
 /// <summary>
 /// Represents a node in the <see cref="GameplayTagNode"/> tree, holding metadata for an individual tag.
 /// </summary>
-internal class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
+public class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 {
 	/// <summary>
 	/// Standard value for the net index of an invalid tag.
@@ -22,7 +22,7 @@ internal class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 	public StringKey TagKey { get; }
 
 	/// <summary>
-	/// Gets or sets the net index of this <see cref="GameplayTagNode"/>.
+	/// Gets the net index of this <see cref="GameplayTagNode"/>.
 	/// </summary>
 	public ushort NetIndex
 	{
@@ -68,7 +68,7 @@ internal class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 	/// Initializes a new instance of the <see cref="GameplayTagNode"/> class.
 	/// </summary>
 	/// <param name="gameplayTagsManager">The manager for handling tag indexing and associations for this node.</param>
-	public GameplayTagNode(GameplayTagsManager gameplayTagsManager)
+	internal GameplayTagNode(GameplayTagsManager gameplayTagsManager)
 	{
 		SingleTagContainer = new GameplayTagContainer(gameplayTagsManager);
 		ParentTagNode = null;
@@ -82,7 +82,7 @@ internal class GameplayTagNode : IComparable<GameplayTagNode>, IComparable
 	/// <param name="fullKey">The full key for this tag, for performance.</param>
 	/// <param name="parentTagNode">The parent <see cref="GameplayTagNode"/> of this node, if any.</param>
 	/// <param name="isExplicit">Is the tag explicitly defined or is it implied by the existence of a child tag.</param>
-	public GameplayTagNode(
+	internal GameplayTagNode(
 		GameplayTagsManager gameplayTagsManager,
 		StringKey tagKey,
 		StringKey fullKey,
