@@ -210,7 +210,7 @@ public class GameplayCueTests(
 		GameplayEffectData effectData = CreateInstantEffectData(
 			CreateModifiers(modifiersData),
 			requireModifierSuccessToTriggerCue,
-			CreateCueDatas(entity, cueDatas));
+			CreateCueDatas(cueDatas));
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
 		ResetCues();
@@ -314,7 +314,7 @@ public class GameplayCueTests(
 			CreateModifiers(modifiersData),
 			true,
 			requireModifierSuccessToTriggerCue,
-			CreateCueDatas(entity, cueDatas));
+			CreateCueDatas(cueDatas));
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
 		ResetCues();
@@ -553,7 +553,7 @@ public class GameplayCueTests(
 			executeOnApplication,
 			CreateModifiers(modifiersData),
 			requireModifierSuccessToTriggerCue,
-			CreateCueDatas(entity, cueDatas));
+			CreateCueDatas(cueDatas));
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
 		var firstTriggered = new ManualResetEventSlim(false);
@@ -819,7 +819,7 @@ public class GameplayCueTests(
 			CreateModifiers(modifiersData),
 			snapshotLevel,
 			requireModifierSuccessToTriggerCue,
-			CreateCueDatas(entity, cueDatas));
+			CreateCueDatas(cueDatas));
 		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
 
 		ResetCues();
@@ -1127,14 +1127,14 @@ public class GameplayCueTests(
 			CreateAttributeBasedModifiers(attributeBasedModifiersData),
 			true,
 			requireModifierSuccessToTriggerCue,
-			CreateCueDatas(entity, cueDatas));
+			CreateCueDatas(cueDatas));
 		var effect1 = new GameplayEffect(effectData1, new GameplayEffectOwnership(entity, entity));
 
 		GameplayEffectData effectData2 = CreateInfiniteEffectData(
 			CreateModifiers(modifiersData),
 			true,
 			requireModifierSuccessToTriggerCue,
-			CreateCueDatas(entity, []));
+			CreateCueDatas([]));
 		var effect2 = new GameplayEffect(effectData2, new GameplayEffectOwnership(entity, entity));
 
 		ResetCues();
@@ -1719,7 +1719,7 @@ public class GameplayCueTests(
 			CreateModifiers(attributeBasedModifiersData),
 			requireModifierSuccessToTriggerCue,
 			suppressStackingCues,
-			CreateCueDatas(entity, cueDatas));
+			CreateCueDatas(cueDatas));
 		var effect1 = new GameplayEffect(effectData1, new GameplayEffectOwnership(entity, entity));
 
 		ResetCues();
@@ -1842,7 +1842,7 @@ public class GameplayCueTests(
 		cueExecutionData.NormalizedValue.Should().Be(normalizedValue);
 	}
 
-	private static GameplayCueData[] CreateCueDatas(TestEntity entity, object[] cueDatas)
+	private static GameplayCueData[] CreateCueDatas(object[] cueDatas)
 	{
 		var result = new GameplayCueData[cueDatas.Length];
 
@@ -1855,7 +1855,7 @@ public class GameplayCueTests(
 				(int)cueData[1],
 				(int)cueData[2],
 				(CueMagnitudeType)cueData[3],
-				cueData.Length < 5 ? null : entity.Attributes[(string)cueData[4]]);
+				cueData.Length < 5 ? null : (string)cueData[4]);
 		}
 
 		return result;

@@ -1,7 +1,6 @@
 // Copyright © 2025 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
-using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.GameplayCues;
 
@@ -20,7 +19,7 @@ public readonly struct GameplayCueData(
 	int minValue,
 	int maxValue,
 	CueMagnitudeType magnitudeType,
-	Attribute? magnitudeAttribute = null)
+	string? magnitudeAttribute = null)
 {
 	/// <summary>
 	/// Gets the unique identifier for this cue.
@@ -46,7 +45,7 @@ public readonly struct GameplayCueData(
 	/// Gets the attribute to be used as magnitude modifier. If <see langword="null"/> the effect level will be used
 	/// instead.
 	/// </summary>
-	public Attribute? MagnitudeAttribute { get; } = magnitudeAttribute;
+	public string? MagnitudeAttribute { get; } = magnitudeAttribute;
 
 	/// <summary>
 	/// Calculates and gets the normalized magnitude for the given value.
