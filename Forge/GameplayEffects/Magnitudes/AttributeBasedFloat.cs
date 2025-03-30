@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 // Copyright © 2024 Gamesmiths Guild.
 using System.Diagnostics;
@@ -34,7 +34,7 @@ public readonly struct AttributeBasedFloat(
 	ScalableFloat preMultiplyAdditiveValue,
 	ScalableFloat postMultiplyAdditiveValue,
 	int? finalChannel = null,
-	Curve? lookupCurve = null) : IEquatable<AttributeBasedFloat>
+	ICurve? lookupCurve = null) : IEquatable<AttributeBasedFloat>
 {
 	/// <summary>
 	/// Gets the capture definition for the backing attribute.
@@ -70,7 +70,7 @@ public readonly struct AttributeBasedFloat(
 	/// <summary>
 	/// Gets the curve entry to use as a lookup instead of directly using the evaluated magnitude.
 	/// </summary>
-	public Curve? LookupCurve { get; } = lookupCurve;
+	public ICurve? LookupCurve { get; } = lookupCurve;
 
 	/// <summary>
 	/// Calculates the final magnitude based on the AttributeBasedFloat configurations.
@@ -126,9 +126,9 @@ public readonly struct AttributeBasedFloat(
 		var finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + magnitude))
 			+ PostMultiplyAdditiveValue.GetValue(level);
 
-		if (LookupCurve.HasValue)
+		if (LookupCurve is not null)
 		{
-			finalMagnitude = LookupCurve.Value.Evaluate(finalMagnitude);
+			finalMagnitude = LookupCurve.Evaluate(finalMagnitude);
 		}
 
 		return finalMagnitude;

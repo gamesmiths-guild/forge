@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
 
@@ -10,7 +10,7 @@ namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 /// </summary>
 /// <param name="baseValue">The base value for this magnitude.</param>
 /// <param name="curve">The curve used for scaling.</param>
-public readonly struct ScalableInt(int baseValue, Curve curve = default) : IEquatable<ScalableInt>
+public readonly struct ScalableInt(int baseValue, ICurve? curve = null) : IEquatable<ScalableInt>
 {
 	/// <summary>
 	/// Gets the base value for this scalable int.
@@ -20,7 +20,7 @@ public readonly struct ScalableInt(int baseValue, Curve curve = default) : IEqua
 	/// <summary>
 	/// Gets the curve fort this scalable int.
 	/// </summary>
-	public Curve ScalingCurve { get; } = curve;
+	public ICurve? ScalingCurve { get; } = curve;
 
 	/// <summary>
 	/// Gets an evaluated value for this scalable int at the given time.
@@ -29,6 +29,11 @@ public readonly struct ScalableInt(int baseValue, Curve curve = default) : IEqua
 	/// <returns>The evaluated value at the given time.</returns>
 	public readonly int GetValue(float time)
 	{
+		if (ScalingCurve is null)
+		{
+			return BaseValue;
+		}
+
 		var scalingFactor = ScalingCurve.Evaluate(time);
 		return (int)(BaseValue * scalingFactor);
 	}
@@ -57,7 +62,7 @@ public readonly struct ScalableInt(int baseValue, Curve curve = default) : IEqua
 	public bool Equals(ScalableInt other)
 	{
 		return BaseValue == other.BaseValue
-			&& ScalingCurve.Equals(other.ScalingCurve);
+			&& ScalingCurve == other.ScalingCurve;
 	}
 
 	/// <summary>

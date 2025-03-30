@@ -26,7 +26,7 @@ public readonly struct CustomCalculationBasedFloat(
 	ScalableFloat coefficient,
 	ScalableFloat preMultiplyAdditiveValue,
 	ScalableFloat postMultiplyAdditiveValue,
-	Curve? lookupCurve = null) : IEquatable<CustomCalculationBasedFloat>
+	ICurve? lookupCurve = null) : IEquatable<CustomCalculationBasedFloat>
 {
 	/// <summary>
 	/// Gets the magnitude calculator class used to calculate the magnitude.
@@ -51,7 +51,7 @@ public readonly struct CustomCalculationBasedFloat(
 	/// <summary>
 	/// Gets the curve entry to use as a lookup instead of directly using the evaluated magnitude.
 	/// </summary>
-	public Curve? LookupCurve { get; } = lookupCurve;
+	public ICurve? LookupCurve { get; } = lookupCurve;
 
 	/// <summary>
 	/// Calculates the final magnitude based on the CustomCalculationBasedFloat configurations.
@@ -67,9 +67,9 @@ public readonly struct CustomCalculationBasedFloat(
 		var finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + baseMagnitude))
 			+ PostMultiplyAdditiveValue.GetValue(level);
 
-		if (LookupCurve.HasValue)
+		if (LookupCurve is not null)
 		{
-			finalMagnitude = LookupCurve.Value.Evaluate(finalMagnitude);
+			finalMagnitude = LookupCurve.Evaluate(finalMagnitude);
 		}
 
 		return finalMagnitude;
