@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using Gamesmiths.Forge.GameplayEffects;
 
@@ -12,15 +12,15 @@ public interface IForgeEntity
 	/// <summary>
 	/// Gets the container with all the attributes from this entity.
 	/// </summary>
-	public Attributes Attributes { get; }
+	Attributes Attributes { get; }
 
 	/// <summary>
 	/// Gets the tags manager of this entity.
 	/// </summary>
-	public GameplayTags GameplayTags { get; }
+	GameplayTags GameplayTags { get; }
 
 	/// <summary>
 	/// Gets the effects manager for this entity.
 	/// </summary>
-	public GameplayEffectsManager EffectsManager { get; }
+	GameplayEffectsManager EffectsManager { get; }
 }
