@@ -18,6 +18,8 @@ public class Attributes : IEnumerable<Attribute>
 	/// </summary>
 	public List<AttributeSet> AttributeSets { get; } = [];
 
+	internal IReadOnlyDictionary<StringKey, Attribute> AttributesMap => _attributes;
+
 	/// <summary>
 	/// Gets the mapping for the attributes of this container.
 	/// </summary>
