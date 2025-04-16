@@ -27,12 +27,27 @@ public abstract class CustomCalculator
 		GameplayEffect effect,
 		IForgeEntity target)
 	{
-		return capturedAttribute.Source switch
+		switch (capturedAttribute.Source)
 		{
-			AttributeCaptureSource.Source =>
-				effect.Ownership.Owner.Attributes[capturedAttribute.Attribute].CurrentValue,
-			AttributeCaptureSource.Target => target.Attributes[capturedAttribute.Attribute].CurrentValue,
-			_ => 0,
-		};
+			case AttributeCaptureSource.Source:
+
+				if (!effect.Ownership.Owner.Attributes.ContainsAttribute(capturedAttribute.Attribute))
+				{
+					return 0;
+				}
+
+				return effect.Ownership.Owner.Attributes[capturedAttribute.Attribute].CurrentValue;
+
+			case AttributeCaptureSource.Target:
+
+				if (!target.Attributes.ContainsAttribute(capturedAttribute.Attribute))
+				{
+					return 0;
+				}
+
+				return target.Attributes[capturedAttribute.Attribute].CurrentValue;
+		}
+
+		return 0;
 	}
 }

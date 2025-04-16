@@ -31,6 +31,9 @@ public class CustomCalculatorsGameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute3", "TestAttributeSet.Attribute2", 2, 2, 1, 1, 14)]
 	[InlineData("TestAttributeSet.Attribute5", "TestAttributeSet.Attribute3", 2, 1, 0, -3, 11)]
 	[InlineData("TestAttributeSet.Attribute90", "TestAttributeSet.Attribute90", 0.5f, -1, 0, 0, 81)]
+	[InlineData("Invalid.Attribute", "Invalid.Attribute", 1, 1, 0, 0, 0)]
+	[InlineData("TestAttributeSet.Attribute1", "Invalid.Attribute", 1, 1, 0, 0, 1)]
+	[InlineData("Invalid.Attribute", "TestAttributeSet.Attribute1", 1, 1, 0, 0, 0)]
 	public void Custom_calculator_class_magnitude_modifies_attribute_accordingly(
 		string targetAttribute,
 		string customMagnitudeCalculatorAttribute,
@@ -84,6 +87,9 @@ public class CustomCalculatorsGameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute3", "TestAttributeSet.Attribute2", 2, 2, 1, 1, 4)]
 	[InlineData("TestAttributeSet.Attribute5", "TestAttributeSet.Attribute3", 2, 1, 0, -3, 8)]
 	[InlineData("TestAttributeSet.Attribute90", "TestAttributeSet.Attribute90", 0.5f, -1, 0, 0, 94)]
+	[InlineData("Invalid.Attribute", "Invalid.Attribute", 1, 1, 0, 0, 0)]
+	[InlineData("TestAttributeSet.Attribute1", "Invalid.Attribute", 1, 1, 0, 0, 5)]
+	[InlineData("Invalid.Attribute", "TestAttributeSet.Attribute1", 1, 1, 0, 0, 0)]
 	public void Custom_calculator_class_magnitude_with_curve_modifies_attribute_accordingly(
 		string targetAttribute,
 		string customMagnitudeCalculatorAttribute,
@@ -211,6 +217,42 @@ public class CustomCalculatorsGameplayEffectsTests(
 		AttributeCaptureSource.Target,
 		new int[] { 2, 1, 1, 0 },
 		new int[] { 3, 1, 2, 0 })]
+	[InlineData(
+		"Invalid.Attribute",
+		"Invalid.Attribute",
+		AttributeCaptureSource.Source,
+		1,
+		1,
+		0,
+		0,
+		1,
+		AttributeCaptureSource.Source,
+		new int[] { },
+		new int[] { })]
+	[InlineData(
+		"TestAttributeSet.Attribute1",
+		"Invalid.Attribute",
+		AttributeCaptureSource.Source,
+		1,
+		1,
+		0,
+		0,
+		1,
+		AttributeCaptureSource.Source,
+		new int[] { 1, 1, 0, 0 },
+		new int[] { 1, 1, 0, 0 })]
+	[InlineData(
+		"Invalid.Attribute",
+		"TestAttributeSet.Attribute1",
+		AttributeCaptureSource.Source,
+		1,
+		1,
+		0,
+		0,
+		1,
+		AttributeCaptureSource.Source,
+		new int[] { },
+		new int[] { })]
 	public void Custom_calculator_class_non_snapshot_modifies_attribute_accordingly(
 		string targetAttribute,
 		string customMagnitudeCalculatorAttribute,
