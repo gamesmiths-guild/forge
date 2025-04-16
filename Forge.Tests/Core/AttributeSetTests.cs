@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using FluentAssertions;
 using Gamesmiths.Forge.Core;
@@ -97,7 +97,6 @@ public class AttributeSetTests
 
 			if (attribute == Vitality)
 			{
-
 				// Do health to vit calculations here.
 				SetAttributeMaxValue(MaxHealth, Vitality.CurrentValue * 10);
 			}

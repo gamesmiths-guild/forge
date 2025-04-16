@@ -81,7 +81,7 @@ public readonly struct GameplayEffectEvaluatedData
 		Duration = EvaluateDuration(gameplayEffect.EffectData.DurationData);
 		Period = EvaluatePeriod(gameplayEffect.EffectData.PeriodicData);
 
-		// Modifiers should be evaluated last because their evaluation requires already evaluated values.
+		// Modifiers should be evaluated after dauration and period because it requires those already evaluated.
 		ModifiersEvaluatedData = EvaluateModifiers();
 
 		if (gameplayEffect.EffectData.DurationData.Type == DurationType.Instant)
@@ -119,6 +119,12 @@ public readonly struct GameplayEffectEvaluatedData
 
 		foreach (Modifier modifier in GameplayEffect.EffectData.Modifiers)
 		{
+			// Ignore modifiers for attributes not present in the target.
+			if (!Target.Attributes.ContainsAttribute(modifier.Attribute))
+			{
+				continue;
+			}
+
 			modifiersEvaluatedData.Add(
 				new ModifierEvaluatedData(
 					Target.Attributes[modifier.Attribute],
@@ -129,6 +135,7 @@ public readonly struct GameplayEffectEvaluatedData
 
 		foreach (Execution execution in GameplayEffect.EffectData.Executions)
 		{
+			// Filter attributes not contained
 			modifiersEvaluatedData.AddRange(execution.CalculateExecution(GameplayEffect, Target));
 		}
 
@@ -149,6 +156,7 @@ public readonly struct GameplayEffectEvaluatedData
 
 		foreach (Execution execution in GameplayEffect.EffectData.Executions)
 		{
+			// Filter attributes not contained
 			foreach (AttributeCaptureDefinition attributeCaptureDefinition in execution.AttributesToCapture)
 			{
 				if (!attributeCaptureDefinition.Snapshot)
@@ -274,6 +282,11 @@ public readonly struct GameplayEffectEvaluatedData
 		if (attributeSource.Source == AttributeCaptureSource.Source)
 		{
 			attributeSourceOwner = GameplayEffect.Ownership.Owner;
+		}
+
+		if (!attributeSourceOwner.Attributes.ContainsAttribute(attributeSource.Attribute))
+		{
+			return false;
 		}
 
 		backingAttribute = attributeSource.GetAttribute(attributeSourceOwner);

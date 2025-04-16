@@ -1,6 +1,7 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
 using FluentAssertions;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayEffects;
 using Gamesmiths.Forge.GameplayTags;
 
@@ -31,6 +32,23 @@ public static class TestUtils
 
 	public static void TestAttribute(TestEntity target, string targetAttribute, int[] expectedResults)
 	{
+		if (!target.Attributes.WithKeys()
+			.Any(x => x.FullKey.Equals(targetAttribute, StringComparison.OrdinalIgnoreCase)))
+		{
+			// Just to make sure I configured the test data right, the values here don't actually matter.
+			if (expectedResults.Length == 0)
+			{
+				return;
+			}
+
+			expectedResults[0].Should().Be(0);
+			expectedResults[1].Should().Be(0);
+			expectedResults[2].Should().Be(0);
+			expectedResults[3].Should().Be(0);
+
+			return;
+		}
+
 		target.Attributes[targetAttribute].CurrentValue.Should().Be(expectedResults[0]);
 		target.Attributes[targetAttribute].BaseValue.Should().Be(expectedResults[1]);
 		target.Attributes[targetAttribute].Modifier.Should().Be(expectedResults[2]);

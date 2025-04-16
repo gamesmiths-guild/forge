@@ -85,11 +85,16 @@ public class Attributes : IEnumerable<Attribute>
 
 #pragma warning disable T0009 // Internal Styling Rule T0009
 	internal void ApplyPendingValueChanges()
-#pragma warning restore T0009
 	{
 		foreach (Attribute attribute in _attributes.Values)
 		{
 			attribute.ApplyPendingValueChanges();
 		}
+	}
+
+	internal bool ContainsAttribute(StringKey attributeKey)
+#pragma warning restore T0009
+	{
+		return _attributes.ContainsKey(attributeKey);
 	}
 }

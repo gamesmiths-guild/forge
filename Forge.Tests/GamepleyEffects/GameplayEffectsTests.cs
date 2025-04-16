@@ -32,6 +32,7 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute90", 25, 99)]
 	[InlineData("TestAttributeSet.Attribute3", 20, 23)]
 	[InlineData("TestAttributeSet.Attribute5", -2, 3)]
+	[InlineData("Invalid.Attribute", 10, 0)]
 	public void Instant_effect_modifies_attribute_base_value(
 		string targetAttribute,
 		int effectMagnitude,
@@ -69,6 +70,9 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute1", "TestAttributeSet.Attribute2", 2, 1, 2, 9)]
 	[InlineData("TestAttributeSet.Attribute90", "TestAttributeSet.Attribute5", -1, 5, 2, 82)]
 	[InlineData("TestAttributeSet.Attribute3", "TestAttributeSet.Attribute5", 1.5f, 2.2f, 3.5f, 17)]
+	[InlineData("Invalid.Attribute", "Invalid.Attribute", 2, 1, 2, 0)]
+	[InlineData("TestAttributeSet.Attribute1", "Invalid.Attribute", 2, 1, 2, 1)]
+	[InlineData("Invalid.Attribute", "TestAttributeSet.Attribute1", 2, 1, 2, 0)]
 	public void Attribute_based_effect_modifies_values_based_on_source_attribute(
 		string targetAttribute,
 		string backingAttribute,
@@ -114,6 +118,9 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute1", "TestAttributeSet.Attribute2", 2, 1, 2, 4)]
 	[InlineData("TestAttributeSet.Attribute3", "TestAttributeSet.Attribute5", 1.5f, 2.2f, 3.5f, 4)]
 	[InlineData("TestAttributeSet.Attribute90", "TestAttributeSet.Attribute5", -1, 5, 2, 94)]
+	[InlineData("Invalid.Attribute", "Invalid.Attribute", 2, 1, 2, 0)]
+	[InlineData("TestAttributeSet.Attribute1", "Invalid.Attribute", 2, 1, 2, 1)]
+	[InlineData("Invalid.Attribute", "TestAttributeSet.Attribute1", 2, 1, 2, 0)]
 	public void Attribute_based_effect_with_curve_modifies_values_based_on_curve_lookup(
 		string targetAttribute,
 		string backingAttribute,
@@ -165,6 +172,7 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute2", 8, 10, 2, 30, -0.66f, 10, 99, 99)]
 	[InlineData("TestAttributeSet.Attribute3", 20, 23, 0.5f, 34, 1, 68, -10, 0)]
 	[InlineData("TestAttributeSet.Attribute90", 90, 99, 0.3f, 99, 0f, 99, 100, 99)]
+	[InlineData("Invalid.Attribute", 4, 0, 4, 0, -0.66f, 0, 42, 0)]
 	public void Multiple_instant_effects_of_different_operations_modify_base_value_accordingly(
 		string targetAttribute,
 		float firstEffectFlatMagnitude,
@@ -275,6 +283,7 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute3", 40, 1, 0.2f, 43, 51)]
 	[InlineData("TestAttributeSet.Attribute5", 10, 1, -1, 15, 5)]
 	[InlineData("TestAttributeSet.Attribute90", 1, 2, 1, 92, 93)]
+	[InlineData("Invalid.Attribute", 10, 1, 2, 0, 0)]
 	public void Modifiers_of_different_level_effects_apply_different_modifiers(
 		string targetAttribute,
 		float modifierBaseMagnitude,
@@ -327,6 +336,7 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute5", 10, -10, new int[] { 15, 5, 10, 0 }, new int[] { 0, 5, -15, -10 })]
 	[InlineData("TestAttributeSet.Attribute90", 1, 15, new int[] { 91, 90, 1, 0 }, new int[] { 15, 90, -75, 0 })]
 	[InlineData("TestAttributeSet.Attribute90", 1, -40, new int[] { 91, 90, 1, 0 }, new int[] { 0, 90, -130, -40 })]
+	[InlineData("Invalid.Attribute", 10, 12, new int[] { }, new int[] { })]
 	public void Override_values_are_applied_temporarily(
 		string targetAttribute,
 		float flatMagnitude,
@@ -431,6 +441,20 @@ public class GameplayEffectsTests(
 		new int[] { 10, 1, 9, 0 },
 		new int[] { 10, 1, 9, 0 },
 		new int[] { 13, 1, 12, 0 })]
+	[InlineData(
+		"Invalid.Attribute",
+		10,
+		1,
+		11,
+		0,
+		12,
+		0,
+		13,
+		1,
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		new int[] { })]
 	public void Multiple_override_values_are_applied_and_removed_correctly(
 		string targetAttribute,
 		float overrideMagnitude1,
@@ -533,6 +557,7 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute5", 10, 1, -1, new int[] { 15, 5, 10, 0 }, new int[] { 0, 5, -10, -5 })]
 	[InlineData("TestAttributeSet.Attribute90", 1, 2, 1, new int[] { 92, 90, 2, 0 }, new int[] { 91, 90, 1, 0 })]
 	[InlineData("TestAttributeSet.Attribute90", 5, 2, 4, new int[] { 99, 90, 10, 1 }, new int[] { 99, 90, 20, 11 })]
+	[InlineData("Invalid.Attribute", 10, 1, 2, new int[] { }, new int[] { })]
 	public void Non_snapshot_level_effect_updates_value_on_level_up(
 		string targetAttribute,
 		float modifierBaseMagnitude,
@@ -584,6 +609,7 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute3", 10, 2, 1, 0.5f, 1, 0.5f, 23, 0.4f, 23, 0.1f, 33)]
 	[InlineData("TestAttributeSet.Attribute5", 5, 1, 0.2f, 1, 1, 0.1f, 10, 3.1f, 25, 1.79f, 34)]
 	[InlineData("TestAttributeSet.Attribute90", -1, 1, 2, 0.1f, 1, 1, 89, 2f, 69, 100f, 0)]
+	[InlineData("Invalid.Attribute", 1, 1, 2, 1, 1, 1, 0, 1, 0, 1, 0)]
 	public void Non_snapshot_level_periodic_effect_updates_scalable_float_values_on_level_up(
 		string targetAttribute,
 		float modifierBaseMagnitude,
@@ -653,6 +679,7 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute3", -10, 15f, 120f, new int[] { 0, 3, -10, -7 })]
 	[InlineData("TestAttributeSet.Attribute5", 20, 33f, 999f, new int[] { 25, 5, 20, 0 })]
 	[InlineData("TestAttributeSet.Attribute90", 100, 1f, 60f, new int[] { 99, 90, 100, 91 })]
+	[InlineData("Invalid.Attribute", 100, 1f, 60f, new int[] { })]
 	public void Inifinite_effect_modify_attribute_modifier_value(
 		string targetAttribute,
 		float modifierBaseMagnitude,
@@ -735,6 +762,14 @@ public class GameplayEffectsTests(
 		new int[] { 72, 90, -18, 0 },
 		-10f,
 		new int[] { 0, 90, -818, -728 })]
+	[InlineData(
+		"Invalid.Attribute",
+		4,
+		new int[] { },
+		4f,
+		new int[] { },
+		-0.66f,
+		new int[] { })]
 	public void Infinite_effect_of_different_operations_update_modifier_value_accordingly(
 		string targetAttribute,
 		float firstEffectModifierBaseMagnitude,
@@ -876,6 +911,18 @@ public class GameplayEffectsTests(
 		1f,
 		1,
 		new int[] { 0, 90, -90, 0 })]
+	[InlineData(
+		"Invalid.Attribute",
+		ModifierOperation.FlatBonus,
+		4,
+		0,
+		ModifierOperation.PercentBonus,
+		4f,
+		0,
+		ModifierOperation.PercentBonus,
+		-0.66f,
+		1,
+		new int[] { })]
 	public void Infinite_effect_computes_channels_accordingly(
 		string targetAttribute,
 		ModifierOperation firstModifierOperationType,
@@ -937,6 +984,7 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute3", 10, 0.1f, 60, 0.05f, new int[] { 13, 3, 10, 0 }, 0.05f, 3)]
 	[InlineData("TestAttributeSet.Attribute5", 10, 1f, 300, 0.5f, new int[] { 15, 5, 10, 0 }, 300f, 5)]
 	[InlineData("TestAttributeSet.Attribute90", 10, 600f, 64, 1f, new int[] { 99, 90, 10, 1 }, 599f, 90)]
+	[InlineData("Invalid.Attribute", 10, 10f, 32, 5f, new int[] { }, 5f, 0)]
 	public void Duration_effect_modifies_attribute_modifier_value_and_expire_after_duration_time(
 		string targetAttribute,
 		float modifierMagnitude,
@@ -992,6 +1040,7 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute3", 3, 128, 10f, 6, 9f, 6, 60f, 24)]
 	[InlineData("TestAttributeSet.Attribute5", 90, 1, 1f, 95, 9f, 99, 10f, 99)]
 	[InlineData("TestAttributeSet.Attribute90", -5, 32, 0.01f, 85, 0.05f, 60, 10f, 0)]
+	[InlineData("Invalid.Attribute", 10, 32, 1f, 0, 1f, 0, 5f, 0)]
 	public void Periodic_effect_modifies_base_attribute_value(
 		string targetAttribute,
 		float modifierMagnitude,
@@ -1045,6 +1094,7 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute3", 10, 60f, 13, 59f, 13)]
 	[InlineData("TestAttributeSet.Attribute5", 5, 1f, 10, 15.9f, 85)]
 	[InlineData("TestAttributeSet.Attribute90", -1, 0.5f, 89, 60f, 0)]
+	[InlineData("Invalid.Attribute", 10, 1f, 0, 1f, 0)]
 	public void Snapshot_periodic_effect_modifies_base_attribute_with_same_value_even_after_level_up(
 		string targetAttribute,
 		float modifierMagnitude,
@@ -1157,6 +1207,60 @@ public class GameplayEffectsTests(
 		12,
 		1f,
 		12)]
+	[InlineData(
+		"Invalid.Attribute",
+		"Invalid.Attribute",
+		2f,
+		1f,
+		2f,
+		1f,
+		0,
+		1f,
+		0,
+		2f,
+		0,
+		1f,
+		0,
+		0,
+		0,
+		1f,
+		0)]
+	[InlineData(
+		"TestAttributeSet.Attribute1",
+		"Invalid.Attribute",
+		2f,
+		1f,
+		2f,
+		1f,
+		1,
+		1f,
+		1,
+		2f,
+		0,
+		1f,
+		1,
+		0,
+		1,
+		1f,
+		1)]
+	[InlineData(
+		"Invalid.Attribute",
+		"TestAttributeSet.Attribute2",
+		2f,
+		1f,
+		2f,
+		1f,
+		0,
+		1f,
+		0,
+		2f,
+		4,
+		1f,
+		0,
+		6,
+		0,
+		1f,
+		0)]
 	public void Non_snapshot_priodic_effect_with_attribute_based_magnitude_should_update_when_attribute_updates(
 		string targetAttribute,
 		string backingAttribute,
@@ -1297,6 +1401,42 @@ public class GameplayEffectsTests(
 		new int[] { 6, 5, 1, 0 },
 		0,
 		new int[] { 5, 5, 0, 0 })]
+	[InlineData(
+		"Invalid.Attribute",
+		"Invalid.Attribute",
+		2f,
+		1f,
+		2f,
+		new int[] { },
+		2f,
+		0,
+		new int[] { },
+		0,
+		new int[] { })]
+	[InlineData(
+		"TestAttributeSet.Attribute1",
+		"Invalid.Attribute",
+		2f,
+		1f,
+		2f,
+		new int[] { 1, 1, 0, 0 },
+		2f,
+		0,
+		new int[] { 1, 1, 0, 0 },
+		0,
+		new int[] { 1, 1, 0, 0 })]
+	[InlineData(
+		"Invalid.Attribute",
+		"TestAttributeSet.Attribute2",
+		2f,
+		1f,
+		2f,
+		new int[] { },
+		2f,
+		4,
+		new int[] { },
+		6,
+		new int[] { })]
 	public void Non_periodic_non_snapshot_attribute_based_magnitude_updates_modifiers_when_attribute_updates(
 		string targetAttribute,
 		string backingAttribute,
@@ -1378,6 +1518,7 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute3", 3f, 60f, 30f, 128, 6, 29f, 6, 120f, 12)]
 	[InlineData("TestAttributeSet.Attribute5", 5f, 3f, 10f, 16, 10, 1f, 10, 5f, 10)]
 	[InlineData("TestAttributeSet.Attribute90", -10f, 0.5f, 0.1f, 32, 80, 1f, 30, 1f, 30)]
+	[InlineData("Invalid.Attribute", 10f, 3f, 1f, 32, 0, 1f, 0, 5f, 0)]
 	public void Periodic_effect_modifies_base_attribute_value_and_expire_after_duration_time(
 		string targetAttribute,
 		float modifierMagnitude,
@@ -1508,6 +1649,43 @@ public class GameplayEffectsTests(
 		1,
 		new object[] { new int[] { 3, 1, 1 } },
 		"TestAttributeSet.Attribute1",
+		1,
+		3,
+		3,
+		StackPolicy.AggregateByTarget,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.AllowApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		StackOwnerDenialPolicy.AlwaysAllow,
+		StackOwnerOverridePolicy.Override,
+		StackOwnerOverrideStackCountPolicy.IncreaseStacks)]
+	[InlineData(
+		new int[] { },
+		new int[] { },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		1,
+		new object[] { new int[] { 2, 1, 0 } },
+		"Invalid.Attribute",
+		10f,
+		5,
+		1,
+		StackPolicy.AggregateByTarget,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		StackOwnerDenialPolicy.AlwaysAllow,
+		StackOwnerOverridePolicy.KeepCurrent)]
+	[InlineData(
+		new int[] { },
+		new int[] { },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		1,
+		new object[] { new int[] { 3, 1, 1 } },
+		"Invalid.Attribute",
 		1,
 		3,
 		3,
@@ -1730,6 +1908,31 @@ public class GameplayEffectsTests(
 		LevelComparison.Lower,
 		LevelComparison.Equal | LevelComparison.Higher,
 		StackLevelOverrideStackCountPolicy.IncreaseStacks)]
+	[InlineData(
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		2,
+		new object[] { new int[] { 1, 1, 0 }, new int[] { 1, 2, 1 } },
+		3,
+		new object[] { new int[] { 1, 1, 0 }, new int[] { 1, 2, 1 }, new int[] { 1, 3, 0 } },
+		3,
+		new object[] { new int[] { 1, 1, 0 }, new int[] { 2, 2, 1 }, new int[] { 1, 3, 0 } },
+		"Invalid.Attribute",
+		5f,
+		new float[] { 1, 2, 3 },
+		5,
+		1,
+		StackPolicy.AggregateByTarget,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.DontStack,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		StackOwnerDenialPolicy.AlwaysAllow,
+		StackOwnerOverridePolicy.KeepCurrent)]
 	public void Stackable_effect_with_different_levels_gives_expected_stack_data(
 		int[] firstExpectedResults,
 		int[] secondExpectedResults,
@@ -1879,6 +2082,93 @@ public class GameplayEffectsTests(
 		1,
 		new object[] { new int[] { 1, 1, 0 } },
 		"TestAttributeSet.Attribute1",
+		"TestAttributeSet.Attribute2",
+		3,
+		AttributeCaptureSource.Source,
+		AttributeBasedFloatCalculationType.AttributeMagnitude,
+		new float[] { 1, 0, 0 },
+		5,
+		1,
+		StackPolicy.AggregateByTarget,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		StackOwnerDenialPolicy.AlwaysAllow,
+		StackOwnerOverridePolicy.Override,
+		StackOwnerOverrideStackCountPolicy.ResetStacks)]
+	[InlineData(
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		1,
+		new object[] { new int[] { 2, 1, 0 } },
+		1,
+		new object[] { new int[] { 1, 1, 1 } },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		"Invalid.Attribute",
+		"Invalid.Attribute",
+		3,
+		AttributeCaptureSource.Source,
+		AttributeBasedFloatCalculationType.AttributeMagnitude,
+		new float[] { 1, 0, 0 },
+		5,
+		1,
+		StackPolicy.AggregateByTarget,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		StackOwnerDenialPolicy.AlwaysAllow,
+		StackOwnerOverridePolicy.Override,
+		StackOwnerOverrideStackCountPolicy.ResetStacks)]
+	[InlineData(
+		new int[] { 1, 1, 0, 0 },
+		new int[] { 1, 1, 0, 0 },
+		new int[] { 1, 1, 0, 0 },
+		new int[] { 1, 1, 0, 0 },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		1,
+		new object[] { new int[] { 2, 1, 0 } },
+		1,
+		new object[] { new int[] { 1, 1, 1 } },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		"TestAttributeSet.Attribute1",
+		"Invalid.Attribute",
+		3,
+		AttributeCaptureSource.Source,
+		AttributeBasedFloatCalculationType.AttributeMagnitude,
+		new float[] { 1, 0, 0 },
+		5,
+		1,
+		StackPolicy.AggregateByTarget,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.ClearEntireStack,
+		StackOwnerDenialPolicy.AlwaysAllow,
+		StackOwnerOverridePolicy.Override,
+		StackOwnerOverrideStackCountPolicy.ResetStacks)]
+	[InlineData(
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		1,
+		new object[] { new int[] { 2, 1, 0 } },
+		1,
+		new object[] { new int[] { 1, 1, 1 } },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		"Invalid.Attribute",
 		"TestAttributeSet.Attribute2",
 		3,
 		AttributeCaptureSource.Source,
@@ -2365,6 +2655,76 @@ public class GameplayEffectsTests(
 		StackApplicationRefreshPolicy.NeverRefresh,
 		StackApplicationResetPeriodPolicy.NeverReset,
 		true)]
+	[InlineData(
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		0,
+		new object[] { },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		0,
+		new object[] { },
+		"Invalid.Attribute",
+		1,
+		10f,
+		1f,
+		40f,
+		40f,
+		3,
+		3,
+		StackPolicy.AggregateBySource,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.RemoveSingleStackAndRefreshDuration,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
+		StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication,
+		false)]
+	[InlineData(
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		1,
+		new object[] { new int[] { 2, 1, 0 } },
+		1,
+		new object[] { new int[] { 2, 1, 0 } },
+		"Invalid.Attribute",
+		1f,
+		10f,
+		1f,
+		1.3f,
+		0.8f,
+		3,
+		1,
+		StackPolicy.AggregateBySource,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.RemoveSingleStackAndRefreshDuration,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		StackApplicationRefreshPolicy.NeverRefresh,
+		StackApplicationResetPeriodPolicy.NeverReset,
+		true)]
 	public void Stackable_periodic_effect_with_duration_updates_correctly(
 		int[] firstExpectedResults,
 		int[] secondExpectedResults,
@@ -2575,6 +2935,36 @@ public class GameplayEffectsTests(
 		null,
 		null,
 		null)]
+	[InlineData(
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		new int[] { },
+		1,
+		new object[] { new int[] { 3, 1, 0 } },
+		1,
+		new object[] { new int[] { 2, 1, 0 } },
+		1,
+		new object[] { new int[] { 1, 1, 0 } },
+		0,
+		new object[] { },
+		"Invalid.Attribute",
+		10,
+		3,
+		3,
+		false,
+		StackPolicy.AggregateBySource,
+		StackLevelPolicy.SegregateLevels,
+		StackMagnitudePolicy.Sum,
+		StackOverflowPolicy.DenyApplication,
+		StackExpirationPolicy.RemoveSingleStackAndRefreshDuration,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null)]
 	public void Infinite_stackable_effect_unnaplies_correctly(
 		int[] firstExpectedResults,
 		int[] secondExpectedResults,
@@ -2718,6 +3108,11 @@ public class GameplayEffectsTests(
 		-45,
 		new int[] { 45, 90, -45, 0 },
 		new int[] { 0, 90, -90, 0 })]
+	[InlineData(
+		"Invalid.Attribute",
+		80f,
+		new int[] { },
+		new int[] { })]
 	public void Unapply_duration_effect_restores_original_attribute_values(
 		string targetAttribute,
 		float effectMagnitude,
@@ -2745,10 +3140,19 @@ public class GameplayEffectsTests(
 			effectData,
 			new GameplayEffectOwnership(owner, owner));
 
-		var originalCurrentValue = target.Attributes[targetAttribute].CurrentValue;
-		var originalBaseValue = target.Attributes[targetAttribute].BaseValue;
-		var originalModifier = target.Attributes[targetAttribute].Modifier;
-		var originalOverflow = target.Attributes[targetAttribute].Overflow;
+		var originalCurrentValue = 0;
+		var originalBaseValue = 0;
+		var originalModifier = 0;
+		var originalOverflow = 0;
+
+		if (target.Attributes.WithKeys()
+			.Any(x => x.FullKey.Equals(targetAttribute, StringComparison.OrdinalIgnoreCase)))
+		{
+			originalCurrentValue = target.Attributes[targetAttribute].CurrentValue;
+			originalBaseValue = target.Attributes[targetAttribute].BaseValue;
+			originalModifier = target.Attributes[targetAttribute].Modifier;
+			originalOverflow = target.Attributes[targetAttribute].Overflow;
+		}
 
 		ActiveGameplayEffectHandle? activeEffectHandle1 = target.EffectsManager.ApplyEffect(effect);
 		Debug.Assert(activeEffectHandle1 is not null, "Effect handle should not be null.");
@@ -2779,6 +3183,7 @@ public class GameplayEffectsTests(
 	[InlineData("TestAttributeSet.Attribute90", 25, 99)]
 	[InlineData("TestAttributeSet.Attribute3", 20, 23)]
 	[InlineData("TestAttributeSet.Attribute5", -2, 3)]
+	[InlineData("Invalid.Attribute", 10, 0)]
 	public void Set_by_caller_magnitude_modifies_attribute_accordingly(
 		string targetAttribute,
 		int effectMagnitude,

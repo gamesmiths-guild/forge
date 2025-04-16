@@ -86,10 +86,22 @@ public readonly struct AttributeBasedFloat(
 		switch (BackingAttribute.Source)
 		{
 			case AttributeCaptureSource.Source:
+
+				if (!effect.Ownership.Owner.Attributes.ContainsAttribute(BackingAttribute.Attribute))
+				{
+					break;
+				}
+
 				attribute = effect.Ownership.Owner.Attributes[BackingAttribute.Attribute];
 				break;
 
 			case AttributeCaptureSource.Target:
+
+				if (!target.Attributes.ContainsAttribute(BackingAttribute.Attribute))
+				{
+					break;
+				}
+
 				attribute = target.Attributes[BackingAttribute.Attribute];
 				break;
 		}
