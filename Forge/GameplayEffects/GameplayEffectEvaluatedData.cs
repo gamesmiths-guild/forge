@@ -135,7 +135,11 @@ public readonly struct GameplayEffectEvaluatedData
 
 		foreach (Execution execution in GameplayEffect.EffectData.Executions)
 		{
-			// Filter attributes not contained
+			if (ExecutionHasInvalidAttributeCaptures(execution))
+			{
+				continue;
+			}
+
 			modifiersEvaluatedData.AddRange(execution.CalculateExecution(GameplayEffect, Target));
 		}
 
@@ -156,7 +160,6 @@ public readonly struct GameplayEffectEvaluatedData
 
 		foreach (Execution execution in GameplayEffect.EffectData.Executions)
 		{
-			// Filter attributes not contained
 			foreach (AttributeCaptureDefinition attributeCaptureDefinition in execution.AttributesToCapture)
 			{
 				if (!attributeCaptureDefinition.Snapshot)
@@ -292,5 +295,34 @@ public readonly struct GameplayEffectEvaluatedData
 		backingAttribute = attributeSource.GetAttribute(attributeSourceOwner);
 
 		return true;
+	}
+
+	private bool ExecutionHasInvalidAttributeCaptures(Execution execution)
+	{
+		foreach (AttributeCaptureDefinition capturedAttribute in execution.AttributesToCapture)
+		{
+			switch (capturedAttribute.Source)
+			{
+				case AttributeCaptureSource.Target:
+
+					if (!Target.Attributes.ContainsAttribute(capturedAttribute.Attribute))
+					{
+						return true;
+					}
+
+					break;
+
+				case AttributeCaptureSource.Source:
+
+					if (!GameplayEffect.Ownership.Source.Attributes.ContainsAttribute(capturedAttribute.Attribute))
+					{
+						return true;
+					}
+
+					break;
+			}
+		}
+
+		return false;
 	}
 }

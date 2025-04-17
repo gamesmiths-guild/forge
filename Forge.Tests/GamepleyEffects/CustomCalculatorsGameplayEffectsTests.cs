@@ -1,6 +1,7 @@
 // Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
+using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects;
@@ -471,6 +472,114 @@ public class CustomCalculatorsGameplayEffectsTests(
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
 	}
 
+	[Fact]
+	[Trait("Execution", "Invalid attributes")]
+	public void Custom_execution_without_valid_attributes_applies_with_no_attribute_changes()
+	{
+		var owner = new NoAttributesEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new NoAttributesEntity(_gameplayTagsManager, _gameplayCuesManager);
+
+		var customCalculatorClass = new CustomTestExecutionClass();
+
+		var effectData = new GameplayEffectData(
+			"Test Effect",
+			[],
+			new DurationData(DurationType.Instant),
+			null,
+			null,
+			executions:
+			[
+				customCalculatorClass
+			]);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(
+				owner,
+				owner));
+
+		target.EffectsManager.ApplyEffect(effect);
+		target.EffectsManager.ApplyEffect(effect);
+		target.EffectsManager.ApplyEffect(effect);
+
+		target.Attributes.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Execution", "Invalid attributes")]
+	public void Custom_execution_without_valid_owner_attributes_applies_with_no_attribute_changes()
+	{
+		var owner = new NoAttributesEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+
+		var customCalculatorClass = new CustomTestExecutionClass();
+
+		var effectData = new GameplayEffectData(
+			"Test Effect",
+			[],
+			new DurationData(DurationType.Instant),
+			null,
+			null,
+			executions:
+			[
+				customCalculatorClass
+			]);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(
+				owner,
+				owner));
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Execution", "Invalid attributes")]
+	public void Custom_execution_without_valid_target_attributes_applies_with_no_attribute_changes()
+	{
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new NoAttributesEntity(_gameplayTagsManager, _gameplayCuesManager);
+
+		var customCalculatorClass = new CustomTestExecutionClass();
+
+		var effectData = new GameplayEffectData(
+			"Test Effect",
+			[],
+			new DurationData(DurationType.Instant),
+			null,
+			null,
+			executions:
+			[
+				customCalculatorClass
+			]);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(
+				owner,
+				owner));
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [90, 90, 0, 0]);
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [90, 90, 0, 0]);
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [90, 90, 0, 0]);
+	}
+
 	private class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator
 	{
 		private readonly float _expoent;
@@ -498,6 +607,12 @@ public class CustomCalculatorsGameplayEffectsTests(
 
 		public AttributeCaptureDefinition SourceAttribute2 { get; }
 
+		public AttributeCaptureDefinition SourceAttribute3 { get; }
+
+		public AttributeCaptureDefinition TargetAttribute1 { get; }
+
+		public AttributeCaptureDefinition TargetAttribute2 { get; }
+
 		public CustomTestExecutionClass()
 		{
 			SourceAttribute1 = new AttributeCaptureDefinition(
@@ -508,9 +623,24 @@ public class CustomCalculatorsGameplayEffectsTests(
 				"TestAttributeSet.Attribute5",
 				AttributeCaptureSource.Source,
 				false);
+			SourceAttribute3 = new AttributeCaptureDefinition(
+				"TestAttributeSet.Attribute90",
+				AttributeCaptureSource.Source,
+				true);
+			TargetAttribute1 = new AttributeCaptureDefinition(
+				"TestAttributeSet.Attribute1",
+				AttributeCaptureSource.Target,
+				false);
+			TargetAttribute2 = new AttributeCaptureDefinition(
+				"TestAttributeSet.Attribute2",
+				AttributeCaptureSource.Target,
+				false);
 
 			AttributesToCapture.Add(SourceAttribute1);
 			AttributesToCapture.Add(SourceAttribute2);
+			AttributesToCapture.Add(SourceAttribute3);
+			AttributesToCapture.Add(TargetAttribute1);
+			AttributesToCapture.Add(TargetAttribute2);
 		}
 
 		public override ModifierEvaluatedData[] CalculateExecution(GameplayEffect effect, IForgeEntity target)
@@ -521,21 +651,37 @@ public class CustomCalculatorsGameplayEffectsTests(
 			var sourceAttribute2value = CaptureAttributeMagnitude(SourceAttribute2, effect, effect.Ownership.Source);
 
 			result[0] = CreateCustomModifierEvaluatedData(
-				target.Attributes["TestAttributeSet.Attribute1"],
+				TargetAttribute1.GetAttribute(target),
 				ModifierOperation.FlatBonus,
 				sourceAttribute1value * sourceAttribute2value);
 
 			result[1] = CreateCustomModifierEvaluatedData(
-				target.Attributes["TestAttributeSet.Attribute2"],
+				TargetAttribute2.GetAttribute(target),
 				ModifierOperation.FlatBonus,
 				sourceAttribute1value + sourceAttribute2value);
 
 			result[2] = CreateCustomModifierEvaluatedData(
-				effect.Ownership.Source.Attributes["TestAttributeSet.Attribute90"],
+				SourceAttribute3.GetAttribute(effect.Ownership.Source),
 				ModifierOperation.FlatBonus,
 				-1);
 
 			return result;
+		}
+	}
+
+	private class NoAttributesEntity : IForgeEntity
+	{
+		public Attributes Attributes { get; }
+
+		public Forge.Core.GameplayTags GameplayTags { get; }
+
+		public GameplayEffectsManager EffectsManager { get; }
+
+		public NoAttributesEntity(GameplayTagsManager tagsManager, GameplayCuesManager cuesManager)
+		{
+			EffectsManager = new(this, cuesManager);
+			Attributes = new();
+			GameplayTags = new(new GameplayTagContainer(tagsManager));
 		}
 	}
 }
