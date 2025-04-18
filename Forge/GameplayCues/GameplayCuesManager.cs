@@ -230,18 +230,36 @@ public sealed class GameplayCuesManager
 				Debug.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeMagnitude must contains a configured MagnitudeAttribute.");
+
+				if (!effectEvaluatedData.Target.Attributes.ContainsAttribute(cueData.MagnitudeAttribute))
+				{
+					return 0;
+				}
+
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].PendingValueChange;
 
 			case CueMagnitudeType.AttributeCurrentValue:
 				Debug.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeMagnitude must contains a configured MagnitudeAttribute.");
+
+				if (!effectEvaluatedData.Target.Attributes.ContainsAttribute(cueData.MagnitudeAttribute))
+				{
+					return 0;
+				}
+
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].CurrentValue;
 
 			case CueMagnitudeType.AttributeModifier:
 				Debug.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeMagnitude must contains a configured MagnitudeAttribute.");
+
+				if (!effectEvaluatedData.Target.Attributes.ContainsAttribute(cueData.MagnitudeAttribute))
+				{
+					return 0;
+				}
+
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].Modifier;
 		}
 	}

@@ -200,6 +200,117 @@ public class GameplayCueTests(
 			new object[] { 1, 0, 0, 0f, false },
 			new object[] { 2, 0, 0, 0f, false },
 		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 3f },
+		},
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute" },
+			new object[] { 1, 0, 5, CueMagnitudeType.EffectLevel },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, false },
+			new object[] { 1, 1, 1, 0.2f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 2, 0, 0f, false },
+			new object[] { 1, 2, 2, 0.4f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 3f },
+			new object[] { "TestAttributeSet.Attribute1", 2f },
+		},
+		true,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute1" },
+			new object[] { 1, 0, 5, CueMagnitudeType.EffectLevel },
+			new object[] { 2, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute2" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, false },
+			new object[] { 1, 1, 1, 0.2f, false },
+			new object[] { 2, 1, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 2, 0, 0f, false },
+			new object[] { 1, 2, 2, 0.4f, false },
+			new object[] { 2, 2, 0, 0f, false },
+		})]
+	[InlineData(
+		new object[] { },
+		true,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute2" },
+			new object[] { 2, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute3" },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, false },
+			new object[] { 1, 0, 0, 0f, false },
+			new object[] { 2, 0, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, false },
+			new object[] { 1, 0, 0, 0f, false },
+			new object[] { 2, 0, 0, 0f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 1f },
+			new object[] { "Invalid.Attribute", 2f },
+		},
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute2" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 1, 0.1f, false },
+			new object[] { 1, 2, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 2, 2, 0.2f, false },
+			new object[] { 1, 4, 0, 0f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "Invalid.Attribute", 3f },
+		},
+		true,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 5, CueMagnitudeType.EffectLevel },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, false },
+			new object[] { 1, 0, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, false },
+			new object[] { 1, 0, 0, 0f, false },
+		})]
 	public void Instant_effect_triggers_execute_cues_with_expected_results(
 		object[] modifiersData,
 		bool requireModifierSuccessToTriggerCue,
@@ -287,6 +398,48 @@ public class GameplayCueTests(
 		})]
 	[InlineData(
 		new object[] { },
+		true,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 5, CueMagnitudeType.EffectLevel },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, false },
+			new object[] { 1, 0, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, false },
+			new object[] { 1, 0, 0, 0f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 5f },
+		},
+		true,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute" },
+			new object[] { 1, 0, 5, CueMagnitudeType.EffectLevel },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 1, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, false },
+			new object[] { 1, 1, 1, 0.2f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "Invalid.Attribute", 5f },
+		},
 		true,
 		new object[]
 		{
@@ -528,6 +681,55 @@ public class GameplayCueTests(
 		false,
 		false,
 		false)]
+	[InlineData(
+		10f,
+		1f,
+		true,
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 1f },
+		},
+		false,
+		5f,
+		5f,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute" },
+			new object[] { 1, 0, 5, CueMagnitudeType.EffectLevel },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 1, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 1, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 1, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 6, 0, 0f, true },
+			new object[] { 1, 6, 1, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, false },
+			new object[] { 1, 1, 1, 0.2f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 11, 0, 0f, false },
+			new object[] { 1, 11, 1, 0.2f, false },
+		},
+		true,
+		true,
+		true)]
 	public void Periodic_effect_triggers_apply_remove_and_execute_cues_with_expected_results(
 		float duration,
 		float period,
@@ -802,6 +1004,48 @@ public class GameplayCueTests(
 		{
 			new object[] { 0, 0, 0, 0f, false },
 			new object[] { 1, 0, 0, 0f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 1f },
+		},
+		false,
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute" },
+			new object[] { 1, 0, 10, CueMagnitudeType.EffectLevel },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 2, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, false },
+			new object[] { 1, 1, 1, 0.1f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, false },
+			new object[] { 1, 1, 2, 0.2f, false },
 		})]
 	public void Infinite_effect_triggers_update_cues_when_level_up_with_expected_results(
 		object[] modifiersData,
@@ -1105,6 +1349,51 @@ public class GameplayCueTests(
 		{
 			new object[] { 0, 1, 98, 1f, true },
 			new object[] { 1, 1, 90, 1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", "TestAttributeSet.Attribute90", false, 2f, 0f, 0f },
+		},
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute90", 2f },
+		},
+		true,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
+			new object[] { 1, 0, 10, CueMagnitudeType.AttributeCurrentValue, "Invalid.Attribute" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 98, 1f, true },
+			new object[] { 1, 1, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 98, 1f, true },
+			new object[] { 1, 1, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 98, 1f, true },
+			new object[] { 1, 1, 0, 0f, true },
 		},
 		new object[]
 		{
@@ -1689,6 +1978,73 @@ public class GameplayCueTests(
 		new object[]
 		{
 			new object[] { 0, 1, 2, 0.2f, true },
+			new object[] { 1, 1, 2, 0.2f, true },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 1f },
+		},
+		10f,
+		3,
+		3,
+		false,
+		true,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute" },
+			new object[] { 1, 0, 10, CueMagnitudeType.EffectLevel },
+		},
+		10f,
+		10f,
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+			new object[] { 1, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 2, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 2, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+			new object[] { 1, 1, 1, 0.1f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
 			new object[] { 1, 1, 2, 0.2f, true },
 		})]
 	public void Stackable_effect_triggers_update_cues_when_attribute_changes_with_expected_results(
