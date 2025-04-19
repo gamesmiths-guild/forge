@@ -2103,6 +2103,32 @@ public class GameplayCueTests(
 		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas5);
 	}
 
+	[Fact]
+	[Trait("Invalid cue", null)]
+	public void Invalid_cue_fails_gracefullys()
+	{
+		var entity = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		GameplayEffectData effectData = CreateInstantEffectData(
+			CreateModifiers([new object[] { "TestAttributeSet.Attribute1", 3f }]),
+			false,
+			[new GameplayCueData("Invalid.Cue", 0, 10, CueMagnitudeType.EffectLevel)]);
+		var effect = new GameplayEffect(effectData, new GameplayEffectOwnership(entity, entity));
+
+		ResetCues();
+		entity.EffectsManager.ApplyEffect(effect);
+		TestCueExecutionData(TestCueExecutionType.Execution, [
+				new object[] { 0, 0, 0, 0f, false },
+				new object[] { 1, 0, 0, 0f, false }
+			]);
+
+		effect.LevelUp();
+		entity.EffectsManager.ApplyEffect(effect);
+		TestCueExecutionData(TestCueExecutionType.Execution, [
+				new object[] { 0, 0, 0, 0f, false },
+				new object[] { 1, 0, 0, 0f, false }
+			]);
+	}
+
 	private static GameplayEffectData CreateInstantEffectData(
 		Modifier[] modifiers,
 		bool requireModifierSuccessToTriggerCue,
