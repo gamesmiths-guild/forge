@@ -15,7 +15,7 @@ public readonly struct GameplayCueParameters(
 	int magnitude,
 	float normalizedMagnitude,
 	IForgeEntity? source = null,
-	Dictionary<string, object>? customParameters = null)
+	Dictionary<StringKey, object>? customParameters = null)
 {
 	/// <summary>
 	/// Gets the magnitude or strength of the effect.
@@ -35,5 +35,5 @@ public readonly struct GameplayCueParameters(
 	/// <summary>
 	/// Gets additional custom parameters that can be passed to the gameplay cue.
 	/// </summary>
-	public readonly Dictionary<string, object>? CustomParameters { get; } = customParameters;
+	public readonly Dictionary<StringKey, object>? CustomParameters { get; } = customParameters;
 }

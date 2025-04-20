@@ -16,6 +16,11 @@ public abstract class CustomCalculator
 	public List<AttributeCaptureDefinition> AttributesToCapture { get; } = [];
 
 	/// <summary>
+	/// Gets a dictionary of custom cue parameters.
+	/// </summary>
+	public Dictionary<StringKey, object> CustomCueParameters { get; } = [];
+
+	/// <summary>
 	/// Captures the current value of a given <see cref="AttributeCaptureDefinition"/>.
 	/// </summary>
 	/// <param name="capturedAttribute">Definition for the attribute to be captured.</param>

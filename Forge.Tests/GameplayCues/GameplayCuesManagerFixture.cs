@@ -58,6 +58,7 @@ public class GameplayCuesManagerFixture
 				Value = parameters.Value.Magnitude,
 				NormalizedValue = parameters.Value.NormalizedMagnitude,
 				Count = ApplyData.Count + 1,
+				CustomParameters = parameters.Value.CustomParameters,
 			};
 
 			Applied = true;
@@ -77,6 +78,7 @@ public class GameplayCuesManagerFixture
 				Value = parameters.Value.Magnitude,
 				NormalizedValue = parameters.Value.NormalizedMagnitude,
 				Count = ExecuteData.Count + 1,
+				CustomParameters = parameters.Value.CustomParameters,
 			};
 
 			OnExecuted?.Invoke();
@@ -101,6 +103,7 @@ public class GameplayCuesManagerFixture
 				Value = parameters.Value.Magnitude,
 				NormalizedValue = parameters.Value.NormalizedMagnitude,
 				Count = UpdateData.Count + 1,
+				CustomParameters = parameters.Value.CustomParameters,
 			};
 		}
 
@@ -109,6 +112,7 @@ public class GameplayCuesManagerFixture
 			public int Value;
 			public float NormalizedValue;
 			public int Count;
+			public Dictionary<StringKey, object>? CustomParameters;
 		}
 	}
 }

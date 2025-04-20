@@ -145,7 +145,8 @@ public sealed class GameplayCuesManager
 				new GameplayCueParameters(
 					magnitude,
 					cueData.NormalizedMagnitude(magnitude),
-					effectEvaluatedData.GameplayEffect.Ownership.Source));
+					effectEvaluatedData.GameplayEffect.Ownership.Source,
+					effectEvaluatedData.CustomCueParameters));
 		}
 	}
 
@@ -179,7 +180,8 @@ public sealed class GameplayCuesManager
 				new GameplayCueParameters(
 					magnitude,
 					cueData.NormalizedMagnitude(magnitude),
-					effectEvaluatedData.GameplayEffect.Ownership.Source));
+					effectEvaluatedData.GameplayEffect.Ownership.Source,
+					effectEvaluatedData.CustomCueParameters));
 		}
 	}
 
@@ -203,7 +205,8 @@ public sealed class GameplayCuesManager
 				new GameplayCueParameters(
 					magnitude,
 					cueData.NormalizedMagnitude(magnitude),
-					effectEvaluatedData.GameplayEffect.Ownership.Source));
+					effectEvaluatedData.GameplayEffect.Ownership.Source,
+					effectEvaluatedData.CustomCueParameters));
 		}
 	}
 

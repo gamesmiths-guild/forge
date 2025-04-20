@@ -61,6 +61,11 @@ public readonly struct GameplayEffectEvaluatedData
 	public Attribute[] AttributesToCapture { get; }
 
 	/// <summary>
+	/// Getsan array of custom cue parameters.
+	/// </summary>
+	public Dictionary<StringKey, object>? CustomCueParameters { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="GameplayEffectEvaluatedData"/> struct.
 	/// </summary>
 	/// <param name="gameplayEffect">The taget gameplay effect of this evaluated data.</param>
@@ -83,6 +88,8 @@ public readonly struct GameplayEffectEvaluatedData
 
 		// Modifiers should be evaluated after dauration and period because it requires those already evaluated.
 		ModifiersEvaluatedData = EvaluateModifiers();
+
+		CustomCueParameters = EvaluateCustomCueParameters();
 
 		if (gameplayEffect.EffectData.DurationData.Type == DurationType.Instant)
 		{
@@ -324,5 +331,44 @@ public readonly struct GameplayEffectEvaluatedData
 		}
 
 		return false;
+	}
+
+	private Dictionary<StringKey, object>? EvaluateCustomCueParameters()
+	{
+		var customParameters = new Dictionary<StringKey, object>();
+
+		foreach (Modifier modifier in GameplayEffect.EffectData.Modifiers)
+		{
+			// Ignore modifiers for attributes not present in the target.
+			if (!Target.Attributes.ContainsAttribute(modifier.Attribute))
+			{
+				continue;
+			}
+
+			if (modifier.Magnitude.MagnitudeCalculationType != MagnitudeCalculationType.CustomCalculatorClass)
+			{
+				continue;
+			}
+
+			Debug.Assert(
+				modifier.Magnitude.CustomCalculationBasedFloat.HasValue,
+				"If modifier is set to CustomCalculatorClass, this should never be null.");
+
+			customParameters = customParameters.Union(
+				modifier.Magnitude.CustomCalculationBasedFloat.Value.MagnitudeCalculatorClass.CustomCueParameters)
+				.ToDictionary();
+		}
+
+		foreach (Execution execution in GameplayEffect.EffectData.Executions)
+		{
+			if (ExecutionHasInvalidAttributeCaptures(execution))
+			{
+				continue;
+			}
+
+			customParameters = customParameters.Union(execution.CustomCueParameters).ToDictionary();
+		}
+
+		return customParameters.Count == 0 ? null : customParameters;
 	}
 }

@@ -6,6 +6,7 @@ using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects;
+using Gamesmiths.Forge.GameplayEffects.Calculator;
 using Gamesmiths.Forge.GameplayEffects.Duration;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
@@ -2129,6 +2130,103 @@ public class GameplayCueTests(
 			]);
 	}
 
+	[Fact]
+	[Trait("Custom cues", null)]
+	public void Custom_calculator_class_sets_custom_cues_parameters_correctly()
+	{
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+
+		var customCalculatorClass = new CustomMagnitudeCalculator(
+			"TestAttributeSet.Attribute1",
+			AttributeCaptureSource.Source,
+			1);
+
+		var effectData = new GameplayEffectData(
+			"Level Up",
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.CustomCalculatorClass,
+						customCalculationBasedFloat: new CustomCalculationBasedFloat(
+							customCalculatorClass,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			],
+			new DurationData(DurationType.Instant),
+			null,
+			null,
+			gameplayCues: [new GameplayCueData("Test.Cue1", 0, 10, CueMagnitudeType.EffectLevel)]);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(
+				new TestEntity(_gameplayTagsManager, _gameplayCuesManager),
+				owner));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [2, 2, 0, 0]);
+
+		_testCues[0].ExecuteData.CustomParameters.Should().NotBeNull();
+		_testCues[0].ExecuteData.CustomParameters.Should().Contain("test", 1);
+	}
+
+	[Fact]
+	[Trait("Custom cues", null)]
+	public void Custom_executions_sets_custom_cues_parameters_correctly()
+	{
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+
+		var customCalculatorClass = new CustomTestExecutionClass();
+
+		var effectData = new GameplayEffectData(
+			"Test Effect",
+			[],
+			new DurationData(DurationType.Instant),
+			null,
+			null,
+			executions: [customCalculatorClass],
+			gameplayCues: [new GameplayCueData("Test.Cue1", 0, 10, CueMagnitudeType.EffectLevel)]);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(
+				owner,
+				owner));
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [89, 89, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 16, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 10, 0, 0]);
+
+		_testCues[0].ExecuteData.Count.Should().Be(1);
+		_testCues[0].ExecuteData.CustomParameters.Should().NotBeNull();
+		_testCues[0].ExecuteData.CustomParameters.Should().Contain("custom.parameter", 8);
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [88, 88, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [31, 31, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [18, 18, 0, 0]);
+
+		_testCues[0].ExecuteData.Count.Should().Be(2);
+		_testCues[0].ExecuteData.CustomParameters.Should().NotBeNull();
+		_testCues[0].ExecuteData.CustomParameters.Should().Contain("custom.parameter", 16);
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [87, 87, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [46, 46, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [26, 26, 0, 0]);
+
+		_testCues[0].ExecuteData.Count.Should().Be(3);
+		_testCues[0].ExecuteData.CustomParameters.Should().NotBeNull();
+		_testCues[0].ExecuteData.CustomParameters.Should().Contain("custom.parameter", 24);
+	}
+
 	private static GameplayEffectData CreateInstantEffectData(
 		Modifier[] modifiers,
 		bool requireModifierSuccessToTriggerCue,
@@ -2223,6 +2321,7 @@ public class GameplayCueTests(
 		cueExecutionData.Count.Should().Be(count);
 		cueExecutionData.Value.Should().Be(value);
 		cueExecutionData.NormalizedValue.Should().Be(normalizedValue);
+		cueExecutionData.CustomParameters.Should().BeNull();
 	}
 
 	private static GameplayCueData[] CreateCueDatas(object[] cueDatas)
@@ -2322,6 +2421,103 @@ public class GameplayCueTests(
 		foreach (TestCue cue in _testCues)
 		{
 			cue.Reset();
+		}
+	}
+
+	private class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator
+	{
+		private readonly float _expoent;
+
+		public AttributeCaptureDefinition Attribute1 { get; }
+
+		public CustomMagnitudeCalculator(StringKey attribute, AttributeCaptureSource captureSource, float expoent)
+		{
+			Attribute1 = new AttributeCaptureDefinition(attribute, captureSource, false);
+
+			AttributesToCapture.Add(Attribute1);
+
+			_expoent = expoent;
+		}
+
+		public override float CalculateBaseMagnitude(GameplayEffect effect, IForgeEntity target)
+		{
+			CustomCueParameters.Add("test", _expoent);
+			return (float)Math.Pow(CaptureAttributeMagnitude(Attribute1, effect, target), _expoent);
+		}
+	}
+
+	private class CustomTestExecutionClass : Execution
+	{
+		private int _internalCount;
+
+		public AttributeCaptureDefinition SourceAttribute1 { get; }
+
+		public AttributeCaptureDefinition SourceAttribute2 { get; }
+
+		public AttributeCaptureDefinition SourceAttribute3 { get; }
+
+		public AttributeCaptureDefinition TargetAttribute1 { get; }
+
+		public AttributeCaptureDefinition TargetAttribute2 { get; }
+
+		public CustomTestExecutionClass()
+		{
+			SourceAttribute1 = new AttributeCaptureDefinition(
+				"TestAttributeSet.Attribute3",
+				AttributeCaptureSource.Source,
+				false);
+			SourceAttribute2 = new AttributeCaptureDefinition(
+				"TestAttributeSet.Attribute5",
+				AttributeCaptureSource.Source,
+				false);
+			SourceAttribute3 = new AttributeCaptureDefinition(
+				"TestAttributeSet.Attribute90",
+				AttributeCaptureSource.Source,
+				true);
+			TargetAttribute1 = new AttributeCaptureDefinition(
+				"TestAttributeSet.Attribute1",
+				AttributeCaptureSource.Target,
+				false);
+			TargetAttribute2 = new AttributeCaptureDefinition(
+				"TestAttributeSet.Attribute2",
+				AttributeCaptureSource.Target,
+				false);
+
+			AttributesToCapture.Add(SourceAttribute1);
+			AttributesToCapture.Add(SourceAttribute2);
+			AttributesToCapture.Add(SourceAttribute3);
+			AttributesToCapture.Add(TargetAttribute1);
+			AttributesToCapture.Add(TargetAttribute2);
+
+			CustomCueParameters.Add("custom.parameter", 0);
+		}
+
+		public override ModifierEvaluatedData[] CalculateExecution(GameplayEffect effect, IForgeEntity target)
+		{
+			var result = new ModifierEvaluatedData[3];
+
+			var sourceAttribute1value = CaptureAttributeMagnitude(SourceAttribute1, effect, effect.Ownership.Source);
+			var sourceAttribute2value = CaptureAttributeMagnitude(SourceAttribute2, effect, effect.Ownership.Source);
+
+			result[0] = CreateCustomModifierEvaluatedData(
+				TargetAttribute1.GetAttribute(target),
+				ModifierOperation.FlatBonus,
+				sourceAttribute1value * sourceAttribute2value);
+
+			result[1] = CreateCustomModifierEvaluatedData(
+				TargetAttribute2.GetAttribute(target),
+				ModifierOperation.FlatBonus,
+				sourceAttribute1value + sourceAttribute2value);
+
+			result[2] = CreateCustomModifierEvaluatedData(
+				SourceAttribute3.GetAttribute(effect.Ownership.Source),
+				ModifierOperation.FlatBonus,
+				-1);
+
+			_internalCount++;
+			CustomCueParameters["custom.parameter"] = _internalCount * (sourceAttribute1value + sourceAttribute2value);
+
+			return result;
 		}
 	}
 }
