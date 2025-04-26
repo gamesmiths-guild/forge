@@ -1,6 +1,7 @@
 // Copyright © 2025 Gamesmiths Guild.
 
 using System.Diagnostics;
+using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayCues;
 using Gamesmiths.Forge.GameplayEffects;
@@ -670,6 +671,59 @@ public class GameplayEffectsTests(
 		target.EffectsManager.UpdateEffects(secondTimeUpdateDelta);
 
 		TestUtils.TestAttribute(target, targetAttribute, [thirdExpectedResult, thirdExpectedResult, 0, 0]);
+	}
+
+	[Theory]
+	[Trait("Periodic", null)]
+	[InlineData("TestAttributeSet.Attribute1", 0, 1, 1)]
+	[InlineData("TestAttributeSet.Attribute1", 1, 0, 1)]
+	[InlineData("TestAttributeSet.Attribute1", 1, 1, 0)]
+	[InlineData("TestAttributeSet.Attribute1", -1, 1, 1)]
+	[InlineData("TestAttributeSet.Attribute1", 1, -1, 1)]
+	[InlineData("TestAttributeSet.Attribute1", 1, 1, -1)]
+	public void Periodic_effect_with_invalid_period_throws_exception(
+		string targetAttribute,
+		float periodicBaseValue,
+		float periodicLevel1Multiplier,
+		float periodicLevel2Multiplier)
+	{
+		var owner = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+
+		var effectData = new GameplayEffectData(
+			"Buff",
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(1)))
+			],
+			new DurationData(DurationType.Infinite),
+			null,
+			new PeriodicData(
+				new ScalableFloat(periodicBaseValue, new Curve(
+					[
+						new CurveKey(1, periodicLevel1Multiplier),
+						new CurveKey(2, periodicLevel2Multiplier),
+					])),
+				true,
+				PeriodInhibitionRemovedPolicy.NeverReset),
+			false);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(owner, new TestEntity(_gameplayTagsManager, _gameplayCuesManager)));
+
+		Action act = () =>
+		{
+			target.EffectsManager.ApplyEffect(effect);
+			target.EffectsManager.UpdateEffects(1);
+			effect.LevelUp();
+		};
+
+		act.Should().Throw<ArgumentOutOfRangeException>().WithMessage("*greater than zero*");
 	}
 
 	[Theory]

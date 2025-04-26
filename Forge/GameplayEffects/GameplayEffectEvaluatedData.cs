@@ -20,6 +20,9 @@ namespace Gamesmiths.Forge.GameplayEffects;
 /// </remarks>
 public readonly struct GameplayEffectEvaluatedData
 {
+	private const string InvalidPeriodicDataException = "Evaluated period must be greater than zero. A non-positive" +
+		" value would cause the effect to loop indefinitely.";
+
 	/// <summary>
 	/// Gets the gameplay effect for this evaluated data.
 	/// </summary>
@@ -114,7 +117,14 @@ public readonly struct GameplayEffectEvaluatedData
 	{
 		if (!periodicData.HasValue)
 		{
-			return 0;
+			return 1;
+		}
+
+		var evaluatedDuration = periodicData.Value.Period.GetValue(Level);
+
+		if (evaluatedDuration <= 0)
+		{
+			throw new ArgumentOutOfRangeException(nameof(periodicData), InvalidPeriodicDataException);
 		}
 
 		return periodicData.Value.Period.GetValue(Level);
