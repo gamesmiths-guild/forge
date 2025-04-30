@@ -269,13 +269,13 @@ internal class ActiveGameplayEffect
 	{
 		var removed = StackCount == 1;
 
-		GameplayEffectEvaluatedData.Target.EffectsManager.OnActiveGameplayEffectUnapplied_InternalCall(this);
-
 		if (removed)
 		{
 			Unapply();
 			return;
 		}
+
+		GameplayEffectEvaluatedData.Target.EffectsManager.OnActiveGameplayEffectUnapplied_InternalCall(this);
 
 		StackCount--;
 		ReapplyEffect(GameplayEffectEvaluatedData.GameplayEffect, isStackingCall: true);

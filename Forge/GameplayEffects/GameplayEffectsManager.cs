@@ -176,7 +176,7 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 
 	internal void OnActiveGameplayEffectChanged_InternalCall(ActiveGameplayEffect removedEffect)
 	{
-		foreach (IGameplayEffectComponent component in removedEffect.GameplayEffect.EffectData.GameplayEffectComponents)
+		foreach (IGameplayEffectComponent component in removedEffect.EffectData.GameplayEffectComponents)
 		{
 			component.OnActiveGameplayEffectChanged(
 				Owner,
@@ -296,10 +296,10 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 			return;
 		}
 
-		if (!forceUnapply &&
-			effectToRemove.EffectData.StackingData.HasValue &&
-			effectToRemove.EffectData.StackingData.Value.ExpirationPolicy ==
-			StackExpirationPolicy.RemoveSingleStackAndRefreshDuration)
+		if (!forceUnapply
+			&& effectToRemove.EffectData.StackingData.HasValue
+			&& effectToRemove.EffectData.StackingData.Value.ExpirationPolicy
+			== StackExpirationPolicy.RemoveSingleStackAndRefreshDuration)
 		{
 			effectToRemove.RemoveStack();
 			effectToRemove.RemainingDuration = effectToRemove.GameplayEffectEvaluatedData.Duration;
@@ -318,6 +318,13 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 
 	private void RemoveActiveGameplayEffect(ActiveGameplayEffect effectToRemove, bool interrupted)
 	{
+		if (!_activeEffects.Contains(effectToRemove))
+		{
+			return;
+		}
+
+		_activeEffects.Remove(effectToRemove);
+
 		GameplayEffectEvaluatedData effectEvaluatedData = effectToRemove.GameplayEffectEvaluatedData;
 
 		foreach (IGameplayEffectComponent component in effectToRemove.EffectData.GameplayEffectComponents)
@@ -333,7 +340,6 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 				true);
 		}
 
-		_activeEffects.Remove(effectToRemove);
 		effectToRemove.Handle.Free();
 
 		effectToRemove.GameplayEffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();

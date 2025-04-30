@@ -1,6 +1,5 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
-using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayTags;
 
@@ -20,9 +19,7 @@ public class TargetTagRequirementsEffectComponent(
 	GameplayTagRequirements removalTagRequirements,
 	GameplayTagRequirements ongoingTagRequirements) : IGameplayEffectComponent
 {
-	private IForgeEntity? _target;
-
-	private ActiveGameplayEffectHandle? _effectHandle;
+	private readonly Dictionary<ActiveGameplayEffectHandle, Action<GameplayTagContainer>> _subscriptionMap = [];
 
 	private GameplayTagRequirements ApplicationTagRequirements { get; } = applicationTagRequirements;
 
@@ -53,12 +50,29 @@ public class TargetTagRequirementsEffectComponent(
 		IForgeEntity target,
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
-		_target = target;
-		_effectHandle = activeEffectEvaluatedData.ActiveGameplayEffectHandle;
+		ActiveGameplayEffectHandle handle = activeEffectEvaluatedData.ActiveGameplayEffectHandle;
 
-		target.GameplayTags.OnTagsChanged += GameplayTags_OnTagsChanged;
+		// Create a distinct handler that captures this 'target' and 'handle'
+		void Handler(GameplayTagContainer tags)
+		{
+			if (!RemovalTagRequirements.IsEmpty
+				&& RemovalTagRequirements.RequirementsMet(tags))
+			{
+				target.EffectsManager.UnapplyEffect(handle, true);
+				return;
+			}
 
-		return OngoingTagRequirements.IsEmpty || OngoingTagRequirements.RequirementsMet(_target.GameplayTags.CombinedTags);
+			if (!OngoingTagRequirements.IsEmpty)
+			{
+				handle.SetInhibit(!OngoingTagRequirements.RequirementsMet(tags));
+			}
+		}
+
+		// Store it so we can unsubscribe later
+		_subscriptionMap[handle] = Handler;
+		target.GameplayTags.OnTagsChanged += Handler;
+
+		return OngoingTagRequirements.IsEmpty || OngoingTagRequirements.RequirementsMet(target.GameplayTags.CombinedTags);
 	}
 
 	/// <inheritdoc/>
@@ -67,30 +81,12 @@ public class TargetTagRequirementsEffectComponent(
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData,
 		bool removed)
 	{
-		if (removed)
+		ActiveGameplayEffectHandle handle = activeEffectEvaluatedData.ActiveGameplayEffectHandle;
+
+		if (removed && _subscriptionMap.TryGetValue(handle, out Action<GameplayTagContainer>? handler))
 		{
-			_target = null;
-			_effectHandle = null;
-			target.GameplayTags.OnTagsChanged -= GameplayTags_OnTagsChanged;
+			target.GameplayTags.OnTagsChanged -= handler;
+			_subscriptionMap.Remove(handle);
 		}
-	}
-
-	private void GameplayTags_OnTagsChanged(GameplayTagContainer tags)
-	{
-		Debug.Assert(_target is not null, "Target should never be null at this point.");
-		Debug.Assert(_effectHandle is not null, "Effect handle should never be null at this point.");
-
-		if (!RemovalTagRequirements.IsEmpty && RemovalTagRequirements.RequirementsMet(tags))
-		{
-			_target.EffectsManager.UnapplyEffect(_effectHandle, true);
-			return;
-		}
-
-		if (OngoingTagRequirements.IsEmpty)
-		{
-			return;
-		}
-
-		_effectHandle.SetInhibit(!OngoingTagRequirements.RequirementsMet(tags));
 	}
 }

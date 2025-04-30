@@ -1,5 +1,6 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © 2025 Gamesmiths Guild.
 
+using System.Diagnostics;
 using Gamesmiths.Forge.GameplayTags;
 
 namespace Gamesmiths.Forge.Core;
@@ -128,6 +129,8 @@ public class GameplayTags
 		}
 
 		_modifierTagCounts[tag] = --modifierTagCount;
+
+		Debug.Assert(modifierTagCount >= 0, $"{nameof(modifierTagCount)} count should never reach a negative value.");
 
 		if (modifierTagCount == 0)
 		{
