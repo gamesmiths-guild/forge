@@ -312,6 +312,11 @@ public class GameplayEffectsManager(IForgeEntity owner, GameplayCuesManager cues
 			return;
 		}
 
+		if (effectToRemove.EffectData.DurationData.Type == DurationType.HasDuration)
+		{
+			forceUnapply = true;
+		}
+
 		effectToRemove.Unapply();
 		RemoveActiveGameplayEffect(effectToRemove, forceUnapply);
 	}
