@@ -2424,7 +2424,7 @@ public class GameplayCueTests(
 		}
 	}
 
-	private class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator
+	private sealed class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator
 	{
 		private readonly float _expoent;
 

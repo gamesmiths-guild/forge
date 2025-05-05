@@ -60,7 +60,7 @@ public class AttributeSetTests
 		set.CurrentHealth.CurrentValue.Should().Be(100);
 	}
 
-	private class SimpleAttributeSet : AttributeSet
+	private sealed class SimpleAttributeSet : AttributeSet
 	{
 		public Attribute InitializedAttribute { get; }
 

@@ -601,7 +601,7 @@ public class CustomCalculatorsGameplayEffectsTests(
 		}
 	}
 
-	private class CustomTestExecutionClass : Execution
+	private sealed class CustomTestExecutionClass : Execution
 	{
 		public AttributeCaptureDefinition SourceAttribute1 { get; }
 
