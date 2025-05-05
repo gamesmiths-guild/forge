@@ -1,6 +1,5 @@
-// Copyright © 2025 Gamesmiths Guild.
+// Copyright © Gamesmiths Guild.
 
-// Copyright © 2024 Gamesmiths Guild.
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Attribute = Gamesmiths.Forge.Core.Attribute;

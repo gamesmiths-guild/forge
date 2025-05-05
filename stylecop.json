@@ -9,7 +9,7 @@
   "settings": {
     "documentationRules": {
       "companyName": "Gamesmiths Guild",
-      "copyrightText": "Copyright © 2025 {companyName}.",
+      "copyrightText": "Copyright © {companyName}.",
       "xmlHeader" : false,
       "documentInterfaces" : true,
       "documentExposedElements" : true,

@@ -1,4 +1,4 @@
-// Copyright © 2024 Gamesmiths Guild.
+// Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
 using Gamesmiths.Forge.Core;

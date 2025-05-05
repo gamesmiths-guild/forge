@@ -1,4 +1,4 @@
-// Copyright © 2025 Gamesmiths Guild.
+// Copyright © Gamesmiths Guild.
 #pragma warning disable SA1118 // ParameterMustNotSpanMultipleLines
 
 using System.Diagnostics;
