@@ -703,23 +703,6 @@ public class GameplayTagTests(GameplayTagsManagerFixture fixture) : IClassFixtur
 		GameplayTag.Empty.MatchesAnyExact(tagContainer).Should().BeFalse();
 	}
 
-	private GameplayTagContainer BuildContainerFromStrings(string[] keys, bool errorIfNotFound = true)
-	{
-		var set = new HashSet<GameplayTag>();
-
-		foreach (var key in keys)
-		{
-			var tag = GameplayTag.RequestTag(_gameplayTagsManager, key, errorIfNotFound);
-
-			if (tag.IsValid)
-			{
-				set.Add(tag);
-			}
-		}
-
-		return new GameplayTagContainer(_gameplayTagsManager, set);
-	}
-
 	[Theory]
 	[Trait("MatchesAnyExact", "Empty tag")]
 	[InlineData("tag")]
@@ -872,5 +855,22 @@ public class GameplayTagTests(GameplayTagsManagerFixture fixture) : IClassFixtur
 		}
 
 		return parentTags;
+	}
+
+	private GameplayTagContainer BuildContainerFromStrings(string[] keys, bool errorIfNotFound = true)
+	{
+		var set = new HashSet<GameplayTag>();
+
+		foreach (var key in keys)
+		{
+			var tag = GameplayTag.RequestTag(_gameplayTagsManager, key, errorIfNotFound);
+
+			if (tag.IsValid)
+			{
+				set.Add(tag);
+			}
+		}
+
+		return new GameplayTagContainer(_gameplayTagsManager, set);
 	}
 }
