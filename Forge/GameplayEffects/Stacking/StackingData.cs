@@ -130,7 +130,6 @@ public readonly struct StackingData(
 	/// Gets the level override stack count policy for this stackable effect.
 	/// </summary>
 	/// <remarks>
-	/// Gets stackLevelPolicy == AggregateLevels &amp;&amp; StackLevelOverridePolicy == Any.
 	/// Only valid when <see cref="StackLevelPolicy"/> == <see cref="StackLevelPolicy.AggregateLevels"/> and
 	/// <see cref="LevelOverridePolicy"/> != <see cref="LevelComparison.None"/>.
 	/// </remarks>

@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.GameplayEffects.Calculator;
+
 namespace Gamesmiths.Forge.GameplayEffects.Magnitudes;
 
 /// <summary>
@@ -18,7 +20,7 @@ public enum MagnitudeCalculationType : byte
 	AttributeBased = 1,
 
 	/// <summary>
-	/// Use a <see cref="IMagnitudeCalculator"/> for calculating the magnitude.
+	/// Use a <see cref="CustomModifierMagnitudeCalculator"/> for calculating the magnitude.
 	/// </summary>
 	CustomCalculatorClass = 2,
 

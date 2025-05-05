@@ -6,8 +6,7 @@ namespace Gamesmiths.Forge.GameplayEffects.Stacking;
 /// Defines what happens with the stack count when an effect of a different level is applied on the target.
 /// </summary>
 /// <remarks>
-/// Only valid when <see cref="StackLevelPolicy.AggregateLevels"/> and <see cref="StackLevelOverridePolicy"/> are
-/// set.
+/// Only valid when <see cref="StackLevelPolicy.AggregateLevels"/> and LevelOverridePolicy are set.
 /// </remarks>
 public enum StackLevelOverrideStackCountPolicy : byte
 {
