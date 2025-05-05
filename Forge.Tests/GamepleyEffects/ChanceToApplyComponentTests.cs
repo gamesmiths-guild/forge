@@ -142,9 +142,9 @@ public class ChanceToApplyComponentTests(
 		TestUtils.TestAttribute(target, targetAttribute, [expectedResults[2], expectedResults[2], 0, 0]);
 	}
 
-	private class FixedRandomProvider(params float[] values) : IRandom
+	private sealed class FixedRandomProvider(params float[] values) : IRandom
 	{
-		private readonly Queue<float> _values = new(values);
+		private readonly Queue<float> _values = new([.. values]);
 
 		public int NextInt()
 		{

@@ -2446,7 +2446,7 @@ public class GameplayCueTests(
 		}
 	}
 
-	private class CustomTestExecutionClass : Execution
+	private sealed class CustomTestExecutionClass : Execution
 	{
 		private int _internalCount;
 

@@ -76,7 +76,7 @@ public class AttributeSetTests
 		}
 	}
 
-	private class VitalAttributeSet : AttributeSet
+	private sealed class VitalAttributeSet : AttributeSet
 	{
 		public Attribute Vitality { get; }
 

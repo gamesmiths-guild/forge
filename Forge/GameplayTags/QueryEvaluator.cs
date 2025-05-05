@@ -8,7 +8,7 @@ namespace Gamesmiths.Forge.GameplayTags;
 /// Utility class for parsing and evaluating query tokens.
 /// </summary>
 /// <param name="query">The <see cref="GameplayTagQuery"/> to be used by this evaluator.</param>
-internal class QueryEvaluator(GameplayTagQuery query)
+internal sealed class QueryEvaluator(GameplayTagQuery query)
 {
 	private readonly GameplayTagQuery _query = query;
 

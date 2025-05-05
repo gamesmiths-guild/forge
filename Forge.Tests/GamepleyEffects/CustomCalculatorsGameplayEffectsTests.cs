@@ -580,7 +580,7 @@ public class CustomCalculatorsGameplayEffectsTests(
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [90, 90, 0, 0]);
 	}
 
-	private class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator
+	private sealed class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator
 	{
 		private readonly float _expoent;
 
@@ -669,7 +669,7 @@ public class CustomCalculatorsGameplayEffectsTests(
 		}
 	}
 
-	private class NoAttributesEntity : IForgeEntity
+	private sealed class NoAttributesEntity : IForgeEntity
 	{
 		public Attributes Attributes { get; }
 

@@ -24,7 +24,7 @@ public class GameplayCuesManagerFixture
 		}
 	}
 
-	internal class TestCue : IGameplayCue
+	internal sealed class TestCue : IGameplayCue
 	{
 		public event Action? OnApplied;
 

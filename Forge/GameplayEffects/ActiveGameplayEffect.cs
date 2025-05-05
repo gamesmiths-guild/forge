@@ -13,7 +13,7 @@ namespace Gamesmiths.Forge.GameplayEffects;
 /// <summary>
 /// Represents an active gameplay effect that is currently affecting an entity.
 /// </summary>
-internal class ActiveGameplayEffect
+internal sealed class ActiveGameplayEffect
 {
 	private const double Epsilon = 0.00001;
 
