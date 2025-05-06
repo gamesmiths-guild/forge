@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.GameplayEffects.Calculator;
 using Gamesmiths.Forge.GameplayEffects.Duration;
@@ -181,10 +182,15 @@ public readonly struct GameplayEffectEvaluatedData
 			{
 				if (!attributeCaptureDefinition.Snapshot)
 				{
-					IForgeEntity attributeSource = attributeCaptureDefinition.Source
+					IForgeEntity? attributeSource = attributeCaptureDefinition.Source
 						== AttributeCaptureSource.Source ? GameplayEffect.Ownership.Source : Target;
 
-					attributesToCapture.Add(attributeCaptureDefinition.GetAttribute(attributeSource));
+					if (!attributeCaptureDefinition.TryGetAttribute(attributeSource, out Attribute? attributeToCapture))
+					{
+						continue;
+					}
+
+					attributesToCapture.Add(attributeToCapture);
 				}
 			}
 		}
@@ -251,10 +257,6 @@ public readonly struct GameplayEffectEvaluatedData
 				modifierMagnitude.AttributeBasedFloat.Value.BackingAttribute,
 				out Attribute? backingAttribute))
 			{
-				Debug.Assert(
-						backingAttribute is not null,
-						"backingAttribute should never be null at this point.");
-
 				return [backingAttribute];
 			}
 
@@ -274,10 +276,6 @@ public readonly struct GameplayEffectEvaluatedData
 			{
 				if (TryGetBackingAttribute(attributeSource, out Attribute? backingAttribute))
 				{
-					Debug.Assert(
-						backingAttribute is not null,
-						"backingAttribute should never be null at this point.");
-
 					attributeList.Add(backingAttribute);
 				}
 			}
@@ -288,7 +286,9 @@ public readonly struct GameplayEffectEvaluatedData
 		return [];
 	}
 
-	private bool TryGetBackingAttribute(AttributeCaptureDefinition attributeSource, out Attribute? backingAttribute)
+	private bool TryGetBackingAttribute(
+		AttributeCaptureDefinition attributeSource,
+		[NotNullWhen(true)] out Attribute? backingAttribute)
 	{
 		backingAttribute = null;
 
@@ -297,21 +297,14 @@ public readonly struct GameplayEffectEvaluatedData
 			return false;
 		}
 
-		IForgeEntity attributeSourceOwner = Target;
+		IForgeEntity? attributeSourceOwner = Target;
 
 		if (attributeSource.Source == AttributeCaptureSource.Source)
 		{
 			attributeSourceOwner = GameplayEffect.Ownership.Owner;
 		}
 
-		if (!attributeSourceOwner.Attributes.ContainsAttribute(attributeSource.Attribute))
-		{
-			return false;
-		}
-
-		backingAttribute = attributeSource.GetAttribute(attributeSourceOwner);
-
-		return true;
+		return attributeSource.TryGetAttribute(attributeSourceOwner, out backingAttribute);
 	}
 
 	private bool ExecutionHasInvalidAttributeCaptures(Execution execution)
@@ -331,7 +324,9 @@ public readonly struct GameplayEffectEvaluatedData
 
 				case AttributeCaptureSource.Source:
 
-					if (!GameplayEffect.Ownership.Source.Attributes.ContainsAttribute(capturedAttribute.Attribute))
+					IForgeEntity? sourceEntity = GameplayEffect.Ownership.Source;
+
+					if (sourceEntity?.Attributes.ContainsAttribute(capturedAttribute.Attribute) != true)
 					{
 						return true;
 					}

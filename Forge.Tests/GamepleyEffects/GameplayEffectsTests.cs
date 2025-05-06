@@ -3274,4 +3274,67 @@ public class GameplayEffectsTests(
 
 		TestUtils.TestAttribute(target, targetAttribute, [expectedResult, expectedResult, 0, 0]);
 	}
+
+	[Fact]
+	[Trait("Instant", null)]
+	public void Simple_effects_with_null_ownership_applies_modifiers_successfully()
+	{
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+
+		var effectData = new GameplayEffectData(
+			"Level Up",
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+			],
+			new DurationData(DurationType.Instant),
+			null,
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(null, null));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Instant", null)]
+	public void Attribute_based_modifier_with_null_ownership_does_not_apply_changes()
+	{
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+
+		var effectData = new GameplayEffectData(
+			"Level Up",
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition(
+								"TestAttributeSet.Attribute5",
+								AttributeCaptureSource.Source),
+							AttributeBasedFloatCalculationType.AttributeMagnitude,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0)))),
+			],
+			new DurationData(DurationType.Instant),
+			null,
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(null, null));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
 }

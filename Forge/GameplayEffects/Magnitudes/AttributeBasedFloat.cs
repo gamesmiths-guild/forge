@@ -86,7 +86,7 @@ public readonly struct AttributeBasedFloat(
 		{
 			case AttributeCaptureSource.Source:
 
-				if (!effect.Ownership.Owner.Attributes.ContainsAttribute(BackingAttribute.Attribute))
+				if (effect.Ownership.Owner?.Attributes.ContainsAttribute(BackingAttribute.Attribute) != true)
 				{
 					break;
 				}

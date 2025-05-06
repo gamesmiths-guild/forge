@@ -580,6 +580,82 @@ public class CustomCalculatorsGameplayEffectsTests(
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [90, 90, 0, 0]);
 	}
 
+	[Fact]
+	[Trait("Instant", null)]
+	public void Custom_calculator_class_with_invalid_ownership_applies_with_no_attribute_changes()
+	{
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+
+		var customCalculatorClass = new CustomMagnitudeCalculator(
+			"TestAttributeSet.Attribute1",
+			AttributeCaptureSource.Source,
+			1);
+
+		var effectData = new GameplayEffectData(
+			"Level Up",
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.CustomCalculatorClass,
+						customCalculationBasedFloat: new CustomCalculationBasedFloat(
+							customCalculatorClass,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			],
+			new DurationData(DurationType.Instant),
+			null,
+			null);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(null, null));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Execution", null)]
+	public void Custom_executions_with_invalid_ownership_applies_with_no_attribute_changes()
+	{
+		var target = new TestEntity(_gameplayTagsManager, _gameplayCuesManager);
+
+		var customCalculatorClass = new CustomTestExecutionClass();
+
+		var effectData = new GameplayEffectData(
+			"Test Effect",
+			[],
+			new DurationData(DurationType.Instant),
+			null,
+			null,
+			executions:
+			[
+				customCalculatorClass
+			]);
+
+		var effect = new GameplayEffect(
+			effectData,
+			new GameplayEffectOwnership(
+				null,
+				null));
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
+	}
+
 	private sealed class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator
 	{
 		private readonly float _expoent;

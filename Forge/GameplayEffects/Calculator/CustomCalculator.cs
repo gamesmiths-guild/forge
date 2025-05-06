@@ -30,13 +30,13 @@ public abstract class CustomCalculator
 	protected static int CaptureAttributeMagnitude(
 		AttributeCaptureDefinition capturedAttribute,
 		GameplayEffect effect,
-		IForgeEntity target)
+		IForgeEntity? target)
 	{
 		switch (capturedAttribute.Source)
 		{
 			case AttributeCaptureSource.Source:
 
-				if (!effect.Ownership.Owner.Attributes.ContainsAttribute(capturedAttribute.Attribute))
+				if (effect.Ownership.Owner?.Attributes.ContainsAttribute(capturedAttribute.Attribute) != true)
 				{
 					return 0;
 				}
@@ -45,7 +45,7 @@ public abstract class CustomCalculator
 
 			case AttributeCaptureSource.Target:
 
-				if (!target.Attributes.ContainsAttribute(capturedAttribute.Attribute))
+				if (target?.Attributes.ContainsAttribute(capturedAttribute.Attribute) != true)
 				{
 					return 0;
 				}

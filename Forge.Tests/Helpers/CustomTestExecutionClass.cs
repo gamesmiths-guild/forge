@@ -6,6 +6,8 @@ using Gamesmiths.Forge.GameplayEffects.Calculator;
 using Gamesmiths.Forge.GameplayEffects.Magnitudes;
 using Gamesmiths.Forge.GameplayEffects.Modifiers;
 
+using Attribute = Gamesmiths.Forge.Core.Attribute;
+
 namespace Gamesmiths.Forge.Tests.Helpers;
 
 public class CustomTestExecutionClass : Execution
@@ -56,36 +58,38 @@ public class CustomTestExecutionClass : Execution
 
 	public override ModifierEvaluatedData[] CalculateExecution(GameplayEffect effect, IForgeEntity target)
 	{
-		if (effect.Ownership.Source is null)
-		{
-			throw new ArgumentNullException(
-				nameof(effect),
-				$"{effect.Ownership.Source} must be defined to use {nameof(CustomTestExecutionClass)}.");
-		}
-
-		var result = new ModifierEvaluatedData[3];
+		var result = new List<ModifierEvaluatedData>();
 
 		var sourceAttribute1value = CaptureAttributeMagnitude(SourceAttribute1, effect, effect.Ownership.Source);
 		var sourceAttribute2value = CaptureAttributeMagnitude(SourceAttribute2, effect, effect.Ownership.Source);
 
-		result[0] = CreateCustomModifierEvaluatedData(
-			TargetAttribute1.GetAttribute(target),
-			ModifierOperation.FlatBonus,
-			sourceAttribute1value * sourceAttribute2value);
+		if (TargetAttribute1.TryGetAttribute(target, out Attribute? targetAttribute1))
+		{
+			result.Add(CreateCustomModifierEvaluatedData(
+				targetAttribute1,
+				ModifierOperation.FlatBonus,
+				sourceAttribute1value * sourceAttribute2value));
+		}
 
-		result[1] = CreateCustomModifierEvaluatedData(
-			TargetAttribute2.GetAttribute(target),
-			ModifierOperation.FlatBonus,
-			sourceAttribute1value + sourceAttribute2value);
+		if (TargetAttribute2.TryGetAttribute(target, out Attribute? targetAttribute2))
+		{
+			result.Add(CreateCustomModifierEvaluatedData(
+				targetAttribute2,
+				ModifierOperation.FlatBonus,
+				sourceAttribute1value + sourceAttribute2value));
+		}
 
-		result[2] = CreateCustomModifierEvaluatedData(
-			SourceAttribute3.GetAttribute(effect.Ownership.Source),
-			ModifierOperation.FlatBonus,
-			-1);
+		if (SourceAttribute3.TryGetAttribute(effect.Ownership.Source, out Attribute? sourceAttribute3))
+		{
+			result.Add(CreateCustomModifierEvaluatedData(
+				sourceAttribute3,
+				ModifierOperation.FlatBonus,
+				-1));
+		}
 
 		_internalCount++;
 		CustomCueParameters["custom.parameter"] = _internalCount * (sourceAttribute1value + sourceAttribute2value);
 
-		return result;
+		return [.. result];
 	}
 }
