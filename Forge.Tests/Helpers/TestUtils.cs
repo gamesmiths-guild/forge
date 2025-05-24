@@ -2,15 +2,15 @@
 
 using FluentAssertions;
 using Gamesmiths.Forge.Core;
-using Gamesmiths.Forge.GameplayEffects;
-using Gamesmiths.Forge.GameplayTags;
+using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
 
 public static class TestUtils
 {
 	public static void TestStackData(
-		IEnumerable<GameplayEffectStackInstanceData> stackData,
+		IEnumerable<EffectStackInstanceData> stackData,
 		int expectedStackDataCount,
 		object[] expectedStackData,
 		TestEntity entity1,
@@ -55,18 +55,18 @@ public static class TestUtils
 		target.Attributes[targetAttribute].Overflow.Should().Be(expectedResults[3]);
 	}
 
-	public static HashSet<GameplayTag> StringToGameplayTag(GameplayTagsManager gameplayTagsManager, string[]? keys)
+	public static HashSet<Tag> StringToTag(TagsManager tagsManager, string[]? keys)
 	{
 		if (keys is null)
 		{
 			return [];
 		}
 
-		var tags = new HashSet<GameplayTag>();
+		var tags = new HashSet<Tag>();
 
 		foreach (var key in keys)
 		{
-			tags.Add(GameplayTag.RequestTag(gameplayTagsManager, key));
+			tags.Add(Tag.RequestTag(tagsManager, key));
 		}
 
 		return tags;

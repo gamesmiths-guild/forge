@@ -1,16 +1,16 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
-using Gamesmiths.Forge.GameplayEffects;
-using Gamesmiths.Forge.GameplayEffects.Calculator;
-using Gamesmiths.Forge.GameplayEffects.Magnitudes;
-using Gamesmiths.Forge.GameplayEffects.Modifiers;
+using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Calculator;
+using Gamesmiths.Forge.Effects.Magnitudes;
+using Gamesmiths.Forge.Effects.Modifiers;
 
 using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
 
-public class CustomTestExecutionClass : Execution
+public class CustomTestExecutionClass : CustomExecution
 {
 	private int _internalCount;
 
@@ -56,7 +56,7 @@ public class CustomTestExecutionClass : Execution
 		CustomCueParameters.Add("custom.parameter", 0);
 	}
 
-	public override ModifierEvaluatedData[] CalculateExecution(GameplayEffect effect, IForgeEntity target)
+	public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target)
 	{
 		var result = new List<ModifierEvaluatedData>();
 

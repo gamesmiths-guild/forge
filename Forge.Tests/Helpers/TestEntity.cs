@@ -1,9 +1,9 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
-using Gamesmiths.Forge.GameplayCues;
-using Gamesmiths.Forge.GameplayEffects;
-using Gamesmiths.Forge.GameplayTags;
+using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
 
@@ -13,22 +13,22 @@ public class TestEntity : IForgeEntity
 
 	public Attributes Attributes { get; }
 
-	public Forge.Core.GameplayTags GameplayTags { get; }
+	public Forge.Core.Tags Tags { get; }
 
-	public GameplayEffectsManager EffectsManager { get; }
+	public EffectsManager EffectsManager { get; }
 
-	public TestEntity(GameplayTagsManager tagsManager, GameplayCuesManager cuesManager)
+	public TestEntity(TagsManager tagsManager, CuesManager cuesManager)
 	{
 		PlayerAttributeSet = new TestAttributeSet();
-		var originalTags = new GameplayTagContainer(
+		var originalTags = new TagContainer(
 			tagsManager,
 			[
-				GameplayTag.RequestTag(tagsManager, "enemy.undead.zombie"),
-				GameplayTag.RequestTag(tagsManager, "color.green")
+				Tag.RequestTag(tagsManager, "enemy.undead.zombie"),
+				Tag.RequestTag(tagsManager, "color.green")
 			]);
 
 		EffectsManager = new(this, cuesManager);
 		Attributes = new(PlayerAttributeSet);
-		GameplayTags = new(originalTags);
+		Tags = new(originalTags);
 	}
 }

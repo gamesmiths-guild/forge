@@ -1,6 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.GameplayEffects;
+using Gamesmiths.Forge.Effects;
 
 namespace Gamesmiths.Forge.Core;
 
@@ -17,10 +17,10 @@ public interface IForgeEntity
 	/// <summary>
 	/// Gets the tags manager of this entity.
 	/// </summary>
-	GameplayTags GameplayTags { get; }
+	Tags Tags { get; }
 
 	/// <summary>
 	/// Gets the effects manager for this entity.
 	/// </summary>
-	GameplayEffectsManager EffectsManager { get; }
+	EffectsManager EffectsManager { get; }
 }

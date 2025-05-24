@@ -108,16 +108,16 @@ public abstract class AttributeSet
 	}
 
 	/// <summary>
-	/// Executes just before a Gameplay Effect execution.
+	/// Executes just before a <see cref="Effects.Effect"/> execution.
 	/// </summary>
-	protected virtual void PreGameplayEffectExecute()
+	protected virtual void PreEffectExecute()
 	{
 	}
 
 	/// <summary>
-	/// Executes just after a Gameplay Effect execution.
+	/// Executes just after a <see cref="Effects.Effect"/> execution.
 	/// </summary>
-	protected virtual void PostGameplayEffectExecute()
+	protected virtual void PostEffectExecute()
 	{
 	}
 }
