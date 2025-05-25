@@ -129,7 +129,7 @@ public sealed class CuesManager
 	{
 		EffectData effectData = effectEvaluatedData.Effect.EffectData;
 
-		Attributes targetAttributes = effectEvaluatedData.Target.Attributes;
+		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
 		if (!ShouldTriggerCue(in effectData, in targetAttributes))
 		{
 			return;
@@ -164,7 +164,7 @@ public sealed class CuesManager
 	{
 		EffectData effectData = effectEvaluatedData.Effect.EffectData;
 
-		Attributes targetAttributes = effectEvaluatedData.Target.Attributes;
+		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
 		if (!ShouldTriggerCue(in effectData, in targetAttributes))
 		{
 			return;
@@ -189,7 +189,7 @@ public sealed class CuesManager
 	{
 		EffectData effectData = effectEvaluatedData.Effect.EffectData;
 
-		Attributes targetAttributes = effectEvaluatedData.Target.Attributes;
+		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
 		if (!ShouldTriggerCue(in effectData, in targetAttributes))
 		{
 			return;
@@ -212,7 +212,7 @@ public sealed class CuesManager
 
 	private static bool ShouldTriggerCue(
 		in EffectData effectData,
-		in Attributes attributes)
+		in EntityAttributes attributes)
 	{
 		return !effectData.RequireModifierSuccessToTriggerCue || attributes.Any(x => x.PendingValueChange != 0);
 	}

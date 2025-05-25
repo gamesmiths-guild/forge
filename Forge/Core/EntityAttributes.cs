@@ -9,7 +9,7 @@ namespace Gamesmiths.Forge.Core;
 /// Container class which handles and manages all <see cref="AttributeSet"/>s and <see cref="Attribute"/>s of an entity.
 /// Attributes can be accessed with the indexer.
 /// </summary>
-public class Attributes : IEnumerable<Attribute>
+public class EntityAttributes : IEnumerable<Attribute>
 {
 	private readonly Dictionary<StringKey, Attribute> _attributes = [];
 
@@ -28,26 +28,26 @@ public class Attributes : IEnumerable<Attribute>
 	public Attribute this[StringKey key] => _attributes[key];
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="Attributes"/> class.
+	/// Initializes a new instance of the <see cref="EntityAttributes"/> class.
 	/// </summary>
-	public Attributes()
+	public EntityAttributes()
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="Attributes"/> class.
+	/// Initializes a new instance of the <see cref="EntityAttributes"/> class.
 	/// </summary>
 	/// <param name="attributeSet">An initial attribute set for initialization.</param>
-	public Attributes(AttributeSet attributeSet)
+	public EntityAttributes(AttributeSet attributeSet)
 	{
 		AddAttributeSet(attributeSet);
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="Attributes"/> class.
+	/// Initializes a new instance of the <see cref="EntityAttributes"/> class.
 	/// </summary>
 	/// <param name="attributeSets">A number of attribute sets for initialization.</param>
-	public Attributes(AttributeSet[] attributeSets)
+	public EntityAttributes(AttributeSet[] attributeSets)
 	{
 		foreach (AttributeSet attributeSet in attributeSets)
 		{
@@ -56,7 +56,7 @@ public class Attributes : IEnumerable<Attribute>
 	}
 
 	/// <summary>
-	/// Adds an attribute set to this managers's attribute sets while handling the mapping of <see cref="Attributes"/>.
+	/// Adds an attribute set to this managers's attribute sets while handling the mapping of <see cref="EntityAttributes"/>.
 	/// </summary>
 	/// <param name="attributeSet">The attribute set to be added.</param>
 	public void AddAttributeSet(AttributeSet attributeSet)

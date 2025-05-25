@@ -3,7 +3,7 @@
 namespace Gamesmiths.Forge.Core;
 
 /// <summary>
-/// Extension methods for <see cref="Attributes"/> class.
+/// Extension methods for <see cref="EntityAttributes"/> class.
 /// </summary>
 public static class AttributesExtensions
 {
@@ -17,7 +17,7 @@ public static class AttributesExtensions
 	/// <param name="attributes">The attributes container to iterate over.</param>
 	/// <returns>An enumerable of <see cref="AttributeInfo"/>, each holding the full key, attribute name, and set name.
 	/// </returns>
-	public static IEnumerable<AttributeInfo> WithKeys(this Attributes attributes)
+	public static IEnumerable<AttributeInfo> WithKeys(this EntityAttributes attributes)
 	{
 		foreach (KeyValuePair<StringKey, Attribute> entry in attributes.AttributesMap)
 		{

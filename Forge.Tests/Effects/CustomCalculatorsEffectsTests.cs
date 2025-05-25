@@ -679,9 +679,9 @@ public class CustomCalculatorsEffectsTests(
 
 	private sealed class NoAttributesEntity : IForgeEntity
 	{
-		public Attributes Attributes { get; }
+		public EntityAttributes Attributes { get; }
 
-		public Forge.Core.Tags Tags { get; }
+		public EntityTags Tags { get; }
 
 		public EffectsManager EffectsManager { get; }
 

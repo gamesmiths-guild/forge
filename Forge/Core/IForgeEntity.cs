@@ -12,12 +12,12 @@ public interface IForgeEntity
 	/// <summary>
 	/// Gets the container with all the attributes from this entity.
 	/// </summary>
-	Attributes Attributes { get; }
+	EntityAttributes Attributes { get; }
 
 	/// <summary>
 	/// Gets the tags manager of this entity.
 	/// </summary>
-	Tags Tags { get; }
+	EntityTags Tags { get; }
 
 	/// <summary>
 	/// Gets the effects manager for this entity.

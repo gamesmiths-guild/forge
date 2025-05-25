@@ -9,7 +9,7 @@ namespace Gamesmiths.Forge.Core;
 /// Provides comprehensive tag management for an entity, integrating both original and inherited tags.
 /// Tracks inherited tags with reference counts and ensures the consistency of the entity's complete tag set.
 /// </summary>
-public class Tags
+public class EntityTags
 {
 	private readonly Dictionary<Tag, int> _modifierTagCounts = [];
 
@@ -31,10 +31,10 @@ public class Tags
 	public TagContainer CombinedTags { get; }
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="Tags"/> class.
+	/// Initializes a new instance of the <see cref="EntityTags"/> class.
 	/// </summary>
 	/// <param name="baseTags">The original, immutable tags for this entity.</param>
-	public Tags(TagContainer baseTags)
+	public EntityTags(TagContainer baseTags)
 	{
 		BaseTags = baseTags;
 		CombinedTags = new TagContainer(baseTags.TagsManager);
