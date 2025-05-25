@@ -1,12 +1,12 @@
 // Copyright © Gamesmiths Guild.
 
 using System.Diagnostics;
+using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Effects.Stacking;
-using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.Effects;
 
@@ -71,7 +71,7 @@ internal sealed class ActiveEffect
 				Effect.OnLevelChanged += Effect_OnLevelChanged;
 			}
 
-			foreach (Attribute attribute in EffectEvaluatedData.AttributesToCapture)
+			foreach (EntityAttribute attribute in EffectEvaluatedData.AttributesToCapture)
 			{
 				attribute.OnValueChanged += Attribute_OnValueChanged;
 			}
@@ -107,7 +107,7 @@ internal sealed class ActiveEffect
 		{
 			StackCount = 0;
 
-			foreach (Attribute attribute in EffectEvaluatedData.AttributesToCapture)
+			foreach (EntityAttribute attribute in EffectEvaluatedData.AttributesToCapture)
 			{
 				attribute.OnValueChanged -= Attribute_OnValueChanged;
 			}
@@ -443,7 +443,7 @@ internal sealed class ActiveEffect
 		ExecutionCount++;
 	}
 
-	private void Attribute_OnValueChanged(Attribute attribute, int change)
+	private void Attribute_OnValueChanged(EntityAttribute attribute, int change)
 	{
 		// This could be optimized by re-evaluating only the modifiers with the attribute that changed.
 		ReapplyEffect(EffectEvaluatedData.Effect);

@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
-namespace Gamesmiths.Forge.Core;
+// Copyright © Gamesmiths Guild.
+namespace Gamesmiths.Forge.Attributes;
 
 /// <summary>
 /// Initializes a new instance of the <see cref="AttributeInfo"/> struct.
@@ -9,7 +10,7 @@ namespace Gamesmiths.Forge.Core;
 /// <param name="name">The simple name of the attribute.</param>
 /// <param name="setName">The name of the attribute set.</param>
 /// <param name="value">The attribute instance.</param>
-public readonly struct AttributeInfo(string fullKey, string name, string setName, Attribute value)
+public readonly struct AttributeInfo(string fullKey, string name, string setName, EntityAttribute value)
 {
 	/// <summary>
 	/// Gets the full key of the attribute (e.g. "vitalattributes.health").
@@ -29,5 +30,5 @@ public readonly struct AttributeInfo(string fullKey, string name, string setName
 	/// <summary>
 	/// Gets the attribute instance.
 	/// </summary>
-	public Attribute Value { get; } = value;
+	public EntityAttribute Value { get; } = value;
 }

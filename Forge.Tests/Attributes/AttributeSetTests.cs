@@ -1,10 +1,9 @@
 // Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
-using Gamesmiths.Forge.Core;
-using Attribute = Gamesmiths.Forge.Core.Attribute;
+using Gamesmiths.Forge.Attributes;
 
-namespace Gamesmiths.Forge.Tests.Core;
+namespace Gamesmiths.Forge.Tests.Attributes;
 
 public class AttributeSetTests
 {
@@ -14,7 +13,7 @@ public class AttributeSetTests
 	{
 		var set = new SimpleAttributeSet();
 
-		Attribute attribute = set.NonInitializedAttribute;
+		EntityAttribute attribute = set.NonInitializedAttribute;
 
 		attribute.Should().Be(null);
 	}
@@ -23,7 +22,7 @@ public class AttributeSetTests
 	public void Initialized_attribute_has_the_configured_default_values()
 	{
 		var set = new SimpleAttributeSet();
-		Attribute attribute = set.InitializedAttribute;
+		EntityAttribute attribute = set.InitializedAttribute;
 
 		attribute.BaseValue.Should().Be(5);
 		attribute.Modifier.Should().Be(0);
@@ -62,10 +61,10 @@ public class AttributeSetTests
 
 	private sealed class SimpleAttributeSet : AttributeSet
 	{
-		public Attribute InitializedAttribute { get; }
+		public EntityAttribute InitializedAttribute { get; }
 
 #pragma warning disable S3459 // Unassigned members should be removed
-		public Attribute NonInitializedAttribute { get; }
+		public EntityAttribute NonInitializedAttribute { get; }
 #pragma warning restore S3459 // Unassigned members should be removed
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor.
@@ -78,11 +77,11 @@ public class AttributeSetTests
 
 	private sealed class VitalAttributeSet : AttributeSet
 	{
-		public Attribute Vitality { get; }
+		public EntityAttribute Vitality { get; }
 
-		public Attribute MaxHealth { get; }
+		public EntityAttribute MaxHealth { get; }
 
-		public Attribute CurrentHealth { get; }
+		public EntityAttribute CurrentHealth { get; }
 
 		public VitalAttributeSet()
 		{
@@ -91,7 +90,7 @@ public class AttributeSetTests
 			CurrentHealth = InitializeAttribute(nameof(CurrentHealth), 100, 0, MaxHealth.CurrentValue);
 		}
 
-		protected override void AttributeOnValueChanged(Attribute attribute, int change)
+		protected override void AttributeOnValueChanged(EntityAttribute attribute, int change)
 		{
 			base.AttributeOnValueChanged(attribute, change);
 

@@ -1,8 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Effects.Modifiers;
-using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.Effects;
 
@@ -17,7 +16,7 @@ public readonly struct ModifierEvaluatedData
 	/// <summary>
 	/// Gets the target attribute of this modifier.
 	/// </summary>
-	public Attribute Attribute { get; }
+	public EntityAttribute Attribute { get; }
 
 	/// <summary>
 	/// Gets the type of modifier operation for this modifier.
@@ -47,7 +46,7 @@ public readonly struct ModifierEvaluatedData
 	/// <param name="magnitude">The final evaluated magnitude.</param>
 	/// <param name="channel">The final channel for this modifier.</param>
 	public ModifierEvaluatedData(
-		Attribute attribute,
+		EntityAttribute attribute,
 		ModifierOperation modifierOperation,
 		float magnitude,
 		int channel)

@@ -1,21 +1,20 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Core;
-using Attribute = Gamesmiths.Forge.Core.Attribute;
+using Gamesmiths.Forge.Attributes;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
 
 public class TestAttributeSet : AttributeSet
 {
-	public Attribute Attribute1 { get; }
+	public EntityAttribute Attribute1 { get; }
 
-	public Attribute Attribute2 { get; }
+	public EntityAttribute Attribute2 { get; }
 
-	public Attribute Attribute3 { get; }
+	public EntityAttribute Attribute3 { get; }
 
-	public Attribute Attribute5 { get; }
+	public EntityAttribute Attribute5 { get; }
 
-	public Attribute Attribute90 { get; }
+	public EntityAttribute Attribute90 { get; }
 
 	public TestAttributeSet()
 	{

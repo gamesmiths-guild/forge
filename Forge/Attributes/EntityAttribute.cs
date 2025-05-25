@@ -2,14 +2,14 @@
 
 using System.Diagnostics;
 
-namespace Gamesmiths.Forge.Core;
+namespace Gamesmiths.Forge.Attributes;
 
 /// <summary>
 /// Represents a numeric property or characteristic of a gameplay object. Attributes can be used to model  a wide
 /// variety of values such as health, strength, ammunition, resources, position, scale, bonuses, or any other measurable
 /// aspect.
 /// </summary>
-public sealed class Attribute
+public sealed class EntityAttribute
 {
 	private readonly List<ChannelData> _channels = [];
 
@@ -24,7 +24,7 @@ public sealed class Attribute
 	/// <para>And it may even trigger in case changes in the <see cref="Min"/> or <see cref="Max"/> values cause the
 	/// <see cref="CurrentValue"/> to update.</para>
 	/// </remarks>
-	public event Action<Attribute, int>? OnValueChanged;
+	public event Action<EntityAttribute, int>? OnValueChanged;
 
 	/// <summary>
 	/// Gets the base value for this attribute.
@@ -67,7 +67,7 @@ public sealed class Attribute
 
 	internal int PendingValueChange { get; private set; }
 
-	internal Attribute(
+	internal EntityAttribute(
 		int defaultValue,
 		int minValue,
 		int maxValue,

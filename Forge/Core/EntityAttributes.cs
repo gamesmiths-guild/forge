@@ -2,30 +2,31 @@
 
 using System.Collections;
 using System.Diagnostics;
+using Gamesmiths.Forge.Attributes;
 
 namespace Gamesmiths.Forge.Core;
 
 /// <summary>
-/// Container class which handles and manages all <see cref="AttributeSet"/>s and <see cref="Attribute"/>s of an entity.
+/// Container class which handles and manages all <see cref="AttributeSet"/>s and <see cref="EntityAttribute"/>s of an entity.
 /// Attributes can be accessed with the indexer.
 /// </summary>
-public class EntityAttributes : IEnumerable<Attribute>
+public class EntityAttributes : IEnumerable<EntityAttribute>
 {
-	private readonly Dictionary<StringKey, Attribute> _attributes = [];
+	private readonly Dictionary<StringKey, EntityAttribute> _attributes = [];
 
 	/// <summary>
 	/// Gets the attribute sets of this entity.
 	/// </summary>
 	public List<AttributeSet> AttributeSets { get; } = [];
 
-	internal IReadOnlyDictionary<StringKey, Attribute> AttributesMap => _attributes;
+	internal IReadOnlyDictionary<StringKey, EntityAttribute> AttributesMap => _attributes;
 
 	/// <summary>
 	/// Gets the mapping for the attributes of this container.
 	/// </summary>
 	/// <param name="key">The attribute key.</param>
 	/// <returns>The attribute for the given key.</returns>
-	public Attribute this[StringKey key] => _attributes[key];
+	public EntityAttribute this[StringKey key] => _attributes[key];
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="EntityAttributes"/> class.
@@ -65,14 +66,14 @@ public class EntityAttributes : IEnumerable<Attribute>
 
 		AttributeSets.Add(attributeSet);
 
-		foreach (KeyValuePair<StringKey, Attribute> attribute in attributeSet.AttributesMap)
+		foreach (KeyValuePair<StringKey, EntityAttribute> attribute in attributeSet.AttributesMap)
 		{
 			_attributes.Add(attribute.Key, attribute.Value);
 		}
 	}
 
 	/// <inheritdoc/>
-	public IEnumerator<Attribute> GetEnumerator()
+	public IEnumerator<EntityAttribute> GetEnumerator()
 	{
 		return _attributes.Values.GetEnumerator();
 	}
@@ -86,7 +87,7 @@ public class EntityAttributes : IEnumerable<Attribute>
 #pragma warning disable T0009 // Internal Styling Rule T0009
 	internal void ApplyPendingValueChanges()
 	{
-		foreach (Attribute attribute in _attributes.Values)
+		foreach (EntityAttribute attribute in _attributes.Values)
 		{
 			attribute.ApplyPendingValueChanges();
 		}

@@ -1,11 +1,13 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Attributes;
+
 namespace Gamesmiths.Forge.Core;
 
 /// <summary>
 /// Extension methods for <see cref="EntityAttributes"/> class.
 /// </summary>
-public static class AttributesExtensions
+public static class EntityAttributesExtensions
 {
 	/// <summary>
 	/// Returns an enumerable collection of <see cref="AttributeInfo"/> objects, each containing an attribute along with
@@ -19,7 +21,7 @@ public static class AttributesExtensions
 	/// </returns>
 	public static IEnumerable<AttributeInfo> WithKeys(this EntityAttributes attributes)
 	{
-		foreach (KeyValuePair<StringKey, Attribute> entry in attributes.AttributesMap)
+		foreach (KeyValuePair<StringKey, EntityAttribute> entry in attributes.AttributesMap)
 		{
 			// Assume full key is stored in entry.Key (e.g. "vitalattributeset.health")
 			// Split the key into set name and attribute name based on a delimiter, here using '.'.

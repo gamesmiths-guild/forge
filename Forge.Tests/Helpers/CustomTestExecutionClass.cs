@@ -1,12 +1,11 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Calculator;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
-
-using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
 
@@ -63,7 +62,7 @@ public class CustomTestExecutionClass : CustomExecution
 		var sourceAttribute1value = CaptureAttributeMagnitude(SourceAttribute1, effect, effect.Ownership.Source);
 		var sourceAttribute2value = CaptureAttributeMagnitude(SourceAttribute2, effect, effect.Ownership.Source);
 
-		if (TargetAttribute1.TryGetAttribute(target, out Attribute? targetAttribute1))
+		if (TargetAttribute1.TryGetAttribute(target, out EntityAttribute? targetAttribute1))
 		{
 			result.Add(CreateCustomModifierEvaluatedData(
 				targetAttribute1,
@@ -71,7 +70,7 @@ public class CustomTestExecutionClass : CustomExecution
 				sourceAttribute1value * sourceAttribute2value));
 		}
 
-		if (TargetAttribute2.TryGetAttribute(target, out Attribute? targetAttribute2))
+		if (TargetAttribute2.TryGetAttribute(target, out EntityAttribute? targetAttribute2))
 		{
 			result.Add(CreateCustomModifierEvaluatedData(
 				targetAttribute2,
@@ -79,7 +78,7 @@ public class CustomTestExecutionClass : CustomExecution
 				sourceAttribute1value + sourceAttribute2value));
 		}
 
-		if (SourceAttribute3.TryGetAttribute(effect.Ownership.Source, out Attribute? sourceAttribute3))
+		if (SourceAttribute3.TryGetAttribute(effect.Ownership.Source, out EntityAttribute? sourceAttribute3))
 		{
 			result.Add(CreateCustomModifierEvaluatedData(
 				sourceAttribute3,

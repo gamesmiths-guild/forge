@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Calculator;
 using Gamesmiths.Forge.Effects.Duration;
@@ -9,7 +10,6 @@ using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Effects.Stacking;
-using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.Effects;
 
@@ -62,7 +62,7 @@ public readonly struct EffectEvaluatedData
 	/// <summary>
 	/// Gets an array of the attributes to be captured by an active effect.
 	/// </summary>
-	public Attribute[] AttributesToCapture { get; }
+	public EntityAttribute[] AttributesToCapture { get; }
 
 	/// <summary>
 	/// Getsan array of custom cue parameters.
@@ -164,9 +164,9 @@ public readonly struct EffectEvaluatedData
 		return [.. modifiersEvaluatedData];
 	}
 
-	private Attribute[] EvaluateAttributesToCapture()
+	private EntityAttribute[] EvaluateAttributesToCapture()
 	{
-		var attributesToCapture = new List<Attribute>();
+		var attributesToCapture = new List<EntityAttribute>();
 
 		foreach (ModifierMagnitude modifierMagnitude in Effect.EffectData.Modifiers.Select(x => x.Magnitude))
 		{
@@ -185,7 +185,7 @@ public readonly struct EffectEvaluatedData
 					IForgeEntity? attributeSource = attributeCaptureDefinition.Source
 						== AttributeCaptureSource.Source ? Effect.Ownership.Source : Target;
 
-					if (!attributeCaptureDefinition.TryGetAttribute(attributeSource, out Attribute? attributeToCapture))
+					if (!attributeCaptureDefinition.TryGetAttribute(attributeSource, out EntityAttribute? attributeToCapture))
 					{
 						continue;
 					}
@@ -240,7 +240,7 @@ public readonly struct EffectEvaluatedData
 		return modifierMagnitude.AttributeBasedFloat.Value.BackingAttribute.Snapshot;
 	}
 
-	private Attribute[] CaptureModifierBackingAttribute(ModifierMagnitude modifierMagnitude)
+	private EntityAttribute[] CaptureModifierBackingAttribute(ModifierMagnitude modifierMagnitude)
 	{
 		if (Effect.EffectData.DurationData.Type == DurationType.Instant)
 		{
@@ -255,7 +255,7 @@ public readonly struct EffectEvaluatedData
 
 			if (TryGetBackingAttribute(
 				modifierMagnitude.AttributeBasedFloat.Value.BackingAttribute,
-				out Attribute? backingAttribute))
+				out EntityAttribute? backingAttribute))
 			{
 				return [backingAttribute];
 			}
@@ -269,12 +269,12 @@ public readonly struct EffectEvaluatedData
 				modifierMagnitude.CustomCalculationBasedFloat.HasValue,
 				"CustomCalculationBasedFloat should always have a value at this point.");
 
-			var attributeList = new List<Attribute>();
+			var attributeList = new List<EntityAttribute>();
 
 			foreach (AttributeCaptureDefinition attributeSource in
 				modifierMagnitude.CustomCalculationBasedFloat.Value.MagnitudeCalculatorClass.AttributesToCapture)
 			{
-				if (TryGetBackingAttribute(attributeSource, out Attribute? backingAttribute))
+				if (TryGetBackingAttribute(attributeSource, out EntityAttribute? backingAttribute))
 				{
 					attributeList.Add(backingAttribute);
 				}
@@ -288,7 +288,7 @@ public readonly struct EffectEvaluatedData
 
 	private bool TryGetBackingAttribute(
 		AttributeCaptureDefinition attributeSource,
-		[NotNullWhen(true)] out Attribute? backingAttribute)
+		[NotNullWhen(true)] out EntityAttribute? backingAttribute)
 	{
 		backingAttribute = null;
 

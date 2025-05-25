@@ -1,6 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
-namespace Gamesmiths.Forge.Core;
+namespace Gamesmiths.Forge.Attributes;
 
 /// <summary>
 /// Represents the data for an attribute override.

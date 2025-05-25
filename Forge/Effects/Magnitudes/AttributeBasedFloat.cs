@@ -1,8 +1,8 @@
 // Copyright © Gamesmiths Guild.
 
 using System.Diagnostics;
+using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
-using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.Effects.Magnitudes;
 
@@ -80,7 +80,7 @@ public readonly struct AttributeBasedFloat(
 	/// <returns>The calculated magnitude for this <see cref="AttributeBasedFloat"/>.</returns>
 	public readonly float CalculateMagnitude(Effect effect, IForgeEntity target, int level)
 	{
-		Attribute? attribute = null;
+		EntityAttribute? attribute = null;
 
 		switch (BackingAttribute.Source)
 		{

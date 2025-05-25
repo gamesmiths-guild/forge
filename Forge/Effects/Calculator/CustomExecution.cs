@@ -1,8 +1,8 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Modifiers;
-using Attribute = Gamesmiths.Forge.Core.Attribute;
 
 namespace Gamesmiths.Forge.Effects.Calculator;
 
@@ -28,7 +28,7 @@ public abstract class CustomExecution : CustomCalculator
 	/// <param name="channel">The channel of the modifier.</param>
 	/// <returns>A new instance of the modifier evalutad data.</returns>
 	protected static ModifierEvaluatedData CreateCustomModifierEvaluatedData(
-		Attribute attribute,
+		EntityAttribute attribute,
 		ModifierOperation operation,
 		float magnitude,
 		int channel = 0)
