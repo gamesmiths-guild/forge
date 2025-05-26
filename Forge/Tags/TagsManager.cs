@@ -467,7 +467,7 @@ public sealed class TagsManager
 			else
 			{
 				// Add .Tag and use that as full tag.
-				fullTagString.Append(CultureInfo.InvariantCulture, $".{subTags[i]}");
+				fullTagString.AppendFormat(CultureInfo.InvariantCulture, ".{0}", subTags[i]);
 				fullTagKey = fullTagString.ToString();
 			}
 

@@ -31,7 +31,12 @@ public readonly struct StringKey : IEquatable<StringKey>, IComparable<StringKey>
 	/// empty, or contain only whitespace.</param>
 	public StringKey(string key)
 	{
-		ArgumentNullException.ThrowIfNull(key);
+#pragma warning disable CA1510 // Use ArgumentNullException throw helper
+		if (key is null)
+		{
+			throw new ArgumentNullException(nameof(key));
+		}
+#pragma warning restore CA1510 // Use ArgumentNullException throw helper
 
 		// Intern and store the string in lowercase to ensure case-insensitive uniqueness.
 		_key = string.Intern(key.Trim().ToLowerInvariant());

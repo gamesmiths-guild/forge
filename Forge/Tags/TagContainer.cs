@@ -5,6 +5,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.Serialization;
 using System.Text;
+#if NETSTANDARD2_1
+using Gamesmiths.Forge.Compatibility;
+#endif
 
 namespace Gamesmiths.Forge.Tags;
 
@@ -17,7 +20,11 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 	/// <summary>
 	/// Gets the set of <see cref="Tag"/>s in this container.
 	/// </summary>
+#if NETSTANDARD2_1
+	public IReadOnlySet<Tag> Tags => new ReadOnlySetWrapper<Tag>(InternalTags);
+#else
 	public IReadOnlySet<Tag> Tags => InternalTags;
+#endif
 
 	/// <summary>
 	/// Gets a set of all parent tags, along with the current <see cref="Tag"/>.
@@ -25,7 +32,11 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 	/// <remarks>
 	/// Used to optimize parent tag lookups.
 	/// </remarks>
+#if NETSTANDARD2_1
+	public IReadOnlySet<Tag> ParentTags => new ReadOnlySetWrapper<Tag>(InternalParentTags);
+#else
 	public IReadOnlySet<Tag> ParentTags => InternalParentTags;
+#endif
 
 	/// <summary>
 	/// Gets the number of explicitly added tags.
@@ -401,8 +412,7 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 
 		foreach (Tag tag in InternalTags)
 		{
-			stringBuilder.Append(CultureInfo.InvariantCulture, $"'{tag}'")
-				.Append(", ");
+			stringBuilder.AppendFormat(CultureInfo.InvariantCulture, "'{0}', ", tag);
 		}
 
 		stringBuilder.Remove(stringBuilder.Length - 2, 2);

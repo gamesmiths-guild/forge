@@ -361,7 +361,7 @@ public readonly struct EffectEvaluatedData
 
 			customParameters = customParameters.Union(
 				modifier.Magnitude.CustomCalculationBasedFloat.Value.MagnitudeCalculatorClass.CustomCueParameters)
-				.ToDictionary();
+				.ToDictionary(x => x.Key, x => x.Value);
 		}
 
 		foreach (CustomExecution execution in Effect.EffectData.CustomExecutions)
@@ -371,7 +371,9 @@ public readonly struct EffectEvaluatedData
 				continue;
 			}
 
-			customParameters = customParameters.Union(execution.CustomCueParameters).ToDictionary();
+			customParameters = customParameters
+				.Union(execution.CustomCueParameters)
+				.ToDictionary(x => x.Key, x => x.Value);
 		}
 
 		return customParameters.Count == 0 ? null : customParameters;
