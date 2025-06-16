@@ -9,19 +9,14 @@ using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Core;
-using Gamesmiths.Forge.Tests.Cues;
 using Gamesmiths.Forge.Tests.Helpers;
-using Gamesmiths.Forge.Tests.Tags;
 
 namespace Gamesmiths.Forge.Tests.Effects;
 
-public class ChanceToApplyComponentTests(
-	TagsManagerFixture tagsManagerFixture,
-	CuesManagerFixture cuesManagerFixture)
-	: IClassFixture<TagsManagerFixture>, IClassFixture<CuesManagerFixture>
+public class ChanceToApplyComponentTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<TagsAndCuesFixture>
 {
-	private readonly TagsManager _tagsManager = tagsManagerFixture.TagsManager;
-	private readonly CuesManager _cuesManager = cuesManagerFixture.CuesManager;
+	private readonly TagsManager _tagsManager = tagsAndCuesFixture.TagsManager;
+	private readonly CuesManager _cuesManager = tagsAndCuesFixture.CuesManager;
 
 	[Theory]
 	[Trait("Instant", null)]

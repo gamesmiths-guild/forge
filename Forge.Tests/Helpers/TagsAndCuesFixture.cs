@@ -3,23 +3,59 @@
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Tags;
 
-namespace Gamesmiths.Forge.Tests.Cues;
+namespace Gamesmiths.Forge.Tests.Helpers;
 
-public class CuesManagerFixture
+public class TagsAndCuesFixture
 {
+	public TagsManager TagsManager { get; }
+
 	public CuesManager CuesManager { get; }
 
 	internal TestCue[] TestCueInstances { get; } = new TestCue[3];
 
-	public CuesManagerFixture()
+	public TagsAndCuesFixture()
 	{
+		TagsManager = new TagsManager([
+			"tag",
+			"simple",
+			"simple.tag",
+			"other.tag",
+			"enemy.undead.zombie",
+			"enemy.undead.skeleton",
+			"enemy.undead.ghoul",
+			"enemy.undead.vampire",
+			"enemy.beast.wolf",
+			"enemy.beast.wolf.gray",
+			"enemy.beast.boar",
+			"enemy.humanoid.goblin",
+			"enemy.humanoid.orc",
+			"item.consumable.potion.health",
+			"item.consumable.potion.mana",
+			"item.consumable.potion.stamina",
+			"item.consumable.food.apple",
+			"item.consumable.food.bread",
+			"item.equipment.weapon.sword",
+			"item.equipment.weapon.dagger",
+			"item.equipment.weapon.axe",
+			"color.red",
+			"color.green",
+			"color.blue",
+			"color.dark.red",
+			"color.dark.green",
+			"color.dark.blue",
+			"test.cue1",
+			"test.cue2",
+			"test.cue3"
+		]);
+
 		CuesManager = new CuesManager();
 
 		for (var i = 0; i < 3; i++)
 		{
 			var testCue = new TestCue();
-			CuesManager.RegisterCue($"Test.Cue{i + 1}", testCue);
+			CuesManager.RegisterCue(Tag.RequestTag(TagsManager, $"test.cue{i + 1}"), testCue);
 			TestCueInstances[i] = testCue;
 		}
 	}

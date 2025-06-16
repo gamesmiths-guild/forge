@@ -3,10 +3,11 @@
 using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Tags;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Tags;
 
-public class TagTests(TagsManagerFixture fixture) : IClassFixture<TagsManagerFixture>
+public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFixture>
 {
 	private readonly TagsManager _tagsManager = fixture.TagsManager;
 

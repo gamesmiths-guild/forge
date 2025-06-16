@@ -2,10 +2,11 @@
 
 using FluentAssertions;
 using Gamesmiths.Forge.Tags;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Tags;
 
-public class TagsManagerTests(TagsManagerFixture fixture) : IClassFixture<TagsManagerFixture>
+public class TagsManagerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFixture>
 {
 	public static readonly string[][] SharedTagSets = [
 		["tag"],

@@ -1,13 +1,13 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Cues;
 
 /// <summary>
 /// Configuration data for a cue.
 /// </summary>
-/// <param name="cueKey">The key for the cue.</param>
+/// <param name="cueTags">The container with all identifier tags for this cue.</param>
 /// <param name="minValue">The minimum value used for this cue's normalized magnitude calculation.</param>
 /// <param name="maxValue">The maximum value used for this cue's normalized magnitude calculation.</param>
 /// <param name="magnitudeType">The type of magnitude to be used for this cue.</param>
@@ -15,16 +15,16 @@ namespace Gamesmiths.Forge.Cues;
 /// effect level will be used instead.
 /// </param>
 public readonly struct CueData(
-	StringKey cueKey,
+	TagContainer? cueTags,
 	int minValue,
 	int maxValue,
 	CueMagnitudeType magnitudeType,
 	string? magnitudeAttribute = null)
 {
 	/// <summary>
-	/// Gets the unique identifier for this cue.
+	/// Gets a container with all the identifier tags for this cue.
 	/// </summary>
-	public StringKey CueKey { get; } = cueKey;
+	public TagContainer? CueTags { get; } = cueTags;
 
 	/// <summary>
 	/// Gets the minimum value used for this cue's normalized magnitude calculation.

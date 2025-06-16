@@ -2,10 +2,11 @@
 
 using FluentAssertions;
 using Gamesmiths.Forge.Tags;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Tags;
 
-public class TagContainerTests(TagsManagerFixture fixture) : IClassFixture<TagsManagerFixture>
+public class TagContainerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFixture>
 {
 	public enum QueryType
 	{
@@ -129,7 +130,7 @@ public class TagContainerTests(TagsManagerFixture fixture) : IClassFixture<TagsM
 		new byte[] { 0, 2, 27, 0, 7, 0 },
 		new string[] { "item.consumable.potion.health", "color.red" })]
 	[InlineData(
-		new byte[] { 0, 2, 41, 0, 39, 0 }, // 41 is invalid tag net index
+		new byte[] { 0, 2, 45, 0, 39, 0 }, // 45 is invalid tag net index
 		new string[] { "tag" })]
 	public void Container_deserializes_successfully(byte[] netIndexStream, string[] tagKeys)
 	{

@@ -15,16 +15,13 @@ using Gamesmiths.Forge.Effects.Stacking;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Core;
 using Gamesmiths.Forge.Tests.Helpers;
-using Gamesmiths.Forge.Tests.Tags;
-using static Gamesmiths.Forge.Tests.Cues.CuesManagerFixture;
-using static Gamesmiths.Forge.Tests.Cues.CuesManagerFixture.TestCue;
+
+using static Gamesmiths.Forge.Tests.Helpers.TagsAndCuesFixture;
+using static Gamesmiths.Forge.Tests.Helpers.TagsAndCuesFixture.TestCue;
 
 namespace Gamesmiths.Forge.Tests.Cues;
 
-public class CueTests(
-	TagsManagerFixture tagsManagerFixture,
-	CuesManagerFixture cuesManagerFixture)
-	: IClassFixture<TagsManagerFixture>, IClassFixture<CuesManagerFixture>
+public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<TagsAndCuesFixture>
 {
 	private enum TestCueExecutionType
 	{
@@ -33,9 +30,9 @@ public class CueTests(
 		Update = 2,
 	}
 
-	private readonly TagsManager _tagsManager = tagsManagerFixture.TagsManager;
-	private readonly CuesManager _cuesManager = cuesManagerFixture.CuesManager;
-	private readonly TestCue[] _testCues = cuesManagerFixture.TestCueInstances;
+	private readonly TagsManager _tagsManager = tagsAndCuesFixture.TagsManager;
+	private readonly CuesManager _cuesManager = tagsAndCuesFixture.CuesManager;
+	private readonly TestCue[] _testCues = tagsAndCuesFixture.TestCueInstances;
 
 	[Theory]
 	[Trait("Execute", null)]
@@ -2112,7 +2109,11 @@ public class CueTests(
 		EffectData effectData = CreateInstantEffectData(
 			CreateModifiers([new object[] { "TestAttributeSet.Attribute1", 3f }]),
 			false,
-			[new CueData("Invalid.Cue", 0, 10, CueMagnitudeType.EffectLevel)]);
+			[new CueData(
+				Tag.RequestTag(_tagsManager, "invalid.tag", false).GetSingleTagContainer(),
+				0,
+				10,
+				CueMagnitudeType.EffectLevel)]);
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
 
 		ResetCues();
@@ -2159,7 +2160,11 @@ public class CueTests(
 			new DurationData(DurationType.Instant),
 			null,
 			null,
-			cues: [new CueData("Test.Cue1", 0, 10, CueMagnitudeType.EffectLevel)]);
+			cues: [new CueData(
+				Tag.RequestTag(_tagsManager, "Test.Cue1").GetSingleTagContainer(),
+				0,
+				10,
+				CueMagnitudeType.EffectLevel)]);
 
 		var effect = new Effect(
 			effectData,
@@ -2191,7 +2196,7 @@ public class CueTests(
 			null,
 			null,
 			customExecutions: [customCalculatorClass],
-			cues: [new CueData("Test.Cue1", 0, 10, CueMagnitudeType.EffectLevel)]);
+			cues: [new CueData(Tag.RequestTag(_tagsManager, "Test.Cue1").GetSingleTagContainer(), 0, 10, CueMagnitudeType.EffectLevel)]);
 
 		var effect = new Effect(effectData, new EffectOwnership(owner, owner));
 
@@ -2223,6 +2228,36 @@ public class CueTests(
 		_testCues[0].ExecuteData.Count.Should().Be(3);
 		_testCues[0].ExecuteData.CustomParameters.Should().NotBeNull();
 		_testCues[0].ExecuteData.CustomParameters.Should().Contain("custom.parameter", 24);
+	}
+
+	[Fact]
+	[Trait("Multiple cues", null)]
+	public void Effect_triggers_multiple_cues_with_expected_results()
+	{
+		var tagContainer = new TagContainer(
+			_tagsManager,
+			[
+				Tag.RequestTag(_tagsManager, "test.cue1"),
+				Tag.RequestTag(_tagsManager, "test.cue2"),
+				Tag.RequestTag(_tagsManager, "test.cue3")
+			]);
+
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		EffectData effectData = CreateInstantEffectData(
+			CreateModifiers([new object[] { "TestAttributeSet.Attribute1", 3f }]),
+			true,
+			[new CueData(tagContainer, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1")]);
+		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
+
+		ResetCues();
+		entity.EffectsManager.ApplyEffect(effect);
+		TestCueExecutionData(
+			TestCueExecutionType.Execution,
+			[
+				new object[] { 0, 1, 3, 0.3f, false },
+				new object[] { 1, 1, 3, 0.3f, false },
+				new object[] { 2, 1, 3, 0.3f, false },
+			]);
 	}
 
 	private static EffectData CreateInstantEffectData(
@@ -2322,25 +2357,6 @@ public class CueTests(
 		cueExecutionData.CustomParameters.Should().BeNull();
 	}
 
-	private static CueData[] CreateCueDatas(object[] cueDatas)
-	{
-		var result = new CueData[cueDatas.Length];
-
-		for (var i = 0; i < cueDatas.Length; i++)
-		{
-			var cueData = (object[])cueDatas[i];
-
-			result[i] = new CueData(
-				$"Test.Cue{(int)cueData[0] + 1}",
-				(int)cueData[1],
-				(int)cueData[2],
-				(CueMagnitudeType)cueData[3],
-				cueData.Length < 5 ? null : (string)cueData[4]);
-		}
-
-		return result;
-	}
-
 	private static Modifier[] CreateModifiers(object[] modifiersData)
 	{
 		var result = new Modifier[modifiersData.Length];
@@ -2384,6 +2400,25 @@ public class CueTests(
 						new ScalableFloat((float)modifierData[3]),
 						new ScalableFloat((float)modifierData[4]),
 						new ScalableFloat((float)modifierData[5]))));
+		}
+
+		return result;
+	}
+
+	private CueData[] CreateCueDatas(object[] cueDatas)
+	{
+		var result = new CueData[cueDatas.Length];
+
+		for (var i = 0; i < cueDatas.Length; i++)
+		{
+			var cueData = (object[])cueDatas[i];
+
+			result[i] = new CueData(
+				Tag.RequestTag(_tagsManager, $"Test.Cue{(int)cueData[0] + 1}").GetSingleTagContainer(),
+				(int)cueData[1],
+				(int)cueData[2],
+				(CueMagnitudeType)cueData[3],
+				cueData.Length < 5 ? null : (string)cueData[4]);
 		}
 
 		return result;

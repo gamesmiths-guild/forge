@@ -3,6 +3,7 @@
 using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Cues;
 
@@ -11,32 +12,32 @@ namespace Gamesmiths.Forge.Cues;
 /// </summary>
 public sealed class CuesManager
 {
-	private readonly Dictionary<StringKey, HashSet<ICueHandler>> _registeredCues = [];
+	private readonly Dictionary<Tag, HashSet<ICueHandler>> _registeredCues = [];
 
 	/// <summary>
 	/// Registers a cue that can be triggered later.
 	/// </summary>
-	/// <param name="cueKey">The key for registering the cue.</param>
-	/// <param name="cue">The cue to be registered to listen for the given key.</param>
-	public void RegisterCue(StringKey cueKey, ICueHandler cue)
+	/// <param name="cueTag">The tag for registering the cue.</param>
+	/// <param name="cue">The cue to be registered to listen for the given tag.</param>
+	public void RegisterCue(Tag cueTag, ICueHandler cue)
 	{
-		if (_registeredCues.TryGetValue(cueKey, out HashSet<ICueHandler>? value))
+		if (_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? value))
 		{
 			value.Add(cue);
 			return;
 		}
 
-		_registeredCues[cueKey] = [cue];
+		_registeredCues[cueTag] = [cue];
 	}
 
 	/// <summary>
 	/// Unregisters a cue.
 	/// </summary>
-	/// <param name="cueKey">The key for the unregistered cue.</param>
+	/// <param name="cueTag">The tag for the unregistered cue.</param>
 	/// <param name="cue">The cue to be unregistered.</param>
-	public void UnregisterCue(StringKey cueKey, ICueHandler cue)
+	public void UnregisterCue(Tag cueTag, ICueHandler cue)
 	{
-		if (!_registeredCues.TryGetValue(cueKey, out HashSet<ICueHandler>? value))
+		if (!_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? value))
 		{
 			return;
 		}
@@ -45,19 +46,19 @@ public sealed class CuesManager
 
 		if (value.Count == 0)
 		{
-			_registeredCues.Remove(cueKey);
+			_registeredCues.Remove(cueTag);
 		}
 	}
 
 	/// <summary>
 	/// Executes a one-shot cue.
 	/// </summary>
-	/// <param name="cueKey">The key for the cue to be triggered.</param>
+	/// <param name="cueTag">The tag for the cue to be triggered.</param>
 	/// <param name="target">An optional target for the cue.</param>
 	/// <param name="parameters">The optional parameters for the cue.</param>>
-	public void ExecuteCue(StringKey cueKey, IForgeEntity? target, CueParameters? parameters)
+	public void ExecuteCue(Tag cueTag, IForgeEntity? target, CueParameters? parameters)
 	{
-		if (!_registeredCues.TryGetValue(cueKey, out HashSet<ICueHandler>? cues))
+		if (!_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
 		{
 			return;
 		}
@@ -71,12 +72,12 @@ public sealed class CuesManager
 	/// <summary>
 	/// Adds a persistent cue.
 	/// </summary>
-	/// <param name="cueKey">The key for the cue to be triggered.</param>
+	/// <param name="cueTag">The tag for the cue to be triggered.</param>
 	/// <param name="target">An optional target for the cue.</param>
 	/// <param name="parameters">The optional parameters for the cue.</param>>
-	public void ApplyCue(StringKey cueKey, IForgeEntity? target, CueParameters? parameters)
+	public void ApplyCue(Tag cueTag, IForgeEntity? target, CueParameters? parameters)
 	{
-		if (!_registeredCues.TryGetValue(cueKey, out HashSet<ICueHandler>? cues))
+		if (!_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
 		{
 			return;
 		}
@@ -90,12 +91,12 @@ public sealed class CuesManager
 	/// <summary>
 	/// Removes a persistent cue.
 	/// </summary>
-	/// <param name="cueKey">The key for the cue to be triggered.</param>
+	/// <param name="cueTag">The tag for the cue to be triggered.</param>
 	/// <param name="target">An optional target for the cue.</param>
 	/// <param name="interrupted">Whether this removal is the result of an interruption.</param>
-	public void RemoveCue(StringKey cueKey, IForgeEntity? target, bool interrupted)
+	public void RemoveCue(Tag cueTag, IForgeEntity? target, bool interrupted)
 	{
-		if (!_registeredCues.TryGetValue(cueKey, out HashSet<ICueHandler>? cues))
+		if (!_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
 		{
 			return;
 		}
@@ -109,12 +110,12 @@ public sealed class CuesManager
 	/// <summary>
 	/// Updates an active cue with new values.
 	/// </summary>
-	/// <param name="cueKey">The key for the cue to be triggered.</param>
+	/// <param name="cueTag">The tag for the cue to be triggered.</param>
 	/// <param name="target">An optional target for the cue.</param>
 	/// <param name="parameters">The optional parameters for the cue.</param>>
-	public void UpdateCue(StringKey cueKey, IForgeEntity? target, CueParameters? parameters)
+	public void UpdateCue(Tag cueTag, IForgeEntity? target, CueParameters? parameters)
 	{
-		if (!_registeredCues.TryGetValue(cueKey, out HashSet<ICueHandler>? cues))
+		if (!_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
 		{
 			return;
 		}
@@ -139,14 +140,22 @@ public sealed class CuesManager
 		{
 			var magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
 
-			ApplyCue(
-				cueData.CueKey,
+			if (cueData.CueTags is null)
+			{
+				continue;
+			}
+
+			foreach (Tag cueTag in cueData.CueTags)
+			{
+				ApplyCue(
+				cueTag,
 				effectEvaluatedData.Target,
 				new CueParameters(
 					magnitude,
 					cueData.NormalizedMagnitude(magnitude),
 					effectEvaluatedData.Effect.Ownership.Source,
 					effectEvaluatedData.CustomCueParameters));
+			}
 		}
 	}
 
@@ -156,7 +165,15 @@ public sealed class CuesManager
 
 		foreach (CueData cueData in effectData.Cues)
 		{
-			RemoveCue(cueData.CueKey, effectEvaluatedData.Target, interrupted);
+			if (cueData.CueTags is null)
+			{
+				continue;
+			}
+
+			foreach (Tag cueTag in cueData.CueTags)
+			{
+				RemoveCue(cueTag, effectEvaluatedData.Target, interrupted);
+			}
 		}
 	}
 
@@ -174,14 +191,22 @@ public sealed class CuesManager
 		{
 			var magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
 
-			ExecuteCue(
-				cueData.CueKey,
+			if (cueData.CueTags is null)
+			{
+				continue;
+			}
+
+			foreach (Tag cueTag in cueData.CueTags)
+			{
+				ExecuteCue(
+				cueTag,
 				effectEvaluatedData.Target,
 				new CueParameters(
 					magnitude,
 					cueData.NormalizedMagnitude(magnitude),
 					effectEvaluatedData.Effect.Ownership.Source,
 					effectEvaluatedData.CustomCueParameters));
+			}
 		}
 	}
 
@@ -199,14 +224,22 @@ public sealed class CuesManager
 		{
 			var magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
 
-			UpdateCue(
-				cueData.CueKey,
+			if (cueData.CueTags is null)
+			{
+				continue;
+			}
+
+			foreach (Tag cueTag in cueData.CueTags)
+			{
+				UpdateCue(
+				cueTag,
 				effectEvaluatedData.Target,
 				new CueParameters(
 					magnitude,
 					cueData.NormalizedMagnitude(magnitude),
 					effectEvaluatedData.Effect.Ownership.Source,
 					effectEvaluatedData.CustomCueParameters));
+			}
 		}
 	}
 

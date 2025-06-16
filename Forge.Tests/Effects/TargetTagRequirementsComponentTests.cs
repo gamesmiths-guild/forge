@@ -10,19 +10,15 @@ using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Effects.Stacking;
 using Gamesmiths.Forge.Tags;
-using Gamesmiths.Forge.Tests.Cues;
 using Gamesmiths.Forge.Tests.Helpers;
-using Gamesmiths.Forge.Tests.Tags;
 
 namespace Gamesmiths.Forge.Tests.Effects;
 
-public class TargetTagRequirementsComponentTests(
-	TagsManagerFixture tagsManagerFixture,
-	CuesManagerFixture cuesManagerFixture)
-	: IClassFixture<TagsManagerFixture>, IClassFixture<CuesManagerFixture>
+public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFixture)
+	: IClassFixture<TagsAndCuesFixture>
 {
-	private readonly TagsManager _tagsManager = tagsManagerFixture.TagsManager;
-	private readonly CuesManager _cuesManager = cuesManagerFixture.CuesManager;
+	private readonly TagsManager _tagsManager = tagsAndCueFixture.TagsManager;
+	private readonly CuesManager _cuesManager = tagsAndCueFixture.CuesManager;
 
 	[Theory]
 	[Trait("Can Apply", null)]
