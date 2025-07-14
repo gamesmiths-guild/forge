@@ -1,6 +1,6 @@
 # Attributes System
 
-The Attributes system in Forge provides a robust framework for managing numeric properties of game entities. Attributes represent any quantifiable characteristic like health, strength, movement speed, or resources.
+The Attributes system in Forge provides a robust framework for managing numeric properties of game entities. Attributes represent any quantifiable characteristic like health, strength, movement speed, or any other property that can be represented numerically.
 
 ## Core Concepts
 
@@ -125,7 +125,7 @@ Example: `(BaseAttack + WeaponDamage) * (1 + StrengthBonus) * (1 + CriticalMulti
 
 ### Creating an AttributeSet
 
-To create an AttributeSet, extend the base class and initialize attributes in the constructor:
+To create an AttributeSet, extend the base class and initialize attributes in the constructor using the provided `InitializeAttribute` method:
 
 ```csharp
 public class ResourceAttributeSet : AttributeSet
@@ -136,6 +136,7 @@ public class ResourceAttributeSet : AttributeSet
 
     public ResourceAttributeSet()
     {
+        // Must use InitializeAttribute to properly register attributes with the system
         MaxMana = InitializeAttribute(nameof(MaxMana), 100, 0, 500);
         CurrentMana = InitializeAttribute(nameof(CurrentMana), 100, 0, MaxMana.CurrentValue);
         ManaRegenRate = InitializeAttribute(nameof(ManaRegenRate), 2, 0, 50);
@@ -156,6 +157,27 @@ public class ResourceAttributeSet : AttributeSet
         }
     }
 }
+```
+
+### AttributeSet Protected Methods
+
+AttributeSet provides several protected methods to manage attributes within the set:
+
+| Method | Purpose |
+|--------|---------|
+| **InitializeAttribute** | Creates and registers a new attribute with the set |
+| **SetAttributeBaseValue** | Sets the base value of an attribute |
+| **AddToAttributeBaseValue** | Adds to the base value of an attribute |
+| **SetAttributeMinValue** | Sets the minimum value constraint |
+| **SetAttributeMaxValue** | Sets the maximum value constraint |
+| **AttributeOnValueChanged** | Override to handle attribute value changes |
+
+Example usage:
+```csharp
+// In an AttributeSet method
+SetAttributeBaseValue(Strength, 15);       // Set strength base to 15
+AddToAttributeBaseValue(CurrentHealth, -5); // Reduce health by 5
+SetAttributeMaxValue(MaxMana, 200);        // Set max mana limit to 200
 ```
 
 ### Attribute Dependencies
