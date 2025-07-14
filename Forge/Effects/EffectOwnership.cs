@@ -8,8 +8,8 @@ namespace Gamesmiths.Forge.Effects;
 /// The context of the effect, representing who caused the effect using what.
 /// </summary>
 /// <param name="owner">Who triggered the action that caused the effect.</param>
-/// <param name="effectCauser">What object or entity actually caused the effect.</param>
-public readonly struct EffectOwnership(IForgeEntity? owner, IForgeEntity? effectCauser) : IEquatable<EffectOwnership>
+/// <param name="source">What object or entity actually caused the effect.</param>
+public readonly struct EffectOwnership(IForgeEntity? owner, IForgeEntity? source) : IEquatable<EffectOwnership>
 {
 	/// <summary>
 	/// Gets the entity responsible for causing the action or event (eg. Character, NPC, Environment).
@@ -25,7 +25,7 @@ public readonly struct EffectOwnership(IForgeEntity? owner, IForgeEntity? effect
 	/// <remarks>
 	/// What caused the effect.
 	/// </remarks>
-	public IForgeEntity? Source { get; } = effectCauser;
+	public IForgeEntity? Source { get; } = source;
 
 	/// <inheritdoc/>
 	public override int GetHashCode()

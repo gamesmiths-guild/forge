@@ -90,7 +90,7 @@ public readonly struct EffectEvaluatedData
 		Duration = EvaluateDuration(effect.EffectData.DurationData);
 		Period = EvaluatePeriod(effect.EffectData.PeriodicData);
 
-		// Modifiers should be evaluated after dauration and period because it requires those already evaluated.
+		// Modifiers should be evaluated after duration and period because it requires those already evaluated.
 		ModifiersEvaluatedData = EvaluateModifiers();
 
 		CustomCueParameters = EvaluateCustomCueParameters();
