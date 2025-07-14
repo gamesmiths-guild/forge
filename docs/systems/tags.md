@@ -1,8 +1,24 @@
 # Tags System
 
-The Tags system in Forge provides a hierarchical mechanism for metadata, allowing efficient categorization and queries of game entities and systems. It's a foundational component that many other Forge systems rely on.
+The Tags system in Forge provides a hierarchical mechanism for metadata, allowing efficient categorization and queries of game entities and systems. It's a foundational component that many other Forge systems build upon.
 
 ## Core Components
+
+### StringKey
+
+At the lowest level, Forge uses `StringKey` as an optimized string representation:
+
+- Immutable, case-insensitive string wrapper
+- Uses string interning for memory optimization (identical strings share the same reference)
+- Automatically converts to lowercase for consistent comparison
+- Perfect for dictionary keys that need case-insensitive comparison
+- Provides implicit conversions to/from strings
+
+```csharp
+// StringKeys are created automatically when strings are used with the Tags system
+// The conversion handles case-insensitivity and interning automatically
+StringKey tagKey = "Enemy.Undead.Zombie";  // Stored internally as "enemy.undead.zombie"
+```
 
 ### Tag
 
@@ -12,6 +28,57 @@ A `Tag` is a string-based identifier that typically uses dot notation to define 
 // Proper way to get a tag reference
 var zombieTag = Tag.RequestTag(tagsManager, "enemy.undead.zombie");
 ```
+
+#### Common Tag Methods
+
+- **RequestTag**: Static method to get a tag from the manager
+  ```csharp
+  var tag = Tag.RequestTag(tagsManager, "enemy.undead.zombie");
+  ```
+
+- **GetSingleTagContainer**: Get a container with only this tag
+  ```csharp
+  TagContainer container = tag.GetSingleTagContainer();
+  ```
+
+- **RequestDirectParent**: Get the immediate parent tag
+  ```csharp
+  var parent = tag.RequestDirectParent(); // "enemy.undead" from "enemy.undead.zombie"
+  ```
+
+- **GetTagParents**: Get a container with this tag and all parents
+  ```csharp
+  TagContainer parents = tag.GetTagParents(); // Contains "enemy.undead.zombie", "enemy.undead", "enemy"
+  ```
+
+#### Tag Matching Methods
+
+- **MatchesTag**: Check if a tag matches or is a parent of another tag
+  ```csharp
+  // "enemy.undead.zombie" matches "enemy" and "enemy.undead" (child matches parent)
+  // "enemy" does NOT match "enemy.undead.zombie" (parent doesn't match child)
+  bool isMatch = childTag.MatchesTag(parentTag);
+  ```
+
+- **MatchesTagExact**: Check for exact tag match (no hierarchy consideration)
+  ```csharp
+  bool isExactMatch = tag1.MatchesTagExact(tag2);
+  ```
+
+- **MatchesAny**: Check if tag matches any tag in a container (considering hierarchy)
+  ```csharp
+  bool matchesAny = tag.MatchesAny(container);
+  ```
+
+- **MatchesAnyExact**: Check for exact match with any tag in a container
+  ```csharp
+  bool matchesAnyExact = tag.MatchesAnyExact(container);
+  ```
+
+- **MatchesTagDepth**: Calculate similarity between two tags (higher value = more similar)
+  ```csharp
+  int similarity = tag1.MatchesTagDepth(tag2);
+  ```
 
 ### TagsManager
 
@@ -42,6 +109,45 @@ var tagsManager = new TagsManager([
 
 **Important:** The TagsManager's tag registry should be immutable during gameplay. All tags should be registered during initialization to maintain efficiency and prevent runtime errors.
 
+#### Common TagsManager Methods
+
+- **RequestTagContainer**: Create a container from string array
+  ```csharp
+  TagContainer container = tagsManager.RequestTagContainer([
+      "enemy.undead.zombie",
+      "enemy.beast.wolf"
+  ]);
+  ```
+
+- **RequestAllTags**: Get a container with all registered tags
+  ```csharp
+  // Get all explicit tags (leaf nodes only)
+  TagContainer allTags = tagsManager.RequestAllTags(true);
+
+  // Get all tags including parent/intermediate tags
+  TagContainer absolutelyAllTags = tagsManager.RequestAllTags(false);
+  ```
+
+- **RequestTagParents**: Get a container with tag and its parents
+  ```csharp
+  TagContainer parents = tagsManager.RequestTagParents(tag);
+  ```
+
+- **RequestTagChildren**: Get a container with child tags
+  ```csharp
+  TagContainer children = tagsManager.RequestTagChildren(tag);
+  ```
+
+- **SplitTagKey**: Split tag into component parts
+  ```csharp
+  string[] parts = tagsManager.SplitTagKey(tag); // ["enemy", "undead", "zombie"]
+  ```
+
+- **GetNumberOfTagNodes**: Count tag depth in hierarchy
+  ```csharp
+  int depth = tagsManager.GetNumberOfTagNodes(tag); // 3 for "enemy.undead.zombie"
+  ```
+
 #### Single Instance vs. Multiple Managers
 
 Typically, you should use **one TagsManager** for your entire game. This enables:
@@ -56,7 +162,7 @@ While not strictly prohibited, using multiple TagsManagers means:
 
 ### TagContainer
 
-`TagContainer` stores and manages a collection of tags on entities or components:
+`TagContainer` stores and manages a collection of tags on entities or components. It handles both explicitly added tags and their implicit parent tags:
 
 ```csharp
 // Create a tag container
@@ -68,6 +174,55 @@ container.AddTag(Tag.RequestTag(tagsManager, "enemy.undead.zombie"));
 // Check if a tag exists in the container
 bool isZombie = container.HasTag(Tag.RequestTag(tagsManager, "enemy.undead.zombie"));
 ```
+
+#### Common TagContainer Methods
+
+- **HasTag**: Check if container has tag (or parent of that tag)
+  ```csharp
+  // container with "enemy.undead.zombie" will return true for "enemy"
+  bool hasTag = container.HasTag(enemyTag);
+  ```
+
+- **HasTagExact**: Check for exact tag match only (no hierarchy)
+  ```csharp
+  // container with "enemy.undead.zombie" will return false for "enemy"
+  bool hasExact = container.HasTagExact(enemyTag);
+  ```
+
+- **HasAny**: Check if container has any tags from another container
+  ```csharp
+  bool hasAny = container1.HasAny(container2);
+  ```
+
+- **HasAnyExact**: Check if container has any exact tags from another container
+  ```csharp
+  bool hasAnyExact = container1.HasAnyExact(container2);
+  ```
+
+- **HasAll**: Check if container has all tags from another container
+  ```csharp
+  bool hasAll = container1.HasAll(container2);
+  ```
+
+- **HasAllExact**: Check if container has all exact tags from another container
+  ```csharp
+  bool hasAllExact = container1.HasAllExact(container2);
+  ```
+
+- **Filter**: Return subset of container matching another container
+  ```csharp
+  TagContainer filtered = container1.Filter(container2);
+  ```
+
+- **FilterExact**: Return subset with exact matches to another container
+  ```csharp
+  TagContainer filteredExact = container1.FilterExact(container2);
+  ```
+
+- **MatchesQuery**: Check if container satisfies a TagQuery
+  ```csharp
+  bool matches = container.MatchesQuery(query);
+  ```
 
 ### EntityTags
 
