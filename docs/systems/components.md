@@ -209,66 +209,6 @@ Components can be used to implement complex systems that integrate with your gam
 - **Attribute Threshold Monitoring**: Components that trigger effects when attributes cross thresholds
 - **AI Behavior Modification**: Components that adjust AI behavior when effects are active
 
-## TagRequirements System
-
-The `TagRequirements` struct is a powerful mechanism for evaluating tag conditions on entities, used extensively by the TargetTagRequirementsEffectComponent.
-
-```csharp
-public readonly struct TagRequirements(
-    TagContainer requiredTags,
-    TagContainer ignoreTags,
-    TagQuery tagQuery)
-{
-    // Implementation...
-}
-```
-
-### Components of TagRequirements
-
-- **RequireTags**: Tags that must all be present on the target
-- **IgnoreTags**: Tags that must not be present on the target (any match will fail)
-- **TagQuery**: A complex query expression for advanced tag matching
-
-### How TagRequirements Are Evaluated
-
-```csharp
-public bool RequirementsMet(in TagContainer targetContainer)
-{
-    var hasRequired = targetContainer.HasAll(RequireTags);
-    var hasIgnored = targetContainer.HasAny(IgnoreTags);
-    var matchQuery = TagQuery.IsEmpty || TagQuery.Matches(targetContainer);
-
-    return hasRequired && !hasIgnored && matchQuery;
-}
-```
-
-For requirements to be met:
-1. Target must have ALL required tags
-2. Target must have NONE of the ignore tags
-3. Target must match the tag query (if one is provided)
-
-### Tag Query Usage
-
-Tag queries allow for more complex expressions than simple "has all" and "has none" logic:
-
-```csharp
-// Create a query that matches if:
-// (Target has EITHER "Fire" OR "Ice") AND (Target does NOT have both "Water" AND "Metal")
-var query = new TagQuery();
-query.Build(new TagQueryExpression(tagsManager)
-    .AllExpressionsMatch()
-        .AddExpression(new TagQueryExpression(tagsManager)
-            .AnyTagsMatch()
-                .AddTag("Fire")
-                .AddTag("Ice"))
-        .AddExpression(new TagQueryExpression(tagsManager)
-            .NoExpressionsMatch()
-                .AddExpression(new TagQueryExpression(tagsManager)
-                    .AllTagsMatch()
-                        .AddTag("Water")
-                        .AddTag("Metal"))));
-```
-
 ## Built-in Components
 
 Forge includes several built-in components that demonstrate the component system's capabilities and provide ready-to-use functionality.
@@ -284,7 +224,29 @@ public class ChanceToApplyEffectComponent(IRandom randomProvider, ScalableFloat 
 }
 ```
 
-Usage example:
+#### The IRandom Interface
+
+The `ChanceToApplyEffectComponent` uses the `IRandom` interface to generate random values for determining if an effect should be applied:
+
+```csharp
+public interface IRandom
+{
+    int NextInt();
+    int NextInt(int maxValue);
+    int NextInt(int minValue, int maxValue);
+    float NextSingle();
+    double NextDouble();
+    long NextInt64();
+    long NextInt64(long maxValue);
+    long NextInt64(long minValue, long maxValue);
+    void NextBytes(byte[] buffer);
+    void NextBytes(Span<byte> buffer);
+}
+```
+
+The component specifically uses the `NextSingle()` method, which returns a random floating-point number between 0.0 (inclusive) and 1.0 (exclusive). This allows for a consistent random number generation implementation that can be swapped or mocked for testing.
+
+#### Usage Example
 
 ```csharp
 // Create a "Stun" effect with a 25% chance to apply
@@ -389,7 +351,67 @@ public class TargetTagRequirementsEffectComponent(
 }
 ```
 
-Usage example:
+#### The TagRequirements System
+
+The `TagRequirements` struct is a powerful mechanism for evaluating tag conditions on entities, used by the TargetTagRequirementsEffectComponent.
+
+```csharp
+public readonly struct TagRequirements(
+    TagContainer requiredTags,
+    TagContainer ignoreTags,
+    TagQuery tagQuery)
+{
+    // Implementation...
+}
+```
+
+##### Components of TagRequirements
+
+- **RequireTags**: Tags that must all be present on the target
+- **IgnoreTags**: Tags that must not be present on the target (any match will fail)
+- **TagQuery**: A complex query expression for advanced tag matching
+
+##### How TagRequirements Are Evaluated
+
+```csharp
+public bool RequirementsMet(in TagContainer targetContainer)
+{
+    var hasRequired = targetContainer.HasAll(RequireTags);
+    var hasIgnored = targetContainer.HasAny(IgnoreTags);
+    var matchQuery = TagQuery.IsEmpty || TagQuery.Matches(targetContainer);
+
+    return hasRequired && !hasIgnored && matchQuery;
+}
+```
+
+For requirements to be met:
+1. Target must have ALL required tags
+2. Target must have NONE of the ignore tags
+3. Target must match the tag query (if one is provided)
+
+##### Tag Query Usage
+
+Tag queries allow for more complex expressions than simple "has all" and "has none" logic:
+
+```csharp
+// Create a query that matches if:
+// (Target has EITHER "Fire" OR "Ice") AND (Target does NOT have both "Water" AND "Metal")
+var query = new TagQuery();
+query.Build(new TagQueryExpression(tagsManager)
+    .AllExpressionsMatch()
+        .AddExpression(new TagQueryExpression(tagsManager)
+            .AnyTagsMatch()
+                .AddTag("Fire")
+                .AddTag("Ice"))
+        .AddExpression(new TagQueryExpression(tagsManager)
+            .NoExpressionsMatch()
+                .AddExpression(new TagQueryExpression(tagsManager)
+                    .AllTagsMatch()
+                        .AddTag("Water")
+                        .AddTag("Metal"))));
+```
+
+#### Usage Example
 
 ```csharp
 // Create a "Frost" effect that only applies to targets with the "Wet" tag,
