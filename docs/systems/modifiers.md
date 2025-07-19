@@ -40,16 +40,28 @@ public enum ModifierOperation : byte
 - **FlatBonus**: Adds (or subtracts) a fixed value to the attribute
   - Example: `+5 Attack Power`, `-10 Movement Speed`
   - Calculation: `CurrentValue + FlatValue`
+  - Multiple flat bonuses are summed together before being applied
 
-- **PercentBonus**: Adds (or subtracts) a percentage of the base value to the attribute
+- **PercentBonus**: Adds (or subtracts) a percentage modifier that is applied after flat bonuses
   - Example: `+25% Critical Chance`, `-15% Damage Taken`
-  - Calculation: `CurrentValue + (BaseValue * PercentValue)`
-  - To reduce a value by a percentage, use a negative percentage (e.g., -34% for a final value of 66%)
-  - Note: This is not a multiplicative bonus, which helps avoid confusing scaling with positive and negative values
+  - Formula: `(BaseValue + FlatBonus) * (1 + PercentBonus)`
+  - Multiple percentage bonuses are added together, not multiplied
+  - Example: A +10% and a +20% bonus results in a total of +30% (1 + 0.1 + 0.2 = 1.3)
+  - Example: A +10% and a -5% modifier results in a +5% total bonus (1 + 0.1 - 0.05 = 1.05)
+  - This additive approach ensures consistent results regardless of application order
 
 - **Override**: Replaces the attribute's value entirely
   - Example: `Set Max Health to 100`
   - Calculation: `NewValue` (ignores current value entirely)
+  - Overrides from higher priority sources take precedence
+
+## Evaluation Order
+
+When calculating the final value of an attribute:
+
+1. First, overrides are checked (highest priority override wins)
+2. If no override exists, flat bonuses are summed and applied
+3. Finally, percentage modifiers are applied to the result
 
 ## Magnitude Calculation
 
@@ -271,14 +283,14 @@ var missingHealthDamage = new Modifier(
     new ModifierMagnitude(
         MagnitudeCalculationType.CustomCalculatorClass,
         customCalculationBasedFloat: new CustomCalculationBasedFloat(
-            new MissingHealthDamageCalculator(),   // Your custom calculator class
-            new ScalableFloat(1.0f),               // Coefficient: full damage
-            new ScalableFloat(0),                  // PreMultiply: no additional value
-            new ScalableFloat(0),                  // PostMultiply: no additional value
-            new Curve([                            // LookupCurve: exponential scaling
-                new CurveKey(0.0f, 1.0f),          // At 0% missing health: normal damage
-                new CurveKey(0.5f, 1.5f),          // At 50% missing health: 1.5x damage
-                new CurveKey(1.0f, 3.0f)           // At 100% missing health: 3x damage
+            new MissingHealthDamageCalculator(),    // Your custom calculator class
+            new ScalableFloat(1.0f),                // Coefficient: full damage
+            new ScalableFloat(0),                   // PreMultiply: no additional value
+            new ScalableFloat(0),                   // PostMultiply: no additional value
+            new Curve([                             // LookupCurve: exponential scaling
+                new CurveKey(0.0f, 1.0f),           // At 0% missing health: normal damage
+                new CurveKey(0.5f, 1.5f),           // At 50% missing health: 1.5x damage
+                new CurveKey(1.0f, 3.0f)            // At 100% missing health: 3x damage
             ])
         )
     )
@@ -324,27 +336,64 @@ Important notes about SetByCallerFloat:
 
 ## Channel System
 
-Modifiers can be applied to different "channels" of an attribute, allowing for layered calculations:
+Modifiers can be applied to different "channels" of an attribute, allowing for more complex layered calculations beyond the default order (flat bonuses then percentage modifiers).
+
+### How Channels Work
+
+Each attribute has multiple calculation channels that are processed in sequence. The attribute value flows through each channel, with the result of each channel becoming the input to the next:
+
+```
+initialValue = baseValue
+For each channel (in ascending order):
+    If channel has override:
+        value = override value
+    Else:
+        value = (value + flatModifiers) * percentModifiers
+Apply min/max clamping to final value
+```
+
+### When to Use Channels
+
+Channels are particularly useful for:
+
+1. **Creating multi-step calculations** - For example, applying base bonuses in channel 0, then applying "increased/more" bonuses in channel 1
+2. **Categorizing modifier sources** - Such as permanent bonuses in channel 0, temporary buffs in channel 1, and debuffs in channel 2
+3. **Implementing compound calculations** - Like applying percentage bonuses, then applying flat bonuses on top of that result, then applying another percentage
 
 ```csharp
-// Apply to the base channel (0)
-var baseDamage = new Modifier(
+// Example of a multi-stage calculation using channels
+// Channel 0: Apply base damage from weapon (flat)
+var weaponDamage = new Modifier(
     "CombatAttributeSet.DamageOutput",
     ModifierOperation.FlatBonus,
-    new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)),
+    new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(20)),
     channel: 0
 );
 
-// Apply to a higher channel (1)
-var bonusDamage = new Modifier(
+// Channel 1: Apply skill damage bonus (percentage)
+var skillDamageBonus = new Modifier(
     "CombatAttributeSet.DamageOutput",
     ModifierOperation.PercentBonus,
-    new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(0.25f)),
+    new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(0.5f)),
     channel: 1
 );
-```
 
-Channels are processed in order, with the results of lower channels feeding into higher ones. This enables complex calculations like "add a flat bonus, then apply percentage increases."
+// Channel 2: Apply flat bonus from passive ability (flat bonus applied AFTER percentage from channel 1)
+var passiveDamageBonus = new Modifier(
+    "CombatAttributeSet.DamageOutput",
+    ModifierOperation.FlatBonus,
+    new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)),
+    channel: 2
+);
+
+// Channel 3: Apply critical hit multiplier (percentage applied to the result of channels 0-2)
+var criticalHitMultiplier = new Modifier(
+    "CombatAttributeSet.DamageOutput",
+    ModifierOperation.PercentBonus,
+    new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(1.0f)),
+    channel: 3
+);
+```
 
 For more detailed information on how channels work and how to use them effectively, see [attributes.md](attributes.md).
 
