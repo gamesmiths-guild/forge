@@ -49,7 +49,7 @@ public readonly struct ModifierEvaluatedData
 		EntityAttribute attribute,
 		ModifierOperation modifierOperation,
 		float magnitude,
-		int channel)
+		int channel = 0)
 	{
 		Attribute = attribute;
 		ModifierOperation = modifierOperation;

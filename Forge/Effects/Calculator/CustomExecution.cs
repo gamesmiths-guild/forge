@@ -1,8 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
-using Gamesmiths.Forge.Effects.Modifiers;
 
 namespace Gamesmiths.Forge.Effects.Calculator;
 
@@ -18,21 +16,4 @@ public abstract class CustomExecution : CustomCalculator
 	/// <param name="target">The target entity to be used as context for the calculation.</param>
 	/// <returns>An array of evaluated datas for each modified attribute.</returns>
 	public abstract ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target);
-
-	/// <summary>
-	/// Creates a custom <see cref="ModifierEvaluatedData"/> with the given parameters.
-	/// </summary>
-	/// <param name="attribute">The attribute to be modified.</param>
-	/// <param name="operation">Which operation to apply.</param>
-	/// <param name="magnitude">The magnitude of the modifier.</param>
-	/// <param name="channel">The channel of the modifier.</param>
-	/// <returns>A new instance of the modifier evalutad data.</returns>
-	protected static ModifierEvaluatedData CreateCustomModifierEvaluatedData(
-		EntityAttribute attribute,
-		ModifierOperation operation,
-		float magnitude,
-		int channel = 0)
-	{
-		return new ModifierEvaluatedData(attribute, operation, magnitude, channel);
-	}
 }

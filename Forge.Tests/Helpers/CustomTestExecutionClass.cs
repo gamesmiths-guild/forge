@@ -64,7 +64,7 @@ public class CustomTestExecutionClass : CustomExecution
 
 		if (TargetAttribute1.TryGetAttribute(target, out EntityAttribute? targetAttribute1))
 		{
-			result.Add(CreateCustomModifierEvaluatedData(
+			result.Add(new ModifierEvaluatedData(
 				targetAttribute1,
 				ModifierOperation.FlatBonus,
 				sourceAttribute1value * sourceAttribute2value));
@@ -72,7 +72,7 @@ public class CustomTestExecutionClass : CustomExecution
 
 		if (TargetAttribute2.TryGetAttribute(target, out EntityAttribute? targetAttribute2))
 		{
-			result.Add(CreateCustomModifierEvaluatedData(
+			result.Add(new ModifierEvaluatedData(
 				targetAttribute2,
 				ModifierOperation.FlatBonus,
 				sourceAttribute1value + sourceAttribute2value));
@@ -80,7 +80,7 @@ public class CustomTestExecutionClass : CustomExecution
 
 		if (SourceAttribute3.TryGetAttribute(effect.Ownership.Source, out EntityAttribute? sourceAttribute3))
 		{
-			result.Add(CreateCustomModifierEvaluatedData(
+			result.Add(new ModifierEvaluatedData(
 				sourceAttribute3,
 				ModifierOperation.FlatBonus,
 				-1));
