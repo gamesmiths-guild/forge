@@ -297,7 +297,7 @@ var missingHealthDamage = new Modifier(
 );
 ```
 
-For detailed information on implementing custom calculators, see [calculators.md](calculators.md).
+For detailed information on implementing custom calculators, see [Custom Calculators System](calculators.md).
 
 ### SetByCallerFloat
 
@@ -395,7 +395,7 @@ var criticalHitMultiplier = new Modifier(
 );
 ```
 
-For more detailed information on how channels work and how to use them effectively, see [attributes.md](attributes.md).
+For more detailed information on how channels work and how to use them effectively, see [Attributes System](attributes.md).
 
 ## Common Modifier Patterns
 

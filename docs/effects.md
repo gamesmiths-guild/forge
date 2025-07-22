@@ -517,7 +517,7 @@ var executionBasedEffectData = new EffectData(
 - Status effect management (dispelling, transforming)
 - Conditional effects with complex logic
 
-For more details on custom executions, see [Effect Executions System](executions.md).
+For more details on custom executions, see [Custom Calculators System](calculators.md).
 
 ### Cue Configurations
 
