@@ -49,6 +49,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
@@ -60,10 +61,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
 							new ScalableFloat(postMultiplyAdditiveValue))))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -105,6 +103,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
@@ -123,10 +122,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 									new CurveKey(8, 2),
 									new CurveKey(11, 1),
 								]))))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -272,6 +268,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var effectData = new EffectData(
 			"Test Effect",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -283,13 +280,11 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
 							new ScalableFloat(postMultiplyAdditiveValue))))
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var effectData2 = new EffectData(
 			"Backing Attribute Effect",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					customMagnitudeCalculatorAttribute,
@@ -297,10 +292,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(effect2Magnitude)))
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -341,10 +333,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var effectData = new EffectData(
 			"Test Effect",
-			[],
 			new DurationData(DurationType.Instant),
-			null,
-			null,
 			customExecutions:
 			[
 				customCalculatorClass
@@ -383,10 +372,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var effectData = new EffectData(
 			"Test Effect",
-			[],
 			new DurationData(DurationType.Infinite),
-			null,
-			null,
 			customExecutions:
 			[
 				customCalculatorClass
@@ -394,6 +380,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var effectData2 = new EffectData(
 			"Backing Attribute Effect",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					"TestAttributeSet.Attribute3",
@@ -401,13 +388,11 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(1)))
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var effectData3 = new EffectData(
 			"Backing Attribute Effect",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 						"TestAttributeSet.Attribute5",
@@ -415,10 +400,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 						new ModifierMagnitude(
 							MagnitudeCalculationType.ScalableFloat,
 							new ScalableFloat(2)))
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -478,10 +460,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var effectData = new EffectData(
 			"Test Effect",
-			[],
 			new DurationData(DurationType.Instant),
-			null,
-			null,
 			customExecutions:
 			[
 				customCalculatorClass
@@ -511,10 +490,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var effectData = new EffectData(
 			"Test Effect",
-			[],
 			new DurationData(DurationType.Instant),
-			null,
-			null,
 			customExecutions:
 			[
 				customCalculatorClass
@@ -550,10 +526,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var effectData = new EffectData(
 			"Test Effect",
-			[],
 			new DurationData(DurationType.Instant),
-			null,
-			null,
 			customExecutions:
 			[
 				customCalculatorClass
@@ -588,6 +561,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					"TestAttributeSet.Attribute1",
@@ -599,10 +573,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 							new ScalableFloat(1),
 							new ScalableFloat(0),
 							new ScalableFloat(0))))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -623,10 +594,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var effectData = new EffectData(
 			"Test Effect",
-			[],
 			new DurationData(DurationType.Instant),
-			null,
-			null,
 			customExecutions:
 			[
 				customCalculatorClass

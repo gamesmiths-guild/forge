@@ -82,8 +82,8 @@ public readonly struct EffectData : IEquatable<EffectData>
 	/// Initializes a new instance of the <see cref="EffectData"/> struct.
 	/// </summary>
 	/// <param name="name">The name of this effect.</param>
-	/// <param name="modifiers">The list of modifiers for this effect.</param>
 	/// <param name="durationData">The duration data for this effect.</param>
+	/// <param name="modifiers">The list of modifiers for this effect.</param>
 	/// <param name="stackingData">The stacking data for this effect, if it's stackable.</param>
 	/// <param name="periodicData">The periodic data for this effect, if it's periodic.</param>
 	/// <param name="snapshopLevel">Whether or not this effect snapshots the level at the momment of creation.
@@ -96,10 +96,10 @@ public readonly struct EffectData : IEquatable<EffectData>
 	/// <param name="cues">The cues associated with this effect.</param>
 	public EffectData(
 		string name,
-		Modifier[] modifiers,
 		DurationData durationData,
-		StackingData? stackingData,
-		PeriodicData? periodicData,
+		Modifier[]? modifiers = null,
+		StackingData? stackingData = null,
+		PeriodicData? periodicData = null,
 		bool snapshopLevel = true,
 		IEffectComponent[]? effectComponents = null,
 		bool requireModifierSuccessToTriggerCue = false,
@@ -191,7 +191,7 @@ public readonly struct EffectData : IEquatable<EffectData>
 			$"Both {nameof(PeriodicData)} and {nameof(StackApplicationResetPeriodPolicy)} must be either defined or undefined.");
 
 		Debug.Assert(
-			!(durationData.Type == DurationType.Instant && Array.Exists(
+			!(durationData.Type == DurationType.Instant && modifiers is not null && Array.Exists(
 				modifiers,
 				x => x.Magnitude.MagnitudeCalculationType == MagnitudeCalculationType.AttributeBased
 					&& x.Magnitude.AttributeBasedFloat.HasValue
@@ -210,8 +210,8 @@ public readonly struct EffectData : IEquatable<EffectData>
 			$"Instant effects cannot apply tags from the {nameof(ModifierTagsEffectComponent)}.");
 
 		Name = name;
-		Modifiers = modifiers;
 		DurationData = durationData;
+		Modifiers = modifiers ?? [];
 		StackingData = stackingData;
 		PeriodicData = periodicData;
 		SnapshopLevel = snapshopLevel;

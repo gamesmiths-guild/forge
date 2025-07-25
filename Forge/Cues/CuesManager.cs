@@ -163,14 +163,14 @@ public sealed class CuesManager
 	{
 		EffectData effectData = effectEvaluatedData.Effect.EffectData;
 
-		foreach (CueData cueData in effectData.Cues)
+		foreach (TagContainer? cueTags in effectData.Cues.Select(x => x.CueTags))
 		{
-			if (cueData.CueTags is null)
+			if (cueTags is null)
 			{
 				continue;
 			}
 
-			foreach (Tag cueTag in cueData.CueTags)
+			foreach (Tag cueTag in cueTags)
 			{
 				RemoveCue(cueTag, effectEvaluatedData.Target, interrupted);
 			}

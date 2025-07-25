@@ -2145,6 +2145,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					"TestAttributeSet.Attribute1",
@@ -2157,9 +2158,6 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 							new ScalableFloat(0),
 							new ScalableFloat(0))))
 			],
-			new DurationData(DurationType.Instant),
-			null,
-			null,
 			cues: [new CueData(
 				Tag.RequestTag(_tagsManager, "Test.Cue1").GetSingleTagContainer(),
 				0,
@@ -2191,10 +2189,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 
 		var effectData = new EffectData(
 			"Test Effect",
-			[],
 			new DurationData(DurationType.Instant),
-			null,
-			null,
 			customExecutions: [customCalculatorClass],
 			cues: [new CueData(Tag.RequestTag(_tagsManager, "Test.Cue1").GetSingleTagContainer(), 0, 10, CueMagnitudeType.EffectLevel)]);
 
@@ -2267,10 +2262,8 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	{
 		return new EffectData(
 			"Instant Effect",
-			modifiers,
 			new DurationData(DurationType.Instant),
-			null,
-			null,
+			modifiers,
 			requireModifierSuccessToTriggerCue: requireModifierSuccessToTriggerCue,
 			cues: cues);
 	}
@@ -2283,10 +2276,8 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	{
 		return new EffectData(
 			"Infinite Effect",
-			modifiers,
 			new DurationData(DurationType.Infinite),
-			null,
-			null,
+			modifiers,
 			snapshopLevel: snapshotLevel,
 			requireModifierSuccessToTriggerCue: requireModifierSuccessToTriggerCue,
 			cues: cues);
@@ -2302,10 +2293,9 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	{
 		return new EffectData(
 			"Infinite Effect",
-			modifiers,
 			new DurationData(DurationType.HasDuration, new ScalableFloat(duration)),
-			null,
-			new PeriodicData(
+			modifiers,
+			periodicData: new PeriodicData(
 				new ScalableFloat(period),
 				executeOnApplication,
 				PeriodInhibitionRemovedPolicy.ResetPeriod),
@@ -2324,8 +2314,8 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	{
 		return new EffectData(
 			"Infinite Effect",
-			modifiers,
 			new DurationData(DurationType.HasDuration, new ScalableFloat(duration)),
+			modifiers,
 			new StackingData(
 				new ScalableInt(stackLimit),
 				new ScalableInt(initialStack),
@@ -2338,7 +2328,6 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 				levelOverridePolicy: LevelComparison.Lower | LevelComparison.Equal | LevelComparison.Higher,
 				levelOverrideStackCountPolicy: StackLevelOverrideStackCountPolicy.IncreaseStacks,
 				applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication),
-			null,
 			snapshopLevel: false,
 			requireModifierSuccessToTriggerCue: requireModifierSuccessToTriggerCue,
 			suppressStackingCues: suppressStackingCues,

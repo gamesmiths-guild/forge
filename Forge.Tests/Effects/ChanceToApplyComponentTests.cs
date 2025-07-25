@@ -35,15 +35,13 @@ public class ChanceToApplyComponentTests(TagsAndCuesFixture tagsAndCuesFixture) 
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
 					ModifierOperation.FlatBonus,
 					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(effectMagnitude)))
 			],
-			new DurationData(DurationType.Instant),
-			null,
-			null,
 			effectComponents: [new ChanceToApplyEffectComponent(
 				new FixedRandomProvider(randomValues),
 				new ScalableFloat(chance))]);
@@ -97,15 +95,13 @@ public class ChanceToApplyComponentTests(TagsAndCuesFixture tagsAndCuesFixture) 
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
 					ModifierOperation.FlatBonus,
 					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(effectMagnitude)))
 			],
-			new DurationData(DurationType.Instant),
-			null,
-			null,
 			effectComponents: [new ChanceToApplyEffectComponent(
 				new FixedRandomProvider(randomValues),
 				new ScalableFloat(

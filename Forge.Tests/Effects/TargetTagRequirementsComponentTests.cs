@@ -345,10 +345,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		var effectData = new EffectData(
 			"Tag Requirements Effect with Query",
-			[],
 			new DurationData(DurationType.Infinite),
-			null,
-			null,
 			effectComponents:
 			[
 				new TargetTagRequirementsEffectComponent(
@@ -403,10 +400,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		var effectData = new EffectData(
 			"Tag Requirements Effect with Query",
-			[],
 			new DurationData(DurationType.Infinite),
-			null,
-			null,
 			effectComponents:
 			[
 				new TargetTagRequirementsEffectComponent(
@@ -947,9 +941,8 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		return new EffectData(
 			"Tag Requirements Effect",
-			[],
 			new DurationData(DurationType.Infinite),
-			new StackingData(
+			stackingData: new StackingData(
 				new ScalableInt(3),
 				new ScalableInt(3),
 				StackPolicy.AggregateBySource,
@@ -957,7 +950,6 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 				StackMagnitudePolicy.Sum,
 				StackOverflowPolicy.DenyApplication,
 				StackExpirationPolicy.RemoveSingleStackAndRefreshDuration),
-			null,
 			effectComponents:
 			[
 				new TargetTagRequirementsEffectComponent(
@@ -984,6 +976,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		return new EffectData(
 			"Tag Requirements Effect",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					"TestAttributeSet.Attribute1",
@@ -992,9 +985,6 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(10)))
 			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null,
 			effectComponents:
 			[
 				new TargetTagRequirementsEffectComponent(
@@ -1022,6 +1012,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		return new EffectData(
 			"Tag Requirements Effect",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					"TestAttributeSet.Attribute1",
@@ -1030,9 +1021,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(10)))
 			],
-			new DurationData(DurationType.Infinite),
-			null,
-			new PeriodicData(new ScalableFloat(1), true, periodInhibitionRemovedPolicy),
+			periodicData: new PeriodicData(new ScalableFloat(1), true, periodInhibitionRemovedPolicy),
 			effectComponents:
 			[
 				new TargetTagRequirementsEffectComponent(
@@ -1057,10 +1046,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		return new EffectData(
 			"Modifier Tags Effect",
-			[],
 			new DurationData(DurationType.Infinite),
-			null,
-			null,
 			effectComponents:
 			[
 				new ModifierTagsEffectComponent(new TagContainer(_tagsManager, tags))

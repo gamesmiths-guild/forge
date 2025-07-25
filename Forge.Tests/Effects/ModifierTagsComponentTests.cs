@@ -300,10 +300,7 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		return new EffectData(
 			"Test Effect",
-			[],
 			new DurationData(DurationType.HasDuration, new ScalableFloat(duration)),
-			null,
-			null,
 			effectComponents:
 			[
 				new ModifierTagsEffectComponent(new TagContainer(_tagsManager, tags))
@@ -316,10 +313,7 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		return new EffectData(
 			"Test Effect",
-			[],
 			new DurationData(DurationType.Infinite),
-			null,
-			null,
 			effectComponents:
 			[
 				new ModifierTagsEffectComponent(new TagContainer(_tagsManager, tags))
@@ -332,9 +326,8 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		return new EffectData(
 			"Test Effect",
-			[],
 			new DurationData(DurationType.Infinite),
-			new StackingData(
+			stackingData: new StackingData(
 				new ScalableInt(stacks),
 				new ScalableInt(stacks),
 				StackPolicy.AggregateBySource,
@@ -342,7 +335,6 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 				StackMagnitudePolicy.Sum,
 				StackOverflowPolicy.DenyApplication,
 				StackExpirationPolicy.RemoveSingleStackAndRefreshDuration),
-			null,
 			effectComponents:
 			[
 				new ModifierTagsEffectComponent(new TagContainer(_tagsManager, tags))

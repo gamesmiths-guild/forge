@@ -39,15 +39,13 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
 					ModifierOperation.FlatBonus,
 					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(effectMagnitude)))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -82,6 +80,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
@@ -94,10 +93,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
 							new ScalableFloat(postMultiplyAdditiveValue))))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -130,6 +126,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
@@ -148,10 +145,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 									new CurveKey(8, 3),
 									new CurveKey(14, 1)
 								]))))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -185,6 +179,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
@@ -192,10 +187,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(firstEffectFlatMagnitude)))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -207,6 +199,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData2 = new EffectData(
 			"Rank Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
@@ -214,10 +207,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(secondEffectPercentMagnitude)))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect2 = new Effect(
 			effectData2,
@@ -229,6 +219,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData3 = new EffectData(
 			"Rank Down",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
@@ -236,10 +227,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(thirdEffectPercentMagnitude)))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect3 = new Effect(
 			effectData3,
@@ -251,6 +239,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData4 = new EffectData(
 			"Rank Fix",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
@@ -258,10 +247,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(fourthEffectOverrideMagnitude)))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect4 = new Effect(
 			effectData4,
@@ -293,6 +279,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
@@ -304,10 +291,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 								new CurveKey(1, modifierLevel1Multiplier),
 								new CurveKey(2, modifierLevel2Multiplier),
 							]))))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -345,6 +329,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var flatBonusEffectData = new EffectData(
 			"FlatBonus",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -352,13 +337,11 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(flatMagnitude)))
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var overrideEffectData = new EffectData(
 			"Override effect",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -366,10 +349,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(overrideMagnitude)))
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var effect1 = new Effect(
 			flatBonusEffectData,
@@ -530,6 +510,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		{
 			return new EffectData(
 				effectName,
+				new DurationData(DurationType.Infinite),
 				[
 					new Modifier(
 						targetAttribute,
@@ -538,10 +519,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 							MagnitudeCalculationType.ScalableFloat,
 							new ScalableFloat(overrideMagnitude)),
 						channel)
-				],
-				new DurationData(DurationType.Infinite),
-				null,
-				null);
+				]);
 		}
 	}
 
@@ -567,6 +545,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -579,10 +558,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 								new CurveKey(2, modifierLevel2Multiplier),
 							]))))
 			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null,
-			false);
+			snapshopLevel: false);
 
 		var effect = new Effect(
 			effectData,
@@ -625,6 +601,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -637,9 +614,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 								new CurveKey(2, modifierLevel2Multiplier),
 							]))))
 			],
-			new DurationData(DurationType.Infinite),
-			null,
-			new PeriodicData(
+			periodicData: new PeriodicData(
 				new ScalableFloat(periodicBaseValue, new Curve(
 					[
 						new CurveKey(1, periodicLevel1Multiplier),
@@ -647,7 +622,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					])),
 				true,
 				PeriodInhibitionRemovedPolicy.NeverReset),
-			false);
+			snapshopLevel: false);
 
 		var effect = new Effect(
 			effectData,
@@ -687,6 +662,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -695,9 +671,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(1)))
 			],
-			new DurationData(DurationType.Infinite),
-			null,
-			new PeriodicData(
+			periodicData: new PeriodicData(
 				new ScalableFloat(periodicBaseValue, new Curve(
 					[
 						new CurveKey(1, periodicLevel1Multiplier),
@@ -705,7 +679,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					])),
 				true,
 				PeriodInhibitionRemovedPolicy.NeverReset),
-			false);
+			snapshopLevel: false);
 
 		var effect = new Effect(
 			effectData,
@@ -741,6 +715,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -748,10 +723,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(modifierBaseMagnitude)))
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -833,6 +805,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff1",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -840,10 +813,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(firstEffectModifierBaseMagnitude)))
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -855,6 +825,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData2 = new EffectData(
 			"Buff2",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -862,10 +833,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(secondEffectModifierBaseMagnitude)))
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var effect2 = new Effect(
 			effectData2,
@@ -877,6 +845,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData3 = new EffectData(
 			"Buff3",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -884,10 +853,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(thirdEffectModifierBaseMagnitude)))
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var effect3 = new Effect(
 			effectData3,
@@ -990,6 +956,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -1012,10 +979,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(thirdModifierBaseMagnitude)),
 					thirdChannel)
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -1028,16 +992,16 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 	[Theory]
 	[Trait("Duration", null)]
-	[InlineData("TestAttributeSet.Attribute1", 10, 10f, 32, 5f, new int[] { 11, 1, 10, 0 }, 5f, 1)]
-	[InlineData("TestAttributeSet.Attribute2", 10, 60f, 1, 59f, new int[] { 12, 2, 10, 0 }, 2f, 2)]
-	[InlineData("TestAttributeSet.Attribute3", 10, 0.1f, 60, 0.05f, new int[] { 13, 3, 10, 0 }, 0.05f, 3)]
-	[InlineData("TestAttributeSet.Attribute5", 10, 1f, 300, 0.5f, new int[] { 15, 5, 10, 0 }, 300f, 5)]
-	[InlineData("TestAttributeSet.Attribute90", 10, 600f, 64, 1f, new int[] { 99, 90, 10, 1 }, 599f, 90)]
-	[InlineData("Invalid.Attribute", 10, 10f, 32, 5f, new int[] { }, 5f, 0)]
+	[InlineData(10f, "TestAttributeSet.Attribute1", 10, 32, 5f, new int[] { 11, 1, 10, 0 }, 5f, 1)]
+	[InlineData(60f, "TestAttributeSet.Attribute2", 10, 1, 59f, new int[] { 12, 2, 10, 0 }, 2f, 2)]
+	[InlineData(0.1f, "TestAttributeSet.Attribute3", 10, 60, 0.05f, new int[] { 13, 3, 10, 0 }, 0.05f, 3)]
+	[InlineData(1f, "TestAttributeSet.Attribute5", 10, 300, 0.5f, new int[] { 15, 5, 10, 0 }, 300f, 5)]
+	[InlineData(600f, "TestAttributeSet.Attribute90", 10, 64, 1f, new int[] { 99, 90, 10, 1 }, 599f, 90)]
+	[InlineData(10f, "Invalid.Attribute", 10, 32, 5f, new int[] { }, 5f, 0)]
 	public void Duration_effect_modifies_attribute_modifier_value_and_expire_after_duration_time(
+		float baseDuration,
 		string targetAttribute,
 		float modifierMagnitude,
-		float baseDuration,
 		float simulatedFPS,
 		float unexpiringPeriodOfTime,
 		int[] firstExpectedResults,
@@ -1049,15 +1013,13 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.HasDuration, new ScalableFloat(baseDuration)),
 			[
 				new Modifier(
 					targetAttribute,
 					ModifierOperation.FlatBonus,
 					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(modifierMagnitude)))
-			],
-			new DurationData(DurationType.HasDuration, new ScalableFloat(baseDuration)),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -1106,15 +1068,14 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
 					ModifierOperation.FlatBonus,
 					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(modifierMagnitude)))
 			],
-			new DurationData(DurationType.Infinite),
-			null,
-			new PeriodicData(new ScalableFloat(period), true, PeriodInhibitionRemovedPolicy.NeverReset));
+			periodicData: new PeriodicData(new ScalableFloat(period), true, PeriodInhibitionRemovedPolicy.NeverReset));
 
 		var effect = new Effect(
 			effectData,
@@ -1157,15 +1118,14 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
 					ModifierOperation.FlatBonus,
 					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(modifierMagnitude)))
 			],
-			new DurationData(DurationType.Infinite),
-			null,
-			new PeriodicData(new ScalableFloat(period), true, PeriodInhibitionRemovedPolicy.NeverReset));
+			periodicData: new PeriodicData(new ScalableFloat(period), true, PeriodInhibitionRemovedPolicy.NeverReset));
 
 		var effect = new Effect(
 			effectData,
@@ -1334,6 +1294,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -1347,9 +1308,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 							new ScalableFloat(preMultiplyAdditiveValue),
 							new ScalableFloat(postMultiplyAdditiveValue))))
 			],
-			new DurationData(DurationType.Infinite),
-			null,
-			new PeriodicData(new ScalableFloat(period), true, PeriodInhibitionRemovedPolicy.NeverReset));
+			periodicData: new PeriodicData(new ScalableFloat(period), true, PeriodInhibitionRemovedPolicy.NeverReset));
 
 		var effect = new Effect(
 			effectData,
@@ -1365,6 +1324,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData2 = new EffectData(
 			"Buff2",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					backingAttribute,
@@ -1372,10 +1332,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(ownerBonusEffectMagnitude)))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect2 = new Effect(
 			effectData2,
@@ -1504,6 +1461,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -1516,10 +1474,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
 							new ScalableFloat(postMultiplyAdditiveValue))))
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -1531,6 +1486,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData2 = new EffectData(
 			"Buff2",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					backingAttribute,
@@ -1538,10 +1494,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(ownerBonusEffectMagnitude)))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect2 = new Effect(
 			effectData2,
@@ -1562,16 +1515,16 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 	[Theory]
 	[Trait("Periodic", null)]
-	[InlineData("TestAttributeSet.Attribute1", 10f, 3f, 1f, 32, 11, 1f, 21, 5f, 41)]
-	[InlineData("TestAttributeSet.Attribute2", 2f, 5f, 0.5f, 64, 4, 4.9f, 22, 5f, 24)]
-	[InlineData("TestAttributeSet.Attribute3", 3f, 60f, 30f, 128, 6, 29f, 6, 120f, 12)]
-	[InlineData("TestAttributeSet.Attribute5", 5f, 3f, 10f, 16, 10, 1f, 10, 5f, 10)]
-	[InlineData("TestAttributeSet.Attribute90", -10f, 0.5f, 0.1f, 32, 80, 1f, 30, 1f, 30)]
-	[InlineData("Invalid.Attribute", 10f, 3f, 1f, 32, 0, 1f, 0, 5f, 0)]
+	[InlineData(3f, "TestAttributeSet.Attribute1", 10f, 1f, 32, 11, 1f, 21, 5f, 41)]
+	[InlineData(5f, "TestAttributeSet.Attribute2", 2f, 0.5f, 64, 4, 4.9f, 22, 5f, 24)]
+	[InlineData(60f, "TestAttributeSet.Attribute3", 3f, 30f, 128, 6, 29f, 6, 120f, 12)]
+	[InlineData(3f, "TestAttributeSet.Attribute5", 5f, 10f, 16, 10, 1f, 10, 5f, 10)]
+	[InlineData(0.5f, "TestAttributeSet.Attribute90", -10f, 0.1f, 32, 80, 1f, 30, 1f, 30)]
+	[InlineData(3f, "Invalid.Attribute", 10f, 1f, 32, 0, 1f, 0, 5f, 0)]
 	public void Periodic_effect_modifies_base_attribute_value_and_expire_after_duration_time(
+		float duration,
 		string targetAttribute,
 		float modifierMagnitude,
-		float duration,
 		float period,
 		float simulatedFPS,
 		int firstExpectedResult,
@@ -1585,15 +1538,14 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.HasDuration, new ScalableFloat(duration)),
 			[
 				new Modifier(
 					targetAttribute,
 					ModifierOperation.FlatBonus,
 					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(modifierMagnitude)))
 			],
-			new DurationData(DurationType.HasDuration, new ScalableFloat(duration)),
-			null,
-			new PeriodicData(new ScalableFloat(period), true, PeriodInhibitionRemovedPolicy.NeverReset));
+			periodicData: new PeriodicData(new ScalableFloat(period), true, PeriodInhibitionRemovedPolicy.NeverReset));
 
 		var effect = new Effect(
 			effectData,
@@ -1778,13 +1730,13 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
 					ModifierOperation.FlatBonus,
 					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(modifierMagnitude)))
 			],
-			new DurationData(DurationType.Infinite),
 			new StackingData(
 				new ScalableInt(stackLimit),
 				new ScalableInt(initialStack),
@@ -1801,8 +1753,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 				levelOverrideStackCountPolicy,
 				applicationRefreshPolicy,
 				applicationResetPeriodPolicy,
-				executeOnSuccessfulApplication),
-			null);
+				executeOnSuccessfulApplication));
 
 		var effect = new Effect(
 			effectData,
@@ -2021,6 +1972,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -2034,7 +1986,6 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 								new CurveKey(3, modifierLevelMultipliers[2])
 							]))))
 			],
-			new DurationData(DurationType.Infinite),
 			new StackingData(
 				new ScalableInt(stackLimit),
 				new ScalableInt(initialStack),
@@ -2051,8 +2002,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 				levelOverrideStackCountPolicy,
 				applicationRefreshPolicy,
 				applicationResetPeriodPolicy,
-				executeOnSuccessfulApplication),
-			null);
+				executeOnSuccessfulApplication));
 
 		var effect = new Effect(
 			effectData,
@@ -2276,6 +2226,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		// Setup Owner2 by changing his attributes.
 		var levelUpEffectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					backingAttribute,
@@ -2283,10 +2234,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(backingAttributeMagnitudeChange)))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var levelUpEffect = new Effect(
 			levelUpEffectData,
@@ -2297,6 +2245,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		// Setup test effect.
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -2313,7 +2262,6 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 							new ScalableFloat(attributeBasedFloatFormulaParameters[1]),
 							new ScalableFloat(attributeBasedFloatFormulaParameters[2]))))
 			],
-			new DurationData(DurationType.Infinite),
 			new StackingData(
 				new ScalableInt(stackLimit),
 				new ScalableInt(initialStack),
@@ -2330,8 +2278,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 				levelOverrideStackCountPolicy,
 				applicationRefreshPolicy,
 				applicationResetPeriodPolicy,
-				executeOnSuccessfulApplication),
-			null);
+				executeOnSuccessfulApplication));
 
 		var effect = new Effect(
 			effectData,
@@ -2402,9 +2349,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		new object[] { new int[] { 3, 1, 0 } },
 		0,
 		new object[] { },
+		10f,
 		"TestAttributeSet.Attribute1",
 		1,
-		10f,
 		1f,
 		40f,
 		40f,
@@ -2437,9 +2384,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		new object[] { new int[] { 3, 1, 0 } },
 		0,
 		new object[] { },
+		10f,
 		"TestAttributeSet.Attribute1",
 		1,
-		10f,
 		1f,
 		13.54f,
 		43.54f,
@@ -2472,9 +2419,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		new object[] { new int[] { 3, 1, 0 } },
 		0,
 		new object[] { },
+		10f,
 		"TestAttributeSet.Attribute1",
 		1,
-		10f,
 		1f,
 		3.54f,
 		13.54f,
@@ -2507,9 +2454,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		new object[] { new int[] { 2, 1, 0 } },
 		0,
 		new object[] { },
+		10f,
 		"TestAttributeSet.Attribute1",
 		1,
-		10f,
 		1f,
 		9f,
 		30f,
@@ -2542,9 +2489,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		new object[] { new int[] { 2, 1, 0 } },
 		0,
 		new object[] { },
+		10f,
 		"TestAttributeSet.Attribute1",
 		1,
-		10f,
 		1f,
 		9f,
 		30f,
@@ -2577,9 +2524,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		new object[] { new int[] { 1, 1, 0 } },
 		0,
 		new object[] { },
+		10f,
 		"TestAttributeSet.Attribute1",
 		1,
-		10f,
 		1f,
 		9.5f,
 		20f,
@@ -2612,9 +2559,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		new object[] { new int[] { 1, 1, 0 } },
 		0,
 		new object[] { },
+		10f,
 		"TestAttributeSet.Attribute1",
 		1,
-		10f,
 		1f,
 		9.5f,
 		20f,
@@ -2647,9 +2594,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		new object[] { new int[] { 1, 1, 0 } },
 		0,
 		new object[] { },
+		10f,
 		"TestAttributeSet.Attribute1",
 		1,
-		10f,
 		1f,
 		9.5f,
 		20f,
@@ -2682,9 +2629,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		new object[] { new int[] { 2, 1, 0 } },
 		1,
 		new object[] { new int[] { 2, 1, 0 } },
+		10f,
 		"TestAttributeSet.Attribute1",
 		1f,
-		10f,
 		1f,
 		1.3f,
 		0.8f,
@@ -2717,9 +2664,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		new object[] { new int[] { 3, 1, 0 } },
 		0,
 		new object[] { },
+		10f,
 		"Invalid.Attribute",
 		1,
-		10f,
 		1f,
 		40f,
 		40f,
@@ -2752,9 +2699,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		new object[] { new int[] { 2, 1, 0 } },
 		1,
 		new object[] { new int[] { 2, 1, 0 } },
+		10f,
 		"Invalid.Attribute",
 		1f,
-		10f,
 		1f,
 		1.3f,
 		0.8f,
@@ -2787,9 +2734,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		object[] thirdExpectedStackData,
 		int fourthExpectedStackDataCount,
 		object[] fourthExpectedStackData,
+		float effectDutation,
 		string targetAttribute,
 		int modifierMagnitude,
-		float effectDutation,
 		float effectPeriod,
 		float firstPeriodOfTime,
 		float secondPeriodOfTime,
@@ -2815,6 +2762,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.HasDuration, new ScalableFloat(effectDutation)),
 			[
 				new Modifier(
 					targetAttribute,
@@ -2823,7 +2771,6 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(modifierMagnitude)))
 			],
-			new DurationData(DurationType.HasDuration, new ScalableFloat(effectDutation)),
 			new StackingData(
 				new ScalableInt(stackLimit),
 				new ScalableInt(initialStack),
@@ -3052,6 +2999,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -3060,7 +3008,6 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(modifierMagnitude)))
 			],
-			new DurationData(DurationType.Infinite),
 			new StackingData(
 				new ScalableInt(stackLimit),
 				new ScalableInt(initialStack),
@@ -3077,8 +3024,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 				levelOverrideStackCountPolicy,
 				applicationRefreshPolicy,
 				applicationResetPeriodPolicy,
-				executeOnSuccessfulApplication),
-			null);
+				executeOnSuccessfulApplication));
 
 		var effect = new Effect(
 			effectData,
@@ -3173,6 +3119,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
+			new DurationData(DurationType.Infinite),
 			[
 				new Modifier(
 					targetAttribute,
@@ -3180,10 +3127,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.ScalableFloat,
 						new ScalableFloat(effectMagnitude)))
-			],
-			new DurationData(DurationType.Infinite),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -3245,6 +3189,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					targetAttribute,
@@ -3252,10 +3197,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.SetByCaller,
 						setByCallerFloat: new SetByCallerFloat(setByCallerTag)))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -3278,15 +3220,13 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					"TestAttributeSet.Attribute1",
 					ModifierOperation.FlatBonus,
 					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
@@ -3305,6 +3245,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Level Up",
+			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					"TestAttributeSet.Attribute1",
@@ -3319,10 +3260,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 							new ScalableFloat(1),
 							new ScalableFloat(0),
 							new ScalableFloat(0)))),
-			],
-			new DurationData(DurationType.Instant),
-			null,
-			null);
+			]);
 
 		var effect = new Effect(
 			effectData,
