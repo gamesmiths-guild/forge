@@ -24,9 +24,14 @@ public enum CueMagnitudeType
 	AttributeValueChange = 2,
 
 	/// <summary>
+	/// The base value of the target attribute will be used as the cue's magnitude.
+	/// </summary>
+	AttributeBaseValue = 3,
+
+	/// <summary>
 	/// The current value of the target attribute will be used as the cue's magnitude.
 	/// </summary>
-	AttributeCurrentValue = 3,
+	AttributeCurrentValue = 4,
 
 	/// <summary>
 	/// The current modifier value applied to the target attribute will be used as the cue's magnitude.
@@ -35,5 +40,14 @@ public enum CueMagnitudeType
 	/// Note that even modifiers from other effects will take effect here, not just the modifiers from the effect which
 	/// triggered the cue.
 	/// </remarks>
-	AttributeModifier = 4,
+	AttributeModifier = 5,
+
+	/// <summary>
+	/// The current overflow value applied to the target attribute will be used as the cue's magnitude.
+	/// </summary>
+	/// <remarks>
+	/// Note that even overflow from other effects will take effect here, not just the modifiers from the effect which
+	/// triggered the cue.
+	/// </remarks>
+	AttributeOverflow = 6,
 }

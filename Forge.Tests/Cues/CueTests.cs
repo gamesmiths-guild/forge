@@ -309,6 +309,24 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { 0, 0, 0, 0f, false },
 			new object[] { 1, 0, 0, 0f, false },
 		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute1", 3f },
+		},
+		false,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeBaseValue, "TestAttributeSet.Attribute1" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 4, 0.4f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 2, 10, 1f, false },
+		})]
 	public void Instant_effect_triggers_execute_cues_with_expected_results(
 		object[] modifiersData,
 		bool requireModifierSuccessToTriggerCue,
@@ -453,6 +471,24 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { 0, 0, 0, 0f, false },
 			new object[] { 1, 0, 0, 0f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute90", 20f },
+		},
+		true,
+		new object[]
+		{
+			new object[] { 0, 0, 100, CueMagnitudeType.AttributeOverflow, "TestAttributeSet.Attribute90" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 11, 0.11f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 11, 0.11f, false },
 		})]
 	public void Infinite_effect_triggers_apply_and_remove_cues_with_expected_results(
 		object[] modifiersData,

@@ -234,8 +234,10 @@ public readonly struct EffectData : IEquatable<EffectData>
 
 			Debug.Assert(
 				cue.MagnitudeType == CueMagnitudeType.AttributeValueChange
+					|| cue.MagnitudeType == CueMagnitudeType.AttributeBaseValue
 					|| cue.MagnitudeType == CueMagnitudeType.AttributeCurrentValue
 					|| cue.MagnitudeType == CueMagnitudeType.AttributeModifier
+					|| cue.MagnitudeType == CueMagnitudeType.AttributeOverflow
 					|| cue.MagnitudeAttribute is null,
 				"Attribute magnitudes type must have a configured MagnitudeAttribute, and not configured otherwise.");
 		}

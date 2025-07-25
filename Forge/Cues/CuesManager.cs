@@ -274,6 +274,18 @@ public sealed class CuesManager
 
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].PendingValueChange;
 
+			case CueMagnitudeType.AttributeBaseValue:
+				Debug.Assert(
+					cueData.MagnitudeAttribute is not null,
+					"Cues with CueMagnitudeType.AttributeBaseValue must contains a configured MagnitudeAttribute.");
+
+				if (!effectEvaluatedData.Target.Attributes.ContainsAttribute(cueData.MagnitudeAttribute))
+				{
+					return 0;
+				}
+
+				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].BaseValue;
+
 			case CueMagnitudeType.AttributeCurrentValue:
 				Debug.Assert(
 					cueData.MagnitudeAttribute is not null,
@@ -297,6 +309,18 @@ public sealed class CuesManager
 				}
 
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].Modifier;
+
+			case CueMagnitudeType.AttributeOverflow:
+				Debug.Assert(
+					cueData.MagnitudeAttribute is not null,
+					"Cues with CueMagnitudeType.AttributeOverflow must contains a configured MagnitudeAttribute.");
+
+				if (!effectEvaluatedData.Target.Attributes.ContainsAttribute(cueData.MagnitudeAttribute))
+				{
+					return 0;
+				}
+
+				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].Overflow;
 		}
 	}
 }
