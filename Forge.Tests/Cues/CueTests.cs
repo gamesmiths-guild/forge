@@ -2484,23 +2484,23 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 
 	private sealed class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator
 	{
-		private readonly float _expoent;
+		private readonly float _exponent;
 
 		public AttributeCaptureDefinition Attribute1 { get; }
 
-		public CustomMagnitudeCalculator(StringKey attribute, AttributeCaptureSource captureSource, float expoent)
+		public CustomMagnitudeCalculator(StringKey attribute, AttributeCaptureSource captureSource, float exponent)
 		{
 			Attribute1 = new AttributeCaptureDefinition(attribute, captureSource, false);
 
 			AttributesToCapture.Add(Attribute1);
 
-			_expoent = expoent;
+			_exponent = exponent;
 		}
 
 		public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
 		{
-			CustomCueParameters.Add("test", _expoent);
-			return (float)Math.Pow(CaptureAttributeMagnitude(Attribute1, effect, target), _expoent);
+			CustomCueParameters.Add("test", _exponent);
+			return (float)Math.Pow(CaptureAttributeMagnitude(Attribute1, effect, target), _exponent);
 		}
 	}
 }
