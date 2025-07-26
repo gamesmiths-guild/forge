@@ -2421,7 +2421,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 							(string)modifierData[1],
 							AttributeCaptureSource.Target,
 							(bool)modifierData[2]),
-						AttributeBasedFloatCalculationType.AttributeMagnitude,
+						AttributeCalculationType.CurrentValue,
 						new ScalableFloat((float)modifierData[3]),
 						new ScalableFloat((float)modifierData[4]),
 						new ScalableFloat((float)modifierData[5]))));

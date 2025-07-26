@@ -89,7 +89,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
 							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source),
-							AttributeBasedFloatCalculationType.AttributeBaseValue,
+							AttributeCalculationType.BaseValue,
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
 							new ScalableFloat(postMultiplyAdditiveValue))))
@@ -135,7 +135,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
 							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source),
-							AttributeBasedFloatCalculationType.AttributeBaseValue,
+							AttributeCalculationType.BaseValue,
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
 							new ScalableFloat(postMultiplyAdditiveValue),
@@ -1303,7 +1303,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
 							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source, false),
-							AttributeBasedFloatCalculationType.AttributeBaseValue,
+							AttributeCalculationType.BaseValue,
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
 							new ScalableFloat(postMultiplyAdditiveValue))))
@@ -1470,7 +1470,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
 							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source, false),
-							AttributeBasedFloatCalculationType.AttributeBaseValue,
+							AttributeCalculationType.BaseValue,
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
 							new ScalableFloat(postMultiplyAdditiveValue))))
@@ -2084,7 +2084,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		"TestAttributeSet.Attribute2",
 		3,
 		AttributeCaptureSource.Source,
-		AttributeBasedFloatCalculationType.AttributeMagnitude,
+		AttributeCalculationType.CurrentValue,
 		new float[] { 1, 0, 0 },
 		5,
 		1,
@@ -2113,7 +2113,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		"Invalid.Attribute",
 		3,
 		AttributeCaptureSource.Source,
-		AttributeBasedFloatCalculationType.AttributeMagnitude,
+		AttributeCalculationType.CurrentValue,
 		new float[] { 1, 0, 0 },
 		5,
 		1,
@@ -2142,7 +2142,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		"Invalid.Attribute",
 		3,
 		AttributeCaptureSource.Source,
-		AttributeBasedFloatCalculationType.AttributeMagnitude,
+		AttributeCalculationType.CurrentValue,
 		new float[] { 1, 0, 0 },
 		5,
 		1,
@@ -2171,7 +2171,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		"TestAttributeSet.Attribute2",
 		3,
 		AttributeCaptureSource.Source,
-		AttributeBasedFloatCalculationType.AttributeMagnitude,
+		AttributeCalculationType.CurrentValue,
 		new float[] { 1, 0, 0 },
 		5,
 		1,
@@ -2200,7 +2200,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		string backingAttribute,
 		int backingAttributeMagnitudeChange,
 		AttributeCaptureSource attributeCaptureSource,
-		AttributeBasedFloatCalculationType attributeBasedFloatCalculationType,
+		AttributeCalculationType attributeBasedFloatCalculationType,
 		float[] attributeBasedFloatFormulaParameters,
 		int stackLimit,
 		int initialStack,
@@ -3256,7 +3256,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 							new AttributeCaptureDefinition(
 								"TestAttributeSet.Attribute5",
 								AttributeCaptureSource.Source),
-							AttributeBasedFloatCalculationType.AttributeMagnitude,
+							AttributeCalculationType.CurrentValue,
 							new ScalableFloat(1),
 							new ScalableFloat(0),
 							new ScalableFloat(0)))),

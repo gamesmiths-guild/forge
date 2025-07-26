@@ -5,25 +5,45 @@ namespace Gamesmiths.Forge.Effects.Magnitudes;
 /// <summary>
 /// The possible types of calculation for an <see cref="AttributeBasedFloat"/>.
 /// </summary>
-public enum AttributeBasedFloatCalculationType : byte
+public enum AttributeCalculationType : byte
 {
 	/// <summary>
 	/// Use the attribute's total magnitude (CurrentValue).
 	/// </summary>
-	AttributeMagnitude = 0,
+	CurrentValue = 0,
 
 	/// <summary>
 	/// Use the attribute's base value.
 	/// </summary>
-	AttributeBaseValue = 1,
+	BaseValue = 1,
+
+	/// <summary>
+	/// Use the attribute's modifier value.
+	/// </summary>
+	Modifier = 2,
+
+	/// <summary>
+	/// Use the attribute's overflow value.
+	/// </summary>
+	Overflow = 3,
 
 	/// <summary>
 	/// Use the attribute's valid modifier value.
 	/// </summary>
-	AttributeModifierMagnitude = 2,
+	ValidModifier = 4,
+
+	/// <summary>
+	/// Use the attribute's minimum value.
+	/// </summary>
+	Min = 5,
+
+	/// <summary>
+	/// Use the attribute's maximum value.
+	/// </summary>
+	Max = 6,
 
 	/// <summary>
 	/// Use the attribute's total magnitude calculated up to a specific channel.
 	/// </summary>
-	AttributeMagnitudeEvaluatedUpToChannel = 3,
+	MagnitudeEvaluatedUpToChannel = 7,
 }

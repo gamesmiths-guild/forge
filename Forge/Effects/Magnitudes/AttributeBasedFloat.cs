@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 
@@ -22,17 +21,17 @@ namespace Gamesmiths.Forge.Effects.Magnitudes;
 /// <param name="preMultiplyAdditiveValue">Value to be added to the magnitude before multiplying the coeficient.</param>
 /// <param name="postMultiplyAdditiveValue">Value to be added to the magnitude after multiplying the coeficient.</param>
 /// <param name="finalChannel">In case <paramref name="attributeCalculationType"/> ==
-/// <see cref="AttributeBasedFloatCalculationType.AttributeMagnitudeEvaluatedUpToChannel"/> a final channel for the
-/// calculation must be provided.</param>
+/// <see cref="AttributeCalculationType.MagnitudeEvaluatedUpToChannel"/> a final channel for the calculation
+/// must be provided.</param>
 /// <param name="lookupCurve">If provided, the final evaluated magnitude will be used as a lookup into this curve.
 /// </param>
 public readonly struct AttributeBasedFloat(
 	AttributeCaptureDefinition backingAttribute,
-	AttributeBasedFloatCalculationType attributeCalculationType,
+	AttributeCalculationType attributeCalculationType,
 	ScalableFloat coefficient,
 	ScalableFloat preMultiplyAdditiveValue,
 	ScalableFloat postMultiplyAdditiveValue,
-	int? finalChannel = null,
+	int finalChannel = 0,
 	ICurve? lookupCurve = null) : IEquatable<AttributeBasedFloat>
 {
 	/// <summary>
@@ -43,7 +42,7 @@ public readonly struct AttributeBasedFloat(
 	/// <summary>
 	/// Gets the calculation type used to capture the base magnitude.
 	/// </summary>
-	public AttributeBasedFloatCalculationType AttributeCalculationType { get; } = attributeCalculationType;
+	public AttributeCalculationType AttributeCalculationType { get; } = attributeCalculationType;
 
 	/// <summary>
 	/// Gets the coeficient to be multiplied with the captured magnitude.
@@ -62,9 +61,9 @@ public readonly struct AttributeBasedFloat(
 
 	/// <summary>
 	/// Gets a value for the final channel when capturing the magnitude using
-	/// <see cref="AttributeBasedFloatCalculationType.AttributeMagnitudeEvaluatedUpToChannel"/>.
+	/// <see cref="AttributeCalculationType.MagnitudeEvaluatedUpToChannel"/>.
 	/// </summary>
-	public int? FinalChannel { get; } = finalChannel;
+	public int FinalChannel { get; } = finalChannel;
 
 	/// <summary>
 	/// Gets the curve entry to use as a lookup instead of directly using the evaluated magnitude.
@@ -114,23 +113,36 @@ public readonly struct AttributeBasedFloat(
 
 		switch (AttributeCalculationType)
 		{
-			case AttributeBasedFloatCalculationType.AttributeMagnitude:
+			case AttributeCalculationType.CurrentValue:
 				magnitude = attribute.CurrentValue;
 				break;
 
-			case AttributeBasedFloatCalculationType.AttributeBaseValue:
+			case AttributeCalculationType.BaseValue:
 				magnitude = attribute.BaseValue;
 				break;
 
-			case AttributeBasedFloatCalculationType.AttributeModifierMagnitude:
-				magnitude = attribute.Modifier - attribute.Overflow;
+			case AttributeCalculationType.Modifier:
+				magnitude = attribute.Modifier;
 				break;
 
-			case AttributeBasedFloatCalculationType.AttributeMagnitudeEvaluatedUpToChannel:
-				Debug.Assert(
-					FinalChannel.HasValue,
-					"FinalChannel must be defined when AttributeCalculationType == AttributeMagnitudeEvaluatedUpToChannel");
-				magnitude = attribute.CalculateMagnitudeUpToChannel(FinalChannel.Value);
+			case AttributeCalculationType.Overflow:
+				magnitude = attribute.Overflow;
+				break;
+
+			case AttributeCalculationType.ValidModifier:
+				magnitude = attribute.ValidModifier;
+				break;
+
+			case AttributeCalculationType.Min:
+				magnitude = attribute.Min;
+				break;
+
+			case AttributeCalculationType.Max:
+				magnitude = attribute.Max;
+				break;
+
+			case AttributeCalculationType.MagnitudeEvaluatedUpToChannel:
+				magnitude = attribute.CalculateMagnitudeUpToChannel(FinalChannel);
 				break;
 		}
 
@@ -178,7 +190,7 @@ public readonly struct AttributeBasedFloat(
 			&& Coefficient.Equals(other.Coefficient)
 			&& PreMultiplyAdditiveValue.Equals(other.PreMultiplyAdditiveValue)
 			&& PostMultiplyAdditiveValue.Equals(other.PostMultiplyAdditiveValue)
-			&& Nullable.Equals(FinalChannel, other.FinalChannel);
+			&& Equals(FinalChannel, other.FinalChannel);
 	}
 
 	/// <summary>

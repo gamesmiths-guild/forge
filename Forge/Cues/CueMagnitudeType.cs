@@ -50,4 +50,24 @@ public enum CueMagnitudeType
 	/// triggered the cue.
 	/// </remarks>
 	AttributeOverflow = 6,
+
+	/// <summary>
+	/// The valid modifier value applied to the target attribute will be used as the cue's magnitude.
+	/// </summary>
+	AttributeValidModifier = 7,
+
+	/// <summary>
+	/// The minimum value of the target attribute will be used as the cue's magnitude.
+	/// </summary>
+	AttributeMin = 8,
+
+	/// <summary>
+	/// The maximum value of the target attribute will be used as the cue's magnitude.
+	/// </summary>
+	AttributeMax = 9,
+
+	/// <summary>
+	/// The magnitude of the target attribute evaluated up to a specific channel will be used as the cue's magnitude.
+	/// </summary>
+	AttributeMagnitudeEvaluatedUpToChannel = 10,
 }

@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Magnitudes;
 
@@ -26,11 +27,17 @@ public abstract class CustomCalculator
 	/// <param name="capturedAttribute">Definition for the attribute to be captured.</param>
 	/// <param name="effect">The effect which makes use of this custom calculator.</param>
 	/// <param name="target">The target of the effect.</param>
+	/// <param name="calculationType">Which type of calculation to use to capture the magnitude.</param>
+	/// <param name="finalChannel">In case <paramref name="calculationType"/> ==
+	/// <see cref="AttributeCalculationType.MagnitudeEvaluatedUpToChannel"/> a final channel for the calculation
+	/// must be provided.</param>
 	/// <returns>The current total value of the captured attribute.</returns>
 	protected static int CaptureAttributeMagnitude(
 		AttributeCaptureDefinition capturedAttribute,
 		Effect effect,
-		IForgeEntity? target)
+		IForgeEntity? target,
+		AttributeCalculationType calculationType = AttributeCalculationType.CurrentValue,
+		int finalChannel = 0)
 	{
 		switch (capturedAttribute.Source)
 		{
@@ -41,7 +48,10 @@ public abstract class CustomCalculator
 					return 0;
 				}
 
-				return effect.Ownership.Owner.Attributes[capturedAttribute.Attribute].CurrentValue;
+				return CaptureMagnitudeValue(
+					effect.Ownership.Owner.Attributes[capturedAttribute.Attribute],
+					calculationType,
+					finalChannel);
 
 			case AttributeCaptureSource.Target:
 
@@ -50,9 +60,32 @@ public abstract class CustomCalculator
 					return 0;
 				}
 
-				return target.Attributes[capturedAttribute.Attribute].CurrentValue;
+				return CaptureMagnitudeValue(
+					target.Attributes[capturedAttribute.Attribute],
+					calculationType,
+					finalChannel);
 		}
 
 		return 0;
+	}
+
+	private static int CaptureMagnitudeValue(
+		EntityAttribute attribute,
+		AttributeCalculationType calculationType,
+		int finalChannel)
+	{
+		return calculationType switch
+		{
+			AttributeCalculationType.CurrentValue => attribute.CurrentValue,
+			AttributeCalculationType.BaseValue => attribute.BaseValue,
+			AttributeCalculationType.Modifier => attribute.Modifier,
+			AttributeCalculationType.Overflow => attribute.Overflow,
+			AttributeCalculationType.ValidModifier => attribute.ValidModifier,
+			AttributeCalculationType.Min => attribute.Min,
+			AttributeCalculationType.Max => attribute.Max,
+			AttributeCalculationType.MagnitudeEvaluatedUpToChannel =>
+				(int)attribute.CalculateMagnitudeUpToChannel(finalChannel),
+			_ => throw new ArgumentOutOfRangeException(nameof(calculationType), calculationType, null),
+		};
 	}
 }

@@ -14,12 +14,16 @@ namespace Gamesmiths.Forge.Cues;
 /// <param name="magnitudeAttribute">The modified attribute to be used as magnitude. If <see langword="null"/> the
 /// effect level will be used instead.
 /// </param>
+/// <param name="finalChannel">In case <paramref name="magnitudeType"/> ==
+/// <see cref="CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel"/> a final channel for the calculation
+/// must be provided.</param>
 public readonly struct CueData(
 	TagContainer? cueTags,
 	int minValue,
 	int maxValue,
 	CueMagnitudeType magnitudeType,
-	string? magnitudeAttribute = null)
+	string? magnitudeAttribute = null,
+	int finalChannel = 0)
 {
 	/// <summary>
 	/// Gets a container with all the identifier tags for this cue.
@@ -46,6 +50,12 @@ public readonly struct CueData(
 	/// instead.
 	/// </summary>
 	public string? MagnitudeAttribute { get; } = magnitudeAttribute;
+
+	/// <summary>
+	/// Gets final channel to be used when capturing the magnitude for this cue, specifically for
+	/// <see cref="MagnitudeType"/> == <see cref="CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel"/>.
+	/// </summary>
+	public int FinalChannel { get; } = finalChannel;
 
 	/// <summary>
 	/// Calculates and gets the normalized magnitude for the given value.

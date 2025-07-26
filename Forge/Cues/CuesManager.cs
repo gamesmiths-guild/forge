@@ -321,6 +321,55 @@ public sealed class CuesManager
 				}
 
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].Overflow;
+
+			case CueMagnitudeType.AttributeValidModifier:
+				Debug.Assert(
+					cueData.MagnitudeAttribute is not null,
+					"Cues with CueMagnitudeType.AttributeValidModifier must contains a configured MagnitudeAttribute.");
+
+				if (!effectEvaluatedData.Target.Attributes.ContainsAttribute(cueData.MagnitudeAttribute))
+				{
+					return 0;
+				}
+
+				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].ValidModifier;
+
+			case CueMagnitudeType.AttributeMin:
+				Debug.Assert(
+					cueData.MagnitudeAttribute is not null,
+					"Cues with CueMagnitudeType.AttributeMin must contains a configured MagnitudeAttribute.");
+
+				if (!effectEvaluatedData.Target.Attributes.ContainsAttribute(cueData.MagnitudeAttribute))
+				{
+					return 0;
+				}
+
+				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].Min;
+
+			case CueMagnitudeType.AttributeMax:
+				Debug.Assert(
+					cueData.MagnitudeAttribute is not null,
+					"Cues with CueMagnitudeType.AttributeMax must contains a configured MagnitudeAttribute.");
+
+				if (!effectEvaluatedData.Target.Attributes.ContainsAttribute(cueData.MagnitudeAttribute))
+				{
+					return 0;
+				}
+
+				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].Max;
+
+			case CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel:
+				Debug.Assert(
+					cueData.MagnitudeAttribute is not null,
+					"Cues with CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel must contains a configured MagnitudeAttribute.");
+
+				if (!effectEvaluatedData.Target.Attributes.ContainsAttribute(cueData.MagnitudeAttribute))
+				{
+					return 0;
+				}
+
+				return (int)effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute]
+					.CalculateMagnitudeUpToChannel(cueData.FinalChannel);
 		}
 	}
 }

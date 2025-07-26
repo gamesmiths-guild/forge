@@ -65,6 +65,11 @@ public sealed class EntityAttribute
 	/// </remarks>
 	public int Overflow { get; private set; }
 
+	/// <summary>
+	/// Gets the adjusted modifier value that is not overflowing the <see cref="Min"/> and <see cref="Max"/> values.
+	/// </summary>
+	public int ValidModifier => Modifier - Overflow;
+
 	internal int PendingValueChange { get; private set; }
 
 	internal EntityAttribute(

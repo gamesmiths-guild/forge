@@ -238,6 +238,10 @@ public readonly struct EffectData : IEquatable<EffectData>
 					|| cue.MagnitudeType == CueMagnitudeType.AttributeCurrentValue
 					|| cue.MagnitudeType == CueMagnitudeType.AttributeModifier
 					|| cue.MagnitudeType == CueMagnitudeType.AttributeOverflow
+					|| cue.MagnitudeType == CueMagnitudeType.AttributeValidModifier
+					|| cue.MagnitudeType == CueMagnitudeType.AttributeMin
+					|| cue.MagnitudeType == CueMagnitudeType.AttributeMax
+					|| cue.MagnitudeType == CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel
 					|| cue.MagnitudeAttribute is null,
 				"Attribute magnitudes type must have a configured MagnitudeAttribute, and not configured otherwise.");
 		}
