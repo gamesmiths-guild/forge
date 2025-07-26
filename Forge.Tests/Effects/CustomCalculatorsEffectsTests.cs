@@ -33,7 +33,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 	public void Custom_calculator_class_magnitude_modifies_attribute_accordingly(
 		string targetAttribute,
 		string customMagnitudeCalculatorAttribute,
-		float customMagnitudeCalculatorExpoent,
+		float customMagnitudeCalculatorExponent,
 		float coefficient,
 		float preMultiplyAdditiveValue,
 		float postMultiplyAdditiveValue,
@@ -45,7 +45,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
 			AttributeCaptureSource.Source,
-			customMagnitudeCalculatorExpoent);
+			customMagnitudeCalculatorExponent);
 
 		var effectData = new EffectData(
 			"Level Up",
@@ -87,7 +87,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 	public void Custom_calculator_class_magnitude_with_curve_modifies_attribute_accordingly(
 		string targetAttribute,
 		string customMagnitudeCalculatorAttribute,
-		float customMagnitudeCalculatorExpoent,
+		float customMagnitudeCalculatorExponent,
 		float coefficient,
 		float preMultiplyAdditiveValue,
 		float postMultiplyAdditiveValue,
@@ -99,7 +99,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
 			AttributeCaptureSource.Source,
-			customMagnitudeCalculatorExpoent);
+			customMagnitudeCalculatorExponent);
 
 		var effectData = new EffectData(
 			"Level Up",
@@ -249,7 +249,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		string targetAttribute,
 		string customMagnitudeCalculatorAttribute,
 		AttributeCaptureSource captureSource,
-		float customMagnitudeCalculatorExpoent,
+		float customMagnitudeCalculatorExponent,
 		float coefficient,
 		float preMultiplyAdditiveValue,
 		float postMultiplyAdditiveValue,
@@ -264,7 +264,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
 			captureSource,
-			customMagnitudeCalculatorExpoent);
+			customMagnitudeCalculatorExponent);
 
 		var effectData = new EffectData(
 			"Test Effect",
@@ -707,7 +707,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 	private sealed class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator
 	{
-		private readonly float _expoent;
+		private readonly float _exponent;
 		private readonly AttributeCalculationType _attributeCalculationType;
 
 		public AttributeCaptureDefinition Attribute1 { get; }
@@ -715,14 +715,14 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		public CustomMagnitudeCalculator(
 			StringKey attribute,
 			AttributeCaptureSource captureSource,
-			float expoent,
+			float exponent,
 			AttributeCalculationType attributeCalculationType = AttributeCalculationType.CurrentValue)
 		{
 			Attribute1 = new AttributeCaptureDefinition(attribute, captureSource, false);
 
 			AttributesToCapture.Add(Attribute1);
 
-			_expoent = expoent;
+			_exponent = exponent;
 			_attributeCalculationType = attributeCalculationType;
 		}
 
@@ -730,7 +730,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		{
 			var capturedMagnitude = CaptureAttributeMagnitude(Attribute1, effect, target, _attributeCalculationType);
 
-			return (float)Math.Pow(capturedMagnitude, _expoent);
+			return (float)Math.Pow(capturedMagnitude, _exponent);
 		}
 	}
 
