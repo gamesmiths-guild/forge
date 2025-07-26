@@ -33,7 +33,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 	public void Custom_calculator_class_magnitude_modifies_attribute_accordingly(
 		string targetAttribute,
 		string customMagnitudeCalculatorAttribute,
-		float customMagnitudeCalculatorexponent,
+		float customMagnitudeCalculatorExpoent,
 		float coefficient,
 		float preMultiplyAdditiveValue,
 		float postMultiplyAdditiveValue,
@@ -45,7 +45,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
 			AttributeCaptureSource.Source,
-			customMagnitudeCalculatorexponent);
+			customMagnitudeCalculatorExpoent);
 
 		var effectData = new EffectData(
 			"Level Up",
@@ -87,7 +87,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 	public void Custom_calculator_class_magnitude_with_curve_modifies_attribute_accordingly(
 		string targetAttribute,
 		string customMagnitudeCalculatorAttribute,
-		float customMagnitudeCalculatorexponent,
+		float customMagnitudeCalculatorExpoent,
 		float coefficient,
 		float preMultiplyAdditiveValue,
 		float postMultiplyAdditiveValue,
@@ -99,7 +99,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
 			AttributeCaptureSource.Source,
-			customMagnitudeCalculatorexponent);
+			customMagnitudeCalculatorExpoent);
 
 		var effectData = new EffectData(
 			"Level Up",
@@ -249,7 +249,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		string targetAttribute,
 		string customMagnitudeCalculatorAttribute,
 		AttributeCaptureSource captureSource,
-		float customMagnitudeCalculatorexponent,
+		float customMagnitudeCalculatorExpoent,
 		float coefficient,
 		float preMultiplyAdditiveValue,
 		float postMultiplyAdditiveValue,
@@ -264,7 +264,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
 			captureSource,
-			customMagnitudeCalculatorexponent);
+			customMagnitudeCalculatorExpoent);
 
 		var effectData = new EffectData(
 			"Test Effect",
@@ -619,24 +619,118 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
 	}
 
+	[Theory]
+	[Trait("Instant", null)]
+	[InlineData(
+		"TestAttributeSet.Attribute1",
+		"TestAttributeSet.Attribute1",
+		AttributeCalculationType.Max,
+		new int[] { 99, 1, 99, 1 })]
+	[InlineData(
+		"TestAttributeSet.Attribute2",
+		"TestAttributeSet.Attribute2",
+		AttributeCalculationType.Min,
+		new int[] { 2, 2, 0, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute5",
+		"TestAttributeSet.Attribute5",
+		AttributeCalculationType.Modifier,
+		new int[] { 20, 5, 15, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute5",
+		"TestAttributeSet.Attribute90",
+		AttributeCalculationType.Overflow,
+		new int[] { 11, 5, 6, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute5",
+		"TestAttributeSet.Attribute90",
+		AttributeCalculationType.ValidModifier,
+		new int[] { 14, 5, 9, 0 })]
+	[InlineData(
+		"TestAttributeSet.Attribute5",
+		"TestAttributeSet.Attribute5",
+		AttributeCalculationType.MagnitudeEvaluatedUpToChannel,
+		new int[] { 10, 5, 5, 0 })]
+	public void Custom_calculator_class_magnitude_captures_magnitude_correctly(
+		string targetAttribute,
+		string customMagnitudeCalculatorAttribute,
+		AttributeCalculationType attributeCalculationType,
+		int[] expectedResults)
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var customCalculatorClass = new CustomMagnitudeCalculator(
+			customMagnitudeCalculatorAttribute,
+			AttributeCaptureSource.Source,
+			1,
+			attributeCalculationType);
+
+		var buffEffectData = new EffectData(
+			"Buff",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					customMagnitudeCalculatorAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(15)),
+					1)
+			]);
+
+		var buffEffect = new Effect(buffEffectData, new EffectOwnership(owner, owner));
+
+		var effectData = new EffectData(
+			"Level Up",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					targetAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.CustomCalculatorClass,
+						customCalculationBasedFloat: new CustomCalculationBasedFloat(
+							customCalculatorClass,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			]);
+
+		var effect = new Effect(effectData, new EffectOwnership(owner, owner));
+
+		owner.EffectsManager.ApplyEffect(buffEffect);
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, targetAttribute, expectedResults);
+	}
+
 	private sealed class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator
 	{
-		private readonly float _exponent;
+		private readonly float _expoent;
+		private readonly AttributeCalculationType _attributeCalculationType;
 
 		public AttributeCaptureDefinition Attribute1 { get; }
 
-		public CustomMagnitudeCalculator(StringKey attribute, AttributeCaptureSource captureSource, float exponent)
+		public CustomMagnitudeCalculator(
+			StringKey attribute,
+			AttributeCaptureSource captureSource,
+			float expoent,
+			AttributeCalculationType attributeCalculationType = AttributeCalculationType.CurrentValue)
 		{
 			Attribute1 = new AttributeCaptureDefinition(attribute, captureSource, false);
 
 			AttributesToCapture.Add(Attribute1);
 
-			_exponent = exponent;
+			_expoent = expoent;
+			_attributeCalculationType = attributeCalculationType;
 		}
 
 		public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
 		{
-			return (float)Math.Pow(CaptureAttributeMagnitude(Attribute1, effect, target), _exponent);
+			var capturedMagnitude = CaptureAttributeMagnitude(Attribute1, effect, target, _attributeCalculationType);
+
+			return (float)Math.Pow(capturedMagnitude, _expoent);
 		}
 	}
 
