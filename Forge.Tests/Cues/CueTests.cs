@@ -480,6 +480,24 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		true,
 		new object[]
 		{
+			new object[] { 0, 0, 100, CueMagnitudeType.AttributeModifier, "TestAttributeSet.Attribute90" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 20, 0.2f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 20, 0.2f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute90", 20f },
+		},
+		true,
+		new object[]
+		{
 			new object[] { 0, 0, 100, CueMagnitudeType.AttributeOverflow, "TestAttributeSet.Attribute90" },
 		},
 		new object[]
@@ -489,6 +507,85 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		new object[]
 		{
 			new object[] { 0, 1, 11, 0.11f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute90", 20f },
+		},
+		true,
+		new object[]
+		{
+			new object[] { 0, 0, 100, CueMagnitudeType.AttributeValidModifier, "TestAttributeSet.Attribute90" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 9, 0.09f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 9, 0.09f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute5", 20f },
+		},
+		true,
+		new object[]
+		{
+			new object[] { 0, 0, 100, CueMagnitudeType.AttributeMin, "TestAttributeSet.Attribute90" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute5", 20f },
+		},
+		true,
+		new object[]
+		{
+			new object[] { 0, 0, 100, CueMagnitudeType.AttributeMax, "TestAttributeSet.Attribute90" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 99, 0.99f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 99, 0.99f, false },
+		})]
+	[InlineData(
+		new object[]
+		{
+			new object[] { "TestAttributeSet.Attribute5", 20f },
+		},
+		true,
+		new object[]
+		{
+			new object[]
+			{
+				0,
+				0,
+				100,
+				CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel,
+				"TestAttributeSet.Attribute90",
+			},
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 90, 0.9f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 90, 0.9f, false },
 		})]
 	public void Infinite_effect_triggers_apply_and_remove_cues_with_expected_results(
 		object[] modifiersData,
@@ -2397,7 +2494,8 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 					MagnitudeCalculationType.ScalableFloat,
 					new ScalableFloat(
 						(float)modifierData[1],
-						new Curve([new CurveKey(1, 1), new CurveKey(2, 2)]))));
+						new Curve([new CurveKey(1, 1), new CurveKey(2, 2)]))),
+				1);
 		}
 
 		return result;

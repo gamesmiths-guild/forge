@@ -620,7 +620,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 	}
 
 	[Theory]
-	[Trait("Instant", null)]
+	[Trait("Attribute calculation", null)]
 	[InlineData(
 		"TestAttributeSet.Attribute1",
 		"TestAttributeSet.Attribute1",
