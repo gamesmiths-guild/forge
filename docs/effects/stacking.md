@@ -1,6 +1,8 @@
-# Effect Stacking System
+# Effect Stacking
 
-The Stacking system in Forge enables effects to accumulate on a target entity, allowing gameplay mechanics like poison stacks, buff/debuff stacks, or other cumulative effects. This powerful system offers extensive control over how effects combine, interact, and expire.
+Effect Stacking in Forge enables [effects](docs/effects/README.md) to accumulate on a target entity, allowing gameplay mechanics like poison stacks, buff/debuff stacks, or other cumulative effects. This powerful system offers extensive control over how effects combine, interact, and expire.
+
+For a practical guide on using stacking, see the [Quick Start Guide](quick-start.md).
 
 ## Core Components
 
@@ -35,17 +37,17 @@ public readonly struct StackingData(
 
 ### Stack Limits and Counts
 
-- **StackLimit**: Maximum number of stacks that can be applied to a target
+- **StackLimit**: Maximum number of stacks that can be applied to a target.
   ```csharp
   public ScalableInt StackLimit { get; }
   ```
 
-- **InitialStack**: Number of stacks applied when the effect is first applied
+- **InitialStack**: Number of stacks applied when the effect is first applied.
   ```csharp
   public ScalableInt InitialStack { get; }
   ```
 
-- **ExecuteOnSuccessfulApplication**: For periodic effects, determines whether the periodic effect executes when a new stack is applied
+- **ExecuteOnSuccessfulApplication**: For [periodic effects](periodic.md), determines whether the periodic effect executes when a new stack is applied.
   ```csharp
   public bool? ExecuteOnSuccessfulApplication { get; }
   ```
@@ -62,9 +64,10 @@ public enum StackOverflowPolicy : byte
 }
 ```
 
-What is an "overflow"? An overflow occurs when an effect has reached its maximum stack count (defined by `StackLimit`) and a new application attempts to add more stacks. The overflow policy determines how this situation is handled:
-- With `AllowApplication`, the new application is processed (refreshing duration, triggering events, etc.) but the stack count remains at the limit
-- With `DenyApplication`, the new application is completely rejected as if it never happened
+An "overflow" occurs when an effect has reached its maximum stack count (defined by `StackLimit`) and a new application attempts to add more stacks. The overflow policy determines how this situation is handled:
+
+- With `AllowApplication`, the new application is processed (refreshing duration, triggering events, etc.) but the stack count remains at the limit.
+- With `DenyApplication`, the new application is completely rejected as if it never happened.
 
 ## Key Stacking Policies
 
@@ -94,7 +97,7 @@ public enum StackLevelPolicy : byte
 
 ### Magnitude Policy
 
-The `StackMagnitudePolicy` controls how effect magnitudes are calculated when stacked:
+The `StackMagnitudePolicy` controls how effect [magnitudes](modifiers.md) are calculated when stacked:
 
 ```csharp
 public enum StackMagnitudePolicy : byte
@@ -106,7 +109,7 @@ public enum StackMagnitudePolicy : byte
 
 ### Expiration Policy
 
-The `StackExpirationPolicy` determines what happens when an effect's duration ends:
+The `StackExpirationPolicy` determines what happens when an effect's [duration](duration.md) ends:
 
 ```csharp
 public enum StackExpirationPolicy : byte
@@ -120,7 +123,7 @@ public enum StackExpirationPolicy : byte
 
 When using `StackPolicy.AggregateByTarget`, these policies control how different owners' effects interact:
 
-- **OwnerDenialPolicy**: Controls whether different owners can apply stacks
+- **OwnerDenialPolicy**: Controls whether different owners can apply stacks.
   ```csharp
   public enum StackOwnerDenialPolicy : byte
   {
@@ -129,7 +132,7 @@ When using `StackPolicy.AggregateByTarget`, these policies control how different
   }
   ```
 
-- **OwnerOverridePolicy**: Controls whether effect ownership changes
+- **OwnerOverridePolicy**: Controls whether effect ownership changes.
   ```csharp
   public enum StackOwnerOverridePolicy : byte
   {
@@ -138,7 +141,7 @@ When using `StackPolicy.AggregateByTarget`, these policies control how different
   }
   ```
 
-- **OwnerOverrideStackCountPolicy**: Controls stack behavior when ownership changes
+- **OwnerOverrideStackCountPolicy**: Controls stack behavior when ownership changes.
   ```csharp
   public enum StackOwnerOverrideStackCountPolicy : byte
   {
@@ -149,7 +152,7 @@ When using `StackPolicy.AggregateByTarget`, these policies control how different
 
 ### Application Policies
 
-- **ApplicationRefreshPolicy**: Controls how duration is handled when applying new stacks
+- **ApplicationRefreshPolicy**: Controls how duration is handled when applying new stacks.
   ```csharp
   public enum StackApplicationRefreshPolicy : byte
   {
@@ -158,7 +161,7 @@ When using `StackPolicy.AggregateByTarget`, these policies control how different
   }
   ```
 
-- **ApplicationResetPeriodPolicy**: For periodic effects, controls how the period timer is handled when a new stack is applied
+- **ApplicationResetPeriodPolicy**: For periodic effects, controls how the period timer is handled when a new stack is applied.
   ```csharp
   public enum StackApplicationResetPeriodPolicy : byte
   {
@@ -184,7 +187,7 @@ public enum LevelComparison : byte
 }
 ```
 
-| Flag Combination            | Value | Description                                  |
+| Flag Combination           | Value | Description                                  |
 |----------------------------|-------|----------------------------------------------|
 | None                       | 0     | No comparison, ignores all levels            |
 | Equal                      | 1     | Only matches equal levels                    |
@@ -196,8 +199,9 @@ public enum LevelComparison : byte
 | Equal \| Higher \| Lower   | 7     | Matches all levels (rarely useful)           |
 
 When used for:
-- **LevelDenialPolicy**: Denies application if the level relationship matches
-- **LevelOverridePolicy**: Overrides existing stack if the level relationship matches
+
+- **LevelDenialPolicy**: Denies application if the level relationship matches.
+- **LevelOverridePolicy**: Overrides existing stack if the level relationship matches.
 
 ### Level Override Stack Count Policy
 
@@ -219,10 +223,10 @@ public enum StackLevelOverrideStackCountPolicy : byte
 // Simple poison effect that stacks up to 5 times, each stack adds to the damage
 var poisonEffectData = new EffectData(
     "Poison",
-    new[] {
-        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, -5)
-    },
     new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
+    new[] {
+        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
+    },
     new StackingData(
         stackLimit: new ScalableInt(5),
         initialStack: new ScalableInt(1),
@@ -232,8 +236,7 @@ var poisonEffectData = new EffectData(
         overflowPolicy: StackOverflowPolicy.DenyApplication,
         expirationPolicy: StackExpirationPolicy.ClearEntireStack,
         applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
-    ),
-    null // No periodic data
+    )
 );
 ```
 
@@ -243,10 +246,10 @@ var poisonEffectData = new EffectData(
 // Buff that allows higher level applications to override lower ones
 var hierarchicalBuffEffect = new EffectData(
     "Strength Buff",
-    new[] {
-        new Modifier("CombatAttributeSet.AttackPower", ModifierOperation.Add, 10)
-    },
     new DurationData(DurationType.HasDuration, new ScalableFloat(30.0f)),
+    new[] {
+        new Modifier("CombatAttributeSet.AttackPower", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+    },
     new StackingData(
         stackLimit: new ScalableInt(3),
         initialStack: new ScalableInt(1),
@@ -264,8 +267,7 @@ var hierarchicalBuffEffect = new EffectData(
         levelOverridePolicy: LevelComparison.Higher,
         levelOverrideStackCountPolicy: StackLevelOverrideStackCountPolicy.ResetStacks,
         applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
-    ),
-    null // No periodic data
+    )
 );
 ```
 
@@ -275,10 +277,10 @@ var hierarchicalBuffEffect = new EffectData(
 // Bleeding effect that ticks every 2 seconds and stacks up to 3 times
 var bleedingEffectData = new EffectData(
     "Bleeding",
-    new[] {
-        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, -3)
-    },
     new DurationData(DurationType.HasDuration, new ScalableFloat(8.0f)),
+    new[] {
+        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-3)))
+    },
     new StackingData(
         stackLimit: new ScalableInt(3),
         initialStack: new ScalableInt(1),
@@ -304,35 +306,33 @@ var bleedingEffectData = new EffectData(
 
 Stacking effects have several constraints and required relationships:
 
-1. **No Instant Stacking**: Stacks cannot be used with `DurationType.Instant`
+1. **No Instant Stacking**: Stacks cannot be used with `DurationType.Instant`.
    ```csharp
    // INVALID - Instant effects can't stack
    new EffectData(
        "Invalid Effect",
-       [...],
        new DurationData(DurationType.Instant), // Error with stacking data
-       new StackingData(...),
-       null
+       [/*...*/],
+       new StackingData(/*...*/)
    );
    ```
 
-2. **Stack Limit and Initial Stack**: The initial stack count must be greater than 0 and less than or equal to the stack limit
+2. **Stack Limit and Initial Stack**: The initial stack count must be greater than 0 and less than or equal to the stack limit.
    ```csharp
    // VALID - Initial stack and limit relationship
    new StackingData(
        stackLimit: new ScalableInt(5),
-       initialStack: new ScalableInt(1),
+       initialStack: new ScalableInt(1)
        // ...
    );
    ```
 
-3. **ApplicationRefreshPolicy Required**: For `HasDuration` effects with stacking
+3. **`ApplicationRefreshPolicy` Required**: For `HasDuration` effects with stacking.
    ```csharp
    // VALID - HasDuration requires ApplicationRefreshPolicy
    new StackingData(
        // ...
-       applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
-       // ...
+       applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
    );
    ```
 
@@ -340,50 +340,50 @@ Stacking effects have several constraints and required relationships:
    - `ExecuteOnSuccessfulApplication`
    - `ApplicationResetPeriodPolicy`
 
-5. **AggregateByTarget Requirements**:
-   - Must define `OwnerDenialPolicy`
-   - If `OwnerDenialPolicy` is `AlwaysAllow`, must define `OwnerOverridePolicy`
-   - If `OwnerOverridePolicy` is `Override`, must define `OwnerOverrideStackCountPolicy`
+5. **`AggregateByTarget` Requirements**:
+   - Must define `OwnerDenialPolicy`.
+   - If `OwnerDenialPolicy` is `AlwaysAllow`, must define `OwnerOverridePolicy`.
+   - If `OwnerOverridePolicy` is `Override`, must define `OwnerOverrideStackCountPolicy`.
 
-6. **AggregateLevels Requirements**:
-   - Must define `LevelDenialPolicy`
-   - Must define `LevelOverridePolicy`
-   - If `LevelOverridePolicy` is not `None`, must define `LevelOverrideStackCountPolicy`
-   - `LevelDenialPolicy` and `LevelOverridePolicy` cannot have overlapping flags
+6. **`AggregateLevels` Requirements**:
+   - Must define `LevelDenialPolicy`.
+   - Must define `LevelOverridePolicy`.
+   - If `LevelOverridePolicy` is not `None`, must define `LevelOverrideStackCountPolicy`.
+   - `LevelDenialPolicy` and `LevelOverridePolicy` cannot have overlapping flags.
 
 ## Best Practices
 
 1. **Use Clear Stack Limits**:
-   - Choose appropriate stack limits based on your game's balance
-   - Consider using ScalableInt for level-based stack limits
+   - Choose appropriate stack limits based on your game's balance.
+   - Consider using `ScalableInt` for level-based stack limits.
 
 2. **Choose Magnitude Policy Carefully**:
-   - `Sum`: Good for additive effects (damage, stat bonuses)
-   - `DontStack`: Good for status effects where you want duration benefits of stacking but not increased magnitude
+   - `Sum`: Good for additive effects (damage, stat bonuses).
+   - `DontStack`: Good for status effects where you want duration benefits of stacking but not increased magnitude.
 
 3. **Consider Stack Expiration**:
-   - `ClearEntireStack`: Simple but can feel abrupt to players
-   - `RemoveSingleStackAndRefreshDuration`: More gradual, better player experience
+   - `ClearEntireStack`: Simple but can feel abrupt to players.
+   - `RemoveSingleStackAndRefreshDuration`: More gradual, better player experience.
 
 4. **Level Control Strategies**:
-   - Use `SegregateLevels` for simpler systems
-   - Use `AggregateLevels` with careful level policies for more complex behaviors
+   - Use `SegregateLevels` for simpler systems.
+   - Use `AggregateLevels` with careful level policies for more complex behaviors.
 
 5. **Owner Control**:
-   - `AggregateBySource`: Simpler, each source gets its own stack
-   - `AggregateByTarget`: More complex, but prevents stacking abuse
+   - `AggregateBySource`: Simpler, each source gets its own stack.
+   - `AggregateByTarget`: More complex, but prevents stacking abuse.
 
 6. **Create Unique Effects**:
-   - Use `StackPolicy.AggregateByTarget` with `StackLimit` of 1 to ensure only one instance of an effect exists on a target
-   - Control replacement behavior with `OwnerDenialPolicy` and `LevelDenialPolicy`
-   - Use `LevelOverridePolicy` to allow higher-level versions to replace lower ones
+   - Use `StackPolicy.AggregateByTarget` with `StackLimit` of 1 to ensure only one instance of an effect exists on a target.
+   - Control replacement behavior with `OwnerDenialPolicy` and `LevelDenialPolicy`.
+   - Use `LevelOverridePolicy` to allow higher-level versions to replace lower ones.
 
 7. **Test Edge Cases**:
-   - Stack limit behavior
-   - Stack expiration and duration refresh
-   - Interactions with inhibitions
-   - Effects from multiple owners and levels
+   - Stack limit behavior.
+   - Stack expiration and duration refresh.
+   - Interactions with inhibitions.
+   - Effects from multiple owners and levels.
 
 8. **Document Your Stacking Rules**:
-   - Clearly explain to players how stacks work for key abilities
-   - Use UI to communicate current stack counts
+   - Clearly explain to players how stacks work for key abilities.
+   - Use UI to communicate current stack counts.

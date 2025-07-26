@@ -2,17 +2,19 @@
 
 The Attributes system in Forge provides a robust framework for managing numeric properties of game entities. Attributes represent any quantifiable characteristic like health, strength, movement speed, or any other property that can be represented numerically.
 
+For a practical guide on using attributes, see the [Quick Start Guide](quick-start.md).
+
 ## Core Concepts
 
 ### EntityAttribute
 
 An `EntityAttribute` represents a single numeric property with constraints and modification tracking:
 
-- **BaseValue**: The fundamental value before modifications
-- **CurrentValue**: The actual value after all modifications, constrained by Min/Max
-- **Min/Max**: The lower and upper bounds for the attribute
-- **Modifier**: The cumulative modification applied to the BaseValue
-- **Overflow**: Value that exceeds Min/Max constraints (useful for effects like shield overflow)
+- **BaseValue**: The fundamental value before modifications.
+- **CurrentValue**: The actual value after all modifications, constrained by Min/Max.
+- **Min/Max**: The lower and upper bounds for the attribute.
+- **Modifier**: The cumulative modification applied to the BaseValue.
+- **Overflow**: Value that exceeds Min/Max constraints (useful for effects like shield overflow).
 
 ### AttributeSet
 
@@ -53,6 +55,7 @@ public class CombatAttributeSet : AttributeSet
 public class PlayerCharacter : IForgeEntity
 {
     public EntityAttributes Attributes { get; }
+    // Other IForgeEntity properties...
 
     public PlayerCharacter()
     {
@@ -76,24 +79,20 @@ var healthAttribute = entity.Attributes["CombatAttributeSet.CurrentHealth"];
 var currentHealth = healthAttribute.CurrentValue;
 ```
 
-**Important**: Although this uses dot notation similar to Tags, these are completely different systems.
+**Important**: Although this uses dot notation similar to [Tags](tags.md), these are not tags and do not need to be registered with the `TagsManager`.
 
 ## Attribute Channels
 
-Channels provide powerful, layered attribute calculation with clearly defined order of operations. Each attribute has one or more channels, which process modifiers in sequence.
-
-![Attribute Channels Diagram](../images/attribute-channels-diagram.png)
-
-*Note: Diagram will be added in a future update*
+Channels provide powerful, layered attribute calculation with clearly defined order of operations. Each attribute has one or more channels, which process [modifiers](modifiers.md) in sequence.
 
 ### How Channels Work
 
 1. Each channel processes modifiers in this order:
-   - Apply override (if present)
-   - Apply flat modifiers (addition/subtraction)
-   - Apply percentage modifiers (multiplication)
+   - Apply override (if present).
+   - Apply flat modifiers (addition/subtraction).
+   - Apply percentage modifiers (multiplication).
 
-2. Channels are processed in sequence, where the output of one channel becomes the input of the next
+2. Channels are processed in sequence, where the output of one channel becomes the input of the next:
 
 ```
 Channel 1:  (BaseValue + FlatMod1) * PercentMod1  →  Result1
@@ -114,10 +113,10 @@ var damage = InitializeAttribute(nameof(Damage), 10, 0, 100, channels: 3);
 
 Channels enable complex formulas like `(x + y) * (z + w)` by separating modifiers into appropriate channels:
 
-- **Channel 0**: Base stats and inherent modifiers
-- **Channel 1**: Equipment and item bonuses
-- **Channel 2**: Temporary buffs and status effects
-- **Channel 3**: Final adjustments like damage reduction
+- **Channel 0**: Base stats and inherent modifiers.
+- **Channel 1**: Equipment and item bonuses.
+- **Channel 2**: Temporary buffs and status effects.
+- **Channel 3**: Final adjustments like damage reduction.
 
 Example: `(BaseAttack + WeaponDamage) * (1 + StrengthBonus) * (1 + CriticalMultiplier) * (1 - TargetArmor)`
 
@@ -182,7 +181,7 @@ SetAttributeMaxValue(MaxMana, 200);        // Set max mana limit to 200
 
 ### Attribute Dependencies
 
-AttributeSets allow creating dependencies between attributes without using Effects:
+AttributeSets allow creating dependencies between attributes without using the [Effects system](docs/effects/README.md):
 
 ```csharp
 public class CharacterAttributeSet : AttributeSet
@@ -215,7 +214,7 @@ There are two primary ways to modify attributes:
 
 ### 1. Within AttributeSets
 
-AttributeSets can modify their own attributes using protected methods:
+AttributeSets can modify their own attributes using protected methods for direct, permanent changes to the base value:
 
 ```csharp
 protected override void AttributeOnValueChanged(EntityAttribute attribute, int change)
@@ -232,25 +231,31 @@ protected override void AttributeOnValueChanged(EntityAttribute attribute, int c
 }
 ```
 
-### 2. Through Effects System
+### 2. Through the Effects System
 
-During gameplay, attributes should be modified exclusively through the Effects system:
+During gameplay, attributes should be modified exclusively through the [Effects system](docs/effects/README.md), which applies temporary or permanent [modifiers](modifiers.md) to attributes without changing their base value.
 
 ```csharp
-// Create damage effect (simplified example)
-var damageEffect = new GameplayEffect(
-    new AttributeModifier("CombatAttributeSet.CurrentHealth", ModifierOperationType.Add, -25)
+// Create a damage effect that applies a temporary modifier
+var damageEffectData = new EffectData(
+    "Damage Effect",
+    new DurationData(DurationType.Instant),
+    new[] {
+        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.FlatBonus, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-25)))
+    }
 );
 
+var effect = new Effect(damageEffectData, new EffectOwnership(caster, caster));
+
 // Apply effect to target
-target.ApplyGameplayEffect(damageEffect);
+target.EffectsManager.ApplyEffect(effect);
 ```
 
 **Important**: Direct manipulation of attributes outside of these two methods is not supported. All attribute methods besides properties are internal to enforce this pattern.
 
 ## Attribute Events
 
-Attributes dispatch events when their values change:
+Attributes dispatch events when their values change, which can be handled within the `AttributeSet`:
 
 ```csharp
 // Within an AttributeSet
@@ -285,6 +290,7 @@ Entities can have multiple attribute sets for different aspects of gameplay:
 public class PlayerCharacter : IForgeEntity
 {
     public EntityAttributes Attributes { get; }
+    // Other IForgeEntity properties...
 
     public PlayerCharacter()
     {
@@ -308,18 +314,18 @@ public class PlayerCharacter : IForgeEntity
 
 ## Integration with Other Systems
 
-While detailed relationships with Effects and other systems are covered in separate documentation, attributes are designed to work seamlessly with these systems:
+While detailed relationships with other systems are covered in their respective documentation, attributes are designed to work seamlessly with them:
 
-- **Effects**: Apply temporary or permanent modifications to attributes
-- **Tags**: Effects can have tag requirements for attribute modification
-- **Executions**: Complex attribute calculations can be encapsulated in Executions
+- **[Effects](docs/effects/README.md)**: Apply temporary or permanent modifications to attributes.
+- **[Tags](tags.md)**: Effects can have tag requirements for attribute modification.
+- **[Custom Calculators](calculators.md)**: Complex attribute calculations can be encapsulated in custom calculators.
 
 ## Best Practices
 
-1. **Group Related Attributes**: Organize attributes into logical sets
-2. **Use AttributeSet for Relationships**: Handle relationships between attributes in the AttributeSet when possible
-3. **Prefer Effects for Gameplay Changes**: During gameplay, modify attributes through Effects
-4. **Design Channel Strategy**: Plan which modifiers belong in which channels
-5. **Document Attribute Dependencies**: Keep track of which attributes affect others
-6. **Consistent Naming**: Use clear, consistent naming conventions for attributes
-7. **Respect Encapsulation**: Never attempt to directly modify attributes outside of AttributeSets or Effects
+1. **Group Related Attributes**: Organize attributes into logical sets.
+2. **Use AttributeSet for Relationships**: Handle relationships between attributes in the AttributeSet when possible.
+3. **Prefer Effects for Gameplay Changes**: During gameplay, modify attributes through Effects.
+4. **Design Channel Strategy**: Plan which modifiers belong in which channels.
+5. **Document Attribute Dependencies**: Keep track of which attributes affect others.
+6. **Consistent Naming**: Use clear, consistent naming conventions for attributes.
+7. **Respect Encapsulation**: Never attempt to directly modify attributes outside of AttributeSets or the Effects system.

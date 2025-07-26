@@ -7,9 +7,20 @@ This guide will help you quickly get started with the Forge framework, showing y
 Let's create a simple player entity:
 
 ```csharp
-// Initialize managers
-var tagsManager = new TagsManager();
-var cuesManager = new CuesManager();
+// Create the player attribute set
+public class PlayerAttributeSet : AttributeSet
+{
+	public EntityAttribute Health { get; }
+	public EntityAttribute Strength { get; }
+	public EntityAttribute Speed { get; }
+
+	public TestAttributeSet()
+	{
+		Health = InitializeAttribute(nameof(Health), 100, 0, 100);
+		Strength = InitializeAttribute(nameof(Strength), 10, 0, 99);
+		Speed = InitializeAttribute(nameof(Speed), 5, 0, 10);
+	}
+}
 
 // Create a new entity that implements IForgeEntity
 public class Player : IForgeEntity
@@ -20,29 +31,20 @@ public class Player : IForgeEntity
 
     public Player(TagsManager tagsManager, CuesManager cuesManager)
     {
-        Attributes = new EntityAttributes();
+        // Initialize entity components
+        Attributes = new EntityAttributes(new PlayerAttributeSet());
         Tags = new EntityTags(new TagContainer(tagsManager));
         EffectsManager = new EffectsManager(this, cuesManager);
-
-        // Initialize attributes
-        InitializeAttributes();
-    }
-
-    private void InitializeAttributes()
-    {
-        // Create a health attribute with initial value 100, min 0, max 100
-        var healthAttribute = new EntityAttribute(100, 0, 100);
-        Attributes.AddAttribute("CombatAttributeSet.Health", healthAttribute);
-
-        // Create a strength attribute with initial value 10
-        var strengthAttribute = new EntityAttribute(10);
-        Attributes.AddAttribute("StatAttributeSet.Strength", strengthAttribute);
-
-        // Create a speed attribute with initial value 5
-        var speedAttribute = new EntityAttribute(5);
-        Attributes.AddAttribute("MovementAttributeSet.Speed", speedAttribute);
     }
 }
+
+// Initialize managers
+var tagsManager = new TagsManager(new string[] {
+    "player.character",
+    "class.warrior",
+    "status.stunned"
+});
+var cuesManager = new CuesManager();
 
 // Create player instance
 var player = new Player(tagsManager, cuesManager);
@@ -54,19 +56,21 @@ Add and check tags on your entity:
 
 ```csharp
 // Add tags to the player
-player.Tags.Add(Tag.RequestTag("player.character"));
-player.Tags.Add(Tag.RequestTag("class.warrior"));
+player.Tags.AddBaseTag(Tag.RequestTag(tagsManager, "player.character"));
+player.Tags.AddBaseTag(Tag.RequestTag(tagsManager, "class.warrior"));
 
 // Check if the player has specific tags
-bool isPlayer = player.Tags.Has(Tag.RequestTag("player.character"));
-bool isWarrior = player.Tags.Has(Tag.RequestTag("class.warrior"));
+bool isPlayer = player.Tags.CombinedTags.HasTag(Tag.RequestTag(tagsManager, "player.character"));
+bool isWarrior = player.Tags.CombinedTags.HasTag(Tag.RequestTag(tagsManager, "class.warrior"));
 
 // Create a tag requirement (used in effects)
 var warriorRequirement = new TagRequirements(
-    requiredTags: new[] { Tag.RequestTag("class.warrior") },
-    blockedTags: new[] { Tag.RequestTag("status.stunned") }
+    requiredTags: new[] { Tag.RequestTag(tagsManager, "class.warrior") },
+    ignoreTags: new[] { Tag.RequestTag(tagsManager, "status.stunned") }
 );
 ```
+
+For more details about the tag system, see the [Tags documentation](tags.md).
 
 ## Creating and Applying Effects
 
@@ -78,20 +82,17 @@ Here's how to create and apply different types of effects:
 // Create a damage effect
 var damageEffect = new EffectData(
     "Basic Attack",
+    new DurationData(DurationType.Instant),
     new[] {
         new Modifier(
-            "CombatAttributeSet.Health",
+            "PlayerAttributeSet.Health",
             ModifierOperation.FlatBonus,
             new ModifierMagnitude(
                 MagnitudeCalculationType.ScalableFloat,
                 new ScalableFloat(-10) // -10 damage
             )
         )
-    },
-    new DurationData(DurationType.Instant),
-    null,
-    null
-);
+    });
 
 // Apply the effect
 var effect = new Effect(
@@ -103,16 +104,17 @@ var effect = new Effect(
 player.EffectsManager.ApplyEffect(effect);
 
 // Check the current health value
-int currentHealth = player.Attributes["CombatAttributeSet.Health"].CurrentValue;
+int currentHealth = player.Attributes["PlayerAttributeSet.Health"].CurrentValue;
 Console.WriteLine($"Player health after damage: {currentHealth}");
 ```
 
 ### Buff Effect with Duration
 
 ```csharp
-// Create a strength buff effect that lasts for 10 seconds
+// Create a warrior only strength buff effect that lasts for 10 seconds
 var strengthBuffEffect = new EffectData(
     "Strength Potion",
+    new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)), // 10 seconds duration
     new[] {
         new Modifier(
             "StatAttributeSet.Strength",
@@ -123,9 +125,17 @@ var strengthBuffEffect = new EffectData(
             )
         )
     },
-    new DurationData(DurationType.HasDuration, 10f), // 10 seconds duration
-    null,
-    warriorRequirement // Only applies to warriors
+    effectComponents: new[] {
+        new TargetTagRequirementsEffectComponent(
+            new TagRequirements(
+                tagsManager.RequestTagContainer(new[] { "class.warrior" }), // Required tags
+                new TagContainer(), // No ignored tags
+                new TagQuery() // No tag query
+            ),
+            new TagRequirements(), // No removal requirements
+            new TagRequirements() // No ongoing requirements
+        )
+    }
 );
 
 // Create and apply the effect
@@ -147,12 +157,15 @@ if (buffHandle != null)
 }
 ```
 
+For more information about effect duration, see the [Duration documentation](duration.md).
+
 ### Effect with Tags
 
 ```csharp
 // Create a "Stunned" effect that adds a tag and reduces speed to 0
 var stunnedEffect = new EffectData(
     "Stunned",
+    new DurationData(DurationType.HasDuration, new ScalableFloat(3.0f)), // 3 seconds duration
     new[] {
         new Modifier(
             "MovementAttributeSet.Speed",
@@ -163,9 +176,11 @@ var stunnedEffect = new EffectData(
             )
         )
     },
-    new DurationData(DurationType.HasDuration, 3f), // 3 seconds duration
-    new[] { Tag.RequestTag("status.stunned") }, // Add this tag while active
-    null
+    effectComponents: new[] {
+        new ModifierTagsEffectComponent(
+            tagsManager.RequestTagContainer(new[] { "status.stunned" })
+        )
+    }
 );
 
 // Apply the stun effect
@@ -177,10 +192,12 @@ var stunEffect = new Effect(
 ActiveEffectHandle? stunHandle = player.EffectsManager.ApplyEffect(stunEffect);
 
 // Check if player is stunned
-bool isStunned = player.Tags.Has(Tag.RequestTag("status.stunned"));
+bool isStunned = player.Tags.CombinedTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
 int currentSpeed = player.Attributes["MovementAttributeSet.Speed"].CurrentValue;
 Console.WriteLine($"Player stunned: {isStunned}, Speed: {currentSpeed}");
 ```
+
+Learn more about modifier tags in the [Components documentation](components.md).
 
 ## Advanced: Creating a Custom Calculator
 
@@ -214,6 +231,7 @@ public class StrengthDamageCalculator : CustomModifierMagnitudeCalculator
 // Use the custom calculator in an effect
 var strengthBasedDamageEffect = new EffectData(
     "Power Attack",
+    new DurationData(DurationType.Instant),
     new[] {
         new Modifier(
             "CombatAttributeSet.Health",
@@ -228,10 +246,7 @@ var strengthBasedDamageEffect = new EffectData(
                 )
             )
         )
-    },
-    new DurationData(DurationType.Instant),
-    null,
-    null
+    }
 );
 
 // Apply the effect
@@ -243,20 +258,34 @@ var strengthDamageEffect = new Effect(
 player.EffectsManager.ApplyEffect(strengthDamageEffect);
 ```
 
+For more advanced calculator usage, see the [Custom Calculators documentation](calculators.md).
+
+## Updating Effects
+
+Remember to update your effects manager periodically:
+
+```csharp
+// In your game loop for real-time games
+void Update(float deltaTime)
+{
+    player.EffectsManager.UpdateEffects(deltaTime);
+}
+
+// Or for turn-based games
+void EndTurn()
+{
+    player.EffectsManager.UpdateEffects(1.0f);
+}
+```
+
 ## Next Steps
 
 Now that you've seen the basics of Forge, you can:
 
-1. Create more complex entity types with custom attribute sets
-2. Implement stacking effects with different stacking rules
-3. Use channels to create advanced attribute calculations
-4. Create custom executions to modify multiple attributes at once
+1. Set up [periodic effects](periodic.md) for damage or healing over time.
+2. Implement [stacking effects](stacking.md) with different stacking rules.
+3. Use [channels](attributes.md) to create advanced attribute calculations.
+4. Create [custom executions](calculators.md) to modify multiple attributes at once.
+5. Add [visual feedback](cues.md) using the cues system.
 
-For more detailed documentation on each system, refer to the specific system documentation:
-
-- [Attributes](attributes.md)
-- [Effects](effects.md)
-- [Modifiers](modifiers.md)
-- [Tags](tags.md)
-- [Cues](cues.md)
-- [Calculators](calculators.md)
+For more detailed documentation on each system, refer to the specific system documentation linked above, or return to the [main documentation index](README.md).

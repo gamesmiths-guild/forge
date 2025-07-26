@@ -1,6 +1,6 @@
-# Custom Calculators System
+# Custom Calculators
 
-The Custom Calculators system in Forge enables developers to implement complex, dynamic calculations for effect modifiers. These calculators provide a powerful way to create game-specific logic that goes beyond the built-in modifier types.
+Custom Calculators in Forge enables developers to implement complex, dynamic calculations for effect modifiers. These calculators provide a powerful way to create game-specific logic that goes beyond the built-in [modifier types](modifiers.md).
 
 ## Core Concepts
 
@@ -22,20 +22,21 @@ public abstract class CustomCalculator
 ```
 
 This base class provides:
-- Management of attribute captures for accessing attribute values during calculations
-- Custom parameters that can be passed to cues when effects are applied
-- Helper methods for retrieving attribute values from targets or sources
 
-Forge offers two primary calculator types that inherit from CustomCalculator:
+- Management of attribute captures for accessing attribute values during calculations.
+- Custom parameters that can be passed to [cues](cues.md) when effects are applied.
+- Helper methods for retrieving attribute values from targets or sources.
+
+Forge offers two primary calculator types that inherit from `CustomCalculator`:
 
 1. **CustomModifierMagnitudeCalculator**: For modifying a single attribute with complex logic. Returns a single float value.
-2. **CustomExecution**: For modifying multiple attributes in a coordinated way. Returns an array of ModifierEvaluatedData.
+2. **CustomExecution**: For modifying multiple attributes in a coordinated way. Returns an array of `ModifierEvaluatedData`.
 
 ## Key Components
 
 ### Attribute Capture
 
-The `AttributeCaptureDefinition` struct is central to retrieving attribute values:
+The `AttributeCaptureDefinition` struct is central to retrieving attribute values from the [Attributes system](attributes.md):
 
 ```csharp
 public readonly struct AttributeCaptureDefinition(
@@ -52,15 +53,16 @@ public readonly struct AttributeCaptureDefinition(
 ```
 
 Parameters:
-- `attribute`: The key of the attribute to capture (e.g., "CombatAttributeSet.CurrentHealth")
-- `source`: Where to capture from either `AttributeCaptureSource.Source` (the effect owner) or `AttributeCaptureSource.Target` (the effect target)
-- `snapshot`: If true, captures the value once when the effect is applied; if false, continuously updates when the source attribute changes
+
+- `attribute`: The key of the attribute to capture (e.g., "CombatAttributeSet.CurrentHealth").
+- `source`: Where to capture from—either `AttributeCaptureSource.Source` (the effect owner) or `AttributeCaptureSource.Target` (the effect target).
+- `snapshot`: If true, captures the value once when the effect is applied; if false, continuously updates when the source attribute changes.
 
 To use attribute capture properly:
 
-1. Define attribute capture definitions as properties in your calculator class
-2. Register them in the `AttributesToCapture` list in the constructor
-3. Use `CaptureAttributeMagnitude` to safely retrieve values during calculation
+1. Define attribute capture definitions as properties in your calculator class.
+2. Register them in the `AttributesToCapture` list in the constructor.
+3. Use `CaptureAttributeMagnitude` to safely retrieve values during calculation.
 
 ```csharp
 // Example of proper attribute capture setup
@@ -101,10 +103,11 @@ public class MyCalculator : CustomModifierMagnitudeCalculator
 ```
 
 The `CaptureAttributeMagnitude` method:
-- Safely retrieves attribute values based on the capture definition
-- Returns 0 if the attribute doesn't exist (avoids null reference exceptions)
-- Handles attribute lookup from the correct entity (source or target)
-- Returns the current value of the attribute
+
+- Safely retrieves attribute values based on the capture definition.
+- Returns 0 if the attribute doesn't exist (avoids null reference exceptions).
+- Handles attribute lookup from the correct entity (source or target).
+- Returns the current value of the attribute.
 
 Even when not using non-snapshot functionality, it's recommended to follow this pattern to ensure consistent and safe attribute access.
 
@@ -133,11 +136,12 @@ public readonly struct ModifierEvaluatedData
 ```
 
 This struct contains:
-- **Attribute**: The target EntityAttribute to be modified
-- **ModifierOperation**: The operation type (FlatBonus, PercentBonus, or Override)
-- **Magnitude**: The calculated value to be applied
-- **Channel**: The attribute channel to apply the modifier to
-- **AttributeOverride**: Special override data (only used with ModifierOperation.Override)
+
+- **Attribute**: The target `EntityAttribute` to be modified.
+- **ModifierOperation**: The operation type (`FlatBonus`, `PercentBonus`, or `Override`).
+- **Magnitude**: The calculated value to be applied.
+- **Channel**: The attribute channel to apply the modifier to.
+- **AttributeOverride**: Special override data (only used with `ModifierOperation.Override`).
 
 `ModifierEvaluatedData` is particularly important for `CustomExecution` implementers, as you'll be creating these objects directly to specify what attributes to modify and how.
 
@@ -155,21 +159,23 @@ new ModifierEvaluatedData(
 
 ### Custom Cue Parameters
 
-The `CustomCueParameters` dictionary allows calculators to pass additional data to the cues system:
+The `CustomCueParameters` dictionary allows calculators to pass additional data to the [Cues system](cues.md):
 
 ```csharp
 public Dictionary<StringKey, object> CustomCueParameters { get; } = [];
 ```
 
 Custom cue parameters enable:
-- Passing calculation results to visual/audio effects
-- Providing context about how the calculation was performed
-- Enabling dynamic cue behavior based on calculator results
+
+- Passing calculation results to visual/audio effects.
+- Providing context about how the calculation was performed.
+- Enabling dynamic cue behavior based on calculator results.
 
 Usage:
-1. Add parameters in the constructor for default values
-2. Update parameters during calculation with dynamic values
-3. The parameters are automatically passed to the cues system
+
+1. Add parameters in the constructor for default values.
+2. Update parameters during calculation with dynamic values.
+3. The parameters are automatically passed to the cues system.
 
 ```csharp
 public class DamageCalculator : CustomModifierMagnitudeCalculator
@@ -186,8 +192,9 @@ public class DamageCalculator : CustomModifierMagnitudeCalculator
         AttributesToCapture.Add(AttackerStrength);
 
         // Set default cue parameters
-        CustomCueParameters.Add("damage.type", "physical");
-        CustomCueParameters.Add("attack.critical", false);
+        CustomCueParameters.Add("cues.damage.type", "physical");
+        CustomCueParameters.Add("cues.attack.critical", false);
+        CustomCueParameters.Add("cues.damage.amount", 0);
     }
 
     public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
@@ -195,12 +202,12 @@ public class DamageCalculator : CustomModifierMagnitudeCalculator
         int strength = CaptureAttributeMagnitude(AttackerStrength, effect, target);
 
         // Check for critical hit
-        bool isCritical = Random.NextDouble() < 0.2;
+        bool isCritical = new Random().NextDouble() < 0.2;
         float damage = strength * (isCritical ? 2.0f : 1.0f);
 
         // Update cue parameters with dynamic values
-        CustomCueParameters["attack.critical"] = isCritical;
-        CustomCueParameters["damage.amount"] = damage;
+        CustomCueParameters["cues.attack.critical"] = isCritical;
+        CustomCueParameters["cues.damage.amount"] = damage;
 
         return -damage;  // Negative for damage
     }
@@ -212,9 +219,10 @@ These parameters can then be used by the cues system to spawn appropriate visual
 ## CustomModifierMagnitudeCalculator
 
 Use this calculator type when you need a single modifier value that:
-- Depends on multiple source attributes
-- Requires complex game-specific logic
-- Needs access to additional game state information
+
+- Depends on multiple source attributes.
+- Requires complex game-specific logic.
+- Needs access to additional game state information.
 
 The key distinction is that `CustomModifierMagnitudeCalculator` only returns a single float value, which is used to modify a single attribute specified in the effect's modifier.
 
@@ -247,7 +255,7 @@ public class MyDamageCalculator : CustomModifierMagnitudeCalculator
         AttributesToCapture.Add(AgilityAttribute);
 
         // Add custom parameters for cues
-        CustomCueParameters.Add("damage.type", "physical");
+        CustomCueParameters.Add("cues.damage.type", "physical");
     }
 
     public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
@@ -260,7 +268,7 @@ public class MyDamageCalculator : CustomModifierMagnitudeCalculator
         float baseDamage = strength * 0.7f + agility * 0.3f;
 
         // Add game-specific conditions
-        if (target.Tags.Has("status.vulnerable"))
+        if (target.Tags.CombinedTags.HasTag("status.vulnerable"))
         {
             baseDamage *= 1.5f;
         }
@@ -272,12 +280,13 @@ public class MyDamageCalculator : CustomModifierMagnitudeCalculator
 
 ### Using with Modifiers
 
-Once defined, you can use your custom calculator in a modifier:
+Once defined, you can use your custom calculator in a [modifier](modifiers.md):
 
 ```csharp
 // Create an effect that applies calculated damage
 var damageEffect = new EffectData(
     "Physical Attack",
+    new DurationData(DurationType.Instant),
     new[] {
         new Modifier(
             "CombatAttributeSet.CurrentHealth",
@@ -292,10 +301,7 @@ var damageEffect = new EffectData(
                 )
             )
         )
-    },
-    new DurationData(DurationType.Instant),
-    null,
-    null
+    }
 );
 ```
 
@@ -303,68 +309,71 @@ var damageEffect = new EffectData(
 
 When a `CustomModifierMagnitudeCalculator` is used:
 
-1. The effect system gathers all attributes specified in `AttributesToCapture`
-2. When the effect is applied, `CalculateBaseMagnitude()` is called
+1. The effect system gathers all attributes specified in `AttributesToCapture`.
+2. When the effect is applied, `CalculateBaseMagnitude()` is called.
 3. The returned value is processed through the formula:
    ```
    finalValue = (coefficient * (calculatedMagnitude + preMultiply)) + postMultiply
    ```
-4. If a lookup curve is provided, the value is mapped through that curve
-5. The final value is used as the magnitude for the modifier
+4. If a lookup curve is provided, the value is mapped through that curve.
+5. The final value is used as the magnitude for the modifier.
 
 ## CustomExecution
 
 Use this calculator type when you need to:
-- Modify multiple attributes with a single calculation
-- Create coordinated changes across different attributes
-- Implement complex game systems like combo effects or resource conversions
 
-Unlike `CustomModifierMagnitudeCalculator` which returns a single float value to modify one attribute, `CustomExecution` returns an array of `ModifierEvaluatedData` objects that can modify multiple attributes with different operations and magnitudes. It can also modify attributes from different entities simultaneously (both the target and the source).
+- Modify multiple attributes with a single calculation.
+- Create coordinated changes across different attributes.
+- Implement complex game systems like combo effects or resource conversions.
+
+Unlike `CustomModifierMagnitudeCalculator`, which returns a single float value to modify one attribute, `CustomExecution` returns an array of `ModifierEvaluatedData` objects that can modify multiple attributes with different operations and magnitudes. It can also modify attributes from different entities simultaneously (both the target and the source).
 
 ### Implementation
 
 To create a custom execution calculator:
 
 ```csharp
-public class ElementalReactionExecution : CustomExecution
+public class ManaDrainExecution : CustomExecution
 {
     // Define attributes to capture and modify
-    public AttributeCaptureDefinition TargetFireResist { get; }
-    public AttributeCaptureDefinition TargetWaterResist { get; }
-    public AttributeCaptureDefinition TargetHealth { get; }
-    public AttributeCaptureDefinition SourceSpellPower { get; }
+    public AttributeCaptureDefinition TargetCurrentMana { get; }
+    public AttributeCaptureDefinition TargetMagicResist { get; }
+    public AttributeCaptureDefinition SourceIntelligence { get; }
+    public AttributeCaptureDefinition SourceCurrentMana { get; }
 
-    public ElementalReactionExecution()
+    public ManaDrainExecution()
     {
-        // Capture target resistances and source spell power
-        TargetFireResist = new AttributeCaptureDefinition(
-            "ResistAttributeSet.FireResistance",
+        // Capture target mana and magic resistance
+        TargetCurrentMana = new AttributeCaptureDefinition(
+            "ResourceAttributeSet.CurrentMana",
             AttributeCaptureSource.Target,
             snapshot: false);
 
-        TargetWaterResist = new AttributeCaptureDefinition(
-            "ResistAttributeSet.WaterResistance",
+        TargetMagicResist = new AttributeCaptureDefinition(
+            "ResistAttributeSet.MagicResistance",
             AttributeCaptureSource.Target,
             snapshot: false);
 
-        TargetHealth = new AttributeCaptureDefinition(
-            "CombatAttributeSet.CurrentHealth",
-            AttributeCaptureSource.Target,
-            snapshot: false);
-
-        SourceSpellPower = new AttributeCaptureDefinition(
-            "StatAttributeSet.SpellPower",
+        // Capture source's intelligence and mana
+        SourceIntelligence = new AttributeCaptureDefinition(
+            "StatAttributeSet.Intelligence",
             AttributeCaptureSource.Source,
-            snapshot: true);
+            snapshot: false);
+
+        SourceCurrentMana = new AttributeCaptureDefinition(
+            "ResourceAttributeSet.CurrentMana",
+            AttributeCaptureSource.Source,
+            snapshot: false);
 
         // Register attributes for capture
-        AttributesToCapture.Add(TargetFireResist);
-        AttributesToCapture.Add(TargetWaterResist);
-        AttributesToCapture.Add(TargetHealth);
-        AttributesToCapture.Add(SourceSpellPower);
+        AttributesToCapture.Add(TargetCurrentMana);
+        AttributesToCapture.Add(TargetMagicResist);
+        AttributesToCapture.Add(SourceIntelligence);
+        AttributesToCapture.Add(SourceCurrentMana);
 
         // Add custom parameters for cues
-        CustomCueParameters.Add("reaction.type", "steam");
+        CustomCueParameters.Add("cues.spell.drain_amount", 0f);
+        CustomCueParameters.Add("cues.spell.transfer_amount", 0f);
     }
 
     public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target)
@@ -372,47 +381,42 @@ public class ElementalReactionExecution : CustomExecution
         var results = new List<ModifierEvaluatedData>();
 
         // Get attribute values
-        int fireResist = CaptureAttributeMagnitude(TargetFireResist, effect, target);
-        int waterResist = CaptureAttributeMagnitude(TargetWaterResist, effect, target);
-        int spellPower = CaptureAttributeMagnitude(SourceSpellPower, effect, target);
+        int targetMana = CaptureAttributeMagnitude(TargetCurrentMana, effect, target);
+        int magicResist = CaptureAttributeMagnitude(TargetMagicResist, effect, target);
+        int intelligence = CaptureAttributeMagnitude(SourceIntelligence, effect, target);
 
-        // Calculate steam reaction damage
-        float steamDamage = spellPower * 0.5f * (2.0f - (fireResist + waterResist) / 200.0f);
+        // Calculate mana drain amount (reduced by magic resistance)
+        float resistFactor = 1.0f - (magicResist / 200.0f); // 200 resist = 100% reduction
+        float drainAmount = intelligence * 0.5f * resistFactor;
 
-        // Apply health damage if attribute exists
-        if (TargetHealth.TryGetAttribute(target, out EntityAttribute? healthAttribute))
+        // Cap the drain at the target's available mana
+        drainAmount = Math.Min(drainAmount, targetMana);
+
+        // Apply mana reduction to target if attribute exists
+        if (TargetCurrentMana.TryGetAttribute(target, out EntityAttribute? targetManaAttribute))
         {
             results.Add(new ModifierEvaluatedData(
-                healthAttribute,
+                targetManaAttribute,
                 ModifierOperation.FlatBonus,
-                -steamDamage,  // Negative for damage
+                -drainAmount,  // Negative for drain
                 channel: 0
             ));
         }
 
-        // Apply temporary resistance reduction if attributes exist
-        if (TargetFireResist.TryGetAttribute(target, out EntityAttribute? fireResistAttribute))
+        // Apply mana gain to source if attribute exists
+        if (SourceCurrentMana.TryGetAttribute(effect.Ownership.Source, out EntityAttribute? sourceManaAttribute))
         {
             results.Add(new ModifierEvaluatedData(
-                fireResistAttribute,
+                sourceManaAttribute,
                 ModifierOperation.FlatBonus,
-                -10,  // Reduce fire resistance
-                channel: 0
-            ));
-        }
-
-        if (TargetWaterResist.TryGetAttribute(target, out EntityAttribute? waterResistAttribute))
-        {
-            results.Add(new ModifierEvaluatedData(
-                waterResistAttribute,
-                ModifierOperation.FlatBonus,
-                -10,  // Reduce water resistance
+                drainAmount * 0.8f,  // Transfer 80% of drained mana
                 channel: 0
             ));
         }
 
         // Update custom cue parameters with calculated values
-        CustomCueParameters["reaction.damage"] = steamDamage;
+        CustomCueParameters["cues.spell.drain_amount"] = drainAmount;
+        CustomCueParameters["cues.spell.transfer_amount"] = drainAmount * 0.8f;
 
         return results.ToArray();
     }
@@ -421,18 +425,15 @@ public class ElementalReactionExecution : CustomExecution
 
 ### Using with Effects
 
-Once defined, you can use your custom execution in an effect:
+Once defined, you can use your custom execution in an [effect](docs/effects/README.md):
 
 ```csharp
-// Create an effect that applies the elemental reaction
-var steamReactionEffect = new EffectData(
-    "Steam Reaction",
-    [],  // No standard modifiers, all handled by custom execution
+// Create an effect that applies the mana drain
+var manaDrainEffect = new EffectData(
+    "Mana Drain",
     new DurationData(DurationType.Instant),
-    null,
-    null,
     customExecutions: new[] {
-        new ElementalReactionExecution()
+        new ManaDrainExecution()
     }
 );
 ```
@@ -441,11 +442,11 @@ var steamReactionEffect = new EffectData(
 
 When a `CustomExecution` is used:
 
-1. The effect system gathers all attributes specified in `AttributesToCapture`
-2. When the effect is applied, `EvaluateExecution()` is called
-3. The method returns an array of `ModifierEvaluatedData` objects
-4. Each modifier is applied to its target attribute with its specified operation, magnitude, and channel
-5. Any custom cue parameters are passed to the cues system
+1. The effect system gathers all attributes specified in `AttributesToCapture`.
+2. When the effect is applied, `EvaluateExecution()` is called.
+3. The method returns an array of `ModifierEvaluatedData` objects.
+4. Each modifier is applied to its target attribute with its specified operation, magnitude, and channel.
+5. Any custom cue parameters are passed to the cues system.
 
 ## Advanced Techniques
 
@@ -469,6 +470,8 @@ public class QuestDamageCalculator : CustomModifierMagnitudeCalculator
             snapshot: true);
 
         AttributesToCapture.Add(BaseDamage);
+
+        CustomCueParameters.Add("cues.quest.target_bonus", false);
     }
 
     public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
@@ -479,7 +482,7 @@ public class QuestDamageCalculator : CustomModifierMagnitudeCalculator
         if (target is IQuestTarget questTarget && _questManager.IsTargetForActiveQuest(questTarget.QuestTargetId))
         {
             baseDamage *= 1.5f;  // 50% bonus damage to quest targets
-            CustomCueParameters["quest.target_bonus"] = true;
+            CustomCueParameters["cues.quest.target_bonus"] = true;
         }
 
         return -baseDamage;  // Negative for damage
@@ -515,6 +518,9 @@ public class ComboAttackExecution : CustomExecution
 
         AttributesToCapture.Add(TargetHealth);
         AttributesToCapture.Add(AttackerStrength);
+
+        CustomCueParameters.Add("cues.combat.combo_count", 0);
+        CustomCueParameters.Add("cues.combat.combo_damage", 0f);
     }
 
     public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target)
@@ -540,8 +546,8 @@ public class ComboAttackExecution : CustomExecution
         }
 
         // Add combo to cue parameters
-        CustomCueParameters["combat.combo_count"] = comboCount;
-        CustomCueParameters["combat.combo_damage"] = comboDamage;
+        CustomCueParameters["cues.combat.combo_count"] = comboCount;
+        CustomCueParameters["cues.combat.combo_damage"] = comboDamage;
 
         // Increment combo counter
         _comboSystem.IncrementCombo(effect.Ownership.Owner);
@@ -555,46 +561,43 @@ public class ComboAttackExecution : CustomExecution
 
 When debugging issues with custom calculators:
 
-1. **Log Input Values**: Verify that attribute captures return expected values
-2. **Check Attribute Names**: Ensure attribute keys match exactly what's in your game
-3. **Test with Simple Formulas**: Start with simple calculations and build up complexity
-4. **Verify Processing Order**: Remember that snapshots happen at effect application time
-5. **Test Edge Cases**: Handle null values, zero values, and extremely large/small values
+1. **Log Input Values**: Verify that attribute captures return expected values.
+2. **Check Attribute Names**: Ensure attribute keys match exactly what's in your game.
+3. **Test with Simple Formulas**: Start with simple calculations and build up complexity.
+4. **Verify Processing Order**: Remember that snapshots happen at effect application time.
+5. **Test Edge Cases**: Handle null values, zero values, and extremely large/small values.
 
 ## Best Practices
 
 ### When to Use CustomCalculationBasedFloat vs CustomExecution
 
 - **Use CustomCalculationBasedFloat when**:
-  - You need to modify a single attribute
-  - Your calculation depends on multiple other attributes
-  - You want the standard modifier framework to handle application
+  - You need to modify a single attribute.
+  - Your calculation depends on multiple other attributes.
+  - You want the standard modifier framework to handle application.
 
 - **Use CustomExecution when**:
-  - You need to modify multiple attributes at once
-  - You need coordinated changes across different attributes
-  - You want complete control over how modifiers are created and applied
+  - You need to modify multiple attributes at once.
+  - You need coordinated changes across different attributes.
+  - You want complete control over how modifiers are created and applied.
 
 ### Attribute Capture Considerations
 
 1. **Snapshot vs Live Updates**:
-   - `snapshot: true`: Captures the attribute value once when the effect is applied
-   - `snapshot: false`: Continuously updates when the source attribute changes
+   - `snapshot: true`: Captures the attribute value once when the effect is applied.
+   - `snapshot: false`: Continuously updates when the source attribute changes.
 
 2. **Source vs Target**:
-   - Choose `AttributeCaptureSource.Source` for values from the effect owner
-   - Choose `AttributeCaptureSource.Target` for values from the effect target
+   - Choose `AttributeCaptureSource.Source` for values from the effect owner.
+   - Choose `AttributeCaptureSource.Target` for values from the effect target.
 
 3. **Error Handling**:
-   - Always handle cases where attributes might not exist
-   - Use `TryGetAttribute()` to safely access attributes
+   - Always handle cases where attributes might not exist.
+   - Use `TryGetAttribute()` to safely access attributes.
 
 ### Performance Tips
 
-1. **Minimize Attribute Dependencies**: Each non-snapshot attribute creates a dependency that triggers recalculations
-
-2. **Optimize Calculations**: Custom calculators can run frequently, keep calculations efficient
-
-3. **Cache Complex Values**: If your calculator performs expensive operations, consider caching results
-
-4. **Batch Related Changes**: Use CustomExecution to apply multiple changes at once instead of multiple effects
+1. **Minimize Attribute Dependencies**: Each non-snapshot attribute creates a dependency that triggers recalculations.
+2. **Optimize Calculations**: Custom calculators can run frequently, so keep calculations efficient.
+3. **Cache Complex Values**: If your calculator performs expensive operations, consider caching results.
+4. **Batch Related Changes**: Use `CustomExecution` to apply multiple changes at once instead of multiple effects.

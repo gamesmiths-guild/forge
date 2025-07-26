@@ -1,6 +1,8 @@
-# Effect Components System
+# Effect Components
 
-The Effect Components system in Forge allows developers to extend effect functionality through a modular, composable approach. Components can add custom behaviors, validation logic, and react to different events in an effect's lifecycle.
+Effect Components in Forge allows developers to extend effect functionality through a modular, composable approach. Components can add custom behaviors, validation logic, and react to different events in an effect's lifecycle.
+
+For a practical guide on using components, see the [Quick Start Guide](quick-start.md).
 
 ## Core Concept
 
@@ -12,7 +14,7 @@ public readonly struct EffectData(
     IEffectComponent[]? effectComponents = null)
 {
     // Implementation...
-    public IEffectComponent[] EffectComponents { get; }
+    public IEffectComponent[]? EffectComponents { get; }
 }
 ```
 
@@ -43,7 +45,7 @@ The interface provides default implementations for all methods, so you only need
 Called during the validation phase to determine if an effect can be applied. Return `false` to block the application.
 
 ```csharp
-bool CanApplyEffect(in IForgeEntity target, in Effect effect)
+public bool CanApplyEffect(in IForgeEntity target, in Effect effect)
 {
     // Custom validation logic
     return true; // Allow application by default
@@ -51,16 +53,17 @@ bool CanApplyEffect(in IForgeEntity target, in Effect effect)
 ```
 
 Use cases:
-- Checking if target meets requirements
-- Implementing application chances
-- Restricting effects based on game state
+
+- Checking if target meets requirements.
+- Implementing application chances.
+- Restricting effects based on game state.
 
 #### OnActiveEffectAdded
 
 Called when a non-instant effect is added to a target. Return `false` to inhibit the effect.
 
 ```csharp
-bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+public bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 {
     // Custom initialization logic
     return true; // Keep the effect active by default
@@ -68,16 +71,17 @@ bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activ
 ```
 
 Use cases:
-- Adding temporary tags or flags
-- Setting up event subscriptions
-- Initializing effect-specific game state
+
+- Adding temporary tags or flags.
+- Setting up event subscriptions.
+- Initializing effect-specific game state.
 
 #### OnActiveEffectUnapplied
 
 Called when an effect is unapplied or a stack is removed.
 
 ```csharp
-void OnActiveEffectUnapplied(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData, bool removed)
+public void OnActiveEffectUnapplied(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData, bool removed)
 {
     // Custom cleanup logic
     if (removed) {
@@ -89,59 +93,64 @@ void OnActiveEffectUnapplied(IForgeEntity target, in ActiveEffectEvaluatedData a
 ```
 
 Use cases:
-- Removing temporary tags or flags
-- Cleaning up game state
-- Removing event subscriptions
+
+- Removing temporary tags or flags.
+- Cleaning up game state.
+- Removing event subscriptions.
 
 #### OnActiveEffectChanged
 
 Called when an effect changes. This occurs specifically when:
-- The effect level changes
-- Modifier values are updated
-- Stack count changes
-- Inhibition state changes
+
+- The effect level changes.
+- Modifier values are updated.
+- Stack count changes.
+- Inhibition state changes.
 
 ```csharp
-void OnActiveEffectChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+public void OnActiveEffectChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 {
     // React to effect changes
 }
 ```
 
 Use cases:
-- Updating related game systems
-- Adjusting dependent mechanics
+
+- Updating related game systems.
+- Adjusting dependent mechanics.
 
 #### OnEffectApplied
 
 Called for all effects when applied, including instant effects and stack applications.
 
 ```csharp
-void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
+public void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
 {
     // React to effect application
 }
 ```
 
 Use cases:
-- Triggering reactions to both instant and duration effects
-- Cross-effect interactions
+
+- Triggering reactions to both instant and duration effects.
+- Cross-effect interactions.
 
 #### OnEffectExecuted
 
 Called when an instant or periodic effect executes its modifiers.
 
 ```csharp
-void OnEffectExecuted(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
+public void OnEffectExecuted(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
 {
     // React to effect execution
 }
 ```
 
 Use cases:
-- Adding secondary effects based on execution results
-- Tracking execution statistics
-- Triggering additional gameplay reactions
+
+- Adding secondary effects based on execution results.
+- Tracking execution statistics.
+- Triggering additional gameplay reactions.
 
 ### Creating Custom Components
 
@@ -164,6 +173,7 @@ public class DamageThresholdComponent : IEffectComponent
     public bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
     {
         _accumulatedDamage[activeEffectEvaluatedData.ActiveEffectHandle] = 0;
+        // Note: This is a simplified example. A real implementation would need a more robust way to subscribe/unsubscribe.
         target.Attributes.GetAttribute("CombatAttributeSet.CurrentHealth").OnValueChanged +=
             (attribute, change) => TrackDamage(target, activeEffectEvaluatedData.ActiveEffectHandle, change);
         return true;
@@ -177,6 +187,7 @@ public class DamageThresholdComponent : IEffectComponent
         if (removed)
         {
             _accumulatedDamage.Remove(activeEffectEvaluatedData.ActiveEffectHandle);
+            // Note: This is a simplified example. A real implementation would need a more robust way to subscribe/unsubscribe.
             target.Attributes.GetAttribute("CombatAttributeSet.CurrentHealth").OnValueChanged -=
                 (attribute, change) => TrackDamage(target, activeEffectEvaluatedData.ActiveEffectHandle, change);
         }
@@ -203,11 +214,11 @@ public class DamageThresholdComponent : IEffectComponent
 
 Components can be used to implement complex systems that integrate with your game's mechanics:
 
-- **Combat Reaction System**: Components that trigger reactions between elements
-- **Cooldown Management**: Components that track and enforce cooldowns between effect applications
-- **Cross-Effect Coordination**: Components that coordinate between multiple active effects
-- **Attribute Threshold Monitoring**: Components that trigger effects when attributes cross thresholds
-- **AI Behavior Modification**: Components that adjust AI behavior when effects are active
+- **Combat Reaction System**: Components that trigger reactions between elements.
+- **Cooldown Management**: Components that track and enforce cooldowns between effect applications.
+- **Cross-Effect Coordination**: Components that coordinate between multiple active effects.
+- **Attribute Threshold Monitoring**: Components that trigger effects when attributes cross thresholds.
+- **AI Behavior Modification**: Components that adjust AI behavior when effects are active.
 
 ## Built-in Components
 
@@ -252,10 +263,7 @@ The component specifically uses the `NextSingle()` method, which returns a rando
 // Create a "Stun" effect with a 25% chance to apply
 var stunEffectData = new EffectData(
     "Stun",
-    new[] { /* modifiers */ },
     new DurationData(DurationType.HasDuration, new ScalableFloat(3.0f)),
-    null,
-    null,
     effectComponents: new[] {
         new ChanceToApplyEffectComponent(
             randomProvider,  // Your game's random number generator
@@ -271,10 +279,8 @@ Advanced usage with level scaling:
 // Create a "Critical Hit" effect with a chance that scales with level
 var criticalHitEffectData = new EffectData(
     "Critical Hit",
-    new[] { /* modifiers */ },
     new DurationData(DurationType.Instant),
-    null,
-    null,
+    [/*...*/],
     effectComponents: new[] {
         new ChanceToApplyEffectComponent(
             randomProvider,
@@ -292,13 +298,14 @@ var criticalHitEffectData = new EffectData(
 ```
 
 Key points:
-- Uses the provided random provider for chance determination
-- Chance can scale with effect level using `ScalableFloat`
-- Validates during `CanApplyEffect`, before any effect application logic
+
+- Uses the provided random provider for chance determination.
+- Chance can scale with effect level using `ScalableFloat`.
+- Validates during `CanApplyEffect`, before any effect application logic.
 
 ### ModifierTagsEffectComponent
 
-Adds tags to the target entity while the effect is active. These tags are automatically removed when the effect ends.
+Adds tags to the target entity while the effect is active. These tags are automatically removed when the effect ends. See the [Tags documentation](tags.md) for more on tags.
 
 ```csharp
 public class ModifierTagsEffectComponent(TagContainer tagsToAdd) : IEffectComponent
@@ -313,29 +320,29 @@ Usage example:
 // Create a "Burning" effect that adds the "Status.Burning" tag to the target
 var burningEffectData = new EffectData(
     "Burning",
-    new[] {
-        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, -5)
-    },
     new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
-    null, // No stacking data
-    new PeriodicData(
+    new[] {
+        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
+    },
+    periodicData: new PeriodicData(
         period: new ScalableFloat(2.0f),
         executeOnApplication: true,
         periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     ),
     effectComponents: new[] {
-        new ModifierTagsEffectComponent(new TagContainer(tagsManager, new[] {
-            Tag.RequestTag("Status.Burning")
-        }))
+        new ModifierTagsEffectComponent(
+            tagsManager.RequestTagContainer(new[] { "status.burning" })
+        )
     }
 );
 ```
 
 Key points:
-- Only works with duration effects (not instant)
-- Tags are automatically added when the effect is applied
-- Tags are automatically removed when the effect ends completely
-- With stacked effects, tags remain until all stacks are removed
+
+- Only works with duration effects (not instant).
+- Tags are automatically added when the effect is applied.
+- Tags are automatically removed when the effect ends completely.
+- With stacked effects, tags remain until all stacks are removed.
 
 ### TargetTagRequirementsEffectComponent
 
@@ -353,13 +360,13 @@ public class TargetTagRequirementsEffectComponent(
 
 #### The TagRequirements System
 
-The `TagRequirements` struct is a powerful mechanism for evaluating tag conditions on entities, used by the TargetTagRequirementsEffectComponent.
+The `TagRequirements` struct is a powerful mechanism for evaluating tag conditions on entities, used by the `TargetTagRequirementsEffectComponent`.
 
 ```csharp
 public readonly struct TagRequirements(
-    TagContainer requiredTags,
-    TagContainer ignoreTags,
-    TagQuery tagQuery)
+    TagContainer? requiredTags = null,
+    TagContainer? ignoreTags = null,
+    TagQuery? tagQuery = null)
 {
     // Implementation...
 }
@@ -367,31 +374,32 @@ public readonly struct TagRequirements(
 
 ##### Components of TagRequirements
 
-- **RequireTags**: Tags that must all be present on the target
-- **IgnoreTags**: Tags that must not be present on the target (any match will fail)
-- **TagQuery**: A complex query expression for advanced tag matching
+- **RequiredTags**: Tags that must all be present on the target.
+- **IgnoreTags**: Tags that must not be present on the target (any match will fail).
+- **TagQuery**: A complex query expression for advanced tag matching.
 
 ##### How TagRequirements Are Evaluated
 
 ```csharp
 public bool RequirementsMet(in TagContainer targetContainer)
 {
-    var hasRequired = targetContainer.HasAll(RequireTags);
-    var hasIgnored = targetContainer.HasAny(IgnoreTags);
-    var matchQuery = TagQuery.IsEmpty || TagQuery.Matches(targetContainer);
+    var hasRequired = RequiredTags is null || targetContainer.HasAll(RequiredTags);
+    var hasIgnored = IgnoreTags is not null && targetContainer.HasAny(IgnoreTags);
+    var matchQuery = TagQuery is null || TagQuery.IsEmpty || TagQuery.Matches(targetContainer);
 
     return hasRequired && !hasIgnored && matchQuery;
 }
 ```
 
 For requirements to be met:
-1. Target must have ALL required tags
-2. Target must have NONE of the ignore tags
-3. Target must match the tag query (if one is provided)
+
+1. Target must have ALL required tags.
+2. Target must have NONE of the ignore tags.
+3. Target must match the tag query (if one is provided).
 
 ##### Tag Query Usage
 
-Tag queries allow for more complex expressions than simple "has all" and "has none" logic:
+Tag queries allow for more complex expressions than simple "has all" and "has none" logic. See the [Tags documentation](tags.md) for more on tag queries.
 
 ```csharp
 // Create a query that matches if:
@@ -418,29 +426,21 @@ query.Build(new TagQueryExpression(tagsManager)
 // is removed if target gains the "Fire" tag, and is inhibited if target has the "Cold.Immune" tag
 var frostEffectData = new EffectData(
     "Frost",
-    new[] { /* modifiers */ },
     new DurationData(DurationType.HasDuration, new ScalableFloat(8.0f)),
-    null,
-    null,
+    [/*...*/],
     effectComponents: new[] {
         new TargetTagRequirementsEffectComponent(
             // Application requirements: target must have "Wet" tag
-            new TagRequirements(
-                tagsManager.RequestTagContainer(new[] { "Wet" }),
-                new TagContainer(),  // No ignore tags
-                new TagQuery()       // No tag query
+            applicationTagRequirements: new TagRequirements(
+                requiredTags: tagsManager.RequestTagContainer(new[] { "Wet" })
             ),
             // Removal requirements: effect is removed if target gets "Fire" tag
-            new TagRequirements(
-                new TagContainer(),
-                new TagContainer(),
-                new TagQuery("Fire")
+            removalTagRequirements: new TagRequirements(
+                tagQuery: new TagQuery(tagsManager, "Fire")
             ),
             // Ongoing requirements: effect is inhibited if target has "Cold.Immune" tag
-            new TagRequirements(
-                new TagContainer(),
-                tagsManager.RequestTagContainer(new[] { "Cold.Immune" }),
-                new TagQuery()
+            ongoingTagRequirements: new TagRequirements(
+                ignoreTags: tagsManager.RequestTagContainer(new[] { "Cold.Immune" })
             )
         )
     }
@@ -448,10 +448,11 @@ var frostEffectData = new EffectData(
 ```
 
 Key points:
-- Dynamically monitors tag changes on the target
-- Can prevent application, force removal, or toggle inhibition
-- Automatically cleans up event subscriptions when the effect is removed
-- Uses `TagRequirements` to define complex tag conditions
+
+- Dynamically monitors tag changes on the target.
+- Can prevent application, force removal, or toggle inhibition.
+- Automatically cleans up event subscriptions when the effect is removed.
+- Uses `TagRequirements` to define complex tag conditions.
 
 ## Combining Components
 
@@ -472,22 +473,13 @@ var complexEffectData = new EffectData(
 
 ## Best Practices
 
-1. **Focus on Single Responsibility**: Each component should handle one specific aspect of behavior
-
-2. **Manage Resources**: Clean up any subscriptions or external resources in `OnActiveEffectUnapplied`
-
-3. **Consider Performance**: Components are called frequently, optimize for performance
-
-4. **Use Return Values Correctly**: Return `false` from validation methods only when you want to block behavior
-
-5. **Leverage Existing Components**: Combine with built-in components when possible
-
-6. **Component Composition**: Use multiple simple components instead of one complex component
-
-7. **Avoid Circular Dependencies**: Be careful not to create recursive loops with components that apply effects
-
-8. **Error Handling**: Components should be robust against unexpected states and not throw exceptions
-
-9. **Documentation**: Document any requirements or assumptions your custom components make
-
-10. **Testing**: Test components in isolation and in combination with other components
+1. **Single Responsibility**: Each component should handle one specific aspect of behavior.
+2. **Manage Resources**: Clean up any subscriptions or external resources in `OnActiveEffectUnapplied`.
+3. **Consider Performance**: Components are called frequently, so optimize for performance.
+4. **Use Return Values Correctly**: Return `false` from validation methods only when you want to block behavior.
+5. **Leverage Existing Components**: Combine with built-in components when possible.
+6. **Component Composition**: Use multiple simple components instead of one complex component.
+7. **Avoid Circular Dependencies**: Be careful not to create recursive loops with components that apply effects.
+8. **Error Handling**: Components should be robust against unexpected states and not throw exceptions.
+9. **Documentation**: Document any requirements or assumptions your custom components make.
+10. **Testing**: Test components in isolation and in combination with other components.
