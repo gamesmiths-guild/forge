@@ -21,17 +21,21 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 	ProjectSection(SolutionItems) = preProject
 		docs\attributes.md = docs\attributes.md
-		docs\calculators.md = docs\calculators.md
-		docs\components.md = docs\components.md
 		docs\cues.md = docs\cues.md
-		docs\duration.md = docs\duration.md
-		docs\effects.md = docs\effects.md
-		docs\modifiers.md = docs\modifiers.md
-		docs\periodic.md = docs\periodic.md
 		docs\quick-start.md = docs\quick-start.md
 		docs\README.md = docs\README.md
-		docs\stacking.md = docs\stacking.md
 		docs\tags.md = docs\tags.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "effects", "effects", "{165A7B54-5612-4533-A67A-D27A8883E0F6}"
+	ProjectSection(SolutionItems) = preProject
+		docs\effects\calculators.md = docs\effects\calculators.md
+		docs\effects\components.md = docs\effects\components.md
+		docs\effects\duration.md = docs\effects\duration.md
+		docs\effects\modifiers.md = docs\effects\modifiers.md
+		docs\effects\periodic.md = docs\effects\periodic.md
+		docs\effects\README.md = docs\effects\README.md
+		docs\effects\stacking.md = docs\effects\stacking.md
 	EndProjectSection
 EndProject
 Global
@@ -54,6 +58,7 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{02EA681E-C7D8-13C7-8484-4AC65E1B71E8} = {00FFFD7A-9C1F-41D5-B270-2E2BE7F70FED}
+		{165A7B54-5612-4533-A67A-D27A8883E0F6} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E3A08099-B336-49EB-B289-336934AE6022}
