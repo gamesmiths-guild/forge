@@ -141,7 +141,7 @@ Calculates magnitude based on another attribute's value using a powerful formula
 ```csharp
 public readonly struct AttributeBasedFloat(
     AttributeCaptureDefinition backingAttribute,
-    AttributeBasedFloatCalculationType attributeCalculationType,
+    AttributeCalculationType attributeCalculationType,
     ScalableFloat coefficient,
     ScalableFloat preMultiplyAdditiveValue,
     ScalableFloat postMultiplyAdditiveValue,
@@ -169,7 +169,7 @@ Properties in detail:
 - **Coefficient**: A scaling factor (possibly level-scaled) that multiplies the captured attribute value.
 - **PreMultiplyAdditiveValue**: A value added to the attribute magnitude before multiplication.
 - **PostMultiplyAdditiveValue**: A value added after the multiplication.
-- **FinalChannel**: Only used with `AttributeCalculationType.AttributeMagnitudeEvaluatedUpToChannel`.
+- **FinalChannel**: Only used with `AttributeCalculationType.MagnitudeEvaluatedUpToChannel`.
 - **LookupCurve**: Optional curve used to remap the final calculated value.
 
 Example:
@@ -186,7 +186,7 @@ var strengthBasedDamage = new Modifier(
                 "StatAttributeSet.Strength",
                 AttributeCaptureSource.Source
             ),
-            AttributeBasedFloatCalculationType.AttributeMagnitude,
+            AttributeCalculationType.CurrentValue,
             new ScalableFloat(0.5f),        // Coefficient: 50% of strength
             new ScalableFloat(0),           // PreMultiply: no additional value
             new ScalableFloat(5)            // PostMultiply: +5 flat bonus
@@ -197,15 +197,19 @@ var strengthBasedDamage = new Modifier(
 
 This creates a damage modifier that adds `(0.5 * Strength) + 5` to the target's damage output.
 
-The `AttributeBasedFloat` has several calculation types:
+The `AttributeCalculationType` enum provides various ways to access different aspects of an attribute:
 
 ```csharp
-public enum AttributeBasedFloatCalculationType : byte
+public enum AttributeCalculationType : byte
 {
-    AttributeMagnitude = 0,                     // Use current value (base + all modifiers)
-    AttributeBaseValue = 1,                     // Use only base value
-    AttributeModifierMagnitude = 2,             // Use only modifier value
-    AttributeMagnitudeEvaluatedUpToChannel = 3  // Use value calculated up to a specific channel
+    CurrentValue = 0,                     // Use current value (base + all modifiers)
+    BaseValue = 1,                        // Use only base value
+    Modifier = 2,                         // Use total modifier value
+    Overflow = 3,                         // Use overflow value (exceeding min/max)
+    ValidModifier = 4,                    // Use effective modifier (excluding overflow)
+    Min = 5,                              // Use minimum value constraint
+    Max = 6,                              // Use maximum value constraint
+    MagnitudeEvaluatedUpToChannel = 7     // Use value calculated up to a specific channel
 }
 ```
 
@@ -457,7 +461,7 @@ new Modifier(
         MagnitudeCalculationType.AttributeBased,
         attributeBasedFloat: new AttributeBasedFloat(
             new AttributeCaptureDefinition("StatAttributeSet.Intelligence", AttributeCaptureSource.Source),
-            AttributeBasedFloatCalculationType.AttributeMagnitude,
+            AttributeCalculationType.CurrentValue,
             new ScalableFloat(0.3f),  // 30% of intelligence
             new ScalableFloat(0),
             new ScalableFloat(0)

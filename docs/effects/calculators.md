@@ -15,7 +15,9 @@ public abstract class CustomCalculator
     protected static int CaptureAttributeMagnitude(
         AttributeCaptureDefinition capturedAttribute,
         Effect effect,
-        IForgeEntity? target);
+        IForgeEntity? target,
+        AttributeCalculationType calculationType = AttributeCalculationType.CurrentValue,
+        int finalChannel = 0);
 
     // Additional implementation...
 }
@@ -107,8 +109,31 @@ The `CaptureAttributeMagnitude` method:
 - Safely retrieves attribute values based on the capture definition.
 - Returns 0 if the attribute doesn't exist (avoids null reference exceptions).
 - Handles attribute lookup from the correct entity (source or target).
-- Returns the current value of the attribute.
+- Supports various calculation types to access different attribute properties:
+  - `AttributeCalculationType.CurrentValue`: Gets the current total value of the attribute (default).
+  - `AttributeCalculationType.BaseValue`: Gets only the base value without modifiers.
+  - `AttributeCalculationType.Modifier`: Gets the total modifier value applied to the attribute.
+  - `AttributeCalculationType.Overflow`: Gets the overflow value (amount exceeding min/max bounds).
+  - `AttributeCalculationType.ValidModifier`: Gets the effective modifier value that isn't causing overflow.
+  - `AttributeCalculationType.Min`: Gets the attribute's minimum value.
+  - `AttributeCalculationType.Max`: Gets the attribute's maximum value.
+  - `AttributeCalculationType.MagnitudeEvaluatedUpToChannel`: Gets the value calculated up to a specific channel (requires finalChannel parameter).
 
+Example with a specific calculation type:
+// Get the valid modifier value (total modifier without overflow)
+int validModifier = CaptureAttributeMagnitude(
+    StrengthAttribute, 
+    effect, 
+    target, 
+    AttributeCalculationType.ValidModifier);
+    
+// Get magnitude calculated up to a specific channel
+int channelMagnitude = CaptureAttributeMagnitude(
+    StrengthAttribute, 
+    effect, 
+    target, 
+    AttributeCalculationType.MagnitudeEvaluatedUpToChannel,
+    finalChannel: 2);
 Even when not using non-snapshot functionality, it's recommended to follow this pattern to ensure consistent and safe attribute access.
 
 ### ModifierEvaluatedData

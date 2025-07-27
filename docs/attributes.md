@@ -15,6 +15,7 @@ An `EntityAttribute` represents a single numeric property with constraints and m
 - **Min/Max**: The lower and upper bounds for the attribute.
 - **Modifier**: The cumulative modification applied to the BaseValue.
 - **Overflow**: Value that exceeds Min/Max constraints (useful for effects like shield overflow).
+- **ValidModifier**: The effective modifier value that isn't causing overflow (Modifier - Overflow).
 
 ### AttributeSet
 
@@ -162,14 +163,14 @@ public class ResourceAttributeSet : AttributeSet
 
 AttributeSet provides several protected methods to manage attributes within the set:
 
-| Method | Purpose |
-|--------|---------|
-| **InitializeAttribute** | Creates and registers a new attribute with the set |
-| **SetAttributeBaseValue** | Sets the base value of an attribute |
-| **AddToAttributeBaseValue** | Adds to the base value of an attribute |
-| **SetAttributeMinValue** | Sets the minimum value constraint |
-| **SetAttributeMaxValue** | Sets the maximum value constraint |
-| **AttributeOnValueChanged** | Override to handle attribute value changes |
+| Method                      | Purpose                                            |
+|-----------------------------|----------------------------------------------------|
+| **InitializeAttribute**     | Creates and registers a new attribute with the set |
+| **SetAttributeBaseValue**   | Sets the base value of an attribute                |
+| **AddToAttributeBaseValue** | Adds to the base value of an attribute             |
+| **SetAttributeMinValue**    | Sets the minimum value constraint                  |
+| **SetAttributeMaxValue**    | Sets the maximum value constraint                  |
+| **AttributeOnValueChanged** | Override to handle attribute value changes         |
 
 Example usage:
 ```csharp
@@ -282,6 +283,32 @@ protected override void AttributeOnValueChanged(EntityAttribute attribute, int c
 
 ## Advanced Concepts
 
+### Overflow and ValidModifier
+
+When modifiers would push an attribute beyond its Min or Max constraints, the `Overflow` property tracks this excess value:
+
+```
+Example: An attribute with:
+ - BaseValue = 100
+ - Min = 0
+ - Max = 150
+ - Current applied modifier = +70
+
+The attribute's properties will show:
+ - BaseValue = 100 (unchanged)
+ - CurrentValue = 150 (clamped at Max)
+ - Modifier = +70 (total modification applied)
+ - Overflow = +20 (the amount exceeding Max)
+ - ValidModifier = +50 (the effective portion of the modifier: 70 - 20)
+```
+
+The `ValidModifier` property gives you the portion of the modifier that is actually affecting the attribute's value. This is useful for:
+
+- Calculating partial effectiveness of buffs and debuffs
+- Determining when effects are being wasted due to attribute caps
+- Creating UI elements that show effective vs. total modifiers
+- Triggering game events when modifiers are partially effective
+
 ### Multiple Attribute Sets
 
 Entities can have multiple attribute sets for different aspects of gameplay:
@@ -329,3 +356,4 @@ While detailed relationships with other systems are covered in their respective 
 5. **Document Attribute Dependencies**: Keep track of which attributes affect others.
 6. **Consistent Naming**: Use clear, consistent naming conventions for attributes.
 7. **Respect Encapsulation**: Never attempt to directly modify attributes outside of AttributeSets or the Effects system.
+8. **Use ValidModifier for UI**: When showing modifier values in UI, consider whether to show the total modifier or the ValidModifier.

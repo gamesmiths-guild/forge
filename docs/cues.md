@@ -48,7 +48,8 @@ var cueData = new CueData(
     minValue: 0,
     maxValue: 100,
     magnitudeType: CueMagnitudeType.AttributeValueChange,
-    magnitudeAttribute: "CombatAttributeSet.CurrentHealth"  // Required for attribute-based magnitude types
+    magnitudeAttribute: "CombatAttributeSet.CurrentHealth",  // Required for attribute-based magnitude types
+    finalChannel: 0  // Required for AttributeMagnitudeEvaluatedUpToChannel type
 );
 ```
 
@@ -59,10 +60,14 @@ var cueData = new CueData(
 - **EffectLevel**: Uses the effect's level.
 - **StackCount**: Uses the effect's stack count.
 - **AttributeValueChange**: Uses the change in an attribute's value (requires `magnitudeAttribute`).
-- **AttributeBaseValue**: Uses an attribute's base value (requires `magnitudeAttribute`)
+- **AttributeBaseValue**: Uses an attribute's base value (requires `magnitudeAttribute`).
 - **AttributeCurrentValue**: Uses an attribute's current value (requires `magnitudeAttribute`).
 - **AttributeModifier**: Uses an attribute's current modifier value (requires `magnitudeAttribute`).
 - **AttributeOverflow**: Uses an attribute's current overflow value (requires `magnitudeAttribute`).
+- **AttributeValidModifier**: Uses an attribute's effective modifier value excluding overflow (requires `magnitudeAttribute`).
+- **AttributeMin**: Uses an attribute's minimum value constraint (requires `magnitudeAttribute`).
+- **AttributeMax**: Uses an attribute's maximum value constraint (requires `magnitudeAttribute`).
+- **AttributeMagnitudeEvaluatedUpToChannel**: Uses an attribute's magnitude calculated up to a specific channel (requires `magnitudeAttribute` and `finalChannel`).
 
 ```csharp
 // Magnitude based on effect level
@@ -81,9 +86,31 @@ var healthChangeCue = new CueData(
     magnitudeType: CueMagnitudeType.AttributeValueChange,
     magnitudeAttribute: "CombatAttributeSet.CurrentHealth"  // Required parameter
 );
+
+// Magnitude based on valid modifier (without overflow)
+var modifierCue = new CueData(
+    cueTags: modifierTags,
+    minValue: -50,
+    maxValue: 50,
+    magnitudeType: CueMagnitudeType.AttributeValidModifier,
+    magnitudeAttribute: "CombatAttributeSet.AttackPower"  // Required parameter
+);
+
+// Magnitude based on calculation up to channel 2
+var channelMagnitudeCue = new CueData(
+    cueTags: calculationTags,
+    minValue: 0,
+    maxValue: 200,
+    magnitudeType: CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel,
+    magnitudeAttribute: "CombatAttributeSet.DamageOutput",  // Required parameter
+    finalChannel: 2  // Required for this magnitude type
+);
 ```
 
-**Important**: The `magnitudeAttribute` parameter is required when using `AttributeValueChange`, `AttributeBaseValue`, `AttributeCurrentValue`, `AttributeModifier`, or `AttributeOverflow` magnitude types. Omitting it will result in errors.
+**Important**:
+- The `magnitudeAttribute` parameter is required when using any attribute-based magnitude types.
+- The `finalChannel` parameter is required specifically for `AttributeMagnitudeEvaluatedUpToChannel` type.
+- Omitting required parameters will result in errors.
 
 ### CueParameters and Magnitude
 
@@ -106,15 +133,19 @@ var parameters = new CueParameters(
 
 Depending on the `CueMagnitudeType` selected, the `magnitude` and `normalizedMagnitude` parameters behave differently:
 
-| MagnitudeType         | Magnitude Source                    | Normalized Range             | Example Use Case                       |
-|-----------------------|-------------------------------------|------------------------------|----------------------------------------|
-| EffectLevel           | Effect's current level              | 0 to 1 (relative to min/max) | Effect strength scaling with level     |
-| StackCount            | Effect's stack count                | 0 to 1 (relative to min/max) | Visual intensity based on stacks       |
-| AttributeValueChange  | Change applied to attribute         | 0 to 1 (relative to min/max) | Damage/healing visual scale            |
-| AttributeBaseValue    | Attribute's base value              | 0 to 1 (relative to min/max) | Visuals based on base stat             |
-| AttributeCurrentValue | Current value of attribute          | 0 to 1 (relative to min/max) | Health bar fill amount                 |
-| AttributeModifier     | Total modifier value on attribute   | 0 to 1 (relative to min/max) | Buff/debuff intensity                  |
-| AttributeOverflow     | Current overflow value of attribute | 0 to 1 (relative to min/max) | Visuals for overcharged, overheal, etc.|
+| MagnitudeType                        | Magnitude Source                      | Normalized Range             | Example Use Case                       |
+|--------------------------------------|---------------------------------------|------------------------------|----------------------------------------|
+| EffectLevel                          | Effect's current level                | 0 to 1 (relative to min/max) | Effect strength scaling with level     |
+| StackCount                           | Effect's stack count                  | 0 to 1 (relative to min/max) | Visual intensity based on stacks       |
+| AttributeValueChange                 | Change applied to attribute           | 0 to 1 (relative to min/max) | Damage/healing visual scale            |
+| AttributeBaseValue                   | Attribute's base value                | 0 to 1 (relative to min/max) | Visuals based on base stat             |
+| AttributeCurrentValue                | Current value of attribute            | 0 to 1 (relative to min/max) | Health bar fill amount                 |
+| AttributeModifier                    | Total modifier value on attribute     | 0 to 1 (relative to min/max) | Buff/debuff intensity                  |
+| AttributeOverflow                    | Overflow value of attribute           | 0 to 1 (relative to min/max) | Visuals for overcharged, overheal      |
+| AttributeValidModifier               | Effective modifier (minus overflow)   | 0 to 1 (relative to min/max) | Visual effect for valid stat changes   |
+| AttributeMin                         | Minimum value constraint              | 0 to 1 (relative to min/max) | Visualizing attribute boundaries       |
+| AttributeMax                         | Maximum value constraint              | 0 to 1 (relative to min/max) | Visualizing attribute limits           |
+| AttributeMagnitudeEvaluatedUpToChannel | Value calculated to specific channel | 0 to 1 (relative to min/max) | Visual effects for partial calculations|
 
 The normalization process maps raw magnitude values into the 0-1 range:
 
@@ -285,4 +316,4 @@ cuesManager.RemoveCue(burningTag, targetEntity, interrupted: false);
 5. **Scale Effects Appropriately**: Use `normalizedMagnitude` to scale effect intensity.
 6. **Lifecycle Management**: Consider how the cue's lifecycle should match game events, especially for persistent cues.
 7. **CuesManager as Singleton**: Maintain a single `CuesManager` instance for the game.
-8. **Provide `magnitudeAttribute`**: Always specify a `magnitudeAttribute` when using attribute-based magnitude types.
+8. **Provide Required Parameters**: Always specify `magnitudeAttribute` when using attribute-based magnitude types and `finalChannel` when using `AttributeMagnitudeEvaluatedUpToChannel` type.
