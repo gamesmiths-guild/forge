@@ -258,7 +258,7 @@ Cues can be triggered in several ways:
 
 ### 1. Through Effects
 
-Cues are typically triggered through the [Effects system](docs/effects/README.md):
+Cues are typically triggered through the [Effects system](effects/README.md):
 
 ```csharp
 // Create an effect with a cue

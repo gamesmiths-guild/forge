@@ -1,6 +1,6 @@
 # Custom Calculators
 
-Custom Calculators in Forge enables developers to implement complex, dynamic calculations for effect modifiers. These calculators provide a powerful way to create game-specific logic that goes beyond the built-in [modifier types](modifiers.md).
+Custom Calculators in Forge enables developers to implement complex, dynamic calculations for effect modifiers. These calculators provide a powerful way to create game-specific logic that goes beyond the built-in [modifier types](modifiers.md#magnitude-calculation-types).
 
 ## Core Concepts
 
@@ -26,7 +26,7 @@ public abstract class CustomCalculator
 This base class provides:
 
 - Management of attribute captures for accessing attribute values during calculations.
-- Custom parameters that can be passed to [cues](cues.md) when effects are applied.
+- Custom parameters that can be passed to [cues](../cues.md) when effects are applied.
 - Helper methods for retrieving attribute values from targets or sources.
 
 Forge offers two primary calculator types that inherit from `CustomCalculator`:
@@ -38,7 +38,7 @@ Forge offers two primary calculator types that inherit from `CustomCalculator`:
 
 ### Attribute Capture
 
-The `AttributeCaptureDefinition` struct is central to retrieving attribute values from the [Attributes system](attributes.md):
+The `AttributeCaptureDefinition` struct is central to retrieving attribute values from the [Attributes system](../attributes.md):
 
 ```csharp
 public readonly struct AttributeCaptureDefinition(
@@ -122,16 +122,16 @@ The `CaptureAttributeMagnitude` method:
 Example with a specific calculation type:
 // Get the valid modifier value (total modifier without overflow)
 int validModifier = CaptureAttributeMagnitude(
-    StrengthAttribute, 
-    effect, 
-    target, 
+    StrengthAttribute,
+    effect,
+    target,
     AttributeCalculationType.ValidModifier);
-    
+
 // Get magnitude calculated up to a specific channel
 int channelMagnitude = CaptureAttributeMagnitude(
-    StrengthAttribute, 
-    effect, 
-    target, 
+    StrengthAttribute,
+    effect,
+    target,
     AttributeCalculationType.MagnitudeEvaluatedUpToChannel,
     finalChannel: 2);
 Even when not using non-snapshot functionality, it's recommended to follow this pattern to ensure consistent and safe attribute access.
@@ -184,7 +184,7 @@ new ModifierEvaluatedData(
 
 ### Custom Cue Parameters
 
-The `CustomCueParameters` dictionary allows calculators to pass additional data to the [Cues system](cues.md):
+The `CustomCueParameters` dictionary allows calculators to pass additional data to the [Cues system](../cues.md):
 
 ```csharp
 public Dictionary<StringKey, object> CustomCueParameters { get; } = [];
@@ -450,7 +450,7 @@ public class ManaDrainExecution : CustomExecution
 
 ### Using with Effects
 
-Once defined, you can use your custom execution in an [effect](docs/effects/README.md):
+Once defined, you can use your custom execution in an [effect](README.md):
 
 ```csharp
 // Create an effect that applies the mana drain

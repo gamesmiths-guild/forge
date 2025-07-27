@@ -1,8 +1,8 @@
 # Effect Modifiers
 
-Effect Modifiers in Forge provides a flexible way to modify entity [attributes](attributes.md) through [effects](docs/effects/README.md). Modifiers define how an effect changes attribute values, with support for different operation types and magnitude calculations.
+Effect Modifiers in Forge provides a flexible way to modify entity [attributes](../attributes.md) through [effects](README.md). Modifiers define how an effect changes attribute values, with support for different operation types and magnitude calculations.
 
-For a practical guide on using modifiers, see the [Quick Start Guide](quick-start.md).
+For a practical guide on using modifiers, see the [Quick Start Guide](../quick-start.md).
 
 ## Core Concepts
 
@@ -22,7 +22,7 @@ public readonly struct Modifier(
 - **Attribute**: The target attribute to modify (using a string key).
 - **Operation**: How the modifier affects the attribute (flat, percentage, or override).
 - **Magnitude**: How to calculate the value that will be applied.
-- **Channel**: Which attribute [channel](attributes.md#attribute-channels) to affect (defaults to 0).
+- **Channel**: Which attribute [channel](../attributes.md#attribute-channels) to affect (defaults to 0).
 
 ## Modifier Operations
 
@@ -65,7 +65,7 @@ When calculating the final value of an attribute:
 2. If no override exists, flat bonuses are summed and applied.
 3. Finally, percentage modifiers are applied to the result.
 
-This order can be customized using [Attribute Channels](attributes.md#attribute-channels).
+This order can be customized using [Attribute Channels](../attributes.md#attribute-channels).
 
 ## Magnitude Calculation
 
@@ -351,7 +351,7 @@ Important notes about `SetByCallerFloat`:
 
 ## Channel System
 
-Modifiers can be applied to different "channels" of an attribute, allowing for more complex layered calculations beyond the default order (flat bonuses then percentage modifiers). For more details, see the [Attribute Channels documentation](attributes.md#attribute-channels).
+Modifiers can be applied to different "channels" of an attribute, allowing for more complex layered calculations beyond the default order (flat bonuses then percentage modifiers). For more details, see the [Attribute Channels documentation](../attributes.md#attribute-channels).
 
 ### How Channels Work
 

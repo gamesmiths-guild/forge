@@ -1,8 +1,8 @@
 # Effect Stacking
 
-Effect Stacking in Forge enables [effects](docs/effects/README.md) to accumulate on a target entity, allowing gameplay mechanics like poison stacks, buff/debuff stacks, or other cumulative effects. This powerful system offers extensive control over how effects combine, interact, and expire.
+Effect Stacking in Forge enables [effects](README.md) to accumulate on a target entity, allowing gameplay mechanics like poison stacks, buff/debuff stacks, or other cumulative effects. This powerful system offers extensive control over how effects combine, interact, and expire.
 
-For a practical guide on using stacking, see the [Quick Start Guide](quick-start.md).
+For a practical guide on using stacking, see the [Quick Start Guide](../quick-start.md).
 
 ## Core Components
 

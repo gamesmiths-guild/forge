@@ -35,12 +35,12 @@ Every game object that uses Forge implements the `IForgeEntity` interface, provi
 
 Forge supports a variety of gameplay mechanics through specialized subsystems:
 
-- **[Effect Duration](duration.md)**: Control how long effects remain active.
-- **[Effect Stacking](stacking.md)**: Configure how multiple instances of effects combine.
-- **[Periodic Effects](periodic.md)**: Create effects that execute repeatedly on a schedule.
-- **[Modifiers](modifiers.md)**: Define how effects change attribute values.
-- **[Effect Components](components.md)**: Extend effects with custom behaviors.
-- **[Custom Calculators](calculators.md)**: Flexible logic execution within the effects pipeline.
+- **[Effect Duration](docs/effects/duration.md)**: Control how long effects remain active.
+- **[Effect Stacking](docs/effects/stacking.md)**: Configure how multiple instances of effects combine.
+- **[Periodic Effects](docs/effects/periodic.md)**: Create effects that execute repeatedly on a schedule.
+- **[Modifiers](docs/effects/modifiers.md)**: Define how effects change attribute values.
+- **[Effect Components](docs/effects/components.md)**: Extend effects with custom behaviors.
+- **[Custom Calculators](docs/effects/calculators.md)**: Flexible logic execution within the effects pipeline.
 
 ## Project Status
 

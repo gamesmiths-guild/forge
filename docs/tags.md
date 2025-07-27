@@ -269,7 +269,7 @@ Typically, game code should use `CombinedTags` for tag checks:
 bool isStunned = entity.Tags.CombinedTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
 ```
 
-**Note:** While the `EntityTags` class provides methods for adding and removing tags, these are internal. Tags should be modified through proper channels: base tags during entity initialization and modifier tags through the [Effects system](docs/effects/README.md).
+**Note:** While the `EntityTags` class provides methods for adding and removing tags, these are internal. Tags should be modified through proper channels: base tags during entity initialization and modifier tags through the [Effects system](effects/README.md).
 
 ## Tag Queries
 

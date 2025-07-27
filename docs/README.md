@@ -39,7 +39,7 @@ Tags are central to many Forge systems, enabling contextual application of effec
 
 ### Effect System
 
-[Effects](docs/effects/README.md) are the primary way to implement gameplay mechanics in Forge:
+[Effects](effects/README.md) are the primary way to implement gameplay mechanics in Forge:
 
 - **Modifiers**: Changes to attribute values.
 - **Tags**: Added or removed during effect application.
@@ -77,18 +77,18 @@ For more detailed information about specific systems, refer to these documentati
 ### Core Systems
 
 - [Attributes](attributes.md): Details on attribute definition, evaluation, and channels.
-- [Effects](docs/effects/README.md): Creating and applying effects to entities.
+- [Effects](effects/README.md): Creating and applying effects to entities.
 - [Tags](tags.md): Using the tag system for entity identification.
 - [Cues](cues.md): Connecting gameplay events to visual and audio feedback.
 
 ### Effect Features
 
-- [Modifiers](modifiers.md): How modifiers affect attribute calculations.
-- [Duration](duration.md): Controlling how long effects remain active.
-- [Stacking](stacking.md): Configuring how multiple instances of effects combine.
-- [Periodic](periodic.md): Creating effects that execute repeatedly over time.
-- [Components](components.md): Extending effects with custom behaviors.
-- [Custom Calculators](calculators.md): Creating custom calculations for effects.
+- [Modifiers](effects/modifiers.md): How modifiers affect attribute calculations.
+- [Duration](effects/duration.md): Controlling how long effects remain active.
+- [Stacking](effects/stacking.md): Configuring how multiple instances of effects combine.
+- [Periodic](effects/periodic.md): Creating effects that execute repeatedly over time.
+- [Components](effects/components.md): Extending effects with custom behaviors.
+- [Custom Calculators](effects/calculators.md): Creating custom calculations for effects.
 
 ### Getting Started
 

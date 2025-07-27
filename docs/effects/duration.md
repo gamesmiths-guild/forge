@@ -1,8 +1,8 @@
 # Effect Duration
 
-Effect Duration in Forge controls how long [effects](docs/effects/README.md) remain active on target entities. It provides three distinct duration types that determine an effect's lifecycle and behavior.
+Effect Duration in Forge controls how long [effects](README.md) remain active on target entities. It provides three distinct duration types that determine an effect's lifecycle and behavior.
 
-For a practical guide on using durations, see the [Quick Start Guide](quick-start.md).
+For a practical guide on using durations, see the [Quick Start Guide](../quick-start.md).
 
 ## Core Components
 
@@ -123,7 +123,7 @@ When working with durations, several constraints apply to ensure effects behave 
    );
    ```
 
-2. **No Stacking**: Instant effects cannot have [stacking data](stacking.md).
+2. **No Stacking**: Instant effects cannot have [stacking data](stacking.md#stackingdata).
    ```csharp
    // INVALID - Instant effects can't have stacking data
    new EffectData(

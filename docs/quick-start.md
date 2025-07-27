@@ -157,7 +157,7 @@ if (buffHandle != null)
 }
 ```
 
-For more information about effect duration, see the [Duration documentation](duration.md).
+For more information about effect duration, see the [Duration documentation](effects/duration.md).
 
 ### Effect with Tags
 
@@ -197,7 +197,7 @@ int currentSpeed = player.Attributes["MovementAttributeSet.Speed"].CurrentValue;
 Console.WriteLine($"Player stunned: {isStunned}, Speed: {currentSpeed}");
 ```
 
-Learn more about modifier tags in the [Components documentation](components.md).
+Learn more about modifier tags in the [Components documentation](effects/components.md).
 
 ## Advanced: Creating a Custom Calculator
 
@@ -258,7 +258,7 @@ var strengthDamageEffect = new Effect(
 player.EffectsManager.ApplyEffect(strengthDamageEffect);
 ```
 
-For more advanced calculator usage, see the [Custom Calculators documentation](calculators.md).
+For more advanced calculator usage, see the [Custom Calculators documentation](effects/calculators.md).
 
 ## Updating Effects
 
@@ -282,10 +282,10 @@ void EndTurn()
 
 Now that you've seen the basics of Forge, you can:
 
-1. Set up [periodic effects](periodic.md) for damage or healing over time.
-2. Implement [stacking effects](stacking.md) with different stacking rules.
-3. Use [channels](attributes.md) to create advanced attribute calculations.
-4. Create [custom executions](calculators.md) to modify multiple attributes at once.
+1. Set up [periodic effects](effects/periodic.md) for damage or healing over time.
+2. Implement [stacking effects](effects/stacking.md) with different stacking rules.
+3. Use [channels](attributes.md#attribute-channels) to create advanced attribute calculations.
+4. Create [custom executions](effects/calculators.md#customexecution) to modify multiple attributes at once.
 5. Add [visual feedback](cues.md) using the cues system.
 
 For more detailed documentation on each system, refer to the specific system documentation linked above, or return to the [main documentation index](README.md).

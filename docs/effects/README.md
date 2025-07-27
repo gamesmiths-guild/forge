@@ -1,12 +1,12 @@
 # Effects System
 
-The Effects system in Forge provides a powerful framework for implementing gameplay mechanics such as damage, healing, buffs, debuffs, and other status effects. It offers a data-driven approach to modifying [attributes](attributes.md) and applying status changes to game entities.
+The Effects system in Forge provides a powerful framework for implementing gameplay mechanics such as damage, healing, buffs, debuffs, and other status effects. It offers a data-driven approach to modifying [attributes](../attributes.md) and applying status changes to game entities.
 
 For a practical guide on creating and applying effects, see the [Quick Start Guide](quick-start.md).
 
 ## Core Concepts
 
-- **Effects** are self-contained gameplay rules that can modify attributes, apply [tags](tags.md), or trigger [cues](cues.md).
+- **Effects** are self-contained gameplay rules that can modify attributes, apply [tags](../tags.md), or trigger [cues](../cues.md).
 - **[Durations](duration.md)** control how long effects remain active (instant, timed, infinite).
 - **[Modifiers](modifiers.md)** define how effects change attributes (add, multiply, override).
 - **[Stacking](stacking.md)** rules determine how multiple instances of similar effects combine.
@@ -501,7 +501,7 @@ var executionBasedEffectData = new EffectData(
 
 ### Cue Configurations
 
-[Cues](cues.md) provide visual and audio feedback for effects, helping communicate gameplay changes to players through effects, animations, sounds, or UI elements. They are optional and can be included in any number within an effect.
+[Cues](../cues.md) provide visual and audio feedback for effects, helping communicate gameplay changes to players through effects, animations, sounds, or UI elements. They are optional and can be included in any number within an effect.
 
 ```csharp
 var cueEnabledEffectData = new EffectData(

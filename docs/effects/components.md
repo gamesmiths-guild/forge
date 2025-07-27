@@ -2,7 +2,7 @@
 
 Effect Components in Forge allows developers to extend effect functionality through a modular, composable approach. Components can add custom behaviors, validation logic, and react to different events in an effect's lifecycle.
 
-For a practical guide on using components, see the [Quick Start Guide](quick-start.md).
+For a practical guide on using components, see the [Quick Start Guide](../quick-start.md).
 
 ## Core Concept
 
@@ -305,7 +305,7 @@ Key points:
 
 ### ModifierTagsEffectComponent
 
-Adds tags to the target entity while the effect is active. These tags are automatically removed when the effect ends. See the [Tags documentation](tags.md) for more on tags.
+Adds tags to the target entity while the effect is active. These tags are automatically removed when the effect ends. See the [Tags documentation](../tags.md) for more on tags.
 
 ```csharp
 public class ModifierTagsEffectComponent(TagContainer tagsToAdd) : IEffectComponent
@@ -399,7 +399,7 @@ For requirements to be met:
 
 ##### Tag Query Usage
 
-Tag queries allow for more complex expressions than simple "has all" and "has none" logic. See the [Tags documentation](tags.md) for more on tag queries.
+Tag queries allow for more complex expressions than simple "has all" and "has none" logic. See the [Tags documentation](../tags.md) for more on tag queries.
 
 ```csharp
 // Create a query that matches if:

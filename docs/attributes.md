@@ -84,7 +84,7 @@ var currentHealth = healthAttribute.CurrentValue;
 
 ## Attribute Channels
 
-Channels provide powerful, layered attribute calculation with clearly defined order of operations. Each attribute has one or more channels, which process [modifiers](modifiers.md) in sequence.
+Channels provide powerful, layered attribute calculation with clearly defined order of operations. Each attribute has one or more channels, which process [modifiers](effects/modifiers.md) in sequence.
 
 ### How Channels Work
 
@@ -182,7 +182,7 @@ SetAttributeMaxValue(MaxMana, 200);        // Set max mana limit to 200
 
 ### Attribute Dependencies
 
-AttributeSets allow creating dependencies between attributes without using the [Effects system](docs/effects/README.md):
+AttributeSets allow creating dependencies between attributes without using the [Effects system](effects/README.md):
 
 ```csharp
 public class CharacterAttributeSet : AttributeSet
@@ -234,7 +234,7 @@ protected override void AttributeOnValueChanged(EntityAttribute attribute, int c
 
 ### 2. Through the Effects System
 
-During gameplay, attributes should be modified exclusively through the [Effects system](docs/effects/README.md), which applies temporary or permanent [modifiers](modifiers.md) to attributes without changing their base value.
+During gameplay, attributes should be modified exclusively through the [Effects system](effects/README.md), which applies temporary or permanent [modifiers](effects/modifiers.md) to attributes without changing their base value.
 
 ```csharp
 // Create a damage effect that applies a temporary modifier
@@ -343,9 +343,9 @@ public class PlayerCharacter : IForgeEntity
 
 While detailed relationships with other systems are covered in their respective documentation, attributes are designed to work seamlessly with them:
 
-- **[Effects](docs/effects/README.md)**: Apply temporary or permanent modifications to attributes.
+- **[Effects](effects/README.md)**: Apply temporary or permanent modifications to attributes.
 - **[Tags](tags.md)**: Effects can have tag requirements for attribute modification.
-- **[Custom Calculators](calculators.md)**: Complex attribute calculations can be encapsulated in custom calculators.
+- **[Custom Calculators](effects/calculators.md)**: Complex attribute calculations can be encapsulated in custom calculators.
 
 ## Best Practices
 
