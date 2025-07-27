@@ -2200,7 +2200,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		string backingAttribute,
 		int backingAttributeMagnitudeChange,
 		AttributeCaptureSource attributeCaptureSource,
-		AttributeCalculationType attributeBasedFloatCalculationType,
+		AttributeCalculationType attributeCalculationType,
 		float[] attributeBasedFloatFormulaParameters,
 		int stackLimit,
 		int initialStack,
@@ -2257,7 +2257,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 								backingAttribute,
 								attributeCaptureSource,
 								false),
-							attributeBasedFloatCalculationType,
+							attributeCalculationType,
 							new ScalableFloat(attributeBasedFloatFormulaParameters[0]),
 							new ScalableFloat(attributeBasedFloatFormulaParameters[1]),
 							new ScalableFloat(attributeBasedFloatFormulaParameters[2]))))
