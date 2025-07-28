@@ -348,19 +348,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 			new DurationData(DurationType.Infinite),
 			effectComponents:
 			[
-				new TargetTagRequirementsEffectComponent(
-					new TagRequirements(
-						new TagContainer(_tagsManager),
-						new TagContainer(_tagsManager),
-						query),
-					new TagRequirements(
-						new TagContainer(_tagsManager),
-						new TagContainer(_tagsManager),
-						new TagQuery()),
-					new TagRequirements(
-						new TagContainer(_tagsManager),
-						new TagContainer(_tagsManager),
-						new TagQuery()))
+				new TargetTagRequirementsEffectComponent(new TagRequirements(tagQuery: query))
 			]);
 
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
@@ -403,19 +391,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 			new DurationData(DurationType.Infinite),
 			effectComponents:
 			[
-				new TargetTagRequirementsEffectComponent(
-					new TagRequirements(
-						new TagContainer(_tagsManager),
-						new TagContainer(_tagsManager),
-						query),
-					new TagRequirements(
-						new TagContainer(_tagsManager),
-						new TagContainer(_tagsManager),
-						new TagQuery()),
-					new TagRequirements(
-						new TagContainer(_tagsManager),
-						new TagContainer(_tagsManager),
-						new TagQuery()))
+				new TargetTagRequirementsEffectComponent(new TagRequirements(tagQuery: query))
 			]);
 
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
@@ -955,16 +931,10 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 				new TargetTagRequirementsEffectComponent(
 					new TagRequirements(
 						new TagContainer(_tagsManager, requiredApplicationTags),
-						new TagContainer(_tagsManager, ignoreApplicationTags),
-						new TagQuery()),
+						new TagContainer(_tagsManager, ignoreApplicationTags)),
 					new TagRequirements(
 						new TagContainer(_tagsManager, requiredRemovalTags),
-						new TagContainer(_tagsManager, ignoreRemovalTags),
-						new TagQuery()),
-					new TagRequirements(
-						new TagContainer(_tagsManager),
-						new TagContainer(_tagsManager),
-						new TagQuery()))
+						new TagContainer(_tagsManager, ignoreRemovalTags)))
 			]);
 	}
 
@@ -988,18 +958,9 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 			effectComponents:
 			[
 				new TargetTagRequirementsEffectComponent(
-					new TagRequirements(
-						new TagContainer(_tagsManager),
-						new TagContainer(_tagsManager),
-						new TagQuery()),
-					new TagRequirements(
-						new TagContainer(_tagsManager),
-						new TagContainer(_tagsManager),
-						new TagQuery()),
-					new TagRequirements(
+					ongoingTagRequirements: new TagRequirements(
 						new TagContainer(_tagsManager, requiredOngoingTags),
-						new TagContainer(_tagsManager, ignoreOngoingTags),
-						new TagQuery()))
+						new TagContainer(_tagsManager, ignoreOngoingTags)))
 			]);
 	}
 
@@ -1025,18 +986,9 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 			effectComponents:
 			[
 				new TargetTagRequirementsEffectComponent(
-					new TagRequirements(
-						new TagContainer(_tagsManager),
-						new TagContainer(_tagsManager),
-						new TagQuery()),
-					new TagRequirements(
-						new TagContainer(_tagsManager),
-						new TagContainer(_tagsManager),
-						new TagQuery()),
-					new TagRequirements(
+					ongoingTagRequirements: new TagRequirements(
 						new TagContainer(_tagsManager, requiredOngoingTags),
-						new TagContainer(_tagsManager, ignoreOngoingTags),
-						new TagQuery()))
+						new TagContainer(_tagsManager, ignoreOngoingTags)))
 			]);
 	}
 
