@@ -196,8 +196,10 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		var equipmentBuffEffect = new Effect(equipmentBuffEffectData, new EffectOwnership(player, player));
 		var activeEffectHandle = player.EffectsManager.ApplyEffect(equipmentBuffEffect);
 
-		player.Attributes["PlayerAttributeSet.Strength"].CurrentValue.Should().Be(20); // Assuming base strength was 10
-		player.Attributes["PlayerAttributeSet.Strength"].ValidModifier.Should().Be(10); // +10 from buff
+		// Assuming base strength was 10
+		player.Attributes["PlayerAttributeSet.Strength"].CurrentValue.Should().Be(20);
+		// +10 from buff
+		player.Attributes["PlayerAttributeSet.Strength"].ValidModifier.Should().Be(10);
 
 		// Remove the effect manually (e.g., when the item is unequipped)
 		if (activeEffectHandle is not null)
@@ -205,8 +207,10 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			player.EffectsManager.UnapplyEffect(activeEffectHandle);
 		}
 
-		player.Attributes["PlayerAttributeSet.Strength"].CurrentValue.Should().Be(10); // Assuming base strength was 10
-		player.Attributes["PlayerAttributeSet.Strength"].ValidModifier.Should().Be(0); // 0 because the effect was removed
+		// Assuming base strength was 10
+		player.Attributes["PlayerAttributeSet.Strength"].CurrentValue.Should().Be(10);
+		// 0 because the effect was removed
+		player.Attributes["PlayerAttributeSet.Strength"].ValidModifier.Should().Be(0);
 	}
 
 	[Fact]
@@ -247,7 +251,8 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 
 		player.EffectsManager.UpdateEffects(10f); // Simulate 10 seconds of game time
 
-		player.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(70); // Assuming initial health was 100, 5 damage every 2 seconds for 10 seconds (5 ticks) + 1 initial tick
+		// Assuming initial health was 100, 5 damage every 2 seconds for 10 seconds (5 ticks) + 1 initial tick
+		player.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(70);
 		player.Attributes["PlayerAttributeSet.Health"].BaseValue.Should().Be(70);
 	}
 
@@ -287,13 +292,13 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 				overflowPolicy: StackOverflowPolicy.DenyApplication, // Deny if max stacks reached
 				magnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
 				expirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
-				applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication, // Refresh duration on new stack
+				applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
 				stackPolicy: StackPolicy.AggregateBySource, // Aggregate stacks from the same source
 				stackLevelPolicy: StackLevelPolicy.SegregateLevels, // Each stack can have its own level
 
 				// The next two values must be defined because this is a periodic effect with stacking
 				executeOnSuccessfulApplication: false, // Do not execute on successful application
-				applicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication // Reset period on successful application
+				applicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication
 			)
 		);
 
@@ -310,7 +315,8 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 
 		Console.WriteLine("Poison drainEffect applied with stacking up to 3 times.");
 
-		// Assuming initial health was 100, 3 damage per stack, 3 stacks applied, 3 ticks of damage (2 seconds each) = 9 total damage
+		// Assuming initial health was 100, 3 damage per stack, 3 stacks applied, 3 ticks of damage (2 seconds each)
+		// = 9 total damage
 		player.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(100 - 27);
 	}
 
@@ -350,15 +356,15 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 				overflowPolicy: StackOverflowPolicy.AllowApplication, // Allow application even if max stacks reached
 				magnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
 				expirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
-				applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication, // Refresh duration on new stack
+				applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
 				stackPolicy: StackPolicy.AggregateByTarget, // Only one effect per target
 				ownerDenialPolicy: StackOwnerDenialPolicy.AlwaysAllow, // Always allow application regardless of owner
 				ownerOverridePolicy: StackOwnerOverridePolicy.Override, // Override existing effect if applied again
-				ownerOverrideStackCountPolicy: StackOwnerOverrideStackCountPolicy.ResetStacks, // Reset stack count on override
+				ownerOverrideStackCountPolicy: StackOwnerOverrideStackCountPolicy.ResetStacks,
 				stackLevelPolicy: StackLevelPolicy.AggregateLevels, // Aggregate levels of the effect
-				levelOverridePolicy: LevelComparison.Equal | LevelComparison.Higher, // Allow equal or higher-level effects to override
+				levelOverridePolicy: LevelComparison.Equal | LevelComparison.Higher,
 				levelDenialPolicy: LevelComparison.Lower, // Deny lower-level effects
-				levelOverrideStackCountPolicy: StackLevelOverrideStackCountPolicy.ResetStacks // Reset stack count on override
+				levelOverrideStackCountPolicy: StackLevelOverrideStackCountPolicy.ResetStacks
 			)
 		);
 
@@ -449,7 +455,8 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			effectComponents: new[] {
 				new TargetTagRequirementsEffectComponent(
 					applicationTagRequirements: new TagRequirements(
-						ignoreTags: tagsManager.RequestTagContainer(new[] { "status.immune.fire" }) // Prevent application if target has "status.immune.fire"
+						// Prevent application if target has "status.immune.fire"
+						ignoreTags: tagsManager.RequestTagContainer(new[] { "status.immune.fire" })
 					)
 				)
 			}
@@ -565,7 +572,8 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		var calculatedDamageEffect = new Effect(calculatedDamageEffectData, new EffectOwnership(player, player));
 		player.EffectsManager.ApplyEffect(calculatedDamageEffect);
 
-		player.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(85); // Assuming initial health was 100 and strength was 10, so damage is 10 + (10 * 0.5) = 15
+		// Assuming initial health was 100 and strength was 10, so damage is 10 + (10 * 0.5) = 15
+		player.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(85);
 	}
 
 	[Fact]
@@ -593,8 +601,10 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		var drainEffect = new Effect(drainEffectData, new EffectOwnership(player1, player1));
 		player2.EffectsManager.ApplyEffect(drainEffect);
 
-		player1.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(104); // Gains 4 health (80% of 5 drained)
-		player2.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(95); // Drains 5 health
+		// Gains 4 health (80% of 5 drained)
+		player1.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(104);
+		// Drains 5 health
+		player2.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(95);
 	}
 
 	[Fact]
