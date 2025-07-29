@@ -11,11 +11,11 @@ namespace Gamesmiths.Forge.Effects.Magnitudes;
 /// </summary>
 /// <param name="attribute">Which attribute to capture.</param>
 /// <param name="source">From what target to capture the attribute from.</param>
-/// <param name="snapshop">Whether the captured value should be a snapshot or not.</param>
+/// <param name="snapshot">Whether the captured value should be a snapshot or not.</param>
 public readonly struct AttributeCaptureDefinition(
 	StringKey attribute,
 	AttributeCaptureSource source,
-	bool snapshop = true) : IEquatable<AttributeCaptureDefinition>
+	bool snapshot = true) : IEquatable<AttributeCaptureDefinition>
 {
 	/// <summary>
 	/// Gets a key indicating which attribute is being captured.
@@ -35,7 +35,7 @@ public readonly struct AttributeCaptureDefinition(
 	/// Only effects with <see cref="Duration.DurationType"/> == <see cref="Duration.DurationType.Infinite"/> or
 	/// <see cref="Duration.DurationType"/> == <see cref="Duration.DurationType.HasDuration"/> can snapshot.
 	/// </remarks>
-	public bool Snapshot { get; } = snapshop;
+	public bool Snapshot { get; } = snapshot;
 
 	/// <summary>
 	/// Tries to retrieve the captured attribute for a given entity.
