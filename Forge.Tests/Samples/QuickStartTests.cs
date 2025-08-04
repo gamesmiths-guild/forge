@@ -661,15 +661,19 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			player.EffectsManager.ApplyEffect(burningEffect);
 			player.EffectsManager.UpdateEffects(5f); // Simulate 5 seconds of game time
 
-			stringWriter.ToString().Should().Contain(
-				"Fire damage cue applied to target.\r\n" +
-				"Fire damage executed: -5\r\n" +
-				"Fire damage executed: -5\r\n" +
-				"Fire damage executed: -5\r\n" +
-				"Fire damage executed: -5\r\n" +
-				"Fire damage executed: -5\r\n" +
-				"Fire damage executed: -5\r\n" +
-				"Fire damage cue removed.");
+			var output = "Fire damage cue applied to target.\n" +
+				"Fire damage executed: -5\n" +
+				"Fire damage executed: -5\n" +
+				"Fire damage executed: -5\n" +
+				"Fire damage executed: -5\n" +
+				"Fire damage executed: -5\n" +
+				"Fire damage executed: -5\n" +
+				"Fire damage cue removed.";
+
+			// Normalize line endings to be consistent across environments
+			var normalizedOutput = output.Replace("\n", Environment.NewLine);
+
+			stringWriter.ToString().Should().Contain(normalizedOutput);
 		}
 		finally
 		{

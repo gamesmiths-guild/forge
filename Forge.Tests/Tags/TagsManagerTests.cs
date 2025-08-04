@@ -264,11 +264,11 @@ public class TagsManagerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 			"other.tag",
 		},
 #pragma warning disable SA1118 // Parameter should not span multiple lines
-		"other\r\n"
-		+ "other.tag\r\n"
-		+ "simple\r\n"
-		+ "simple.tag\r\n"
-		+ "tag\r\n")]
+		"other\n"
+		+ "other.tag\n"
+		+ "simple\n"
+		+ "simple.tag\n"
+		+ "tag\n")]
 	[InlineData(
 		new string[]
 		{
@@ -279,21 +279,24 @@ public class TagsManagerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 			"color.dark.green",
 			"color.dark.blue",
 		},
-		"color\r\n"
-		+ "color.blue\r\n"
-		+ "color.dark\r\n"
-		+ "color.dark.blue\r\n"
-		+ "color.dark.green\r\n"
-		+ "color.dark.red\r\n"
-		+ "color.green\r\n"
-		+ "color.red\r\n")]
+		"color\n"
+		+ "color.blue\n"
+		+ "color.dark\n"
+		+ "color.dark.blue\n"
+		+ "color.dark.green\n"
+		+ "color.dark.red\n"
+		+ "color.green\n"
+		+ "color.red\n")]
 	[InlineData(new string[] { }, "")]
 #pragma warning restore SA1118 // Parameter should not span multiple lines
 	public void To_string(string[] managerTags, string output)
 	{
 		var tagsManager = new TagsManager(managerTags);
 
-		tagsManager.ToString().Should().Be(output);
+		// Normalize line endings to be consistent across environments
+		var normalizedOutput = output.Replace("\n", Environment.NewLine);
+
+		tagsManager.ToString().Should().Be(normalizedOutput);
 	}
 
 	private static TagContainer ConstructContainer(
