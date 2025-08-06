@@ -29,7 +29,7 @@ jobs:
 
       - name: Publish NuGet Package
         if: success() && github.event_name == 'push'
-        run: dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+        run: dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
