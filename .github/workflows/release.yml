@@ -33,17 +33,20 @@ jobs:
 
       - name: Rename DLLs for artifact upload
         run: |
-          mv Forge/bin/Release/netstandard2.1/Gamesmiths.Forge.dll Gamesmiths.Forge.netstandard2.1.dll
-          mv Forge/bin/Release/net8.0/Gamesmiths.Forge.dll Gamesmiths.Forge.net8.0.dll
+          mv Forge/bin/Release/netstandard2.1/Gamesmiths.Forge.dll ./artifacts/Gamesmiths.Forge.netstandard2.1.dll
+          mv Forge/bin/Release/netstandard2.1/Gamesmiths.Forge.pdb ./artifacts/Gamesmiths.Forge.netstandard2.1.pdb
+          mv Forge/bin/Release/netstandard2.1/Gamesmiths.Forge.xml ./artifacts/Gamesmiths.Forge.netstandard2.1.xml
+          mv Forge/bin/Release/net8.0/Gamesmiths.Forge.dll ./artifacts/Gamesmiths.Forge.net8.0.dll
+          mv Forge/bin/Release/net8.0/Gamesmiths.Forge.pdb ./artifacts/Gamesmiths.Forge.net8.0.pdb
+          mv Forge/bin/Release/net8.0/Gamesmiths.Forge.xml ./artifacts/Gamesmiths.Forge.net8.0.xml
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./artifacts/*.nupkg
-            **/bin/Release/**/*.dll
+            ./artifacts/*
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
-          draft: true
+          draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
