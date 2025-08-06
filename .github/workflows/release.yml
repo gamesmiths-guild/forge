@@ -27,9 +27,12 @@ jobs:
       - name: Pack NuGet
         run: dotnet pack Forge/Forge.csproj --configuration Release --no-build --output ./artifacts
 
-      - name: Publish NuGet Package
+      - name: Publish NuGet Packages
         if: success() && github.event_name == 'push'
-        run: dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+        run: |
+          dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+          dotnet nuget add source --username ${{ github.actor }} --password ${{ secrets.GH_PACKAGE_RELEASE }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          dotnet nuget push ./artifacts/*.nupkg --source "github" --api-key ${{ secrets.GH_PACKAGE_RELEASE }} --skip-duplicate
 
       - name: Rename DLLs for artifact upload
         run: |
