@@ -1,5 +1,7 @@
 # Forge Gameplay Framework
 
+_[![NuGet](https://img.shields.io/nuget/v/Gamesmiths.Forge.svg)](https://www.nuget.org/packages/Gamesmiths.Forge)_
+
 A gameplay framework for developing games using C#.
 
 Forge is an engine-agnostic gameplay framework designed for building robust game systems in C#. Inspired by Unreal Engine's Gameplay Ability System (GAS), Forge provides a centralized and controlled approach to managing attributes, effects, tags, and cues in your games.
@@ -69,9 +71,15 @@ Forge targets:
 - .NET Standard 2.1 (for broad compatibility)
 - .NET 8 (for modern features)
 
-### Package Manager
+### NuGet (Recommended)
 
-Package manager support coming soon.
+Install the package via .NET CLI:
+
+```shell
+dotnet add package Gamesmiths.Forge --version 0.1.0
+```
+
+Or search for `Gamesmiths.Forge` in the NuGet Package Manager UI in Visual Studio.
 
 ### Manual Installation
 
