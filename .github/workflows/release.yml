@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build Forge/Forge.csproj --configuration Release --no-restore
+
+      - name: Pack NuGet
+        run: dotnet pack Forge/Forge.csproj --configuration Release --no-build --output ./artifacts
+
+      - name: Publish NuGet Package
+        if: success() && github.event_name == 'push'
+        run: dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./artifacts/*.nupkg
+            **/bin/Release/**/*.dll
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
