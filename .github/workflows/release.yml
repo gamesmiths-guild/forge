@@ -31,6 +31,11 @@ jobs:
         if: success() && github.event_name == 'push'
         run: dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
 
+      - name: Rename DLLs for artifact upload
+        run: |
+          mv bin/Release/netstandard2.1/Gamesmiths.Forge.dll Gamesmiths.Forge.netstandard2.1.dll
+          mv bin/Release/net8.0/Gamesmiths.Forge.dll Gamesmiths.Forge.net8.0.dll
+
       - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
