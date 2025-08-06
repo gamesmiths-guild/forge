@@ -16,7 +16,7 @@ Forge supports:
 - **.NET Standard 2.1** (broad compatibility)
 - **.NET 8** (modern features)
 
-Install via NuGet, reference the Forge project in your solution, or download the precompiled .dll from the Releases page.
+Install via NuGet, reference the Forge project directly, or download the precompiled `.dll` from the Releases page.
 
 ## Documentation
 

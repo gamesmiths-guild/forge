@@ -4,6 +4,18 @@ This guide will help you quickly get started with the Forge framework, showing y
 
 ---
 
+## Installation
+
+Install Forge via NuGet (recommended):
+
+```shell
+dotnet add package Gamesmiths.Forge --version 0.1.0
+```
+
+For other installation methods, see the [main README](../README.md).
+
+---
+
 ## Creating a Basic Entity
 
 Let's create a simple player entity with three attributes: health, strength and speed.

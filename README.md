@@ -71,6 +71,8 @@ Forge targets:
 - .NET Standard 2.1 (for broad compatibility)
 - .NET 8 (for modern features)
 
+Install via NuGet, reference the Forge project directly, or download the precompiled `.dll` from the Releases page.
+
 ### NuGet (Recommended)
 
 Install the package via .NET CLI:
@@ -83,7 +85,9 @@ Or search for `Gamesmiths.Forge` in the NuGet Package Manager UI in Visual Studi
 
 ### Manual Installation
 
-1. Clone the repository.
+If you need to build from source or make local changes:
+
+1. Clone this repository.
 2. Reference the Forge project in your solution.
 3. Follow the [Quick Start Guide](docs/quick-start.md).
 
