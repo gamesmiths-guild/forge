@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Tags;
@@ -127,7 +126,7 @@ public class TagsAndCuesFixture
 
 		public void OnUpdate(IForgeEntity? target, CueParameters? parameters)
 		{
-			Debug.Assert(Applied, "Cue must be applied before updating.");
+			Validation.Assert(Applied, "Cue must be applied before updating.");
 
 			if (!parameters.HasValue)
 			{

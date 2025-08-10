@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Tags;
@@ -127,7 +126,7 @@ public class TagQueryExpression(TagsManager tagsManager)
 	/// <returns>This <see cref="TagQueryExpression"/> itself.</returns>
 	public TagQueryExpression AddTag(Tag tag)
 	{
-		Debug.Assert(UsesTagSet(), "Shouldn't be adding expressions to a query of TagSet type.");
+		Validation.Assert(UsesTagSet(), "Shouldn't be adding expressions to a query of TagSet type.");
 
 		_tagSet.Add(tag);
 		return this;
@@ -140,7 +139,7 @@ public class TagQueryExpression(TagsManager tagsManager)
 	/// <returns>This <see cref="TagContainer"/> itself.</returns>
 	public TagQueryExpression AddTags(TagContainer tags)
 	{
-		Debug.Assert(UsesTagSet(), "Shouldn't be adding expressions to a query of TagSet type.");
+		Validation.Assert(UsesTagSet(), "Shouldn't be adding expressions to a query of TagSet type.");
 
 		_tagSet.AddRange(tags.Tags);
 		return this;
@@ -153,7 +152,7 @@ public class TagQueryExpression(TagsManager tagsManager)
 	/// <returns>This <see cref="TagQueryExpression"/> itself.</returns>
 	public TagQueryExpression AddExpression(TagQueryExpression expression)
 	{
-		Debug.Assert(UsesExpressionSet(), "Shouldn't be adding tags to a query of ExpressionSet type.");
+		Validation.Assert(UsesExpressionSet(), "Shouldn't be adding tags to a query of ExpressionSet type.");
 
 		_expressionSet.Add(expression);
 		return this;
@@ -182,7 +181,7 @@ public class TagQueryExpression(TagsManager tagsManager)
 					var tagIndex = tagDictionary.AddUnique(tag);
 
 					// Token 255 is reserved for internal use, so 254 is max unique tags.
-					Debug.Assert(tagIndex <= 254, "Stream can't hold more than 254 tags.");
+					Validation.Assert(tagIndex <= 254, "Stream can't hold more than 254 tags.");
 
 					tokenStream.Add((byte)tagIndex);
 				}
@@ -204,7 +203,7 @@ public class TagQueryExpression(TagsManager tagsManager)
 				break;
 
 			case TagQueryExpressionType.Undefined:
-				Debug.Fail($"{typeof(TagQueryExpressionType)} should never be set as" +
+				Validation.Fail($"{typeof(TagQueryExpressionType)} should never be set as" +
 					$"{TagQueryExpressionType.Undefined}.");
 				break;
 		}

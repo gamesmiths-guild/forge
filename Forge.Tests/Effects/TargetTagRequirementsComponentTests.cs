@@ -1,6 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Components;
@@ -299,7 +299,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		var modifierTagEffect = new Effect(modifierTagEffectData, new EffectOwnership(entity, entity));
 
 		ActiveEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
-		Debug.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.EffectsManager.ApplyEffect(effect);
 
@@ -430,7 +430,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 		TestUtils.TestStackData(
@@ -475,7 +475,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
@@ -531,7 +531,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 
 		ActiveEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
-		Debug.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 
@@ -571,7 +571,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		var modifierTagEffect = new Effect(modifierTagEffectData, new EffectOwnership(entity, entity));
 
 		ActiveEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
-		Debug.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
@@ -605,7 +605,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
 		TestUtils.TestStackData(
@@ -655,7 +655,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.EffectsManager.UpdateEffects(100f);
 
@@ -781,7 +781,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", secondExpectedResults);
 
 		ActiveEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
-		Debug.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.EffectsManager.UpdateEffects(secondUpdatePeriod);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", thirdExpectedResults);
@@ -888,7 +888,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		var modifierTagEffect = new Effect(modifierTagEffectData, new EffectOwnership(entity, entity));
 
 		ActiveEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
-		Debug.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeModifierEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", firstExpectedResults);

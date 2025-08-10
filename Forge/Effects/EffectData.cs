@@ -1,6 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects.Calculator;
 using Gamesmiths.Forge.Effects.Components;
@@ -107,108 +107,6 @@ public readonly struct EffectData : IEquatable<EffectData>
 		CustomExecution[]? customExecutions = null,
 		CueData[]? cues = null)
 	{
-		Debug.Assert(
-			!(periodicData.HasValue && durationData.Type == DurationType.Instant),
-			"Periodic effects can't be set as instant.");
-
-		Debug.Assert(
-			!(durationData.Type != DurationType.HasDuration && durationData.Duration.HasValue),
-			$"Can't set duration if {nameof(DurationType)} is set to {durationData.Type}.");
-
-		Debug.Assert(
-			!(stackingData.HasValue && durationData.Type == DurationType.Instant),
-			$"{DurationType.Instant} effects can't have stacks.");
-
-		Debug.Assert(
-			!(stackingData.HasValue
-				&& (stackingData.Value.InitialStack.BaseValue > stackingData.Value.StackLimit.BaseValue
-				|| stackingData.Value.InitialStack.BaseValue == 0)),
-			"Shouldn't set InitialStack count to be higher than the StackLimit nor zero. It's probably a bad configuration.");
-
-		Debug.Assert(
-			!(stackingData.HasValue
-			&& (stackingData.Value.StackPolicy == StackPolicy.AggregateByTarget !=
-				stackingData.Value.OwnerDenialPolicy.HasValue)),
-			$"If {nameof(StackPolicy)} is set {StackPolicy.AggregateByTarget}, {nameof(StackOwnerDenialPolicy)} must be defined. And not defined if otherwise.");
-
-		Debug.Assert(
-			!(stackingData.HasValue
-			&& ((stackingData.Value.StackPolicy == StackPolicy.AggregateByTarget &&
-				stackingData.Value.OwnerDenialPolicy == StackOwnerDenialPolicy.AlwaysAllow) !=
-				stackingData.Value.OwnerOverridePolicy.HasValue)),
-			$"If {nameof(StackPolicy)} is set {StackPolicy.AggregateByTarget} and {nameof(StackOwnerDenialPolicy)} is set to {StackOwnerDenialPolicy.AlwaysAllow}, {nameof(StackOwnerOverridePolicy)} must be defined. And not defined if otherwise.");
-
-		Debug.Assert(
-			!(stackingData.HasValue
-			&& ((stackingData.Value.StackPolicy == StackPolicy.AggregateByTarget &&
-				stackingData.Value.OwnerOverridePolicy.HasValue &&
-				stackingData.Value.OwnerOverridePolicy.Value == StackOwnerOverridePolicy.Override) !=
-				stackingData.Value.OwnerOverrideStackCountPolicy.HasValue)),
-			$"If {nameof(StackOwnerOverridePolicy)} is set {StackOwnerOverridePolicy.Override}, {nameof(StackOwnerOverrideStackCountPolicy)} must be defined. And not defined if otherwise.");
-
-		Debug.Assert(
-			!(stackingData.HasValue
-				&& (stackingData.Value.StackLevelPolicy == StackLevelPolicy.AggregateLevels !=
-				stackingData.Value.LevelDenialPolicy.HasValue)),
-			$"If {nameof(StackLevelPolicy)} is set {StackLevelPolicy.AggregateLevels}, {nameof(LevelComparison)} must be defined. And not defined if otherwise.");
-
-		Debug.Assert(
-			!(stackingData.HasValue
-				&& (stackingData.Value.StackLevelPolicy == StackLevelPolicy.AggregateLevels !=
-				stackingData.Value.LevelOverridePolicy.HasValue)),
-			$"If {nameof(StackLevelPolicy)} is set {StackLevelPolicy.AggregateLevels}, LevelOverridePolicy must be defined. And not defined if otherwise.");
-
-		Debug.Assert(
-			!(stackingData.HasValue
-				&& ((stackingData.Value.StackLevelPolicy == StackLevelPolicy.AggregateLevels &&
-				stackingData.Value.LevelOverridePolicy.HasValue &&
-				stackingData.Value.LevelOverridePolicy.Value != LevelComparison.None) !=
-				stackingData.Value.LevelOverrideStackCountPolicy.HasValue)),
-			$"If LevelOverridePolicy is different from {LevelComparison.None}, {nameof(StackLevelOverrideStackCountPolicy)} must be defined. And not defined if otherwise.");
-
-		Debug.Assert(
-			!(stackingData.HasValue
-				&& stackingData.Value.LevelDenialPolicy.HasValue &&
-				stackingData.Value.LevelOverridePolicy.HasValue &&
-				stackingData.Value.LevelDenialPolicy.Value != LevelComparison.None &&
-				(stackingData.Value.LevelDenialPolicy.Value & stackingData.Value.LevelOverridePolicy.Value) != 0),
-			"LevelDenialPolicy and LevelOverridePolicy should't have the same value. If it's getting denied, how will it override?");
-
-		Debug.Assert(
-			!(stackingData.HasValue
-				&& (durationData.Type == DurationType.HasDuration !=
-				stackingData.Value.ApplicationRefreshPolicy.HasValue)),
-			$"Effects set as {DurationType.HasDuration} must define {nameof(StackApplicationRefreshPolicy)} and not define it if otherwise.");
-
-		Debug.Assert(
-			!(stackingData.HasValue
-				&& (stackingData.Value.ExecuteOnSuccessfulApplication.HasValue != periodicData.HasValue)),
-			$"Both {nameof(PeriodicData)} and ExecuteOnSuccessfulApplication must be either defined or undefined.");
-
-		Debug.Assert(
-			!(stackingData.HasValue
-				&& (stackingData.Value.ApplicationResetPeriodPolicy.HasValue != periodicData.HasValue)),
-			$"Both {nameof(PeriodicData)} and {nameof(StackApplicationResetPeriodPolicy)} must be either defined or undefined.");
-
-		Debug.Assert(
-			!(durationData.Type == DurationType.Instant && modifiers is not null && Array.Exists(
-				modifiers,
-				x => x.Magnitude.MagnitudeCalculationType == MagnitudeCalculationType.AttributeBased
-					&& x.Magnitude.AttributeBasedFloat.HasValue
-					&& !x.Magnitude.AttributeBasedFloat.Value.BackingAttribute.Snapshot)),
-			$"Effects set as {DurationType.Instant} and {MagnitudeCalculationType.AttributeBased} cannot be set as non Snapshot.");
-
-		Debug.Assert(
-			!(durationData.Type == DurationType.Instant && !snapshopLevel),
-			$"Effects set as {DurationType.Instant} cannot be set as non Snapshot for Level.");
-
-		Debug.Assert(
-			effectComponents is null ||
-			!Array.Exists(effectComponents, x => x is ModifierTagsEffectComponent) ||
-			(Array.Exists(effectComponents, x => x is ModifierTagsEffectComponent) &&
-			durationData.Type != DurationType.Instant),
-			$"Instant effects cannot apply tags from the {nameof(ModifierTagsEffectComponent)}.");
-
 		Name = name;
 		DurationData = durationData;
 		Modifiers = modifiers ?? [];
@@ -221,18 +119,124 @@ public readonly struct EffectData : IEquatable<EffectData>
 		CustomExecutions = customExecutions ?? [];
 		Cues = cues ?? [];
 
-#if DEBUG
+		if (!Validation.Enabled)
+		{
+			return;
+		}
+
+		Validation.Assert(
+			!(periodicData.HasValue && durationData.Type == DurationType.Instant),
+			"Periodic effects can't be set as instant.");
+
+		Validation.Assert(
+			!(durationData.Type != DurationType.HasDuration && durationData.Duration.HasValue),
+			$"Can't set duration if {nameof(DurationType)} is set to {durationData.Type}.");
+
+		Validation.Assert(
+			!(stackingData.HasValue && durationData.Type == DurationType.Instant),
+			$"{DurationType.Instant} effects can't have stacks.");
+
+		Validation.Assert(
+			!(stackingData.HasValue
+				&& (stackingData.Value.InitialStack.BaseValue > stackingData.Value.StackLimit.BaseValue
+				|| stackingData.Value.InitialStack.BaseValue == 0)),
+			"Shouldn't set InitialStack count to be higher than the StackLimit nor zero. It's probably a bad configuration.");
+
+		Validation.Assert(
+			!(stackingData.HasValue
+			&& (stackingData.Value.StackPolicy == StackPolicy.AggregateByTarget !=
+				stackingData.Value.OwnerDenialPolicy.HasValue)),
+			$"If {nameof(StackPolicy)} is set {StackPolicy.AggregateByTarget}, {nameof(StackOwnerDenialPolicy)} must be defined. And not defined if otherwise.");
+
+		Validation.Assert(
+			!(stackingData.HasValue
+			&& ((stackingData.Value.StackPolicy == StackPolicy.AggregateByTarget &&
+				stackingData.Value.OwnerDenialPolicy == StackOwnerDenialPolicy.AlwaysAllow) !=
+				stackingData.Value.OwnerOverridePolicy.HasValue)),
+			$"If {nameof(StackPolicy)} is set {StackPolicy.AggregateByTarget} and {nameof(StackOwnerDenialPolicy)} is set to {StackOwnerDenialPolicy.AlwaysAllow}, {nameof(StackOwnerOverridePolicy)} must be defined. And not defined if otherwise.");
+
+		Validation.Assert(
+			!(stackingData.HasValue
+			&& ((stackingData.Value.StackPolicy == StackPolicy.AggregateByTarget &&
+				stackingData.Value.OwnerOverridePolicy.HasValue &&
+				stackingData.Value.OwnerOverridePolicy.Value == StackOwnerOverridePolicy.Override) !=
+				stackingData.Value.OwnerOverrideStackCountPolicy.HasValue)),
+			$"If {nameof(StackOwnerOverridePolicy)} is set {StackOwnerOverridePolicy.Override}, {nameof(StackOwnerOverrideStackCountPolicy)} must be defined. And not defined if otherwise.");
+
+		Validation.Assert(
+			!(stackingData.HasValue
+				&& (stackingData.Value.StackLevelPolicy == StackLevelPolicy.AggregateLevels !=
+				stackingData.Value.LevelDenialPolicy.HasValue)),
+			$"If {nameof(StackLevelPolicy)} is set {StackLevelPolicy.AggregateLevels}, {nameof(LevelComparison)} must be defined. And not defined if otherwise.");
+
+		Validation.Assert(
+			!(stackingData.HasValue
+				&& (stackingData.Value.StackLevelPolicy == StackLevelPolicy.AggregateLevels !=
+				stackingData.Value.LevelOverridePolicy.HasValue)),
+			$"If {nameof(StackLevelPolicy)} is set {StackLevelPolicy.AggregateLevels}, LevelOverridePolicy must be defined. And not defined if otherwise.");
+
+		Validation.Assert(
+			!(stackingData.HasValue
+				&& ((stackingData.Value.StackLevelPolicy == StackLevelPolicy.AggregateLevels &&
+				stackingData.Value.LevelOverridePolicy.HasValue &&
+				stackingData.Value.LevelOverridePolicy.Value != LevelComparison.None) !=
+				stackingData.Value.LevelOverrideStackCountPolicy.HasValue)),
+			$"If LevelOverridePolicy is different from {LevelComparison.None}, {nameof(StackLevelOverrideStackCountPolicy)} must be defined. And not defined if otherwise.");
+
+		Validation.Assert(
+			!(stackingData.HasValue
+				&& stackingData.Value.LevelDenialPolicy.HasValue &&
+				stackingData.Value.LevelOverridePolicy.HasValue &&
+				stackingData.Value.LevelDenialPolicy.Value != LevelComparison.None &&
+				(stackingData.Value.LevelDenialPolicy.Value & stackingData.Value.LevelOverridePolicy.Value) != 0),
+			"LevelDenialPolicy and LevelOverridePolicy should't have the same value. If it's getting denied, how will it override?");
+
+		Validation.Assert(
+			!(stackingData.HasValue
+				&& (durationData.Type == DurationType.HasDuration !=
+				stackingData.Value.ApplicationRefreshPolicy.HasValue)),
+			$"Effects set as {DurationType.HasDuration} must define {nameof(StackApplicationRefreshPolicy)} and not define it if otherwise.");
+
+		Validation.Assert(
+			!(stackingData.HasValue
+				&& (stackingData.Value.ExecuteOnSuccessfulApplication.HasValue != periodicData.HasValue)),
+			$"Both {nameof(PeriodicData)} and ExecuteOnSuccessfulApplication must be either defined or undefined.");
+
+		Validation.Assert(
+			!(stackingData.HasValue
+				&& (stackingData.Value.ApplicationResetPeriodPolicy.HasValue != periodicData.HasValue)),
+			$"Both {nameof(PeriodicData)} and {nameof(StackApplicationResetPeriodPolicy)} must be either defined or undefined.");
+
+		Validation.Assert(
+			!(durationData.Type == DurationType.Instant && modifiers is not null && Array.Exists(
+				modifiers,
+				x => x.Magnitude.MagnitudeCalculationType == MagnitudeCalculationType.AttributeBased
+					&& x.Magnitude.AttributeBasedFloat.HasValue
+					&& !x.Magnitude.AttributeBasedFloat.Value.BackingAttribute.Snapshot)),
+			$"Effects set as {DurationType.Instant} and {MagnitudeCalculationType.AttributeBased} cannot be set as non Snapshot.");
+
+		Validation.Assert(
+			!(durationData.Type == DurationType.Instant && !snapshopLevel),
+			$"Effects set as {DurationType.Instant} cannot be set as non Snapshot for Level.");
+
+		Validation.Assert(
+			effectComponents is null ||
+			!Array.Exists(effectComponents, x => x is ModifierTagsEffectComponent) ||
+			(Array.Exists(effectComponents, x => x is ModifierTagsEffectComponent) &&
+			durationData.Type != DurationType.Instant),
+			$"Instant effects cannot apply tags from the {nameof(ModifierTagsEffectComponent)}.");
+
 		foreach (CueData cue in Cues)
 		{
-			Debug.Assert(
+			Validation.Assert(
 				cue.MagnitudeType != CueMagnitudeType.StackCount || !suppressStackingCues,
 				"StackCount magnitude type is not allowed when SuppressStackingCues is set to true.");
 
-			Debug.Assert(
+			Validation.Assert(
 				cue.MagnitudeType != CueMagnitudeType.StackCount || stackingData.HasValue,
 				"StackCount magnitude type can only be used if StackingData is configured.");
 
-			Debug.Assert(
+			Validation.Assert(
 				cue.MagnitudeType == CueMagnitudeType.AttributeValueChange
 					|| cue.MagnitudeType == CueMagnitudeType.AttributeBaseValue
 					|| cue.MagnitudeType == CueMagnitudeType.AttributeCurrentValue
@@ -245,7 +249,6 @@ public readonly struct EffectData : IEquatable<EffectData>
 					|| cue.MagnitudeAttribute is null,
 				"Attribute magnitudes type must have a configured MagnitudeAttribute, and not configured otherwise.");
 		}
-#endif
 	}
 
 	/// <inheritdoc/>

@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
@@ -364,7 +363,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
 		ActiveEffectHandle? activeEffect2handle = target.EffectsManager.ApplyEffect(effect2);
-		Debug.Assert(activeEffect2handle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffect2handle is not null, "Effect handle should have a value.");
 
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResult);
 
@@ -467,19 +466,19 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults1); // 1
 
 		ActiveEffectHandle? activeEffect2Handle1 = target.EffectsManager.ApplyEffect(effect2);
-		Debug.Assert(activeEffect2Handle1 is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffect2Handle1 is not null, "Effect handle should have a value.");
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults2); // 1,2
 
 		ActiveEffectHandle? activeEffect3Handle = target.EffectsManager.ApplyEffect(effect3);
-		Debug.Assert(activeEffect3Handle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffect3Handle is not null, "Effect handle should have a value.");
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults3); // 1,2,3
 
 		ActiveEffectHandle? activeEffect4Handle = target.EffectsManager.ApplyEffect(effect4);
-		Debug.Assert(activeEffect4Handle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffect4Handle is not null, "Effect handle should have a value.");
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults4); // 1,2,3,4
 
 		ActiveEffectHandle? activeEffect1Handle = target.EffectsManager.ApplyEffect(effect1);
-		Debug.Assert(activeEffect1Handle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffect1Handle is not null, "Effect handle should have a value.");
 
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults1); // 1,2,3,4,1
 
@@ -493,7 +492,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults3); // 1,3
 
 		ActiveEffectHandle? activeEffect2Handle2 = target.EffectsManager.ApplyEffect(effect2);
-		Debug.Assert(activeEffect2Handle2 is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffect2Handle2 is not null, "Effect handle should have a value.");
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults2); // 1,3,2
 
 		target.EffectsManager.UnapplyEffect(activeEffect3Handle);
@@ -3031,7 +3030,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			new EffectOwnership(owner, owner));
 
 		ActiveEffectHandle? effectHandle = target.EffectsManager.ApplyEffect(effect);
-		Debug.Assert(effectHandle is not null, "Effect handle should not be null.");
+		Validation.Assert(effectHandle is not null, "Effect handle should not be null.");
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
@@ -3148,12 +3147,12 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		}
 
 		ActiveEffectHandle? activeEffectHandle1 = target.EffectsManager.ApplyEffect(effect);
-		Debug.Assert(activeEffectHandle1 is not null, "Effect handle should not be null.");
+		Validation.Assert(activeEffectHandle1 is not null, "Effect handle should not be null.");
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
 		ActiveEffectHandle? activeEffectHandle2 = target.EffectsManager.ApplyEffect(effect);
-		Debug.Assert(activeEffectHandle2 is not null, "Effect handle should not be null.");
+		Validation.Assert(activeEffectHandle2 is not null, "Effect handle should not be null.");
 
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
 

@@ -1,6 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
+using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Tags;
 
@@ -33,7 +33,7 @@ internal sealed class QueryEvaluator(TagQuery query)
 			returnValue = EvaluateExpression(container);
 		}
 
-		Debug.Assert(
+		Validation.Assert(
 			_curStreamIdx == _query.QueryTokenStream.Count,
 			"There shouldn't be remaining tokens into the stream.");
 
@@ -77,7 +77,7 @@ internal sealed class QueryEvaluator(TagQuery query)
 				return EvaluateNoExpressionsMatch(tags, skip);
 
 			case TagQueryExpressionType.Undefined:
-				Debug.Fail($"{typeof(TagQueryExpressionType)} should never be set as" +
+				Validation.Fail($"{typeof(TagQueryExpressionType)} should never be set as" +
 					$"{TagQueryExpressionType.Undefined}.");
 				return false;
 		}
@@ -298,7 +298,7 @@ internal sealed class QueryEvaluator(TagQuery query)
 		}
 
 		_readError = true;
-		Debug.Fail($"Error parsing {typeof(TagQuery)}! Code should not reach this point.");
+		Validation.Fail($"Error parsing {typeof(TagQuery)}! Code should not reach this point.");
 
 		return 0;
 	}

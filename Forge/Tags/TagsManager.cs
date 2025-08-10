@@ -1,11 +1,8 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using System.Globalization;
 using System.Text;
-#if DEBUG
 using System.Text.RegularExpressions;
-#endif
 using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Tags;
@@ -15,9 +12,7 @@ namespace Gamesmiths.Forge.Tags;
 /// </summary>
 public sealed class TagsManager
 {
-#if DEBUG
 	private const string InvalidTagCharacters = @"\, ";
-#endif
 
 	private readonly Dictionary<Tag, TagNode> _tagNodeMap = [];
 
@@ -221,7 +216,6 @@ public sealed class TagsManager
 		return result.ToString();
 	}
 
-#if DEBUG
 	internal static bool IsValidTagKey(string tagString, out string error, out string fixedString)
 	{
 		fixedString = tagString;
@@ -267,7 +261,6 @@ public sealed class TagsManager
 
 		return isValid;
 	}
-#endif
 
 	internal TagNode? FindTagNode(Tag tag)
 	{
@@ -332,13 +325,15 @@ public sealed class TagsManager
 			{
 				parentTags.Add(tagParent);
 			}
-#if DEBUG
-			var validationCopy = new HashSet<Tag>(parentTags);
-			validationCopy.UnionWith(tag.ParseParentTags());
-			Debug.Assert(
-				validationCopy.SetEquals(parentTags),
-				$"ExtractParentTags results are inconsistent for tag \"{tag}\"");
-#endif
+
+			if (Validation.Enabled)
+			{
+				var validationCopy = new HashSet<Tag>(parentTags);
+				validationCopy.UnionWith(tag.ParseParentTags());
+				Validation.Assert(
+					validationCopy.SetEquals(parentTags),
+					$"ExtractParentTags results are inconsistent for tag \"{tag}\"");
+			}
 		}
 
 		return parentTags;
@@ -429,8 +424,7 @@ public sealed class TagsManager
 		StringKey originalTagKey = tagKey;
 		var fullTagString = new StringBuilder(tagKey);
 
-#if DEBUG
-		if (!IsValidTagKey(fullTagString.ToString(), out var outError, out var outFixedString))
+		if (Validation.Enabled && !IsValidTagKey(fullTagString.ToString(), out var _, out var outFixedString))
 		{
 			if (string.IsNullOrEmpty(outFixedString))
 			{
@@ -440,7 +434,6 @@ public sealed class TagsManager
 			fullTagString = new StringBuilder(outFixedString);
 			originalTagKey = fullTagString.ToString();
 		}
-#endif
 
 		var subTags = fullTagString.ToString().Split('.');
 
@@ -540,7 +533,7 @@ public sealed class TagsManager
 
 			_networkIndexInvalidated = true;
 
-			Debug.Assert(
+			Validation.Assert(
 				tag.TagKey == fullTagKey,
 				$"tag.TagKey: \"{tag.TagKey}\" and fullTagKey: \"{fullTagKey}\" should always match.");
 		}

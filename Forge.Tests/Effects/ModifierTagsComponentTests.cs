@@ -1,7 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using FluentAssertions;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Components;
@@ -118,7 +118,7 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		var validationContainer = new TagContainer(_tagsManager, validationTags);
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
@@ -246,7 +246,7 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		var validationContainer = new TagContainer(_tagsManager, validationTags);
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
@@ -284,7 +284,7 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		var validationContainer = new TagContainer(_tagsManager, validationTags);
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		Debug.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
+		Validation.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();

@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Tags;
@@ -263,7 +262,7 @@ public sealed class CuesManager
 				return effectEvaluatedData.Stack;
 
 			case CueMagnitudeType.AttributeValueChange:
-				Debug.Assert(
+				Validation.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeMagnitude must contains a configured MagnitudeAttribute.");
 
@@ -275,7 +274,7 @@ public sealed class CuesManager
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].PendingValueChange;
 
 			case CueMagnitudeType.AttributeBaseValue:
-				Debug.Assert(
+				Validation.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeBaseValue must contains a configured MagnitudeAttribute.");
 
@@ -287,7 +286,7 @@ public sealed class CuesManager
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].BaseValue;
 
 			case CueMagnitudeType.AttributeCurrentValue:
-				Debug.Assert(
+				Validation.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeMagnitude must contains a configured MagnitudeAttribute.");
 
@@ -299,7 +298,7 @@ public sealed class CuesManager
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].CurrentValue;
 
 			case CueMagnitudeType.AttributeModifier:
-				Debug.Assert(
+				Validation.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeMagnitude must contains a configured MagnitudeAttribute.");
 
@@ -311,7 +310,7 @@ public sealed class CuesManager
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].Modifier;
 
 			case CueMagnitudeType.AttributeOverflow:
-				Debug.Assert(
+				Validation.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeOverflow must contains a configured MagnitudeAttribute.");
 
@@ -323,7 +322,7 @@ public sealed class CuesManager
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].Overflow;
 
 			case CueMagnitudeType.AttributeValidModifier:
-				Debug.Assert(
+				Validation.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeValidModifier must contains a configured MagnitudeAttribute.");
 
@@ -335,7 +334,7 @@ public sealed class CuesManager
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].ValidModifier;
 
 			case CueMagnitudeType.AttributeMin:
-				Debug.Assert(
+				Validation.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeMin must contains a configured MagnitudeAttribute.");
 
@@ -347,7 +346,7 @@ public sealed class CuesManager
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].Min;
 
 			case CueMagnitudeType.AttributeMax:
-				Debug.Assert(
+				Validation.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeMax must contains a configured MagnitudeAttribute.");
 
@@ -359,7 +358,7 @@ public sealed class CuesManager
 				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].Max;
 
 			case CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel:
-				Debug.Assert(
+				Validation.Assert(
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel must contains a configured MagnitudeAttribute.");
 

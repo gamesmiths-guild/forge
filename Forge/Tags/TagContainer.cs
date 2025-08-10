@@ -1,13 +1,13 @@
 // Copyright © Gamesmiths Guild.
 
 using System.Collections;
-using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.Serialization;
 using System.Text;
 #if NETSTANDARD2_1
 using Gamesmiths.Forge.Compatibility;
 #endif
+using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Tags;
 
@@ -104,7 +104,7 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 	public TagContainer(TagsManager tagsManager, HashSet<Tag> sourceTags)
 		: this(tagsManager)
 	{
-		Debug.Assert(
+		Validation.Assert(
 			sourceTags.All(x => x.TagsManager == tagsManager),
 			"All tags must have the same TagsManager.");
 
@@ -145,7 +145,7 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 		}
 
 		// Containers at this point should always have a designated manager.
-		Debug.Assert(
+		Validation.Assert(
 			container.TagsManager is not null,
 			$"Container isn't properly registred in a {typeof(TagsManager)}.");
 

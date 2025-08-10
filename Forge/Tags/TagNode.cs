@@ -28,7 +28,7 @@ public class TagNode : IComparable<TagNode>, IComparable
 	{
 		get
 		{
-			System.Diagnostics.Debug.Assert(_netIndex != InvalidTagNetIndex, "NetIndex should never be invalid.");
+			Validation.Assert(_netIndex != InvalidTagNetIndex, "NetIndex should never be invalid.");
 			return _netIndex;
 		}
 
