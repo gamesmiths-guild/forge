@@ -97,22 +97,10 @@ public sealed class EntityAttribute
 			});
 		}
 
-		if (!Validation.Enabled)
+		if (Validation.Enabled)
 		{
-			return;
+			ValidateData();
 		}
-
-		Validation.Assert(
-			minValue <= maxValue,
-			"MinValue cannot be greater than MaxValue.");
-
-		Validation.Assert(
-			defaultValue >= minValue && defaultValue <= maxValue,
-			"DefaultValue should be withing MinValue and MaxValue.");
-
-		Validation.Assert(
-			channels > 0,
-			"There should be at least one channel.");
 	}
 
 	internal void SetMinValue(int newMinValue)
@@ -317,5 +305,20 @@ public sealed class EntityAttribute
 		{
 			Overflow = 0;
 		}
+	}
+
+	private void ValidateData()
+	{
+		Validation.Assert(
+			Min <= Max,
+			"MinValue cannot be greater than MaxValue.");
+
+		Validation.Assert(
+			BaseValue >= Min && BaseValue <= Max,
+			"DefaultValue should be withing MinValue and MaxValue.");
+
+		Validation.Assert(
+			_channels.Count > 0,
+			"There should be at least one channel.");
 	}
 }
