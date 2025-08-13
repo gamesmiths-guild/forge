@@ -77,7 +77,7 @@ Forge includes a runtime validation system (`Validation` class) that helps catch
 - By default, validation is **disabled**.
 - Enable it by setting `Validation.Enabled = true;` in your editor, test, or debug environment.
 - When enabled, failed validations will throw a `ValidationException` with an explanatory message.
-- In release builds, leave validation disabled for optimal performance.
+- For optimal performance, leave validation disabled in production or deployment environments.
 
 **Usage Example:**
 
