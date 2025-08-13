@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Attributes;
@@ -91,7 +90,7 @@ public abstract class AttributeSet
 		int maxValue = int.MaxValue,
 		int channels = 1)
 	{
-		Debug.Assert(!string.IsNullOrEmpty(attributeName), "attributeName should never be null or empty.");
+		Validation.Assert(!string.IsNullOrEmpty(attributeName), "attributeName should never be null or empty.");
 
 		var attribute = new EntityAttribute(defaultValue, minValue, maxValue, channels);
 		AttributesMap.Add($"{GetType().Name}.{attributeName}", attribute);

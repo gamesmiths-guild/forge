@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
@@ -219,7 +218,7 @@ public readonly struct EffectEvaluatedData
 
 		if (modifierMagnitude.MagnitudeCalculationType == MagnitudeCalculationType.CustomCalculatorClass)
 		{
-			Debug.Assert(
+			Validation.Assert(
 				modifierMagnitude.CustomCalculationBasedFloat.HasValue,
 				"CustomCalculationBasedFloat should always have a value at this point.");
 
@@ -233,7 +232,7 @@ public readonly struct EffectEvaluatedData
 			return true;
 		}
 
-		Debug.Assert(
+		Validation.Assert(
 			modifierMagnitude.AttributeBasedFloat.HasValue,
 			"AttributeBasedFloat should always have a value at this point.");
 
@@ -249,7 +248,7 @@ public readonly struct EffectEvaluatedData
 
 		if (modifierMagnitude.MagnitudeCalculationType == MagnitudeCalculationType.AttributeBased)
 		{
-			Debug.Assert(
+			Validation.Assert(
 				modifierMagnitude.AttributeBasedFloat.HasValue,
 				"AttributeBasedFloat should always have a value at this point.");
 
@@ -265,7 +264,7 @@ public readonly struct EffectEvaluatedData
 
 		if (modifierMagnitude.MagnitudeCalculationType == MagnitudeCalculationType.CustomCalculatorClass)
 		{
-			Debug.Assert(
+			Validation.Assert(
 				modifierMagnitude.CustomCalculationBasedFloat.HasValue,
 				"CustomCalculationBasedFloat should always have a value at this point.");
 
@@ -355,7 +354,7 @@ public readonly struct EffectEvaluatedData
 				continue;
 			}
 
-			Debug.Assert(
+			Validation.Assert(
 				modifier.Magnitude.CustomCalculationBasedFloat.HasValue,
 				"If modifier is set to CustomCalculatorClass, this should never be null.");
 

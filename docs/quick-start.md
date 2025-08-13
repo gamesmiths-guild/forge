@@ -818,5 +818,6 @@ Now that you've seen the basics of Forge, you can:
 5. Use [Periodic Effects](effects/periodic.md) for recurring gameplay mechanics.
 6. Extend effects with [Components](effects/components.md) for custom behaviors.
 7. Integrate [Cues](cues.md) for visual and audio feedback.
+8. For catching configuration errors during development, see [Validation and Debugging](README.md#validation-and-debugging).
 
 For more detailed documentation, refer to the [Forge Documentation Index](README.md).

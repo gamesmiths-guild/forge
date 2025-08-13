@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Effects.Magnitudes;
@@ -69,7 +68,7 @@ public readonly struct ModifierMagnitude : IEquatable<ModifierMagnitude>
 		CustomCalculationBasedFloat? customCalculationBasedFloat = null,
 		SetByCallerFloat? setByCallerFloat = null)
 	{
-		Debug.Assert(
+		Validation.Assert(
 			(magnitudeCalculationType == MagnitudeCalculationType.ScalableFloat && scalableFloatMagnitude.HasValue
 					&& !attributeBasedFloat.HasValue && !customCalculationBasedFloat.HasValue
 					&& !setByCallerFloat.HasValue)
@@ -105,25 +104,25 @@ public readonly struct ModifierMagnitude : IEquatable<ModifierMagnitude>
 		switch (MagnitudeCalculationType)
 		{
 			case MagnitudeCalculationType.ScalableFloat:
-				Debug.Assert(
+				Validation.Assert(
 					ScalableFloatMagnitude.HasValue,
 					$"{nameof(ScalableFloatMagnitude)} should always have a value at this point.");
 				return ScalableFloatMagnitude.Value.GetValue(level ?? effect.Level);
 
 			case MagnitudeCalculationType.AttributeBased:
-				Debug.Assert(
+				Validation.Assert(
 					AttributeBasedFloat.HasValue,
 					$"{nameof(AttributeBasedFloat)} should always have a value at this point.");
 				return AttributeBasedFloat.Value.CalculateMagnitude(effect, target, level ?? effect.Level);
 
 			case MagnitudeCalculationType.CustomCalculatorClass:
-				Debug.Assert(
+				Validation.Assert(
 					CustomCalculationBasedFloat.HasValue,
 					$"{nameof(CustomCalculationBasedFloat)} should always have a value at this point.");
 				return CustomCalculationBasedFloat.Value.CalculateMagnitude(effect, target, level ?? effect.Level);
 
 			case MagnitudeCalculationType.SetByCaller:
-				Debug.Assert(
+				Validation.Assert(
 					SetByCallerFloat.HasValue,
 					$"{nameof(SetByCallerFloat)} should always have a value at this point.");
 				return effect.DataTag[SetByCallerFloat.Value.Tag];

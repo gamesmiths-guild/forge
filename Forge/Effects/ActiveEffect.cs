@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Duration;
@@ -121,11 +120,11 @@ internal sealed class ActiveEffect
 
 	internal bool AddStack(Effect effect, int stacks = 1)
 	{
-		Debug.Assert(
+		Validation.Assert(
 			EffectData.StackingData.HasValue,
 			"StackingData should never be null at this point.");
 
-		Debug.Assert(
+		Validation.Assert(
 			stacks > 0,
 			"Number of stacks should be higher than 1.");
 
@@ -138,7 +137,7 @@ internal sealed class ActiveEffect
 		// We have to evaluate level before checking the stack count since the level could change.
 		if (stackingData.LevelDenialPolicy.HasValue)
 		{
-			Debug.Assert(
+			Validation.Assert(
 				stackingData.LevelOverridePolicy.HasValue,
 				"LevelOverridePolicy should never be null at this point.");
 
@@ -165,7 +164,7 @@ internal sealed class ActiveEffect
 
 			if ((stackingData.LevelOverridePolicy.Value & relation) != 0)
 			{
-				Debug.Assert(
+				Validation.Assert(
 					stackingData.LevelOverrideStackCountPolicy.HasValue,
 					"LevelOverrideStackCountPolicy should never be null at this point.");
 
@@ -201,7 +200,7 @@ internal sealed class ActiveEffect
 				evaluatedEffect = effect;
 				hasChanges = true;
 
-				Debug.Assert(
+				Validation.Assert(
 					stackingData.OwnerOverrideStackCountPolicy.HasValue,
 					"OwnerOverrideStackCountPolicy should never be null at this point.");
 
@@ -420,7 +419,7 @@ internal sealed class ActiveEffect
 					break;
 
 				case ModifierOperation.Override:
-					Debug.Assert(
+					Validation.Assert(
 						modifier.AttributeOverride is not null,
 						"AttributeOverrideData should never be null at this point.");
 

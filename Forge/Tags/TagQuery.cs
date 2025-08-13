@@ -1,6 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
+using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Tags;
 
@@ -139,7 +139,7 @@ public class TagQuery
 	/// <returns>A constructed <see cref="TagQuery"/> for matching a single tag.</returns>
 	public static TagQuery MakeQueryMatchTag(Tag tag)
 	{
-		Debug.Assert(tag.TagsManager is not null, "Shouldn't be able to use tags without managers.");
+		Validation.Assert(tag.TagsManager is not null, "Shouldn't be able to use tags without managers.");
 
 		return BuildQuery(
 			new TagQueryExpression(tag.TagsManager)
@@ -154,7 +154,7 @@ public class TagQuery
 	/// <returns>A constructed <see cref="TagQuery"/> for matching a single tag exact.</returns>
 	public static TagQuery MakeQueryMatchTagExact(Tag tag)
 	{
-		Debug.Assert(tag.TagsManager is not null, "Shouldn't be able to use tags without managers.");
+		Validation.Assert(tag.TagsManager is not null, "Shouldn't be able to use tags without managers.");
 
 		return BuildQuery(
 			new TagQueryExpression(tag.TagsManager)
@@ -205,7 +205,7 @@ public class TagQuery
 	/// <param name="container">The <see cref="TagContainer"/> supplying the new tags.</param>
 	public void ReplaceTagsFast(TagContainer container)
 	{
-		Debug.Assert(container.Count == _tagDictionary.Count, "Must use containers with the same size.");
+		Validation.Assert(container.Count == _tagDictionary.Count, "Must use containers with the same size.");
 
 		_tagDictionary.Clear();
 		_tagDictionary.AddRange(container.Tags);
@@ -220,7 +220,7 @@ public class TagQuery
 	/// <param name="tag">The <see cref="Tag"/> to replace the unique tag in the query.</param>
 	public void ReplaceTagFast(Tag tag)
 	{
-		Debug.Assert(_tagDictionary.Count == 1, "Must use single containers.");
+		Validation.Assert(_tagDictionary.Count == 1, "Must use single containers.");
 
 		_tagDictionary.Clear();
 		_tagDictionary.Add(tag);

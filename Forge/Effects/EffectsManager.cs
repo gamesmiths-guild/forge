@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects.Components;
@@ -196,7 +195,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private static bool MatchesStackPolicy(ActiveEffect existingEffect, Effect newEffect)
 	{
-		Debug.Assert(
+		Validation.Assert(
 			newEffect.EffectData.StackingData.HasValue,
 			"StackingData should always be valid at this point.");
 
@@ -206,7 +205,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private static bool MatchesStackLevelPolicy(ActiveEffect existingEffect, Effect newEffect)
 	{
-		Debug.Assert(
+		Validation.Assert(
 			newEffect.EffectData.StackingData.HasValue,
 			"StackingData should always be valid at this point.");
 

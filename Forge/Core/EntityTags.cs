@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Core;
@@ -130,7 +129,7 @@ public class EntityTags
 
 		_modifierTagCounts[tag] = --modifierTagCount;
 
-		Debug.Assert(modifierTagCount >= 0, $"{nameof(modifierTagCount)} count should never reach a negative value.");
+		Validation.Assert(modifierTagCount >= 0, $"{nameof(modifierTagCount)} count should never reach a negative value.");
 
 		if (modifierTagCount == 0)
 		{

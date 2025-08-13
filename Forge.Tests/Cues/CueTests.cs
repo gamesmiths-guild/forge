@@ -1,7 +1,6 @@
 // Copyright © Gamesmiths Guild.
 #pragma warning disable SA1118 // ParameterMustNotSpanMultipleLines
 
-using System.Diagnostics;
 using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
@@ -606,7 +605,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		ActiveEffectHandle? activeEffectHandler = entity.EffectsManager.ApplyEffect(effect);
 		TestCueExecutionData(TestCueExecutionType.Application, cueTestDatas1);
 
-		Debug.Assert(activeEffectHandler is not null, "Effect should not be null here.");
+		Validation.Assert(activeEffectHandler is not null, "Effect should not be null here.");
 		entity.EffectsManager.UnapplyEffect(activeEffectHandler);
 		TestCueExecutionData(TestCueExecutionType.Application, cueTestDatas2);
 	}
@@ -1207,7 +1206,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas2);
 		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas2);
 
-		Debug.Assert(activeEffectHandler is not null, "Effect should not be null here.");
+		Validation.Assert(activeEffectHandler is not null, "Effect should not be null here.");
 		entity.EffectsManager.UnapplyEffect(activeEffectHandler);
 		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas3);
 		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas3);
@@ -1568,7 +1567,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas2);
 		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas2);
 
-		Debug.Assert(activeEffectHandler is not null, "Effect should not be null here.");
+		Validation.Assert(activeEffectHandler is not null, "Effect should not be null here.");
 		entity.EffectsManager.UnapplyEffect(activeEffectHandler);
 		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas3);
 		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas3);

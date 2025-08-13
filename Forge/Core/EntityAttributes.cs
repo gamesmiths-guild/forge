@@ -1,7 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
 using System.Collections;
-using System.Diagnostics;
 using Gamesmiths.Forge.Attributes;
 
 namespace Gamesmiths.Forge.Core;
@@ -62,7 +61,7 @@ public class EntityAttributes : IEnumerable<EntityAttribute>
 	/// <param name="attributeSet">The attribute set to be added.</param>
 	public void AddAttributeSet(AttributeSet attributeSet)
 	{
-		Debug.Assert(attributeSet is not null, "AttributeSets is not initialized.");
+		Validation.Assert(attributeSet is not null, "AttributeSets is not initialized.");
 
 		AttributeSets.Add(attributeSet);
 

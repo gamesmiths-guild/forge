@@ -1,6 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
+using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Attributes;
 
@@ -78,18 +78,6 @@ public sealed class EntityAttribute
 		int maxValue,
 		int channels)
 	{
-		Debug.Assert(
-			minValue <= maxValue,
-			"MinValue cannot be greater than MaxValue.");
-
-		Debug.Assert(
-			defaultValue >= minValue && defaultValue <= maxValue,
-			"DefaultValue should be withing MinValue and MaxValue.");
-
-		Debug.Assert(
-			channels > 0,
-			"There should be at least one channel.");
-
 		PendingValueChange = 0;
 
 		Min = minValue;
@@ -108,11 +96,16 @@ public sealed class EntityAttribute
 				PercentModifier = 1,
 			});
 		}
+
+		if (Validation.Enabled)
+		{
+			ValidateData();
+		}
 	}
 
 	internal void SetMinValue(int newMinValue)
 	{
-		Debug.Assert(newMinValue <= Max, "MinValue cannot be lower than MaxValue.");
+		Validation.Assert(newMinValue <= Max, "MinValue cannot be lower than MaxValue.");
 
 		var oldValue = CurrentValue;
 
@@ -128,7 +121,7 @@ public sealed class EntityAttribute
 
 	internal void SetMaxValue(int newMaxValue)
 	{
-		Debug.Assert(newMaxValue >= Min, "MaxValue cannot be lower than MinValue.");
+		Validation.Assert(newMaxValue >= Min, "MaxValue cannot be lower than MinValue.");
 
 		var oldValue = CurrentValue;
 
@@ -312,5 +305,20 @@ public sealed class EntityAttribute
 		{
 			Overflow = 0;
 		}
+	}
+
+	private void ValidateData()
+	{
+		Validation.Assert(
+			Min <= Max,
+			"MinValue cannot be greater than MaxValue.");
+
+		Validation.Assert(
+			BaseValue >= Min && BaseValue <= Max,
+			"DefaultValue should be withing MinValue and MaxValue.");
+
+		Validation.Assert(
+			_channels.Count > 0,
+			"There should be at least one channel.");
 	}
 }
