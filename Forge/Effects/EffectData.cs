@@ -187,30 +187,6 @@ public readonly struct EffectData : IEquatable<EffectData>
 			&& Cues.SequenceEqual(other.Cues);
 	}
 
-	/// <summary>
-	/// Determines if two <see cref="EffectData"/> objects are equal.
-	/// </summary>
-	/// <param name="lhs">The first <see cref="EffectData"/> to compare.</param>
-	/// <param name="rhs">The second <see cref="EffectData"/> to compare.</param>
-	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal;
-	/// otherwise, <see langword="false"/>.</returns>
-	public static bool operator ==(EffectData lhs, EffectData rhs)
-	{
-		return lhs.Equals(rhs);
-	}
-
-	/// <summary>
-	/// Determines if two <see cref="EffectData"/> objects are not equal.
-	/// </summary>
-	/// <param name="lhs">The first <see cref="EffectData"/> to compare.</param>
-	/// <param name="rhs">The second <see cref="EffectData"/> to compare.</param>
-	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not
-	/// equal; otherwise, <see langword="false"/>.</returns>
-	public static bool operator !=(EffectData lhs, EffectData rhs)
-	{
-		return !(lhs == rhs);
-	}
-
 	private void ValidateData()
 	{
 		Validation.Assert(
@@ -338,5 +314,29 @@ public readonly struct EffectData : IEquatable<EffectData>
 					|| cue.MagnitudeAttribute is null,
 				"Attribute magnitudes type must have a configured MagnitudeAttribute, and not configured otherwise.");
 		}
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="EffectData"/> objects are equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="EffectData"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="EffectData"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal;
+	/// otherwise, <see langword="false"/>.</returns>
+	public static bool operator ==(EffectData lhs, EffectData rhs)
+	{
+		return lhs.Equals(rhs);
+	}
+
+	/// <summary>
+	/// Determines if two <see cref="EffectData"/> objects are not equal.
+	/// </summary>
+	/// <param name="lhs">The first <see cref="EffectData"/> to compare.</param>
+	/// <param name="rhs">The second <see cref="EffectData"/> to compare.</param>
+	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not
+	/// equal; otherwise, <see langword="false"/>.</returns>
+	public static bool operator !=(EffectData lhs, EffectData rhs)
+	{
+		return !(lhs == rhs);
 	}
 }
