@@ -70,6 +70,22 @@ Forge's architecture follows these key principles:
 
 The framework avoids deep inheritance hierarchies, preferring flexible composition patterns that allow for greater code reuse and clearer architecture.
 
+## Validation and Debugging
+
+Forge includes a runtime validation system (`Validation` class) that helps catch misconfigurations and logic errors during development, editor, and testing workflows.
+
+- By default, validation is **disabled**.
+- Enable it by setting `Validation.Enabled = true;` in your editor, test, or debug environment.
+- When enabled, failed validations will throw a `ValidationException` with an explanatory message.
+- In release builds, leave validation disabled for optimal performance.
+
+**Usage Example:**
+
+```csharp
+Validation.Enabled = true; // Enable validation (e.g., in editor)
+Validation.Assert(someCondition, "Message if failed.");
+```
+
 ## Documentation Structure
 
 For more detailed information about specific systems, refer to these documentation files:
