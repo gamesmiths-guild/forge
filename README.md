@@ -1,6 +1,6 @@
 # Forge Gameplay Framework
 
-_[![NuGet](https://img.shields.io/nuget/v/Gamesmiths.Forge.svg)](https://www.nuget.org/packages/Gamesmiths.Forge)_
+[![NuGet](https://img.shields.io/nuget/v/Gamesmiths.Forge.svg)](https://www.nuget.org/packages/Gamesmiths.Forge)
 
 A gameplay framework for developing games using C#.
 
