@@ -9,7 +9,7 @@ This guide will help you quickly get started with the Forge framework, showing y
 Install Forge via NuGet (recommended):
 
 ```shell
-dotnet add package Gamesmiths.Forge --version 0.1.1
+dotnet add package Gamesmiths.Forge --version 0.1.2
 ```
 
 For other installation methods, see the [main README](../README.md).
