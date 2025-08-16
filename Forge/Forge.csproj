@@ -10,21 +10,21 @@
 
   <PropertyGroup>
     <AssemblyTitle>Forge</AssemblyTitle>
-    <Product>Forge Gameplay Framework</Product>
+    <Product>Forge Gameplay System</Product>
     <Company>Gamesmiths Guild</Company>
     <Copyright>Copyright © Gamesmiths Guild</Copyright>
   </PropertyGroup>
 
   <PropertyGroup Label="Package Metadata">
     <PackageId>Gamesmiths.Forge</PackageId>
-    <Title>Forge Gameplay Framework</Title>
+    <Title>Forge Gameplay System</Title>
     <Authors>Lex</Authors>
     <Description>A gameplay framework for developing games using C#.</Description>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/gamesmiths-guild/forge</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/gamesmiths-guild/forge</PackageProjectUrl>
-    <PackageTags>gameplay;framework;game;engine;gamedev;C#</PackageTags>
+    <PackageTags>gameplay;framework;game;gamedev;game-development;data-driven;unity;godot</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>https://github.com/gamesmiths-guild/forge/releases</PackageReleaseNotes>
   </PropertyGroup>
