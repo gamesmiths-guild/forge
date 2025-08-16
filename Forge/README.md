@@ -1,4 +1,4 @@
-# Forge Gameplay Framework
+# Forge Gameplay System
 
 Forge is an engine-agnostic gameplay framework designed for building robust game systems in C#. Inspired by Unreal Engine's Gameplay Ability System (GAS), Forge provides a centralized and controlled approach to gameplay mechanics.
 

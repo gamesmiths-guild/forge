@@ -5,7 +5,7 @@ using Gamesmiths.Forge.Effects;
 namespace Gamesmiths.Forge.Core;
 
 /// <summary>
-/// Interface for implementing entities that can be used by the Forge Gameplay Framework.
+/// Interface for implementing entities that can be used by the Forge Gameplay System.
 /// </summary>
 public interface IForgeEntity
 {
