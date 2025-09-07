@@ -18,7 +18,7 @@ namespace Gamesmiths.Forge.Effects;
 /// <remarks>
 /// Optimizes performance by avoiding repeated complex calculations and serves as data for event arguments.
 /// </remarks>
-public readonly struct EffectEvaluatedData
+public readonly record struct EffectEvaluatedData
 {
 	private const string InvalidPeriodicDataException = "Evaluated period must be greater than zero. A non-positive" +
 		" value would cause the effect to loop indefinitely.";
@@ -94,7 +94,7 @@ public readonly struct EffectEvaluatedData
 
 		CustomCueParameters = EvaluateCustomCueParameters();
 
-		if (effect.EffectData.DurationData.Type == DurationType.Instant)
+		if (effect.EffectData.DurationData.DurationType == DurationType.Instant)
 		{
 			AttributesToCapture = [];
 			return;
@@ -211,7 +211,7 @@ public readonly struct EffectEvaluatedData
 
 	private bool IsModifierSnapshop(ModifierMagnitude modifierMagnitude)
 	{
-		if (Effect.EffectData.DurationData.Type == DurationType.Instant)
+		if (Effect.EffectData.DurationData.DurationType == DurationType.Instant)
 		{
 			return true;
 		}
@@ -241,7 +241,7 @@ public readonly struct EffectEvaluatedData
 
 	private EntityAttribute[] CaptureModifierBackingAttribute(ModifierMagnitude modifierMagnitude)
 	{
-		if (Effect.EffectData.DurationData.Type == DurationType.Instant)
+		if (Effect.EffectData.DurationData.DurationType == DurationType.Instant)
 		{
 			return [];
 		}

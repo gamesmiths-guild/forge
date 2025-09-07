@@ -37,7 +37,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			return null;
 		}
 
-		if (effect.EffectData.DurationData.Type == DurationType.Instant)
+		if (effect.EffectData.DurationData.DurationType == DurationType.Instant)
 		{
 			var evaluatedData = new EffectEvaluatedData(effect, Owner);
 
@@ -311,7 +311,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			return;
 		}
 
-		if (effectToRemove.EffectData.DurationData.Type == DurationType.HasDuration)
+		if (effectToRemove.EffectData.DurationData.DurationType == DurationType.HasDuration)
 		{
 			forceUnapply = true;
 		}

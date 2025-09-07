@@ -11,7 +11,7 @@ namespace Gamesmiths.Forge.Effects;
 /// <remarks>
 /// Optimizes performance by avoiding repeated complex calculations and serves as data for event arguments.
 /// </remarks>
-public readonly struct ModifierEvaluatedData
+public readonly record struct ModifierEvaluatedData
 {
 	/// <summary>
 	/// Gets the target attribute of this modifier.

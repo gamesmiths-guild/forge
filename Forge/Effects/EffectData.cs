@@ -15,7 +15,7 @@ namespace Gamesmiths.Forge.Effects;
 /// <summary>
 /// The configuration data for a effect.
 /// </summary>
-public readonly struct EffectData : IEquatable<EffectData>
+public readonly record struct EffectData
 {
 	/// <summary>
 	/// Gets the name of this effect.
@@ -125,80 +125,18 @@ public readonly struct EffectData : IEquatable<EffectData>
 		}
 	}
 
-	/// <inheritdoc/>
-	public override int GetHashCode()
-	{
-		var hash = default(HashCode);
-		hash.Add(Name);
-		hash.Add(DurationData);
-		hash.Add(StackingData);
-		hash.Add(PeriodicData);
-		hash.Add(SnapshopLevel);
-		hash.Add(RequireModifierSuccessToTriggerCue);
-		hash.Add(SuppressStackingCues);
-
-		foreach (CustomExecution execution in CustomExecutions)
-		{
-			hash.Add(execution);
-		}
-
-		foreach (Modifier modifier in Modifiers)
-		{
-			hash.Add(modifier);
-		}
-
-		foreach (IEffectComponent component in EffectComponents)
-		{
-			hash.Add(component);
-		}
-
-		foreach (CueData cue in Cues)
-		{
-			hash.Add(cue);
-		}
-
-		return hash.ToHashCode();
-	}
-
-	/// <inheritdoc/>
-	public override bool Equals(object? obj)
-	{
-		if (obj is EffectData other)
-		{
-			return Equals(other);
-		}
-
-		return false;
-	}
-
-	/// <inheritdoc/>
-	public bool Equals(EffectData other)
-	{
-		return Name == other.Name
-			&& DurationData.Equals(other.DurationData)
-			&& Nullable.Equals(StackingData, other.StackingData)
-			&& Nullable.Equals(PeriodicData, other.PeriodicData)
-			&& SnapshopLevel == other.SnapshopLevel
-			&& RequireModifierSuccessToTriggerCue == other.RequireModifierSuccessToTriggerCue
-			&& SuppressStackingCues == other.SuppressStackingCues
-			&& CustomExecutions.SequenceEqual(other.CustomExecutions)
-			&& Modifiers.SequenceEqual(other.Modifiers)
-			&& EffectComponents.SequenceEqual(other.EffectComponents)
-			&& Cues.SequenceEqual(other.Cues);
-	}
-
 	private void ValidateData()
 	{
 		Validation.Assert(
-			!(PeriodicData.HasValue && DurationData.Type == DurationType.Instant),
+			!(PeriodicData.HasValue && DurationData.DurationType == DurationType.Instant),
 			"Periodic effects can't be set as instant.");
 
 		Validation.Assert(
-			!(DurationData.Type != DurationType.HasDuration && DurationData.Duration.HasValue),
-			$"Can't set duration if {nameof(DurationType)} is set to {DurationData.Type}.");
+			!(DurationData.DurationType != DurationType.HasDuration && DurationData.Duration.HasValue),
+			$"Can't set duration if {nameof(DurationType)} is set to {DurationData.DurationType}.");
 
 		Validation.Assert(
-			!(StackingData.HasValue && DurationData.Type == DurationType.Instant),
+			!(StackingData.HasValue && DurationData.DurationType == DurationType.Instant),
 			$"{DurationType.Instant} effects can't have stacks.");
 
 		Validation.Assert(
@@ -258,7 +196,7 @@ public readonly struct EffectData : IEquatable<EffectData>
 
 		Validation.Assert(
 			!(StackingData.HasValue
-				&& (DurationData.Type == DurationType.HasDuration !=
+				&& (DurationData.DurationType == DurationType.HasDuration !=
 				StackingData.Value.ApplicationRefreshPolicy.HasValue)),
 			$"Effects set as {DurationType.HasDuration} must define {nameof(StackApplicationRefreshPolicy)} and not define it if otherwise.");
 
@@ -273,7 +211,7 @@ public readonly struct EffectData : IEquatable<EffectData>
 			$"Both {nameof(PeriodicData)} and {nameof(StackApplicationResetPeriodPolicy)} must be either defined or undefined.");
 
 		Validation.Assert(
-			!(DurationData.Type == DurationType.Instant && Modifiers is not null && Array.Exists(
+			!(DurationData.DurationType == DurationType.Instant && Modifiers is not null && Array.Exists(
 				Modifiers,
 				x => x.Magnitude.MagnitudeCalculationType == MagnitudeCalculationType.AttributeBased
 					&& x.Magnitude.AttributeBasedFloat.HasValue
@@ -281,14 +219,14 @@ public readonly struct EffectData : IEquatable<EffectData>
 			$"Effects set as {DurationType.Instant} and {MagnitudeCalculationType.AttributeBased} cannot be set as non Snapshot.");
 
 		Validation.Assert(
-			!(DurationData.Type == DurationType.Instant && !SnapshopLevel),
+			!(DurationData.DurationType == DurationType.Instant && !SnapshopLevel),
 			$"Effects set as {DurationType.Instant} cannot be set as non Snapshot for Level.");
 
 		Validation.Assert(
 			EffectComponents is null ||
 			!Array.Exists(EffectComponents, x => x is ModifierTagsEffectComponent) ||
 			(Array.Exists(EffectComponents, x => x is ModifierTagsEffectComponent) &&
-			DurationData.Type != DurationType.Instant),
+			DurationData.DurationType != DurationType.Instant),
 			$"Instant effects cannot apply tags from the {nameof(ModifierTagsEffectComponent)}.");
 
 		foreach (CueData cue in Cues)
@@ -314,29 +252,5 @@ public readonly struct EffectData : IEquatable<EffectData>
 					|| cue.MagnitudeAttribute is null,
 				"Attribute magnitudes type must have a configured MagnitudeAttribute, and not configured otherwise.");
 		}
-	}
-
-	/// <summary>
-	/// Determines if two <see cref="EffectData"/> objects are equal.
-	/// </summary>
-	/// <param name="lhs">The first <see cref="EffectData"/> to compare.</param>
-	/// <param name="rhs">The second <see cref="EffectData"/> to compare.</param>
-	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal;
-	/// otherwise, <see langword="false"/>.</returns>
-	public static bool operator ==(EffectData lhs, EffectData rhs)
-	{
-		return lhs.Equals(rhs);
-	}
-
-	/// <summary>
-	/// Determines if two <see cref="EffectData"/> objects are not equal.
-	/// </summary>
-	/// <param name="lhs">The first <see cref="EffectData"/> to compare.</param>
-	/// <param name="rhs">The second <see cref="EffectData"/> to compare.</param>
-	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not
-	/// equal; otherwise, <see langword="false"/>.</returns>
-	public static bool operator !=(EffectData lhs, EffectData rhs)
-	{
-		return !(lhs == rhs);
 	}
 }
