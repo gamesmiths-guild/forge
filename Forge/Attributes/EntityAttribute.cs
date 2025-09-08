@@ -11,7 +11,7 @@ namespace Gamesmiths.Forge.Attributes;
 /// </summary>
 public sealed class EntityAttribute
 {
-	private readonly List<ChannelData> _channels = [];
+	private readonly ChannelData[] _channels;
 
 	private readonly LinkedList<AttributeOverride> _attributeOverrides = [];
 
@@ -87,14 +87,16 @@ public sealed class EntityAttribute
 		Overflow = 0;
 		CurrentValue = BaseValue;
 
+		_channels = new ChannelData[channels];
+
 		for (var i = 0; i < channels; i++)
 		{
-			_channels.Add(new ChannelData
+			_channels[i] = new ChannelData
 			{
 				Override = null,
 				FlatModifier = 0,
 				PercentModifier = 1,
-			});
+			};
 		}
 
 		if (Validation.Enabled)
@@ -183,7 +185,8 @@ public sealed class EntityAttribute
 
 		var oldValue = CurrentValue;
 
-		_channels[attributeOverrideData.Channel].Override = attributeOverrideData.Magnitude;
+		ref ChannelData channelData = ref _channels[attributeOverrideData.Channel];
+		channelData.Override = attributeOverrideData.Magnitude;
 
 		UpdateCachedValues();
 
@@ -200,13 +203,14 @@ public sealed class EntityAttribute
 
 		_attributeOverrides.Remove(attributeOverride);
 
+		ref ChannelData channelData = ref _channels[channel];
 		if (_attributeOverrides.Any(x => x.Channel == channel))
 		{
-			_channels[channel].Override = _attributeOverrides.First(x => x.Channel == channel).Magnitude;
+			channelData.Override = _attributeOverrides.First(x => x.Channel == channel).Magnitude;
 		}
 		else
 		{
-			_channels[channel].Override = null;
+			channelData.Override = null;
 		}
 
 		UpdateCachedValues();
@@ -221,7 +225,8 @@ public sealed class EntityAttribute
 	{
 		var oldValue = CurrentValue;
 
-		_channels[channel].FlatModifier += value;
+		ref ChannelData channelData = ref _channels[channel];
+		channelData.FlatModifier += value;
 
 		UpdateCachedValues();
 
@@ -235,7 +240,8 @@ public sealed class EntityAttribute
 	{
 		var oldValue = CurrentValue;
 
-		_channels[channel].PercentModifier += value;
+		ref ChannelData channelData = ref _channels[channel];
+		channelData.PercentModifier += value;
 
 		UpdateCachedValues();
 
@@ -318,7 +324,7 @@ public sealed class EntityAttribute
 			"DefaultValue should be withing MinValue and MaxValue.");
 
 		Validation.Assert(
-			_channels.Count > 0,
+			_channels.Length > 0,
 			"There should be at least one channel.");
 	}
 }

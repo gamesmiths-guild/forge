@@ -138,7 +138,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
 							new ScalableFloat(postMultiplyAdditiveValue),
-							lookupCurve: new Curve(
+							LookupCurve: new Curve(
 								[
 									new CurveKey(6, 4),
 									new CurveKey(8, 3),

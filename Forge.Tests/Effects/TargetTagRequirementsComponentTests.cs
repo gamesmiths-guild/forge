@@ -348,7 +348,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 			new DurationData(DurationType.Infinite),
 			effectComponents:
 			[
-				new TargetTagRequirementsEffectComponent(new TagRequirements(tagQuery: query))
+				new TargetTagRequirementsEffectComponent(new TagRequirements(TagQuery: query))
 			]);
 
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
@@ -391,7 +391,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 			new DurationData(DurationType.Infinite),
 			effectComponents:
 			[
-				new TargetTagRequirementsEffectComponent(new TagRequirements(tagQuery: query))
+				new TargetTagRequirementsEffectComponent(new TagRequirements(TagQuery: query))
 			]);
 
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));

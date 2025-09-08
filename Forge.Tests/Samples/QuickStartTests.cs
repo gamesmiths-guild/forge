@@ -239,9 +239,9 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 				)
 			},
 			periodicData: new PeriodicData(
-				period: new ScalableFloat(2.0f),
-				executeOnApplication: true,
-				periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+				Period: new ScalableFloat(2.0f),
+				ExecuteOnApplication: true,
+				PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
 			)
 		);
 
@@ -282,23 +282,23 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 				)
 			},
 			periodicData: new PeriodicData(
-				period: new ScalableFloat(2.0f),
-				executeOnApplication: false,
-				periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+				Period: new ScalableFloat(2.0f),
+				ExecuteOnApplication: false,
+				PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
 			),
 			stackingData: new StackingData(
-				stackLimit: new ScalableInt(3), // Max 3 stacks
-				initialStack: new ScalableInt(1), // Starts with 1 stack
-				overflowPolicy: StackOverflowPolicy.DenyApplication, // Deny if max stacks reached
-				magnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
-				expirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
-				applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
-				stackPolicy: StackPolicy.AggregateBySource, // Aggregate stacks from the same source
-				stackLevelPolicy: StackLevelPolicy.SegregateLevels, // Each stack can have its own level
+				StackLimit: new ScalableInt(3), // Max 3 stacks
+				InitialStack: new ScalableInt(1), // Starts with 1 stack
+				OverflowPolicy: StackOverflowPolicy.DenyApplication, // Deny if max stacks reached
+				MagnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
+				ExpirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
+				ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
+				StackPolicy: StackPolicy.AggregateBySource, // Aggregate stacks from the same source
+				StackLevelPolicy: StackLevelPolicy.SegregateLevels, // Each stack can have its own level
 
 				// The next two values must be defined because this is a periodic effect with stacking
-				executeOnSuccessfulApplication: false, // Do not execute on successful application
-				applicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication
+				ExecuteOnSuccessfulApplication: false, // Do not execute on successful application
+				ApplicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication
 			)
 		);
 
@@ -351,20 +351,20 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 				)
 			},
 			stackingData: new StackingData(
-				stackLimit: new ScalableInt(1), // Only 1 instance allowed
-				initialStack: new ScalableInt(1), // Starts with 1 stack
-				overflowPolicy: StackOverflowPolicy.AllowApplication, // Allow application even if max stacks reached
-				magnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
-				expirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
-				applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
-				stackPolicy: StackPolicy.AggregateByTarget, // Only one effect per target
-				ownerDenialPolicy: StackOwnerDenialPolicy.AlwaysAllow, // Always allow application regardless of owner
-				ownerOverridePolicy: StackOwnerOverridePolicy.Override, // Override existing effect if applied again
-				ownerOverrideStackCountPolicy: StackOwnerOverrideStackCountPolicy.ResetStacks,
-				stackLevelPolicy: StackLevelPolicy.AggregateLevels, // Aggregate levels of the effect
-				levelOverridePolicy: LevelComparison.Equal | LevelComparison.Higher,
-				levelDenialPolicy: LevelComparison.Lower, // Deny lower-level effects
-				levelOverrideStackCountPolicy: StackLevelOverrideStackCountPolicy.ResetStacks
+				StackLimit: new ScalableInt(1), // Only 1 instance allowed
+				InitialStack: new ScalableInt(1), // Starts with 1 stack
+				OverflowPolicy: StackOverflowPolicy.AllowApplication, // Allow application even if max stacks reached
+				MagnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
+				ExpirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
+				ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
+				StackPolicy: StackPolicy.AggregateByTarget, // Only one effect per target
+				OwnerDenialPolicy: StackOwnerDenialPolicy.AlwaysAllow, // Always allow application regardless of owner
+				OwnerOverridePolicy: StackOwnerOverridePolicy.Override, // Override existing effect if applied again
+				OwnerOverrideStackCountPolicy: StackOwnerOverrideStackCountPolicy.ResetStacks,
+				StackLevelPolicy: StackLevelPolicy.AggregateLevels, // Aggregate levels of the effect
+				LevelOverridePolicy: LevelComparison.Equal | LevelComparison.Higher,
+				LevelDenialPolicy: LevelComparison.Lower, // Deny lower-level effects
+				LevelOverrideStackCountPolicy: StackLevelOverrideStackCountPolicy.ResetStacks
 			)
 		);
 
@@ -456,7 +456,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 				new TargetTagRequirementsEffectComponent(
 					applicationTagRequirements: new TagRequirements(
 						// Prevent application if target has "status.immune.fire"
-						ignoreTags: tagsManager.RequestTagContainer(new[] { "status.immune.fire" })
+						IgnoreTags: tagsManager.RequestTagContainer(new[] { "status.immune.fire" })
 					)
 				)
 			}
@@ -638,17 +638,17 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 				)
 			},
 			periodicData: new PeriodicData(
-				period: new ScalableFloat(1.0f), // Ticks every second
-				executeOnApplication: true,
-				periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+				Period: new ScalableFloat(1.0f), // Ticks every second
+				ExecuteOnApplication: true,
+				PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
 			),
 			cues: new[] {
 				new CueData(
-					cueTags: tagsManager.RequestTagContainer(new[] { "cues.damage.fire" }),
-					minValue: 0,
-					maxValue: 100,
-					magnitudeType: CueMagnitudeType.AttributeValueChange,
-					magnitudeAttribute: "PlayerAttributeSet.Health" // Tracks health changes
+					CueTags: tagsManager.RequestTagContainer(new[] { "cues.damage.fire" }),
+					MinValue: 0,
+					MaxValue: 100,
+					MagnitudeType: CueMagnitudeType.AttributeValueChange,
+					MagnitudeAttribute: "PlayerAttributeSet.Health" // Tracks health changes
 				)
 			}
 		);
@@ -700,10 +700,10 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 
 		// Manually trigger a fire damage cue
 		var parameters = new CueParameters(
-			magnitude: 25, // Raw damage value
-			normalizedMagnitude: 0.25f, // Normalized between 0-1
-			source: player,
-			customParameters: new Dictionary<StringKey, object>
+			Magnitude: 25, // Raw damage value
+			NormalizedMagnitude: 0.25f, // Normalized between 0-1
+			Source: player,
+			CustomParameters: new Dictionary<StringKey, object>
 			{
 				{ "DamageType", "Fire" },
 				{ "IsCritical", true }
@@ -797,12 +797,12 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			StrengthAttribute = new AttributeCaptureDefinition(
 				"PlayerAttributeSet.Strength",
 				AttributeCaptureSource.Source,
-				snapshot: true);
+				Snapshot: true);
 
 			SpeedAttribute = new AttributeCaptureDefinition(
 				"PlayerAttributeSet.Speed",
 				AttributeCaptureSource.Source,
-				snapshot: true);
+				Snapshot: true);
 
 			AttributesToCapture.Add(StrengthAttribute);
 			AttributesToCapture.Add(SpeedAttribute);
@@ -833,17 +833,17 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			TargetHealth = new AttributeCaptureDefinition(
 				"PlayerAttributeSet.Health",
 				AttributeCaptureSource.Target,
-				snapshot: false);
+				Snapshot: false);
 
 			SourceHealth = new AttributeCaptureDefinition(
 				"PlayerAttributeSet.Health",
 				AttributeCaptureSource.Source,
-				snapshot: false);
+				Snapshot: false);
 
 			SourceStrength = new AttributeCaptureDefinition(
 				"PlayerAttributeSet.Strength",
 				AttributeCaptureSource.Source,
-				snapshot: false);
+				Snapshot: false);
 
 			// Register attributes for capture
 			AttributesToCapture.Add(TargetHealth);
@@ -922,7 +922,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			// Logic for updating persistent cues (e.g., adjust fire intensity)
 			if (parameters.HasValue)
 			{
-				Console.WriteLine($"Fire damage cue updated with magnitude: {parameters.Value.Magnitude}");
+				Console.WriteLine($"Fire damage cue updated with Magnitude: {parameters.Value.Magnitude}");
 			}
 		}
 	}

@@ -32,7 +32,7 @@ internal sealed class ActiveEffect
 
 	internal int StackCount { get; private set; }
 
-	internal bool IsExpired => EffectData.DurationData.Type ==
+	internal bool IsExpired => EffectData.DurationData.DurationType ==
 		DurationType.HasDuration &&
 		RemainingDuration <= 0;
 
@@ -281,7 +281,7 @@ internal sealed class ActiveEffect
 
 	internal void Update(double deltaTime)
 	{
-		if (EffectData.DurationData.Type == DurationType.HasDuration)
+		if (EffectData.DurationData.DurationType == DurationType.HasDuration)
 		{
 			RemainingDuration -= deltaTime;
 
@@ -425,11 +425,11 @@ internal sealed class ActiveEffect
 
 					if (multiplier == 1)
 					{
-						modifier.Attribute.AddOverride(modifier.AttributeOverride);
+						modifier.Attribute.AddOverride(modifier.AttributeOverride.Value);
 						break;
 					}
 
-					modifier.Attribute.ClearOverride(modifier.AttributeOverride);
+					modifier.Attribute.ClearOverride(modifier.AttributeOverride.Value);
 					break;
 			}
 		}

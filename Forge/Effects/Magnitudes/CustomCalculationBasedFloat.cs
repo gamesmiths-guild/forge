@@ -15,44 +15,19 @@ namespace Gamesmiths.Forge.Effects.Magnitudes;
 /// finalValue = (coefficient * (calculatedMagnitude + preMultiply)) + postMultiply;
 /// </code>
 /// </remarks>
-/// <param name="magnitudeCalculatorClass">The magnitude calculator class to be used for magnitude calculation.</param>
-/// <param name="coefficient">Value to be multiplied with the calculcuated magnitude.</param>
-/// <param name="preMultiplyAdditiveValue">Value to be added to the magnitude before multiplying the coeficient.</param>
-/// <param name="postMultiplyAdditiveValue">Value to be added to the magnitude after multiplying the coeficient.</param>
-/// <param name="lookupCurve">If provided, the final evaluated magnitude will be used as a lookup into this curve.
+/// <param name="MagnitudeCalculatorClass">The magnitude calculator class to be used for magnitude calculation.</param>
+/// <param name="Coefficient">Value to be multiplied with the calculcuated magnitude.</param>
+/// <param name="PreMultiplyAdditiveValue">Value to be added to the magnitude before multiplying the coeficient.</param>
+/// <param name="PostMultiplyAdditiveValue">Value to be added to the magnitude after multiplying the coeficient.</param>
+/// <param name="LookupCurve">If provided, the final evaluated magnitude will be used as a lookup into this curve.
 /// </param>
-public readonly struct CustomCalculationBasedFloat(
-	CustomModifierMagnitudeCalculator magnitudeCalculatorClass,
-	ScalableFloat coefficient,
-	ScalableFloat preMultiplyAdditiveValue,
-	ScalableFloat postMultiplyAdditiveValue,
-	ICurve? lookupCurve = null) : IEquatable<CustomCalculationBasedFloat>
+public readonly record struct CustomCalculationBasedFloat(
+	CustomModifierMagnitudeCalculator MagnitudeCalculatorClass,
+	ScalableFloat Coefficient,
+	ScalableFloat PreMultiplyAdditiveValue,
+	ScalableFloat PostMultiplyAdditiveValue,
+	ICurve? LookupCurve = null)
 {
-	/// <summary>
-	/// Gets the magnitude calculator class used to calculate the magnitude.
-	/// </summary>
-	public CustomModifierMagnitudeCalculator MagnitudeCalculatorClass { get; } = magnitudeCalculatorClass;
-
-	/// <summary>
-	/// Gets the coeficient to be multiplied with the captured magnitude.
-	/// </summary>
-	public ScalableFloat Coefficient { get; } = coefficient;
-
-	/// <summary>
-	/// Gets the value to be added to the captured magnitude before multiplying the coefficient.
-	/// </summary>
-	public ScalableFloat PreMultiplyAdditiveValue { get; } = preMultiplyAdditiveValue;
-
-	/// <summary>
-	/// Gets the value to be added to the captured magnitude after multiplying the coefficient.
-	/// </summary>
-	public ScalableFloat PostMultiplyAdditiveValue { get; } = postMultiplyAdditiveValue;
-
-	/// <summary>
-	/// Gets the curve entry to use as a lookup instead of directly using the evaluated magnitude.
-	/// </summary>
-	public ICurve? LookupCurve { get; } = lookupCurve;
-
 	/// <summary>
 	/// Calculates the final magnitude based on the CustomCalculationBasedFloat configurations.
 	/// </summary>
@@ -73,61 +48,5 @@ public readonly struct CustomCalculationBasedFloat(
 		}
 
 		return finalMagnitude;
-	}
-
-	/// <inheritdoc/>
-	public override int GetHashCode()
-	{
-		var hash = default(HashCode);
-		hash.Add(MagnitudeCalculatorClass);
-		hash.Add(Coefficient);
-		hash.Add(PreMultiplyAdditiveValue);
-		hash.Add(PostMultiplyAdditiveValue);
-
-		return hash.ToHashCode();
-	}
-
-	/// <inheritdoc/>
-	public override bool Equals(object? obj)
-	{
-		if (obj is CustomCalculationBasedFloat other)
-		{
-			return Equals(other);
-		}
-
-		return false;
-	}
-
-	/// <inheritdoc/>
-	public bool Equals(CustomCalculationBasedFloat other)
-	{
-		return MagnitudeCalculatorClass.Equals(other.MagnitudeCalculatorClass)
-			&& Coefficient.Equals(other.Coefficient)
-			&& PreMultiplyAdditiveValue.Equals(other.PreMultiplyAdditiveValue)
-			&& PostMultiplyAdditiveValue.Equals(other.PostMultiplyAdditiveValue);
-	}
-
-	/// <summary>
-	/// Determines if two <see cref="CustomCalculationBasedFloat"/> objects are equal.
-	/// </summary>
-	/// <param name="lhs">The first <see cref="CustomCalculationBasedFloat"/> to compare.</param>
-	/// <param name="rhs">The second <see cref="CustomCalculationBasedFloat"/> to compare.</param>
-	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are equal;
-	/// otherwise, <see langword="false"/>.</returns>
-	public static bool operator ==(CustomCalculationBasedFloat lhs, CustomCalculationBasedFloat rhs)
-	{
-		return lhs.Equals(rhs);
-	}
-
-	/// <summary>
-	/// Determines if two <see cref="CustomCalculationBasedFloat"/> objects are not equal.
-	/// </summary>
-	/// <param name="lhs">The first <see cref="CustomCalculationBasedFloat"/> to compare.</param>
-	/// <param name="rhs">The second <see cref="CustomCalculationBasedFloat"/> to compare.</param>
-	/// <returns><see langword="true"/> if the values of <paramref name="lhs"/> and <paramref name="rhs"/> are not
-	/// equal; otherwise, <see langword="false"/>.</returns>
-	public static bool operator !=(CustomCalculationBasedFloat lhs, CustomCalculationBasedFloat rhs)
-	{
-		return !(lhs == rhs);
 	}
 }
