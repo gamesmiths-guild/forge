@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Effects;
 
 namespace Gamesmiths.Forge.Core;
@@ -23,4 +24,9 @@ public interface IForgeEntity
 	/// Gets the effects manager for this entity.
 	/// </summary>
 	EffectsManager EffectsManager { get; }
+
+	/// <summary>
+	/// Gets the abitilies manager for this entity.
+	/// </summary>
+	EntityAbilities Abilities { get; }
 }
