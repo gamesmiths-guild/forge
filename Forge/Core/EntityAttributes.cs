@@ -6,7 +6,8 @@ using Gamesmiths.Forge.Attributes;
 namespace Gamesmiths.Forge.Core;
 
 /// <summary>
-/// Container class which handles and manages all <see cref="AttributeSet"/>s and <see cref="EntityAttribute"/>s of an entity.
+/// Container class which handles and manages all <see cref="AttributeSet"/>s and <see cref="EntityAttribute"/>s of an
+/// entity.
 /// Attributes can be accessed with the indexer.
 /// </summary>
 public class EntityAttributes : IEnumerable<EntityAttribute>
