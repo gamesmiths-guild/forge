@@ -21,8 +21,8 @@ namespace Gamesmiths.Forge.Abilities;
 /// <param name="AbilityTags">Tags associated with the ability for categorization and filtering.</param>
 /// <param name="InstancingPolicy">The instancing policy for the ability, determining how instances are created and
 /// managed.</param>
-/// <param name="RetriggerInstancedAbility">Flag indicating whether an instanced ability can be reexecuted while it is
-/// Still active. If on, iIt will stop and re-trigger the ability.</param>
+/// <param name="RetriggerInstancedAbility">Flag indicating whether an instanced ability can be re-triggered while it is
+/// Still active. If on, it will stop and re-trigger the ability.</param>
 /// <param name="AbilitTriggerData">The trigger data associated with the ability, defining how and when the ability can
 /// be executed.</param>
 /// <param name="CancelAbilitiesWithTag">Abilities with any of these tags will be canceled when this ability is
