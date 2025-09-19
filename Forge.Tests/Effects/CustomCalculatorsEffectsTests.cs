@@ -741,11 +741,14 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		public EffectsManager EffectsManager { get; }
 
+		public EntityAbilities Abilities { get; }
+
 		public NoAttributesEntity(TagsManager tagsManager, CuesManager cuesManager)
 		{
 			EffectsManager = new(this, cuesManager);
 			Attributes = new();
 			Tags = new(new TagContainer(tagsManager));
+			Abilities = new();
 		}
 	}
 }

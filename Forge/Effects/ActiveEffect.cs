@@ -18,11 +18,11 @@ internal sealed class ActiveEffect
 
 	private double _internalTime;
 
-	private bool _isInhibited;
-
 	internal ActiveEffectHandle Handle { get; }
 
 	internal EffectEvaluatedData EffectEvaluatedData { get; private set; }
+
+	internal bool IsInhibited { get; private set; }
 
 	internal double RemainingDuration { get; set; }
 
@@ -62,7 +62,7 @@ internal sealed class ActiveEffect
 		{
 			ExecutionCount = 0;
 			_internalTime = 0;
-			_isInhibited = inhibited;
+			IsInhibited = inhibited;
 			RemainingDuration = EffectEvaluatedData.Duration;
 
 			if (!EffectData.SnapshopLevel)
@@ -79,7 +79,7 @@ internal sealed class ActiveEffect
 		if (EffectData.PeriodicData.HasValue)
 		{
 			if (EffectData.PeriodicData.Value.ExecuteOnApplication &&
-				!reApplication && !_isInhibited)
+				!reApplication && !IsInhibited)
 			{
 				Execute();
 			}
@@ -89,7 +89,7 @@ internal sealed class ActiveEffect
 				NextPeriodicTick = EffectEvaluatedData.Period;
 			}
 		}
-		else if (!_isInhibited)
+		else if (!IsInhibited)
 		{
 			ApplyModifiers();
 		}
@@ -97,7 +97,7 @@ internal sealed class ActiveEffect
 
 	internal void Unapply(bool reApplication = false)
 	{
-		if (!EffectData.PeriodicData.HasValue && !_isInhibited)
+		if (!EffectData.PeriodicData.HasValue && !IsInhibited)
 		{
 			ApplyModifiers(true);
 		}
@@ -255,7 +255,7 @@ internal sealed class ActiveEffect
 			NextPeriodicTick = EffectEvaluatedData.Period;
 		}
 
-		if (stackingData.ExecuteOnSuccessfulApplication == true && !_isInhibited)
+		if (stackingData.ExecuteOnSuccessfulApplication == true && !IsInhibited)
 		{
 			Execute();
 		}
@@ -327,16 +327,16 @@ internal sealed class ActiveEffect
 
 	internal void SetInhibit(bool value)
 	{
-		if (_isInhibited == value)
+		if (IsInhibited == value)
 		{
 			return;
 		}
 
-		_isInhibited = value;
+		IsInhibited = value;
 
 		if (EffectData.PeriodicData.HasValue)
 		{
-			if (_isInhibited)
+			if (IsInhibited)
 			{
 				return;
 			}
@@ -356,7 +356,7 @@ internal sealed class ActiveEffect
 			return;
 		}
 
-		ApplyModifiers(_isInhibited);
+		ApplyModifiers(IsInhibited);
 	}
 
 	private void ExecutePeriodicEffects(double deltaTime)
@@ -367,7 +367,7 @@ internal sealed class ActiveEffect
 		{
 			while (_internalTime >= NextPeriodicTick - Epsilon)
 			{
-				if (!_isInhibited)
+				if (!IsInhibited)
 				{
 					Execute();
 				}

@@ -747,6 +747,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		public EntityAttributes Attributes { get; }
 		public EntityTags Tags { get; }
 		public EffectsManager EffectsManager { get; }
+		public EntityAbilities Abilities { get; }
 
 		public Player(TagsManager tagsManager, CuesManager cuesManager)
 		{
@@ -761,6 +762,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			Attributes = new EntityAttributes(new PlayerAttributeSet());
 			Tags = new EntityTags(baseTags);
 			EffectsManager = new EffectsManager(this, cuesManager);
+			Abilities = new();
 		}
 	}
 

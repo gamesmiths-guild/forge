@@ -7,6 +7,11 @@ namespace Gamesmiths.Forge.Effects;
 /// </summary>
 public class ActiveEffectHandle
 {
+	/// <summary>
+	/// Gets a value indicating whether the effect is currently inhibited.
+	/// </summary>
+	public bool IsInhibited => ActiveEffect?.IsInhibited ?? false;
+
 	internal ActiveEffect? ActiveEffect { get; private set; }
 
 	internal ActiveEffectHandle(ActiveEffect activeEffect)

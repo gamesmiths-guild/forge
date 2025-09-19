@@ -17,6 +17,8 @@ public class TestEntity : IForgeEntity
 
 	public EffectsManager EffectsManager { get; }
 
+	public EntityAbilities Abilities { get; }
+
 	public TestEntity(TagsManager tagsManager, CuesManager cuesManager)
 	{
 		PlayerAttributeSet = new TestAttributeSet();
@@ -30,5 +32,6 @@ public class TestEntity : IForgeEntity
 		EffectsManager = new(this, cuesManager);
 		Attributes = new(PlayerAttributeSet);
 		Tags = new(originalTags);
+		Abilities = new();
 	}
 }
