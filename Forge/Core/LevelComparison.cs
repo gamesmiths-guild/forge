@@ -1,9 +1,9 @@
 // Copyright © Gamesmiths Guild.
 
-namespace Gamesmiths.Forge.Effects.Stacking;
+namespace Gamesmiths.Forge.Core;
 
 /// <summary>
-/// Type of level comparison for when <see cref="StackLevelPolicy.AggregateLevels"/> is set.
+/// Flags for comparing levels.
 /// </summary>
 [Flags]
 public enum LevelComparison : byte
