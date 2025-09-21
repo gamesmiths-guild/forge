@@ -11,15 +11,17 @@ internal class Ability
 {
 	private int _activeCount;
 
+	internal event Action<Ability>? OnAbilityDeactivated;
+
 	/// <summary>
 	/// Gets the ability data for this ability.
 	/// </summary>
 	internal AbilityData AbilityData { get; }
 
 	/// <summary>
-	/// Gets the current level o this ability.
+	/// Gets or sets the current level o this ability.
 	/// </summary>
-	internal int Level { get; }
+	internal int Level { get; set; }
 
 	/// <summary>
 	/// Gets the policy that determines when this granted ability should be removed.
@@ -32,6 +34,8 @@ internal class Ability
 	internal IForgeEntity? SourceEntity { get; }
 
 	internal AbilityHandle Handle { get; }
+
+	internal bool IsActive => _activeCount > 0;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Ability"/> class.
@@ -52,6 +56,8 @@ internal class Ability
 		GrantedAbilityRemovalPolicy = grantedAbilityRemovalPolicy;
 		SourceEntity = sourceEntity;
 
+		_activeCount = 0;
+
 		Handle = new AbilityHandle(this);
 	}
 
@@ -62,5 +68,20 @@ internal class Ability
 	{
 		_activeCount++;
 		Console.WriteLine($"Ability {AbilityData.Name} activated. Active count: {_activeCount}");
+	}
+
+	internal void Deactivate()
+	{
+		OnAbilityDeactivated?.Invoke(this);
+
+		if (_activeCount > 0)
+		{
+			_activeCount--;
+			Console.WriteLine($"Ability {AbilityData.Name} deactivated. Active count: {_activeCount}");
+		}
+		else
+		{
+			Console.WriteLine($"Ability {AbilityData.Name} is not active.");
+		}
 	}
 }
