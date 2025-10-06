@@ -159,7 +159,7 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 	}
 
 	[Theory]
-	[Trait("IsValid", "Correct")]
+	[Trait("IsActive", "Correct")]
 	[InlineData("Entity.Attributes.Strengh")]
 	[InlineData("item.consumable.potion.stamina")]
 	[InlineData("color.black")]
@@ -170,7 +170,7 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 	}
 
 	[Theory]
-	[Trait("IsValid", "Incorrect")]
+	[Trait("IsActive", "Incorrect")]
 	[InlineData(" Entity,Attr ibutes,Strength  ", "Entity_Attr_ibutes_Strength")]
 	[InlineData("item.consumable.potion.stamina ", "item.consumable.potion.stamina")]
 	[InlineData("color.dark.green.", "color.dark.green")]

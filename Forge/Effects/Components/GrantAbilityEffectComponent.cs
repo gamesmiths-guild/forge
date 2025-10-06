@@ -15,10 +15,20 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 
 	private readonly AbilityHandle[] _grantedAbilities = new AbilityHandle[grantAbilityConfigs.Length];
 
+	private bool _isInhibited;
+
 	/// <inheritdoc/>
-	public void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
+	public void OnEffectExecuted(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
 	{
-		GrantAbilities(target, effectEvaluatedData);
+		GrantAbilitiesPermanently(target, effectEvaluatedData);
+	}
+
+	/// <inheritdoc/>
+	public bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		GrantAbilities(target, activeEffectEvaluatedData);
+
+		return true;
 	}
 
 	/// <inheritdoc/>
@@ -29,24 +39,37 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 	{
 		if (removed)
 		{
-			RemoveGrantedAbilities(target);
+			RemoveGrantedAbilities(target, activeEffectEvaluatedData.ActiveEffectHandle);
 		}
 	}
 
 	/// <inheritdoc/>
 	public void OnActiveEffectChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
-		if (activeEffectEvaluatedData.ActiveEffectHandle.IsInhibited)
+		if (_isInhibited != activeEffectEvaluatedData.ActiveEffectHandle.IsInhibited)
 		{
-			RemoveGrantedAbilities(target);
-		}
-		else
-		{
-			GrantAbilities(target, activeEffectEvaluatedData.EffectEvaluatedData);
+			_isInhibited = activeEffectEvaluatedData.ActiveEffectHandle.IsInhibited;
+			InhibitGrantedAbilities(target, _isInhibited, activeEffectEvaluatedData.ActiveEffectHandle);
 		}
 	}
 
-	private void GrantAbilities(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
+	private void GrantAbilitiesPermanently(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
+	{
+		for (var i = 0; i < _grantAbilityConfigs.Length; i++)
+		{
+			GrantAbilityConfig config = _grantAbilityConfigs[i];
+
+			target.Abilities.GrantAbilityPermanently(
+				config.AbilityData,
+				config.ScalableLevel.GetValue(effectEvaluatedData.Level),
+				config.RemovalPolicy,
+				config.InhibitionPolicy,
+				config.LevelOverridePolicy,
+				effectEvaluatedData.Effect.Ownership.Owner);
+		}
+	}
+
+	private void GrantAbilities(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
 		for (var i = 0; i < _grantAbilityConfigs.Length; i++)
 		{
@@ -54,18 +77,28 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 
 			_grantedAbilities[i] = target.Abilities.GrantAbility(
 				config.AbilityData,
-				config.ScalableLevel.GetValue(effectEvaluatedData.Level),
+				config.ScalableLevel.GetValue(activeEffectEvaluatedData.EffectEvaluatedData.Level),
 				config.RemovalPolicy,
+				config.InhibitionPolicy,
 				config.LevelOverridePolicy,
-				effectEvaluatedData.Effect.Ownership.Owner);
+				activeEffectEvaluatedData.ActiveEffectHandle,
+				activeEffectEvaluatedData.EffectEvaluatedData.Effect.Ownership.Owner);
 		}
 	}
 
-	private void RemoveGrantedAbilities(IForgeEntity target)
+	private void RemoveGrantedAbilities(IForgeEntity target, ActiveEffectHandle activeEffectHandle)
 	{
 		foreach (AbilityHandle ability in _grantedAbilities)
 		{
-			target.Abilities.RemoveGrantedAbility(ability);
+			target.Abilities.RemoveGrantedAbility(ability, activeEffectHandle);
+		}
+	}
+
+	private void InhibitGrantedAbilities(IForgeEntity target, bool inhibit, ActiveEffectHandle effectHandle)
+	{
+		foreach (AbilityHandle ability in _grantedAbilities)
+		{
+			target.Abilities.InhibitGrantedAbility(ability, inhibit, effectHandle);
 		}
 	}
 }

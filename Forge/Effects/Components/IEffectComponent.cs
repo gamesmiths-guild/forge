@@ -30,7 +30,7 @@ public interface IEffectComponent
 	/// </remarks>
 	/// <param name="target">The target receiving the active effect.</param>
 	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect being added.</param>
-	/// <returns><see langword="true"/> if the applied effect remains active; <see langword="true"/> if it has been
+	/// <returns><see langword="true"/> if the applied effect remains active; <see langword="false"/> if it has been
 	/// inhibited by the component during application.</returns>
 	bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{

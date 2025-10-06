@@ -357,6 +357,8 @@ internal sealed class ActiveEffect
 		}
 
 		ApplyModifiers(IsInhibited);
+
+		EffectEvaluatedData.Target.EffectsManager.OnActiveEffectChanged_InternalCall(this);
 	}
 
 	private void ExecutePeriodicEffects(double deltaTime)

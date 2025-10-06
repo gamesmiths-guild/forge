@@ -77,7 +77,8 @@ public class TargetTagRequirementsEffectComponent(
 		_subscriptionMap[handle] = Handler;
 		target.Tags.OnTagsChanged += Handler;
 
-		return OngoingTagRequirements?.IsEmpty != false || OngoingTagRequirements.Value.RequirementsMet(target.Tags.CombinedTags);
+		return OngoingTagRequirements?.IsEmpty != false
+			|| OngoingTagRequirements.Value.RequirementsMet(target.Tags.CombinedTags);
 	}
 
 	/// <inheritdoc/>

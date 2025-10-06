@@ -26,7 +26,12 @@ internal class Ability
 	/// <summary>
 	/// Gets the policy that determines when this granted ability should be removed.
 	/// </summary>
-	internal GrantedAbilityRemovalPolicy GrantedAbilityRemovalPolicy { get; }
+	internal AbilityDeactivationPolicy GrantedAbilityRemovalPolicy { get; }
+
+	/// <summary>
+	/// Gets the policy that determines how this ability behaves when it is inhibited.
+	/// </summary>
+	internal AbilityDeactivationPolicy GrantedAbilityInhibitionPolicy { get; }
 
 	/// <summary>
 	/// Gets the entity that is the source of this ability.
@@ -34,6 +39,8 @@ internal class Ability
 	internal IForgeEntity? SourceEntity { get; }
 
 	internal AbilityHandle Handle { get; }
+
+	internal bool IsInhibited { get; set; }
 
 	internal bool IsActive => _activeCount > 0;
 
@@ -44,19 +51,24 @@ internal class Ability
 	/// <param name="level">The level of the ability.</param>
 	/// <param name="grantedAbilityRemovalPolicy">The policy that determines when this granted ability should be removed.
 	/// </param>
+	/// <param name="grantedAbilityInhibitionPolicy">The policy that determines how this ability behaves when it is
+	/// inhibited.</param>
 	/// <param name="sourceEntity">The entity that granted us this ability.</param>
 	internal Ability(
 		AbilityData abilityData,
 		int level,
-		GrantedAbilityRemovalPolicy grantedAbilityRemovalPolicy = GrantedAbilityRemovalPolicy.CancelImmediately,
+		AbilityDeactivationPolicy grantedAbilityRemovalPolicy = AbilityDeactivationPolicy.CancelImmediately,
+		AbilityDeactivationPolicy grantedAbilityInhibitionPolicy = AbilityDeactivationPolicy.CancelImmediately,
 		IForgeEntity? sourceEntity = null)
 	{
 		AbilityData = abilityData;
 		Level = level;
 		GrantedAbilityRemovalPolicy = grantedAbilityRemovalPolicy;
+		GrantedAbilityInhibitionPolicy = grantedAbilityInhibitionPolicy;
 		SourceEntity = sourceEntity;
 
 		_activeCount = 0;
+		IsInhibited = false;
 
 		Handle = new AbilityHandle(this);
 	}
