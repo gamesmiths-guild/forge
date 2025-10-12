@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using FluentAssertions;
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
@@ -22,7 +21,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 	[Fact]
 	[Trait("Grant ability", null)]
-	public void Abilitie_are_granted_successfully()
+	public void Ability_is_granted_successfully()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
@@ -36,14 +35,12 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			entity,
 			abilityData,
 			new ScalableInt(1),
-			out ActiveEffectHandle? effectHandle);
+			out _);
 
-		Debug.Assert(abilityHandle is not null, "abilityHandle is not null.");
-		Debug.Assert(effectHandle is not null, "effectHandle is not null.");
-
+		abilityHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle.Activate();
+		abilityHandle!.Activate();
 
 		abilityHandle.IsActive.Should().BeTrue();
 	}
@@ -66,24 +63,22 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out ActiveEffectHandle? effectHandle);
 
-		Debug.Assert(abilityHandle is not null, "abilityHandle is not null.");
-		Debug.Assert(effectHandle is not null, "effectHandle is not null.");
-
+		abilityHandle.Should().NotBeNull();
+		effectHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle.Activate();
+		abilityHandle!.Activate();
 
 		abilityHandle.IsActive.Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle);
+		entity.EffectsManager.UnapplyEffect(effectHandle!);
 
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
-
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
 	[Fact]
-	[Trait("Grant ability", null)]
+	[Trait("Remove ability", null)]
 	public void Ability_is_only_removed_after_being_deactivated()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
@@ -102,29 +97,27 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			AbilityDeactivationPolicy.RemoveOnEnd,
 			AbilityDeactivationPolicy.RemoveOnEnd);
 
-		Debug.Assert(abilityHandle is not null, "abilityHandle is not null.");
-		Debug.Assert(effectHandle is not null, "effectHandle is not null.");
-
+		abilityHandle.Should().NotBeNull();
+		effectHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle.Activate();
+		abilityHandle!.Activate();
 
 		abilityHandle.IsActive.Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle);
+		entity.EffectsManager.UnapplyEffect(effectHandle!);
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
 		abilityHandle.End();
 
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
-
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
 	[Fact]
 	[Trait("Inhibit ability", null)]
-	public void Inhibited_effect_inhibites_ability_temporarily()
+	public void Ability_gets_inhibited_temporarily_while_granting_effect_is_inhibited()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
@@ -135,38 +128,25 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableFloat(-1));
 
 		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
 
 		AbilityHandle? abilityHandle = SetupAbility(
 			entity,
 			abilityData,
 			new ScalableInt(1),
-			out ActiveEffectHandle? effectHandle,
+			out _,
 			extraComponent: new TargetTagRequirementsEffectComponent(
 				ongoingTagRequirements: new TagRequirements(
 					IgnoreTags: ignoreTags)));
 
-		Debug.Assert(abilityHandle is not null, "abilityHandle is not null.");
-		Debug.Assert(effectHandle is not null, "effectHandle is not null.");
-		Debug.Assert(ignoreTags is not null, "ignoreTags is not null.");
-
+		abilityHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle.Activate();
+		abilityHandle!.Activate();
 
 		abilityHandle.IsActive.Should().BeTrue();
 
-		var tagEffectData = new EffectData(
-			"Tag Effect",
-			new DurationData(DurationType.Infinite),
-			effectComponents: [new ModifierTagsEffectComponent(ignoreTags)]);
-
-		var tagEffect = new Effect(
-			tagEffectData,
-			new EffectOwnership(entity, null));
-
-		ActiveEffectHandle? tagEffectHandle = entity.EffectsManager.ApplyEffect(tagEffect);
-
-		Debug.Assert(tagEffectHandle is not null, "tagEffectHandle is not null.");
+		ActiveEffectHandle? tagEffectHandle = CreateAndApplyTagEffect(entity, ignoreTags!);
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
@@ -175,7 +155,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsActive.Should().BeFalse();
 		abilityHandle.IsInhibited.Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(tagEffectHandle);
+		entity.EffectsManager.UnapplyEffect(tagEffectHandle!);
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
@@ -186,7 +166,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	}
 
 	[Fact]
-	[Trait("Grant ability", null)]
+	[Trait("Remove ability", null)]
 	public void Granted_ability_is_not_removed_when_deactivation_policy_is_ignore()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
@@ -205,29 +185,27 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			AbilityDeactivationPolicy.Ignore,
 			AbilityDeactivationPolicy.Ignore);
 
-		Debug.Assert(abilityHandle is not null, "abilityHandle is not null.");
-		Debug.Assert(effectHandle is not null, "effectHandle is not null.");
-
+		abilityHandle.Should().NotBeNull();
+		effectHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle.Activate();
+		abilityHandle!.Activate();
 
 		abilityHandle.IsActive.Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle);
+		entity.EffectsManager.UnapplyEffect(effectHandle!);
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
 		abilityHandle.End();
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
-
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
 	[Fact]
 	[Trait("Grant ability", null)]
-	public void Ability_granted_by_multiple_effects_is_removed_only_when_all_effects_are_removed()
+	public void Ability_granted_by_multiple_effects_is_removed_only_when_all_granting_effects_are_removed()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
@@ -249,20 +227,18 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out ActiveEffectHandle? effectHandle2);
 
-		Debug.Assert(abilityHandle1 is not null, "abilityHandle1 is not null.");
-		Debug.Assert(effectHandle1 is not null, "effectHandle1 is not null.");
-		Debug.Assert(abilityHandle2 is not null, "abilityHandle2 is not null.");
-		Debug.Assert(effectHandle2 is not null, "effectHandle2 is not null.");
-
+		abilityHandle1.Should().NotBeNull();
+		effectHandle1.Should().NotBeNull();
+		abilityHandle2.Should().NotBeNull();
+		effectHandle2.Should().NotBeNull();
 		abilityHandle1.Should().Be(abilityHandle2);
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		entity.EffectsManager.UnapplyEffect(effectHandle1!);
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle1);
-
-		entity.Abilities.GrantedAbilities.Should().ContainSingle();
-
-		entity.EffectsManager.UnapplyEffect(effectHandle2);
+		entity.EffectsManager.UnapplyEffect(effectHandle2!);
 
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
 	}
@@ -280,8 +256,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableFloat(-1));
 
 		TagContainer? blockingTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
-
-		Debug.Assert(blockingTags is not null, "blockingTags is not null.");
+		blockingTags.Should().NotBeNull();
 
 		var grantAbilityConfig = new GrantAbilityConfig(
 			abilityData,
@@ -302,16 +277,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			grantAbilityEffectData,
 			new EffectOwnership(entity, null));
 
-		var tagEffectData = new EffectData(
-			"Tag Effect",
-			new DurationData(DurationType.Infinite),
-			effectComponents: [new ModifierTagsEffectComponent(blockingTags)]);
-
-		var tagEffect = new Effect(
-			tagEffectData,
-			new EffectOwnership(entity, null));
-
-		entity.EffectsManager.ApplyEffect(tagEffect);
+		CreateAndApplyTagEffect(entity, blockingTags!);
 
 		entity.EffectsManager.ApplyEffect(grantAbilityEffect);
 
@@ -345,15 +311,14 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out ActiveEffectHandle? temporaryEffectHandle);
 
-		Debug.Assert(permanentAbilityHandle is not null, "permanentAbilityHandle is not null.");
-		Debug.Assert(temporaryAbilityHandle is not null, "temporaryAbilityHandle is not null.");
-		Debug.Assert(temporaryEffectHandle is not null, "temporaryEffectHandle is not null.");
-
+		permanentAbilityHandle.Should().NotBeNull();
+		temporaryAbilityHandle.Should().NotBeNull();
+		temporaryEffectHandle.Should().NotBeNull();
 		permanentAbilityHandle.Should().Be(temporaryAbilityHandle);
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
 		// Remove the temporary effect.
-		entity.EffectsManager.UnapplyEffect(temporaryEffectHandle);
+		entity.EffectsManager.UnapplyEffect(temporaryEffectHandle!);
 
 		// The ability should still be granted because of the initial permanent grant.
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
@@ -378,9 +343,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out ActiveEffectHandle? temporaryEffectHandle);
 
-		Debug.Assert(temporaryAbilityHandle is not null, "temporaryAbilityHandle is not null.");
-		Debug.Assert(temporaryEffectHandle is not null, "temporaryEffectHandle is not null.");
-
+		temporaryAbilityHandle.Should().NotBeNull();
+		temporaryEffectHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
 		// Grant ability with an instant effect, making it permanent.
@@ -394,14 +358,14 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		permanentAbilityHandle.Should().Be(temporaryAbilityHandle);
 
 		// Remove the temporary effect.
-		entity.EffectsManager.UnapplyEffect(temporaryEffectHandle);
+		entity.EffectsManager.UnapplyEffect(temporaryEffectHandle!);
 
 		// The ability should still be granted because of the initial permanent grant.
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 	}
 
 	[Fact]
-	[Trait("Grant ability", null)]
+	[Trait("Inhibit ability", null)]
 	public void Ability_granted_by_instant_effect_is_not_inhibited()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
@@ -421,37 +385,30 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			durationData: new DurationData(DurationType.Instant));
 
 		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
 
 		// Grant the same ability with a non-instant, inhibitable effect.
 		SetupAbility(
 			entity,
 			abilityData,
 			new ScalableInt(1),
-			out ActiveEffectHandle? temporaryEffectHandle,
+			out _,
 			extraComponent: new TargetTagRequirementsEffectComponent(
 				ongoingTagRequirements: new TagRequirements(
 					IgnoreTags: ignoreTags)));
 
-		Debug.Assert(abilityHandle is not null, "abilityHandle is not null.");
-		Debug.Assert(temporaryEffectHandle is not null, "temporaryEffectHandle is not null.");
-		Debug.Assert(ignoreTags is not null, "ignoreTags is not null.");
-
+		abilityHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
 		// Inhibit the temporary effect by adding the tag.
-		var tagEffectData = new EffectData(
-			"Tag Effect",
-			new DurationData(DurationType.Infinite),
-			effectComponents: [new ModifierTagsEffectComponent(ignoreTags)]);
-		var tagEffect = new Effect(tagEffectData, new EffectOwnership(entity, null));
-		entity.EffectsManager.ApplyEffect(tagEffect);
+		CreateAndApplyTagEffect(entity, ignoreTags!);
 
 		// The ability should not be inhibited because it was granted permanently.
-		abilityHandle.IsInhibited.Should().BeFalse();
+		abilityHandle!.IsInhibited.Should().BeFalse();
 	}
 
 	[Fact]
-	[Trait("Grant ability", null)]
+	[Trait("Inhibit ability", null)]
 	public void Ability_granted_by_late_instant_effect_is_not_inhibited()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
@@ -463,35 +420,28 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableFloat(-1));
 
 		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
 
 		// Grant the same ability with a non-instant, inhibitable effect.
 		AbilityHandle? abilityHandle = SetupAbility(
 			entity,
 			abilityData,
 			new ScalableInt(1),
-			out ActiveEffectHandle? temporaryEffectHandle,
+			out _,
 			extraComponent: new TargetTagRequirementsEffectComponent(
 				ongoingTagRequirements: new TagRequirements(
 					IgnoreTags: ignoreTags)));
 
-		Debug.Assert(abilityHandle is not null, "abilityHandle is not null.");
-		Debug.Assert(temporaryEffectHandle is not null, "temporaryEffectHandle is not null.");
-		Debug.Assert(ignoreTags is not null, "ignoreTags is not null.");
-
+		abilityHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
 		// Inhibit the temporary effect by adding the tag.
-		var tagEffectData = new EffectData(
-			"Tag Effect",
-			new DurationData(DurationType.Infinite),
-			effectComponents: [new ModifierTagsEffectComponent(ignoreTags)]);
-		var tagEffect = new Effect(tagEffectData, new EffectOwnership(entity, null));
-		entity.EffectsManager.ApplyEffect(tagEffect);
+		CreateAndApplyTagEffect(entity, ignoreTags!);
 
-		// The ability should not be inhibited because it was granted permanently.
-		abilityHandle.IsInhibited.Should().BeTrue();
+		// The ability should now be inhibited.
+		abilityHandle!.IsInhibited.Should().BeTrue();
 
-		// Grant ability with an instant effect, making it permanent.
+		// Grant ability with an instant effect, making it permanent and removing inhibition.
 		SetupAbility(
 			entity,
 			abilityData,
@@ -499,12 +449,12 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			out _,
 			durationData: new DurationData(DurationType.Instant));
 
-		// The ability should not be inhibited because it was granted permanently.
+		// The ability should no longer be inhibited.
 		abilityHandle.IsInhibited.Should().BeFalse();
 	}
 
 	[Fact]
-	[Trait("Grant ability", null)]
+	[Trait("Inhibit ability", null)]
 	public void Ability_is_inhibited_only_when_all_granting_effects_are_inhibited()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
@@ -517,6 +467,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		TagContainer? ignoreTags1 = Tag.RequestTag(_tagsManager, "Simple.Tag").GetSingleTagContainer();
 		TagContainer? ignoreTags2 = Tag.RequestTag(_tagsManager, "Other.Tag").GetSingleTagContainer();
+		ignoreTags1.Should().NotBeNull();
+		ignoreTags2.Should().NotBeNull();
 
 		AbilityHandle? abilityHandle = SetupAbility(
 			entity,
@@ -536,36 +488,27 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 				ongoingTagRequirements: new TagRequirements(
 					IgnoreTags: ignoreTags2)));
 
-		Debug.Assert(abilityHandle is not null, "abilityHandle is not null.");
-		Debug.Assert(ignoreTags1 is not null, "ignoreTags1 is not null.");
-		Debug.Assert(ignoreTags2 is not null, "ignoreTags2 is not null.");
-
+		abilityHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
-		abilityHandle.Activate();
+		abilityHandle!.Activate();
 		abilityHandle.IsActive.Should().BeTrue();
 
 		// Inhibit the first effect.
-		var tagEffect1 = new Effect(
-			new EffectData("Tag Effect 1", new DurationData(DurationType.Infinite), effectComponents: [new ModifierTagsEffectComponent(ignoreTags1)]),
-			new EffectOwnership(entity, null));
-		entity.EffectsManager.ApplyEffect(tagEffect1);
+		CreateAndApplyTagEffect(entity, ignoreTags1!);
 
-		// Ability should not be inhibited yet.
+		// Ability should not be inhibited yet, but it should be deactivated.
 		abilityHandle.IsInhibited.Should().BeFalse();
-		abilityHandle.IsActive.Should().BeFalse(); // It deactivates because one source is inhibited.
+		abilityHandle.IsActive.Should().BeFalse();
 
 		// Inhibit the second effect.
-		var tagEffect2 = new Effect(
-			new EffectData("Tag Effect 2", new DurationData(DurationType.Infinite), effectComponents: [new ModifierTagsEffectComponent(ignoreTags2)]),
-			new EffectOwnership(entity, null));
-		entity.EffectsManager.ApplyEffect(tagEffect2);
+		CreateAndApplyTagEffect(entity, ignoreTags2!);
 
 		// Now the ability should be fully inhibited.
 		abilityHandle.IsInhibited.Should().BeTrue();
 	}
 
 	[Fact]
-	[Trait("Grant ability", null)]
+	[Trait("Inhibit ability", null)]
 	public void Inhibited_ability_becomes_active_if_new_non_inhibited_source_is_added()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
@@ -577,6 +520,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableFloat(-1));
 
 		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
 
 		AbilityHandle? abilityHandle = SetupAbility(
 			entity,
@@ -587,16 +531,12 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 				ongoingTagRequirements: new TagRequirements(
 					IgnoreTags: ignoreTags)));
 
-		Debug.Assert(abilityHandle is not null, "abilityHandle is not null.");
-		Debug.Assert(ignoreTags is not null, "ignoreTags is not null.");
+		abilityHandle.Should().NotBeNull();
 
 		// Inhibit the ability.
-		var tagEffect = new Effect(
-			new EffectData("Tag Effect", new DurationData(DurationType.Infinite), effectComponents: [new ModifierTagsEffectComponent(ignoreTags)]),
-			new EffectOwnership(entity, null));
-		entity.EffectsManager.ApplyEffect(tagEffect);
+		CreateAndApplyTagEffect(entity, ignoreTags!);
 
-		abilityHandle.IsInhibited.Should().BeTrue();
+		abilityHandle!.IsInhibited.Should().BeTrue();
 
 		// Add a new, non-inhibited source for the same ability.
 		SetupAbility(
@@ -610,7 +550,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	}
 
 	[Fact]
-	[Trait("Grant ability", null)]
+	[Trait("Inhibit ability", null)]
 	public void Inhibition_policy_RemoveOnEnd_inhibits_after_deactivation()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
@@ -622,6 +562,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableFloat(-1));
 
 		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
 
 		AbilityHandle? abilityHandle = SetupAbility(
 			entity,
@@ -633,17 +574,13 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 				ongoingTagRequirements: new TagRequirements(
 					IgnoreTags: ignoreTags)));
 
-		Debug.Assert(abilityHandle is not null, "abilityHandle is not null.");
-		Debug.Assert(ignoreTags is not null, "ignoreTags is not null.");
+		abilityHandle.Should().NotBeNull();
 
-		abilityHandle.Activate();
+		abilityHandle!.Activate();
 		abilityHandle.IsActive.Should().BeTrue();
 
 		// Inhibit the granting effect.
-		var tagEffect = new Effect(
-			new EffectData("Tag Effect", new DurationData(DurationType.Infinite), effectComponents: [new ModifierTagsEffectComponent(ignoreTags)]),
-			new EffectOwnership(entity, null));
-		entity.EffectsManager.ApplyEffect(tagEffect);
+		CreateAndApplyTagEffect(entity, ignoreTags!);
 
 		// With RemoveOnEnd policy, the ability is not inhibited while active.
 		abilityHandle.IsInhibited.Should().BeFalse();
@@ -658,7 +595,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	}
 
 	[Fact]
-	[Trait("Grant ability", null)]
+	[Trait("Inhibit ability", null)]
 	public void Inhibition_policy_Ignore_prevents_inhibition()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
@@ -670,6 +607,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableFloat(-1));
 
 		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
 
 		AbilityHandle? abilityHandle = SetupAbility(
 			entity,
@@ -681,16 +619,12 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 				ongoingTagRequirements: new TagRequirements(
 					IgnoreTags: ignoreTags)));
 
-		Debug.Assert(abilityHandle is not null, "abilityHandle is not null.");
-		Debug.Assert(ignoreTags is not null, "ignoreTags is not null.");
+		abilityHandle.Should().NotBeNull();
 
-		abilityHandle.Activate();
+		abilityHandle!.Activate();
 
 		// Inhibit the granting effect.
-		var tagEffect = new Effect(
-			new EffectData("Tag Effect", new DurationData(DurationType.Infinite), effectComponents: [new ModifierTagsEffectComponent(ignoreTags)]),
-			new EffectOwnership(entity, null));
-		entity.EffectsManager.ApplyEffect(tagEffect);
+		CreateAndApplyTagEffect(entity, ignoreTags!);
 
 		// With Ignore policy, the ability is never inhibited.
 		abilityHandle.IsInhibited.Should().BeFalse();
@@ -780,5 +714,19 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		return new Effect(
 			grantAbilityEffectData,
 			new EffectOwnership(source, null));
+	}
+
+	private static ActiveEffectHandle? CreateAndApplyTagEffect(TestEntity entity, TagContainer tags)
+	{
+		var tagEffectData = new EffectData(
+			"Tag Effect",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [new ModifierTagsEffectComponent(tags)]);
+
+		var tagEffect = new Effect(
+			tagEffectData,
+			new EffectOwnership(entity, null));
+
+		return entity.EffectsManager.ApplyEffect(tagEffect);
 	}
 }
