@@ -70,14 +70,14 @@ public class EntityAbilities
 
 		if (existingAbility is not null && existingAbility.SourceEntity == sourceEntity)
 		{
-			List<ActiveEffectHandle>? grantSources = _grantSources[existingAbility];
-			if (grantSources is not null)
+			if (_grantSources.TryGetValue(existingAbility, out List<ActiveEffectHandle>? grantSources)
+				&& grantSources is not null)
 			{
 				List<ActiveEffectHandle>? inhibitSources = _inhibitSources[existingAbility];
 
 				Debug.Assert(
 					inhibitSources is not null,
-					"InhibitAbilityBasedOnPolicy grantSources should not be null if grant grantSources are not null.");
+					"InhibitAbilityBasedOnPolicy inhibitSources should not be null if grant grantSources are not null.");
 
 				// Ability already granted, just add the new source to the mapping.
 				grantSources.Add(sourceActiveEffectHandle);
@@ -123,20 +123,17 @@ public class EntityAbilities
 	{
 		if (abilityToRemove is null
 			|| abilityToRemove.GrantedAbilityRemovalPolicy == AbilityDeactivationPolicy.Ignore
-			|| _grantSources[abilityToRemove] is null)
+			|| !_grantSources.TryGetValue(abilityToRemove, out List<ActiveEffectHandle>? grantSources)
+			|| grantSources is null)
 		{
 			return;
 		}
 
-		List<ActiveEffectHandle>? grantSources = _grantSources[abilityToRemove];
 		List<ActiveEffectHandle>? inhibitSources = _inhibitSources[abilityToRemove];
 
 		Debug.Assert(
-			grantSources is not null,
-			"Grant grantSources should not be null at this point.");
-		Debug.Assert(
 			inhibitSources is not null,
-			"InhibitAbilityBasedOnPolicy grantSources should not be null if grant grantSources are not null.");
+			"InhibitAbilityBasedOnPolicy inhibitSources should not be null if grant grantSources are not null.");
 
 		grantSources.Remove(effectHandle);
 		inhibitSources.Remove(effectHandle);
@@ -184,25 +181,15 @@ public class EntityAbilities
 	{
 		if (abilityToInhibit is null
 			|| abilityToInhibit.GrantedAbilityInhibitionPolicy == AbilityDeactivationPolicy.Ignore
-			|| _grantSources[abilityToInhibit] is null)
+			|| !_inhibitSources.TryGetValue(abilityToInhibit, out List<ActiveEffectHandle>? inhibitSources)
+			|| inhibitSources is null)
 		{
 			return;
 		}
 
-		List<ActiveEffectHandle>? inhibitSources = _inhibitSources[abilityToInhibit];
-
-		Debug.Assert(
-			inhibitSources is not null,
-			"InhibitAbilityBasedOnPolicy grantSources should not be null if grant grantSources are not null.");
-
 		if (inhibit)
 		{
 			inhibitSources.Add(effectHandle);
-
-			if (inhibitSources.Count > 1)
-			{
-				return;
-			}
 
 			InhibitAbilityBasedOnPolicy(abilityToInhibit);
 		}
@@ -210,7 +197,7 @@ public class EntityAbilities
 		{
 			inhibitSources.Remove(effectHandle);
 
-			if (inhibitSources.Count == 0)
+			if (_inhibitSources[abilityToInhibit]?.Count < _grantSources[abilityToInhibit]?.Count)
 			{
 				abilityToInhibit.IsInhibited = false;
 			}
@@ -247,7 +234,8 @@ public class EntityAbilities
 	{
 		abilityToRemove.OnAbilityDeactivated -= RemoveAbility;
 
-		if (_grantSources[abilityToRemove]?.Count > 0)
+		if (_grantSources.TryGetValue(abilityToRemove, out List<ActiveEffectHandle>? grantSources)
+			&& grantSources?.Count > 0)
 		{
 			return;
 		}

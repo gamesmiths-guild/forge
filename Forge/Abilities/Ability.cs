@@ -78,6 +78,12 @@ internal class Ability
 	/// </summary>
 	internal void Activate()
 	{
+		if (IsInhibited)
+		{
+			Console.WriteLine($"Ability {AbilityData.Name} is inhibited and cannot be activated.");
+			return;
+		}
+
 		_activeCount++;
 		Console.WriteLine($"Ability {AbilityData.Name} activated. Active count: {_activeCount}");
 	}
