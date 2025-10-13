@@ -315,8 +315,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults2);
 
-		Validation.Assert(effectHandler is not null, "effectHandler should never be null here");
-		effect2Target.EffectsManager.UnapplyEffect(effectHandler);
+		effect2Target.EffectsManager.UnapplyEffect(effectHandler!);
 
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults1);
 	}
@@ -435,14 +434,12 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [29, 1, 28, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [13, 2, 11, 0]);
 
-		Validation.Assert(effectHandler2 is not null, "effectHandler2 should never be null here");
-		owner.EffectsManager.UnapplyEffect(effectHandler2);
+		owner.EffectsManager.UnapplyEffect(effectHandler2!);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [21, 1, 20, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
 
-		Validation.Assert(effectHandler1 is not null, "effectHandler1 should never be null here");
-		owner.EffectsManager.UnapplyEffect(effectHandler1);
+		owner.EffectsManager.UnapplyEffect(effectHandler1!);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);

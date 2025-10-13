@@ -363,11 +363,10 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
 		ActiveEffectHandle? activeEffect2handle = target.EffectsManager.ApplyEffect(effect2);
-		Validation.Assert(activeEffect2handle is not null, "Effect handle should have a value.");
 
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResult);
 
-		target.EffectsManager.UnapplyEffect(activeEffect2handle);
+		target.EffectsManager.UnapplyEffect(activeEffect2handle!);
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 	}
@@ -466,39 +465,34 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults1); // 1
 
 		ActiveEffectHandle? activeEffect2Handle1 = target.EffectsManager.ApplyEffect(effect2);
-		Validation.Assert(activeEffect2Handle1 is not null, "Effect handle should have a value.");
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults2); // 1,2
 
 		ActiveEffectHandle? activeEffect3Handle = target.EffectsManager.ApplyEffect(effect3);
-		Validation.Assert(activeEffect3Handle is not null, "Effect handle should have a value.");
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults3); // 1,2,3
 
 		ActiveEffectHandle? activeEffect4Handle = target.EffectsManager.ApplyEffect(effect4);
-		Validation.Assert(activeEffect4Handle is not null, "Effect handle should have a value.");
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults4); // 1,2,3,4
 
 		ActiveEffectHandle? activeEffect1Handle = target.EffectsManager.ApplyEffect(effect1);
-		Validation.Assert(activeEffect1Handle is not null, "Effect handle should have a value.");
 
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults1); // 1,2,3,4,1
 
-		target.EffectsManager.UnapplyEffect(activeEffect1Handle);
+		target.EffectsManager.UnapplyEffect(activeEffect1Handle!);
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults4); // 1,2,3,4
 
-		target.EffectsManager.UnapplyEffect(activeEffect2Handle1);
+		target.EffectsManager.UnapplyEffect(activeEffect2Handle1!);
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults4); // 1,3,4
 
-		target.EffectsManager.UnapplyEffect(activeEffect4Handle);
+		target.EffectsManager.UnapplyEffect(activeEffect4Handle!);
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults3); // 1,3
 
 		ActiveEffectHandle? activeEffect2Handle2 = target.EffectsManager.ApplyEffect(effect2);
-		Validation.Assert(activeEffect2Handle2 is not null, "Effect handle should have a value.");
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults2); // 1,3,2
 
-		target.EffectsManager.UnapplyEffect(activeEffect3Handle);
+		target.EffectsManager.UnapplyEffect(activeEffect3Handle!);
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults2); // 1,2
 
-		target.EffectsManager.UnapplyEffect(activeEffect2Handle2);
+		target.EffectsManager.UnapplyEffect(activeEffect2Handle2!);
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults1); // 1
 
 		static EffectData CreateOverrideEffect(
@@ -3030,7 +3024,6 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			new EffectOwnership(owner, owner));
 
 		ActiveEffectHandle? effectHandle = target.EffectsManager.ApplyEffect(effect);
-		Validation.Assert(effectHandle is not null, "Effect handle should not be null.");
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
@@ -3041,7 +3034,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			owner,
 			target);
 
-		target.EffectsManager.UnapplyEffect(effectHandle, forceUnapply);
+		target.EffectsManager.UnapplyEffect(effectHandle!, forceUnapply);
 
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
 
@@ -3147,20 +3140,18 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		}
 
 		ActiveEffectHandle? activeEffectHandle1 = target.EffectsManager.ApplyEffect(effect);
-		Validation.Assert(activeEffectHandle1 is not null, "Effect handle should not be null.");
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
 		ActiveEffectHandle? activeEffectHandle2 = target.EffectsManager.ApplyEffect(effect);
-		Validation.Assert(activeEffectHandle2 is not null, "Effect handle should not be null.");
 
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
 
-		target.EffectsManager.UnapplyEffect(activeEffectHandle1);
+		target.EffectsManager.UnapplyEffect(activeEffectHandle1!);
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
-		target.EffectsManager.UnapplyEffect(activeEffectHandle2);
+		target.EffectsManager.UnapplyEffect(activeEffectHandle2!);
 
 		TestUtils.TestAttribute(
 			target,
