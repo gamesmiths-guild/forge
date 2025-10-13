@@ -75,7 +75,7 @@ public class EntityAbilities
 			{
 				List<ActiveEffectHandle>? inhibitSources = _inhibitSources[existingAbility];
 
-				Debug.Assert(
+				Validation.Assert(
 					inhibitSources is not null,
 					"InhibitAbilityBasedOnPolicy inhibitSources should not be null if grant grantSources are not null.");
 
@@ -131,7 +131,7 @@ public class EntityAbilities
 
 		List<ActiveEffectHandle>? inhibitSources = _inhibitSources[abilityToRemove];
 
-		Debug.Assert(
+		Validation.Assert(
 			inhibitSources is not null,
 			"InhibitAbilityBasedOnPolicy inhibitSources should not be null if grant grantSources are not null.");
 
