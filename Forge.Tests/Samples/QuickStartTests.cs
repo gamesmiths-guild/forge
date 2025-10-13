@@ -612,9 +612,8 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	public void Triggering_a_cue_through_effects()
 	{
 		// Arrange
-		var stringWriter = new StringWriter();
-		var originalOut = Console.Out;
-		Console.SetOut(stringWriter);
+		var mockCueHandler = tagsAndCueFixture.MockCueHandler;
+		mockCueHandler.Reset();
 
 		// Initialize managers
 		var tagsManager = _tagsManager;
@@ -655,31 +654,15 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 
 		var burningEffect = new Effect(burningEffectData, new EffectOwnership(player, player));
 
-		try
-		{
-			// Apply the burning effect
-			player.EffectsManager.ApplyEffect(burningEffect);
-			player.EffectsManager.UpdateEffects(5f); // Simulate 5 seconds of game time
+		// Act
+		player.EffectsManager.ApplyEffect(burningEffect);
+		player.EffectsManager.UpdateEffects(5f); // Simulate 5 seconds of game time
 
-			var output = "Fire damage cue applied to target.\n" +
-				"Fire damage executed: -5\n" +
-				"Fire damage executed: -5\n" +
-				"Fire damage executed: -5\n" +
-				"Fire damage executed: -5\n" +
-				"Fire damage executed: -5\n" +
-				"Fire damage executed: -5\n" +
-				"Fire damage cue removed.";
-
-			// Normalize line endings to be consistent across environments
-			var normalizedOutput = output.Replace("\n", Environment.NewLine);
-
-			stringWriter.ToString().Should().Contain(normalizedOutput);
-		}
-		finally
-		{
-			// Cleanup
-			Console.SetOut(originalOut);
-		}
+		// Assert
+		mockCueHandler.ApplyCount.Should().Be(1);
+		mockCueHandler.ExecuteCount.Should().Be(6); // 1 on application + 5 from periodic ticks
+		mockCueHandler.Magnitudes.Should().OnlyContain(x => x == -5);
+		mockCueHandler.RemoveCount.Should().Be(1);
 	}
 
 	[Fact]
@@ -687,9 +670,8 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	public void Manually_triggering_a_cue()
 	{
 		// Arrange
-		var stringWriter = new StringWriter();
-		var originalOut = Console.Out;
-		Console.SetOut(stringWriter);
+		var mockCueHandler = tagsAndCueFixture.MockCueHandler;
+		mockCueHandler.Reset();
 
 		// Initialize managers
 		var tagsManager = _tagsManager;
@@ -710,22 +692,16 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			}
 		);
 
-		try
-		{
-			cuesManager.ExecuteCue(
-				cueTag: Tag.RequestTag(tagsManager, "cues.damage.fire"),
-				target: player,
-				parameters: parameters
-			);
+		// Act
+		cuesManager.ExecuteCue(
+			cueTag: Tag.RequestTag(tagsManager, "cues.damage.fire"),
+			target: player,
+			parameters: parameters
+		);
 
-			stringWriter.ToString().Should().Contain("Fire damage executed: 25");
-		}
-		finally
-		{
-			// Cleanup
-			Console.SetOut(originalOut);
-		}
-
+		// Assert
+		mockCueHandler.ExecuteCount.Should().Be(1);
+		mockCueHandler.Magnitudes.Should().Contain(25);
 	}
 
 	public class PlayerAttributeSet : AttributeSet
@@ -894,38 +870,34 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		}
 	}
 
-	public class FireDamageCueHandler : ICueHandler
+	public class MockCueHandler : ICueHandler
 	{
+		public int ApplyCount { get; private set; }
+		public int ExecuteCount { get; private set; }
+		public int RemoveCount { get; private set; }
+		public List<float> Magnitudes { get; } = new();
+
+		public void OnApply(IForgeEntity? target, CueParameters? parameters) => ApplyCount++;
+
 		public void OnExecute(IForgeEntity? target, CueParameters? parameters)
 		{
+			ExecuteCount++;
 			if (parameters.HasValue)
 			{
-				Console.WriteLine($"Fire damage executed: {parameters.Value.Magnitude}");
+				Magnitudes.Add(parameters.Value.Magnitude);
 			}
 		}
 
-		public void OnApply(IForgeEntity? target, CueParameters? parameters)
-		{
-			// Logic for when a persistent cue starts (e.g., play fire animation)
-			if (target != null)
-			{
-				Console.WriteLine("Fire damage cue applied to target.");
-			}
-		}
+		public void OnRemove(IForgeEntity? target, bool interrupted) => RemoveCount++;
 
-		public void OnRemove(IForgeEntity? target, bool interrupted)
-		{
-			// Logic for when a cue ends (e.g., stop fire animation)
-			Console.WriteLine("Fire damage cue removed.");
-		}
+		public void OnUpdate(IForgeEntity? target, CueParameters? parameters) { }
 
-		public void OnUpdate(IForgeEntity? target, CueParameters? parameters)
+		public void Reset()
 		{
-			// Logic for updating persistent cues (e.g., adjust fire intensity)
-			if (parameters.HasValue)
-			{
-				Console.WriteLine($"Fire damage cue updated with Magnitude: {parameters.Value.Magnitude}");
-			}
+			ApplyCount = 0;
+			ExecuteCount = 0;
+			RemoveCount = 0;
+			Magnitudes.Clear();
 		}
 	}
 }

@@ -14,6 +14,8 @@ public class ExamplesTestFixture
 
 	public CuesManager CuesManager { get; }
 
+	public MockCueHandler MockCueHandler { get; } = new();
+
 	public ExamplesTestFixture()
 	{
 		CuesManager = new CuesManager();
@@ -29,7 +31,7 @@ public class ExamplesTestFixture
 
 		CuesManager.RegisterCue(
 			Tag.RequestTag(TagsManager, "cues.damage.fire"),
-			new FireDamageCueHandler()
+			MockCueHandler
 		);
 	}
 }
