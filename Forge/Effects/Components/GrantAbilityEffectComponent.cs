@@ -32,6 +32,16 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 	}
 
 	/// <inheritdoc/>
+	public void OnPostActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		if (activeEffectEvaluatedData.ActiveEffectHandle.IsInhibited)
+		{
+			_isInhibited = activeEffectEvaluatedData.ActiveEffectHandle.IsInhibited;
+			InhibitGrantedAbilities(target, _isInhibited, activeEffectEvaluatedData.ActiveEffectHandle);
+		}
+	}
+
+	/// <inheritdoc/>
 	public void OnActiveEffectUnapplied(
 		IForgeEntity target,
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData,

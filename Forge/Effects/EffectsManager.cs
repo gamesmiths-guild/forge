@@ -285,6 +285,18 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 
+		foreach (IEffectComponent component in effect.EffectData.EffectComponents)
+		{
+			component.OnPostActiveEffectAdded(
+				Owner,
+				new ActiveEffectEvaluatedData(
+					activeEffect.Handle,
+					activeEffect.EffectEvaluatedData,
+					activeEffect.RemainingDuration,
+					activeEffect.NextPeriodicTick,
+					activeEffect.ExecutionCount));
+		}
+
 		return activeEffect;
 	}
 

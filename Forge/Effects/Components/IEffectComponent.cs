@@ -38,6 +38,17 @@ public interface IEffectComponent
 	}
 
 	/// <summary>
+	/// Executes and implements extra functionality for when an <see cref="ActiveEffect"/> is added to a target after
+	/// all other components have processed <see cref="OnActiveEffectAdded"/> and finished evaluating.
+	/// </summary>
+	/// <param name="target">The target receiving the active effect.</param>
+	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect being added.</param>
+	void OnPostActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		// This method is intentionally left blank.
+	}
+
+	/// <summary>
 	/// Executes and implements extra functionality for when an <see cref="ActiveEffect"/> is unapplied from a
 	/// target. It's also called when a single stack is removed. The <paramref name="activeEffectEvaluatedData"/> data
 	/// contains the number of stacks just before it's removed, so it's never going to be zero.
