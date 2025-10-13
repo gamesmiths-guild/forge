@@ -1,6 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Effects;
 
@@ -19,6 +19,25 @@ public class EntityAbilities
 	/// Gets the set of abilities currently granted to the entity.
 	/// </summary>
 	public HashSet<AbilityHandle> GrantedAbilities { get; } = [];
+
+	/// <summary>
+	/// Tries to get a granted ability from its data.
+	/// </summary>
+	/// <param name="abilityData">The data of the ability to find.</param>
+	/// <param name="abilityHandle">The handle of the found ability.</param>
+	/// <returns><see>true</see> if the ability was found; otherwise, <c>false</c>.</returns>
+	public bool TryGetAbility(AbilityData abilityData, [NotNullWhen(true)] out AbilityHandle? abilityHandle)
+	{
+		Ability? ability = GrantedAbilities.FirstOrDefault(x => x?.Ability?.AbilityData == abilityData)?.Ability;
+		if (ability is not null)
+		{
+			abilityHandle = ability.Handle;
+			return true;
+		}
+
+		abilityHandle = null;
+		return false;
+	}
 
 	internal void GrantAbilityPermanently(
 		AbilityData abilityData,

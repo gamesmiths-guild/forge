@@ -717,7 +717,9 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		effectHandle = entity.EffectsManager.ApplyEffect(grantAbilityEffect);
 
-		return entity.Abilities.GrantedAbilities.FirstOrDefault();
+		entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? abilityHandle);
+
+		return abilityHandle;
 	}
 
 	private static Effect CreateAbilityApplierEffect(
