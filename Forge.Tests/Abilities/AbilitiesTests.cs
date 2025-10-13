@@ -636,6 +636,36 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
+	[Fact]
+	[Trait("Inhibit ability", null)]
+	public void Effect_inhibited_at_application_grant_inhibited_abilities()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbiltyData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
+
+		CreateAndApplyTagEffect(entity, ignoreTags!);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(
+					IgnoreTags: ignoreTags)));
+
+		abilityHandle.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+		abilityHandle!.IsInhibited.Should().BeTrue();
+	}
+
 	private static AbilityData CreateAbiltyData(
 		string abilityName,
 		ScalableFloat cooldownDuration,
