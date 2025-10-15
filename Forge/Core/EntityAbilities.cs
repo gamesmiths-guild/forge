@@ -25,10 +25,15 @@ public class EntityAbilities
 	/// </summary>
 	/// <param name="abilityData">The data of the ability to find.</param>
 	/// <param name="abilityHandle">The handle of the found ability.</param>
+	/// <param name="source">The source entity of the ability, if any.</param>
 	/// <returns><see>true</see> if the ability was found; otherwise, <c>false</c>.</returns>
-	public bool TryGetAbility(AbilityData abilityData, [NotNullWhen(true)] out AbilityHandle? abilityHandle)
+	public bool TryGetAbility(
+		AbilityData abilityData,
+		[NotNullWhen(true)] out AbilityHandle? abilityHandle,
+		IForgeEntity? source = null)
 	{
-		Ability? ability = GrantedAbilities.FirstOrDefault(x => x?.Ability?.AbilityData == abilityData)?.Ability;
+		Ability? ability = GrantedAbilities.FirstOrDefault(
+			x => x?.Ability?.AbilityData == abilityData && x.Ability?.SourceEntity == source)?.Ability;
 		if (ability is not null)
 		{
 			abilityHandle = ability.Handle;

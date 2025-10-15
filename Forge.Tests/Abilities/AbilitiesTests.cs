@@ -10,6 +10,7 @@ using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Tags;
+using Gamesmiths.Forge.Tests.Core;
 using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Abilities;
@@ -666,6 +667,155 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle!.IsInhibited.Should().BeTrue();
 	}
 
+	[Fact]
+	[Trait("Grant ability", null)]
+	public void Ability_level_is_set_correctly()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbiltyData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(5), // Grant at level 5
+			out _);
+
+		abilityHandle.Should().NotBeNull();
+		abilityHandle!.Level.Should().Be(5);
+	}
+
+	[Fact]
+	[Trait("Grant ability", null)]
+	public void Ability_level_scales_with_curve()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var levelCurve = new Curve(
+			[
+				new CurveKey(1, 1f), // Effect level 1 -> Ability level 1
+				new CurveKey(2, 3f), // Effect level 2 -> Ability level 3
+				new CurveKey(3, 5f), // Effect level 3 -> Ability level 5
+			]);
+
+		AbilityData abilityData = CreateAbiltyData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		// Grant ability with a scaling level based on the effect's level
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1, levelCurve),
+			out _,
+			effectLevel: 2); // Granting effect is level 2
+
+		abilityHandle.Should().NotBeNull();
+		abilityHandle!.Level.Should().Be(3); // Curve should evaluate to 3
+	}
+
+	[Fact]
+	[Trait("Grant ability", null)]
+	public void Ability_level_override_policy_works_correctly()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbiltyData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		// Grant at level 2
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(2),
+			out _);
+
+		abilityHandle.Should().NotBeNull();
+		abilityHandle!.Level.Should().Be(2);
+
+		// Grant again at level 3 with override policy for higher levels
+		SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(3),
+			out _,
+			levelOverridePolicy: LevelComparison.Higher);
+
+		abilityHandle.Level.Should().Be(3);
+
+		// Grant again at level 1 with the same policy; level should not change
+		SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			levelOverridePolicy: LevelComparison.Higher);
+
+		abilityHandle.Level.Should().Be(3);
+
+		// Grant again at level 5 with override policy for lower or equal levels
+		SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(5),
+			out _,
+			levelOverridePolicy: LevelComparison.Lower | LevelComparison.Equal);
+
+		abilityHandle.Level.Should().Be(3);
+	}
+
+	[Fact]
+	[Trait("Grant ability", null)]
+	public void Abilities_with_different_sources_are_separate_instances()
+	{
+		TestEntity entity1 = new(_tagsManager, _cuesManager);
+		TestEntity entity2 = new(_tagsManager, _cuesManager);
+
+		// Create two different AbilityData instances (differ by name)
+		AbilityData abilityData1 = CreateAbiltyData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		// Grant the first ability
+		AbilityHandle? abilityHandle1 = SetupAbility(
+			entity1,
+			abilityData1,
+			new ScalableInt(1),
+			out _,
+			sourceEntity: entity1);
+
+		// Grant the second ability
+		AbilityHandle? abilityHandle2 = SetupAbility(
+			entity1,
+			abilityData1,
+			new ScalableInt(1),
+			out _,
+			sourceEntity: entity2);
+
+		abilityHandle1.Should().NotBeNull();
+		abilityHandle2.Should().NotBeNull();
+
+		// The handles should be for different ability instances
+		abilityHandle1.Should().NotBe(abilityHandle2);
+		entity1.Abilities.GrantedAbilities.Should().HaveCount(2);
+
+		// Activate one and ensure the other is not affected
+		abilityHandle1!.Activate();
+		abilityHandle1.IsActive.Should().BeTrue();
+		abilityHandle2!.IsActive.Should().BeFalse();
+	}
+
 	private static AbilityData CreateAbiltyData(
 		string abilityName,
 		ScalableFloat cooldownDuration,
@@ -693,41 +843,46 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	}
 
 	private static AbilityHandle? SetupAbility(
-		TestEntity entity,
+		TestEntity targetEntity,
 		AbilityData abilityData,
 		ScalableInt abilityLevelScaling,
 		out ActiveEffectHandle? effectHandle,
 		AbilityDeactivationPolicy grantedAbilityRemovalPolicy = AbilityDeactivationPolicy.CancelImmediately,
 		AbilityDeactivationPolicy grantedAbilityInhibitionPolicy = AbilityDeactivationPolicy.CancelImmediately,
+		IForgeEntity? sourceEntity = null,
 		DurationData? durationData = null,
-		IEffectComponent? extraComponent = null)
+		IEffectComponent? extraComponent = null,
+		int effectLevel = 1,
+		LevelComparison levelOverridePolicy = LevelComparison.Higher)
 	{
 		GrantAbilityConfig grantAbilityConfig = new(
 			abilityData,
 			abilityLevelScaling,
 			grantedAbilityRemovalPolicy,
-			grantedAbilityInhibitionPolicy);
+			grantedAbilityInhibitionPolicy,
+			levelOverridePolicy);
 
 		Effect grantAbilityEffect = CreateAbilityApplierEffect(
 			"Grant Fireball",
 			grantAbilityConfig,
-			entity,
+			sourceEntity,
 			durationData,
-			extraComponent);
+			extraComponent,
+			effectLevel);
 
-		effectHandle = entity.EffectsManager.ApplyEffect(grantAbilityEffect);
+		effectHandle = targetEntity.EffectsManager.ApplyEffect(grantAbilityEffect);
 
-		entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? abilityHandle);
-
+		targetEntity.Abilities.TryGetAbility(abilityData, out AbilityHandle? abilityHandle, sourceEntity);
 		return abilityHandle;
 	}
 
 	private static Effect CreateAbilityApplierEffect(
 		string effectName,
 		GrantAbilityConfig grantAbilityConfig,
-		IForgeEntity source,
+		IForgeEntity? sourceEntity,
 		DurationData? durationData,
-		IEffectComponent? extraComponent)
+		IEffectComponent? extraComponent,
+		int effectLevel)
 	{
 		durationData ??= new DurationData(DurationType.Infinite);
 
@@ -745,7 +900,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		return new Effect(
 			grantAbilityEffectData,
-			new EffectOwnership(source, null));
+			new EffectOwnership(null, sourceEntity),
+			effectLevel);
 	}
 
 	private static ActiveEffectHandle? CreateAndApplyTagEffect(TestEntity entity, TagContainer tags)

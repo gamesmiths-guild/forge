@@ -75,7 +75,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 				config.RemovalPolicy,
 				config.InhibitionPolicy,
 				config.LevelOverridePolicy,
-				effectEvaluatedData.Effect.Ownership.Owner);
+				effectEvaluatedData.Effect.Ownership.Source);
 		}
 	}
 
@@ -92,7 +92,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 				config.InhibitionPolicy,
 				config.LevelOverridePolicy,
 				activeEffectEvaluatedData.ActiveEffectHandle,
-				activeEffectEvaluatedData.EffectEvaluatedData.Effect.Ownership.Owner);
+				activeEffectEvaluatedData.EffectEvaluatedData.Effect.Ownership.Source);
 		}
 	}
 

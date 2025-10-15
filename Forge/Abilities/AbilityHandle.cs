@@ -17,6 +17,11 @@ public class AbilityHandle
 	/// </summary>
 	public bool IsInhibited => Ability?.IsInhibited == true;
 
+	/// <summary>
+	/// Gets a value indicating the level of the ability associated with this handle.
+	/// </summary>
+	public int Level => Ability?.Level ?? 0;
+
 	internal Ability? Ability { get; private set; }
 
 	internal AbilityHandle(Ability ability)
