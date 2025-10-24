@@ -244,7 +244,7 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		var validationContainer = new TagContainer(_tagsManager, validationTags);
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		
+
 		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
@@ -281,7 +281,7 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		var validationContainer = new TagContainer(_tagsManager, validationTags);
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		
+
 		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
@@ -296,7 +296,9 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		return new EffectData(
 			"Test Effect",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(duration)),
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(duration))),
 			effectComponents:
 			[
 				new ModifierTagsEffectComponent(new TagContainer(_tagsManager, tags))

@@ -824,7 +824,9 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		var costEffectData = new EffectData(
 			"Fireball Cooldown",
-			new DurationData(DurationType.HasDuration, cooldownDuration));
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, cooldownDuration)));
 
 		var cooldownEffectData = new EffectData(
 			"Fireball Cost",

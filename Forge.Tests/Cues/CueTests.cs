@@ -329,24 +329,24 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	public void Instant_effect_triggers_execute_cues_with_expected_results(
 		object[] modifiersData,
 		bool requireModifierSuccessToTriggerCue,
-		object[] cueDatas,
-		object[] cueTestDatas1,
-		object[] cueTestDatas2)
+		object[] cueData,
+		object[] cueTestData1,
+		object[] cueTestData2)
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		EffectData effectData = CreateInstantEffectData(
 			CreateModifiers(modifiersData),
 			requireModifierSuccessToTriggerCue,
-			CreateCueDatas(cueDatas));
+			CreateCueData(cueData));
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
 
 		ResetCues();
 		entity.EffectsManager.ApplyEffect(effect);
-		TestCueExecutionData(TestCueExecutionType.Execution, cueTestDatas1);
+		TestCueExecutionData(TestCueExecutionType.Execution, cueTestData1);
 
 		effect.LevelUp();
 		entity.EffectsManager.ApplyEffect(effect);
-		TestCueExecutionData(TestCueExecutionType.Execution, cueTestDatas2);
+		TestCueExecutionData(TestCueExecutionType.Execution, cueTestData2);
 	}
 
 	[Theory]
@@ -589,24 +589,24 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	public void Infinite_effect_triggers_apply_and_remove_cues_with_expected_results(
 		object[] modifiersData,
 		bool requireModifierSuccessToTriggerCue,
-		object[] cueDatas,
-		object[] cueTestDatas1,
-		object[] cueTestDatas2)
+		object[] cueData,
+		object[] cueTestData1,
+		object[] cueTestData2)
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		EffectData effectData = CreateInfiniteEffectData(
 			CreateModifiers(modifiersData),
 			true,
 			requireModifierSuccessToTriggerCue,
-			CreateCueDatas(cueDatas));
+			CreateCueData(cueData));
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
 
 		ResetCues();
 		ActiveEffectHandle? activeEffectHandler = entity.EffectsManager.ApplyEffect(effect);
-		TestCueExecutionData(TestCueExecutionType.Application, cueTestDatas1);
+		TestCueExecutionData(TestCueExecutionType.Application, cueTestData1);
 
 		entity.EffectsManager.UnapplyEffect(activeEffectHandler!);
-		TestCueExecutionData(TestCueExecutionType.Application, cueTestDatas2);
+		TestCueExecutionData(TestCueExecutionType.Application, cueTestData2);
 	}
 
 	[Theory]
@@ -867,13 +867,13 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		bool requireModifierSuccessToTriggerCue,
 		float firstDeltaUpdate,
 		float secondDeltaUpdate,
-		object[] cueDatas,
-		object[] applicationCueTestDatas1,
-		object[] executionCueTestDatas1,
-		object[] applicationCueTestDatas2,
-		object[] executionCueTestDatas2,
-		object[] applicationCueTestDatas3,
-		object[] executionCueTestDatas3,
+		object[] cueData,
+		object[] applicationCueTestData1,
+		object[] executionCueTestData1,
+		object[] applicationCueTestData2,
+		object[] executionCueTestData2,
+		object[] applicationCueTestData3,
+		object[] executionCueTestData3,
 		bool applyTriggered,
 		bool executeTriggered,
 		bool isFiredInCorrectOrder)
@@ -885,7 +885,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			executeOnApplication,
 			CreateModifiers(modifiersData),
 			requireModifierSuccessToTriggerCue,
-			CreateCueDatas(cueDatas));
+			CreateCueData(cueData));
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
 
 		var firstTriggered = new ManualResetEventSlim(false);
@@ -908,18 +908,18 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		secondTriggered.IsSet.Should().Be(executeTriggered);
 		isOrderCorrect.Should().Be(isFiredInCorrectOrder);
 
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas1);
-		TestCueExecutionData(TestCueExecutionType.Execution, executionCueTestDatas1);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData1);
+		TestCueExecutionData(TestCueExecutionType.Execution, executionCueTestData1);
 
 		entity.EffectsManager.UpdateEffects(firstDeltaUpdate);
 
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas2);
-		TestCueExecutionData(TestCueExecutionType.Execution, executionCueTestDatas2);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData2);
+		TestCueExecutionData(TestCueExecutionType.Execution, executionCueTestData2);
 
 		entity.EffectsManager.UpdateEffects(secondDeltaUpdate);
 
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas3);
-		TestCueExecutionData(TestCueExecutionType.Execution, executionCueTestDatas3);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData3);
+		TestCueExecutionData(TestCueExecutionType.Execution, executionCueTestData3);
 	}
 
 	[Theory]
@@ -1180,34 +1180,34 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		object[] modifiersData,
 		bool snapshotLevel,
 		bool requireModifierSuccessToTriggerCue,
-		object[] cueDatas,
-		object[] applicationCueTestDatas1,
-		object[] updateCueTestDatas1,
-		object[] applicationCueTestDatas2,
-		object[] updateCueTestDatas2,
-		object[] applicationCueTestDatas3,
-		object[] updateCueTestDatas3)
+		object[] cueData,
+		object[] applicationCueTestData1,
+		object[] updateCueTestData1,
+		object[] applicationCueTestData2,
+		object[] updateCueTestData2,
+		object[] applicationCueTestData3,
+		object[] updateCueTestData3)
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		EffectData effectData = CreateInfiniteEffectData(
 			CreateModifiers(modifiersData),
 			snapshotLevel,
 			requireModifierSuccessToTriggerCue,
-			CreateCueDatas(cueDatas));
+			CreateCueData(cueData));
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
 
 		ResetCues();
 		ActiveEffectHandle? activeEffectHandler = entity.EffectsManager.ApplyEffect(effect);
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas1);
-		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas1);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData1);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData1);
 
 		effect.LevelUp();
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas2);
-		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas2);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData2);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData2);
 
 		entity.EffectsManager.UnapplyEffect(activeEffectHandler!);
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas3);
-		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas3);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData3);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData3);
 	}
 
 	[Theory]
@@ -1528,46 +1528,46 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { 0, 0, 0, 0f, true },
 			new object[] { 1, 0, 0, 0f, true },
 		})]
-	public void Attributre_based_modifiers_triggers_update_cues_when_attribute_changes_with_expected_results(
+	public void Attribute_based_modifiers_triggers_update_cues_when_attribute_changes_with_expected_results(
 		object[] attributeBasedModifiersData,
 		object[] modifiersData,
 		bool requireModifierSuccessToTriggerCue,
-		object[] cueDatas,
-		object[] applicationCueTestDatas1,
-		object[] updateCueTestDatas1,
-		object[] applicationCueTestDatas2,
-		object[] updateCueTestDatas2,
-		object[] applicationCueTestDatas3,
-		object[] updateCueTestDatas3)
+		object[] cueData,
+		object[] applicationCueTestData1,
+		object[] updateCueTestData1,
+		object[] applicationCueTestData2,
+		object[] updateCueTestData2,
+		object[] applicationCueTestData3,
+		object[] updateCueTestData3)
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		EffectData effectData1 = CreateInfiniteEffectData(
 			CreateAttributeBasedModifiers(attributeBasedModifiersData),
 			true,
 			requireModifierSuccessToTriggerCue,
-			CreateCueDatas(cueDatas));
+			CreateCueData(cueData));
 		var effect1 = new Effect(effectData1, new EffectOwnership(entity, entity));
 
 		EffectData effectData2 = CreateInfiniteEffectData(
 			CreateModifiers(modifiersData),
 			true,
 			requireModifierSuccessToTriggerCue,
-			CreateCueDatas([]));
+			CreateCueData([]));
 		var effect2 = new Effect(effectData2, new EffectOwnership(entity, entity));
 
 		ResetCues();
 
 		entity.EffectsManager.ApplyEffect(effect1);
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas1);
-		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas1);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData1);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData1);
 
 		ActiveEffectHandle? activeEffectHandler = entity.EffectsManager.ApplyEffect(effect2);
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas2);
-		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas2);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData2);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData2);
 
 		entity.EffectsManager.UnapplyEffect(activeEffectHandler!);
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas3);
-		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas3);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData3);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData3);
 	}
 
 	[Theory]
@@ -2181,19 +2181,19 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		int stackLimit,
 		bool requireModifierSuccessToTriggerCue,
 		bool suppressStackingCues,
-		object[] cueDatas,
+		object[] cueData,
 		float deltaUpdate1,
 		float deltaUpdate2,
-		object[] applicationCueTestDatas1,
-		object[] updateCueTestDatas1,
-		object[] applicationCueTestDatas2,
-		object[] updateCueTestDatas2,
-		object[] applicationCueTestDatas3,
-		object[] updateCueTestDatas3,
-		object[] applicationCueTestDatas4,
-		object[] updateCueTestDatas4,
-		object[] applicationCueTestDatas5,
-		object[] updateCueTestDatas5)
+		object[] applicationCueTestData1,
+		object[] updateCueTestData1,
+		object[] applicationCueTestData2,
+		object[] updateCueTestData2,
+		object[] applicationCueTestData3,
+		object[] updateCueTestData3,
+		object[] applicationCueTestData4,
+		object[] updateCueTestData4,
+		object[] applicationCueTestData5,
+		object[] updateCueTestData5)
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		EffectData effectData1 = CreateDurationStackableEffectData(
@@ -2203,36 +2203,36 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			CreateModifiers(attributeBasedModifiersData),
 			requireModifierSuccessToTriggerCue,
 			suppressStackingCues,
-			CreateCueDatas(cueDatas));
+			CreateCueData(cueData));
 		var effect1 = new Effect(effectData1, new EffectOwnership(entity, entity));
 
 		ResetCues();
 
 		entity.EffectsManager.ApplyEffect(effect1);
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas1);
-		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas1);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData1);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData1);
 
 		entity.EffectsManager.UpdateEffects(deltaUpdate1);
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas2);
-		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas2);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData2);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData2);
 
 		effect1.LevelUp();
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas3);
-		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas3);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData3);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData3);
 
 		entity.EffectsManager.ApplyEffect(effect1);
 		entity.EffectsManager.ApplyEffect(effect1);
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas4);
-		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas4);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData4);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData4);
 
 		entity.EffectsManager.UpdateEffects(deltaUpdate2);
-		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestDatas5);
-		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestDatas5);
+		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData5);
+		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData5);
 	}
 
 	[Fact]
 	[Trait("Invalid cue", null)]
-	public void Invalid_cue_fails_gracefullys()
+	public void Invalid_cue_fails_gracefully()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		EffectData effectData = CreateInstantEffectData(
@@ -2422,7 +2422,9 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	{
 		return new EffectData(
 			"Infinite Effect",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(duration)),
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(duration))),
 			modifiers,
 			periodicData: new PeriodicData(
 				new ScalableFloat(period),
@@ -2443,7 +2445,9 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	{
 		return new EffectData(
 			"Infinite Effect",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(duration)),
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(duration))),
 			modifiers,
 			new StackingData(
 				new ScalableInt(stackLimit),
@@ -2524,13 +2528,13 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		return result;
 	}
 
-	private CueData[] CreateCueDatas(object[] cueDatas)
+	private CueData[] CreateCueData(object[] cueDataArray)
 	{
-		var result = new CueData[cueDatas.Length];
+		var result = new CueData[cueDataArray.Length];
 
-		for (var i = 0; i < cueDatas.Length; i++)
+		for (var i = 0; i < cueDataArray.Length; i++)
 		{
-			var cueData = (object[])cueDatas[i];
+			var cueData = (object[])cueDataArray[i];
 
 			result[i] = new CueData(
 				Tag.RequestTag(_tagsManager, $"Test.Cue{(int)cueData[0] + 1}").GetSingleTagContainer(),
@@ -2543,11 +2547,11 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		return result;
 	}
 
-	private void TestCueExecutionData(TestCueExecutionType cueDataType, object[] cueTestDatas)
+	private void TestCueExecutionData(TestCueExecutionType cueDataType, object[] cueTestDataArray)
 	{
-		for (var i = 0; i < cueTestDatas.Length; i++)
+		for (var i = 0; i < cueTestDataArray.Length; i++)
 		{
-			var cueTestData = (object[])cueTestDatas[i];
+			var cueTestData = (object[])cueTestDataArray[i];
 			TestCue testCue = _testCues[(int)cueTestData[0]];
 
 			CueExecutionData cueExecutionData = cueDataType switch

@@ -193,6 +193,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		_cuesManager.UpdateCues(in effectEvaluatedData);
 	}
 
+	internal void RemoveActiveEffect_InternalCall(ActiveEffect effect)
+	{
+		RemoveActiveEffect(effect, false);
+	}
+
 	private static bool MatchesStackPolicy(ActiveEffect existingEffect, Effect newEffect)
 	{
 		Validation.Assert(

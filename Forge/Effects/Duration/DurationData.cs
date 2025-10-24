@@ -8,6 +8,7 @@ namespace Gamesmiths.Forge.Effects.Duration;
 /// Duration data for a effect.
 /// </summary>
 /// <param name="DurationType">The type of duration for the effect.</param>
-/// <param name="Duration">The duration for this effect in case it's of type <see cref="DurationType.HasDuration"/>.
+/// <param name="DurationMagnitude">The duration for this effect in case it's of type
+/// <see cref="DurationType.HasDuration"/>.
 /// </param>
-public readonly record struct DurationData(DurationType DurationType, ScalableFloat? Duration = null);
+public readonly record struct DurationData(DurationType DurationType, ModifierMagnitude? DurationMagnitude = null);

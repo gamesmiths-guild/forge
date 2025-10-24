@@ -121,7 +121,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Create a strength buff effect that lasts for 10 seconds
 		var strengthBuffEffectData = new EffectData(
 			"Strength Potion",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)), // 10 seconds duration
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(10.0f))), // 10 seconds duration
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Strength",
@@ -227,7 +231,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Create a poison effect that ticks every 2 seconds for 10 seconds
 		var poisonEffectData = new EffectData(
 			"Poison",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(10.0f))),
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Health",
@@ -270,7 +278,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Create a poison effect that stacks up to 3 times
 		var stackingPoisonEffectData = new EffectData(
 			"Stacking Poison",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(6.0f)), // Each stack lasts 6 seconds
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(6.0f))), // Each stack lasts 6 seconds
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Health",
@@ -335,7 +347,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Define the unique effect data
 		var uniqueEffectData = new EffectData(
 			"Unique Buff",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)), // Lasts 10 seconds
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(10.0f))), // Lasts 10 seconds
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Strength",
@@ -395,7 +411,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Create a "Stunned" effect that adds a tag and reduces speed to 0
 		var stunEffectData = new EffectData(
 			"Stunned",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(3.0f)), // 3 seconds duration
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(3.0f))), // 3 seconds duration
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Speed",
@@ -484,7 +504,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Create a "Stunned" effect that adds a tag and reduces speed to 0
 		var stunEffectData = new EffectData(
 			"Stunned",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(3.0f)), // 3 seconds duration
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(3.0f))), // 3 seconds duration
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Speed",
@@ -625,7 +649,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Define a burning effect that includes the fire damage cue
 		var burningEffectData = new EffectData(
 			"Burning",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(5.0f)),
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(5.0f))),
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Health",

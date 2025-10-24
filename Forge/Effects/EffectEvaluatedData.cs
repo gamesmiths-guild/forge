@@ -64,14 +64,14 @@ public readonly record struct EffectEvaluatedData
 	public EntityAttribute[] AttributesToCapture { get; }
 
 	/// <summary>
-	/// Getsan array of custom cue parameters.
+	/// Gets an array of custom cue parameters.
 	/// </summary>
 	public Dictionary<StringKey, object>? CustomCueParameters { get; }
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="EffectEvaluatedData"/> struct.
 	/// </summary>
-	/// <param name="effect">The taget effect of this evaluated data.</param>
+	/// <param name="effect">The target effect of this evaluated data.</param>
 	/// <param name="target">The target of this evaluated data.</param>
 	/// <param name="stack">The stack for this evaluated data.</param>
 	/// <param name="level">The level for this evaluated data.</param>
@@ -105,12 +105,12 @@ public readonly record struct EffectEvaluatedData
 
 	private float EvaluateDuration(DurationData durationData)
 	{
-		if (!durationData.Duration.HasValue)
+		if (!durationData.DurationMagnitude.HasValue)
 		{
 			return 0;
 		}
 
-		return durationData.Duration.Value.GetValue(Level);
+		return durationData.DurationMagnitude.Value.GetMagnitude(Effect, Target, Level);
 	}
 
 	private float EvaluatePeriod(PeriodicData? periodicData)
@@ -169,10 +169,17 @@ public readonly record struct EffectEvaluatedData
 
 		foreach (ModifierMagnitude modifierMagnitude in Effect.EffectData.Modifiers.Select(x => x.Magnitude))
 		{
-			if (!IsModifierSnapshop(modifierMagnitude))
+			if (!IsModifierSnapshot(modifierMagnitude))
 			{
 				attributesToCapture.AddRange(CaptureModifierBackingAttribute(modifierMagnitude));
 			}
+		}
+
+		if (Effect.EffectData.DurationData.DurationType == DurationType.HasDuration
+			&& Effect.EffectData.DurationData.DurationMagnitude.HasValue)
+		{
+			attributesToCapture.AddRange(
+				CaptureModifierBackingAttribute(Effect.EffectData.DurationData.DurationMagnitude.Value));
 		}
 
 		foreach (CustomExecution execution in Effect.EffectData.CustomExecutions)
@@ -209,7 +216,7 @@ public readonly record struct EffectEvaluatedData
 		return modifierMagnitude.GetMagnitude(Effect, Target, Level) * stackMultiplier;
 	}
 
-	private bool IsModifierSnapshop(ModifierMagnitude modifierMagnitude)
+	private bool IsModifierSnapshot(ModifierMagnitude modifierMagnitude)
 	{
 		if (Effect.EffectData.DurationData.DurationType == DurationType.Instant)
 		{

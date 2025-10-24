@@ -4,6 +4,7 @@ using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Calculator;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
@@ -696,7 +697,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 	[InlineData("TestAttributeSet.Attribute5", 20, 33f, 999f, new int[] { 25, 5, 20, 0 })]
 	[InlineData("TestAttributeSet.Attribute90", 100, 1f, 60f, new int[] { 99, 90, 100, 91 })]
 	[InlineData("Invalid.Attribute", 100, 1f, 60f, new int[] { })]
-	public void Inifinite_effect_modify_attribute_modifier_value(
+	public void Infinite_effect_modify_attribute_modifier_value(
 		string targetAttribute,
 		float modifierBaseMagnitude,
 		float simulatedFPS,
@@ -1006,7 +1007,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(baseDuration)),
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(baseDuration))),
 			[
 				new Modifier(
 					targetAttribute,
@@ -1263,7 +1266,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		0,
 		1f,
 		0)]
-	public void Non_snapshot_priodic_effect_with_attribute_based_magnitude_should_update_when_attribute_updates(
+	public void Non_snapshot_periodic_effect_with_attribute_based_magnitude_should_update_when_attribute_updates(
 		string targetAttribute,
 		string backingAttribute,
 		float coefficient,
@@ -1531,7 +1534,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(duration)),
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(duration))),
 			[
 				new Modifier(
 					targetAttribute,
@@ -1782,7 +1787,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 	[Theory]
 	[Trait("Stackable", null)]
 
-	// Effects with stack level policy Seggregate don't stack.
+	// Effects with stack level policy Segregate don't stack.
 	[InlineData(
 		new int[] { 6, 1, 5, 0 },
 		new int[] { 16, 1, 15, 0 },
@@ -2727,7 +2732,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		object[] thirdExpectedStackData,
 		int fourthExpectedStackDataCount,
 		object[] fourthExpectedStackData,
-		float effectDutation,
+		float effectDuration,
 		string targetAttribute,
 		int modifierMagnitude,
 		float effectPeriod,
@@ -2755,7 +2760,9 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		var effectData = new EffectData(
 			"Buff",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(effectDutation)),
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(effectDuration))),
 			[
 				new Modifier(
 					targetAttribute,
@@ -3045,7 +3052,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			owner,
 			target);
 
-		target.EffectsManager.UnapplyEffect(effectHandle, forceUnapply);
+		target.EffectsManager.UnapplyEffect(effectHandle!, forceUnapply);
 
 		TestUtils.TestAttribute(target, targetAttribute, thirdExpectedResults);
 
@@ -3056,7 +3063,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			owner,
 			target);
 
-		target.EffectsManager.UnapplyEffect(effectHandle, forceUnapply);
+		target.EffectsManager.UnapplyEffect(effectHandle!, forceUnapply);
 
 		TestUtils.TestAttribute(target, targetAttribute, fourthExpectedResults);
 
@@ -3259,5 +3266,260 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		target.EffectsManager.ApplyEffect(effect);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Duration", null)]
+	public void Attribute_based_duration_uses_source_attribute_to_set_expiration()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		// Owner TestAttributeSet.Attribute5 base is 5. Duration = 5 * 2 = 10 seconds.
+		var durationMagnitude = new ModifierMagnitude(
+			MagnitudeCalculationType.AttributeBased,
+			attributeBasedFloat: new AttributeBasedFloat(
+				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Source),
+				AttributeCalculationType.BaseValue,
+				new ScalableFloat(2f), // coefficient
+				new ScalableFloat(0f), // pre-add
+				new ScalableFloat(0f))); // post-add
+
+		var effectData = new EffectData(
+			"AB Duration",
+			new DurationData(DurationType.HasDuration, durationMagnitude),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+			]);
+
+		var effect = new Effect(effectData, new EffectOwnership(owner, owner));
+
+		// Apply and verify modifier is applied
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		// Before expiration
+		target.EffectsManager.UpdateEffects(9.9f);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		// Cross expiration (10s total)
+		target.EffectsManager.UpdateEffects(10f - 9.9f);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Duration", null)]
+	public void Set_by_caller_duration_sets_expiration_from_runtime_value()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var durationTag = Tag.RequestTag(_tagsManager, "simple.tag");
+
+		var durationMagnitude = new ModifierMagnitude(
+			MagnitudeCalculationType.SetByCaller,
+			setByCallerFloat: new SetByCallerFloat(durationTag));
+
+		var effectData = new EffectData(
+			"SBC Duration",
+			new DurationData(DurationType.HasDuration, durationMagnitude),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+			]);
+
+		var effect = new Effect(effectData, new EffectOwnership(owner, owner));
+
+		// Set duration to 0.5 seconds at runtime
+		effect.SetSetByCallerMagnitude(durationTag, 0.5f);
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		// Before expiration
+		target.EffectsManager.UpdateEffects(0.49f);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		// Cross expiration
+		target.EffectsManager.UpdateEffects(0.5f - 0.49f);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Duration", null)]
+	public void Duration_uses_custom_calculator_to_set_expiration()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var durationMagnitude = new ModifierMagnitude(
+			MagnitudeCalculationType.CustomCalculatorClass,
+			customCalculationBasedFloat: new CustomCalculationBasedFloat(
+				new DurationFromSourceAttributeCalculator(),
+				new ScalableFloat(1f), // coefficient
+				new ScalableFloat(0f), // pre-add
+				new ScalableFloat(0f))); // post-add
+
+		var effectData = new EffectData(
+			"CC Duration",
+			new DurationData(DurationType.HasDuration, durationMagnitude),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+			]);
+
+		var effect = new Effect(effectData, new EffectOwnership(owner, owner));
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		// Before expiration (1.0s)
+		target.EffectsManager.UpdateEffects(0.99f);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		// Cross expiration
+		target.EffectsManager.UpdateEffects(1f - 0.99f);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Duration", null)]
+	public void Attribute_based_duration_updates_duration_with_attribute_changes()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		// Owner TestAttributeSet.Attribute5 base is 5. Duration = 5 * 2 = 10 seconds.
+		var durationMagnitude = new ModifierMagnitude(
+			MagnitudeCalculationType.AttributeBased,
+			attributeBasedFloat: new AttributeBasedFloat(
+				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Source, false),
+				AttributeCalculationType.BaseValue,
+				new ScalableFloat(2f), // coefficient
+				new ScalableFloat(0f), // pre-add
+				new ScalableFloat(0f))); // post-add
+
+		var effectData = new EffectData(
+			"AB Duration",
+			new DurationData(DurationType.HasDuration, durationMagnitude),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+			]);
+
+		var effect = new Effect(effectData, new EffectOwnership(owner, owner));
+
+		var buffEffectData = new EffectData(
+				"Buff Attribute5",
+				new DurationData(DurationType.Instant),
+				[
+					new Modifier(
+						"TestAttributeSet.Attribute5",
+						ModifierOperation.FlatBonus,
+						new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(5)))
+				]);
+
+		var buffEffect = new Effect(buffEffectData, new EffectOwnership(owner, owner));
+
+		// Apply and verify modifier is applied
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		// Before expiration
+		target.EffectsManager.UpdateEffects(9.9f);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		owner.EffectsManager.ApplyEffect(buffEffect);
+
+		// Cross expiration (10s total)
+		target.EffectsManager.UpdateEffects(10f - 9.9f);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		// Before expiration
+		target.EffectsManager.UpdateEffects(10f);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Duration", null)]
+	public void Attribute_based_duration_finishes_with_negative_attribute_changes()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		// Owner TestAttributeSet.Attribute5 base is 5. Duration = 5 * 2 = 10 seconds.
+		var durationMagnitude = new ModifierMagnitude(
+			MagnitudeCalculationType.AttributeBased,
+			attributeBasedFloat: new AttributeBasedFloat(
+				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Source, false),
+				AttributeCalculationType.BaseValue,
+				new ScalableFloat(2f), // coefficient
+				new ScalableFloat(0f), // pre-add
+				new ScalableFloat(0f))); // post-add
+
+		var effectData = new EffectData(
+			"AB Duration",
+			new DurationData(DurationType.HasDuration, durationMagnitude),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+			]);
+
+		var effect = new Effect(effectData, new EffectOwnership(owner, owner));
+
+		var buffEffectData = new EffectData(
+				"Buff Attribute5",
+				new DurationData(DurationType.Instant),
+				[
+					new Modifier(
+						"TestAttributeSet.Attribute5",
+						ModifierOperation.FlatBonus,
+						new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-3)))
+				]);
+
+		var debuffEffect = new Effect(buffEffectData, new EffectOwnership(owner, owner));
+
+		// Apply and verify modifier is applied
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		// Before expiration
+		target.EffectsManager.UpdateEffects(9.0f);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		owner.EffectsManager.ApplyEffect(debuffEffect);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	private sealed class DurationFromSourceAttributeCalculator : CustomModifierMagnitudeCalculator
+	{
+		private readonly AttributeCaptureDefinition _sourceAttr;
+
+		public DurationFromSourceAttributeCalculator()
+		{
+			// Use owner's Attribute2 (base 2), duration = captured * 0.5 => 1.0 second
+			_sourceAttr = new AttributeCaptureDefinition(
+				"TestAttributeSet.Attribute2",
+				AttributeCaptureSource.Source,
+				Snapshot: false);
+			AttributesToCapture.Add(_sourceAttr);
+		}
+
+		public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
+		{
+			var value = CaptureAttributeMagnitude(_sourceAttr, effect, target);
+			return value * 0.5f; // 2 * 0.5 = 1.0
+		}
 	}
 }

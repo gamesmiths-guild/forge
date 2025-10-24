@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Components;
@@ -528,7 +527,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 
 		ActiveEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
-		
+
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 
 		entity.EffectsManager.UnapplyEffect(activeModifierEffectHandle!);
@@ -567,7 +566,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		var modifierTagEffect = new Effect(modifierTagEffectData, new EffectOwnership(entity, entity));
 
 		ActiveEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
-		
+
 		entity.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 
@@ -600,7 +599,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		
+
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
 		TestUtils.TestStackData(
 			entity.EffectsManager.GetEffectInfo(effectData),
@@ -649,7 +648,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		
+
 		entity.EffectsManager.UpdateEffects(100f);
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
@@ -774,7 +773,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", secondExpectedResults);
 
 		ActiveEffectHandle? activeModifierEffectHandle = entity.EffectsManager.ApplyEffect(modifierTagEffect);
-		
+
 		entity.EffectsManager.UpdateEffects(secondUpdatePeriod);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", thirdExpectedResults);
 

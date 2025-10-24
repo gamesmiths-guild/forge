@@ -184,18 +184,18 @@ internal sealed class ActiveEffect
 			return false;
 		}
 
-		Effect evaluatedEffect = EffectEvaluatedData.Effect;
+		Effect evaluatedEffect = Effect;
 
 		if (stackingData.OwnerDenialPolicy.HasValue)
 		{
 			if (stackingData.OwnerDenialPolicy.Value == StackOwnerDenialPolicy.DenyIfDifferent &&
-				EffectEvaluatedData.Effect.Ownership.Owner != effect.Ownership.Owner)
+				Effect.Ownership.Owner != effect.Ownership.Owner)
 			{
 				return false;
 			}
 
 			if (stackingData.OwnerOverridePolicy == StackOwnerOverridePolicy.Override &&
-				EffectEvaluatedData.Effect.Ownership.Owner != effect.Ownership.Owner)
+				Effect.Ownership.Owner != effect.Ownership.Owner)
 			{
 				evaluatedEffect = effect;
 				hasChanges = true;
@@ -216,7 +216,7 @@ internal sealed class ActiveEffect
 			}
 		}
 
-		// It can be a successfull application and still not increase stack count.
+		// It can be a successful application and still not increase stack count.
 		// In some cases we can even skip re-application.
 		if (resetStacks)
 		{
@@ -276,7 +276,7 @@ internal sealed class ActiveEffect
 		EffectEvaluatedData.Target.EffectsManager.OnActiveEffectUnapplied_InternalCall(this);
 
 		StackCount--;
-		ReapplyEffect(EffectEvaluatedData.Effect, isStackingCall: true);
+		ReapplyEffect(Effect, isStackingCall: true);
 	}
 
 	internal void Update(double deltaTime)
@@ -383,12 +383,11 @@ internal sealed class ActiveEffect
 	{
 		Unapply(true);
 
-		EffectEvaluatedData =
-			new EffectEvaluatedData(
-				effect,
-				EffectEvaluatedData.Target,
-				StackCount,
-				level);
+		EffectEvaluatedData = new EffectEvaluatedData(
+			effect,
+			EffectEvaluatedData.Target,
+			StackCount,
+			level);
 
 		Apply(reApplication: true);
 
@@ -396,7 +395,7 @@ internal sealed class ActiveEffect
 
 		EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
 
-		if (!EffectEvaluatedData.Effect.EffectData.SuppressStackingCues || !isStackingCall)
+		if (!Effect.EffectData.SuppressStackingCues || !isStackingCall)
 		{
 			EffectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData);
 		}
@@ -444,15 +443,44 @@ internal sealed class ActiveEffect
 		ExecutionCount++;
 	}
 
+	private void UpdateEffectEvaluation()
+	{
+		if (!EffectData.DurationData.DurationMagnitude.HasValue)
+		{
+			ReapplyEffect(Effect);
+			return;
+		}
+
+		var updatedDuration = EffectData.DurationData.DurationMagnitude.Value.GetMagnitude(
+				Effect,
+				EffectEvaluatedData.Target,
+				Effect.Level);
+
+		if (EffectEvaluatedData.Duration > updatedDuration + Epsilon
+			|| EffectEvaluatedData.Duration < updatedDuration - Epsilon)
+		{
+			RemainingDuration += updatedDuration - EffectEvaluatedData.Duration;
+		}
+
+		if (RemainingDuration <= 0
+			&& EffectData.DurationData.DurationType == DurationType.HasDuration
+			&& StackCount == 1)
+		{
+			Unapply();
+			EffectEvaluatedData.Target.EffectsManager.RemoveActiveEffect_InternalCall(this);
+			return;
+		}
+
+		ReapplyEffect(Effect);
+	}
+
 	private void Attribute_OnValueChanged(EntityAttribute attribute, int change)
 	{
-		// This could be optimized by re-evaluating only the modifiers with the attribute that changed.
-		ReapplyEffect(EffectEvaluatedData.Effect);
+		UpdateEffectEvaluation();
 	}
 
 	private void Effect_OnLevelChanged(int obj)
 	{
-		// This one has to re-calculate everything that uses ScalableFloats.
-		ReapplyEffect(EffectEvaluatedData.Effect);
+		UpdateEffectEvaluation();
 	}
 }

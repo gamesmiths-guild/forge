@@ -13,7 +13,7 @@ public interface IEffectComponent
 	/// <summary>
 	/// A custom validation method for validating whether a effect can be applied or not.
 	/// </summary>
-	/// <param name="target">The target of the gampleplay effect.</param>
+	/// <param name="target">The target of the gameplay effect.</param>
 	/// <param name="effect">The effect instance.</param>
 	/// <returns><see langword="true"/> if the effect can be applied;<see langword="false"/> otherwise.
 	/// </returns>
@@ -54,7 +54,7 @@ public interface IEffectComponent
 	/// contains the number of stacks just before it's removed, so it's never going to be zero.
 	/// </summary>
 	/// <remarks>
-	/// Note that only effects with duration can be unappled.
+	/// Note that only effects with duration can be unapplied.
 	/// </remarks>
 	/// <param name="target">The target whose the active effect is being removed.</param>
 	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect being removed.</param>>
@@ -82,11 +82,11 @@ public interface IEffectComponent
 	/// Executes and implements extra functionality for when a effect is applied to a target.
 	/// </summary>
 	/// <remarks>
-	/// Note that a effect is considered to be applied both when it's intially added and when a new stack is
+	/// Note that a effect is considered to be applied both when it's initially added and when a new stack is
 	/// successfully applied. All effects, including instant effects, are considered to be applied and will trigger this
 	/// method.
 	/// </remarks>
-	/// <param name="target">The target of the gampleplay effect.</param>
+	/// <param name="target">The target of the gameplay effect.</param>
 	/// <param name="effectEvaluatedData">The evaluated data for the effect being applied.</param>
 	void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
 	{
@@ -99,7 +99,7 @@ public interface IEffectComponent
 	/// <remarks>
 	/// Note that only instant and periodic effects can be executed on a target.
 	/// </remarks>
-	/// <param name="target">The target of the gampleplay effect.</param>
+	/// <param name="target">The target of the gameplay effect.</param>
 	/// <param name="effectEvaluatedData">The evaluated data for the effect being applied.</param>
 	void OnEffectExecuted(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
 	{

@@ -132,7 +132,7 @@ public readonly record struct EffectData
 			"Periodic effects can't be set as instant.");
 
 		Validation.Assert(
-			!(DurationData.DurationType != DurationType.HasDuration && DurationData.Duration.HasValue),
+			!(DurationData.DurationType != DurationType.HasDuration && DurationData.DurationMagnitude.HasValue),
 			$"Can't set duration if {nameof(DurationType)} is set to {DurationData.DurationType}.");
 
 		Validation.Assert(
