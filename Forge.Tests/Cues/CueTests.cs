@@ -2407,7 +2407,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			"Infinite Effect",
 			new DurationData(DurationType.Infinite),
 			modifiers,
-			snapshopLevel: snapshotLevel,
+			snapshotLevel: snapshotLevel,
 			requireModifierSuccessToTriggerCue: requireModifierSuccessToTriggerCue,
 			cues: cues);
 	}
@@ -2461,7 +2461,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 				LevelOverridePolicy: LevelComparison.Lower | LevelComparison.Equal | LevelComparison.Higher,
 				LevelOverrideStackCountPolicy: StackLevelOverrideStackCountPolicy.IncreaseStacks,
 				ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication),
-			snapshopLevel: false,
+			snapshotLevel: false,
 			requireModifierSuccessToTriggerCue: requireModifierSuccessToTriggerCue,
 			suppressStackingCues: suppressStackingCues,
 			cues: cues);

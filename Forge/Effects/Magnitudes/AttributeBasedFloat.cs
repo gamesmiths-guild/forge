@@ -17,9 +17,11 @@ namespace Gamesmiths.Forge.Effects.Magnitudes;
 /// </summary>
 /// <param name="BackingAttribute">Information about which and attribute should be captured and how.</param>
 /// <param name="AttributeCalculationType">How the magnitude is going to be extracted from the given attribute.</param>
-/// <param name="Coefficient">Value to be multiplied with the calculcuated magnitude.</param>
-/// <param name="PreMultiplyAdditiveValue">Value to be added to the magnitude before multiplying the coeficient.</param>
-/// <param name="PostMultiplyAdditiveValue">Value to be added to the magnitude after multiplying the coeficient.</param>
+/// <param name="Coefficient">Value to be multiplied with the calculated magnitude.</param>
+/// <param name="PreMultiplyAdditiveValue">Value to be added to the magnitude before multiplying the coefficient.
+/// </param>
+/// <param name="PostMultiplyAdditiveValue">Value to be added to the magnitude after multiplying the coefficient.
+/// </param>
 /// <param name="FinalChannel">In case <paramref name="AttributeCalculationType"/> ==
 /// <see cref="AttributeCalculationType.MagnitudeEvaluatedUpToChannel"/> a final channel for the calculation
 /// must be provided.</param>
@@ -38,7 +40,7 @@ public readonly record struct AttributeBasedFloat(
 	/// Calculates the final magnitude based on the AttributeBasedFloat configurations.
 	/// </summary>
 	/// <param name="effect">The source effect that will be used to capture source attributes from.</param>
-	/// <param name="target">The target enity that will be used to capture source attributes from.</param>
+	/// <param name="target">The target entity that will be used to capture source attributes from.</param>
 	/// <param name="level">Level to use in the magnitude calculation.</param>
 	/// <returns>The calculated magnitude for this <see cref="AttributeBasedFloat"/>.</returns>
 	public readonly float CalculateMagnitude(Effect effect, IForgeEntity target, int level)

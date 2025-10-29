@@ -552,7 +552,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 								new CurveKey(2, modifierLevel2Multiplier),
 							]))))
 			],
-			snapshopLevel: false);
+			snapshotLevel: false);
 
 		var effect = new Effect(
 			effectData,
@@ -616,7 +616,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					])),
 				true,
 				PeriodInhibitionRemovedPolicy.NeverReset),
-			snapshopLevel: false);
+			snapshotLevel: false);
 
 		var effect = new Effect(
 			effectData,
@@ -673,7 +673,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					])),
 				true,
 				PeriodInhibitionRemovedPolicy.NeverReset),
-			snapshopLevel: false);
+			snapshotLevel: false);
 
 		var effect = new Effect(
 			effectData,
@@ -3500,6 +3500,48 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		owner.EffectsManager.ApplyEffect(debuffEffect);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Periodic", null)]
+	public void Set_by_caller_magnitude_updates_periodic_application_value()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var setByCallerTag = Tag.RequestTag(_tagsManager, "tag");
+
+		var effectData = new EffectData(
+			"Level Up",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.SetByCaller,
+						setByCallerFloat: new SetByCallerFloat(setByCallerTag, false)))
+			],
+			periodicData: new PeriodicData(new ScalableFloat(1f), true, PeriodInhibitionRemovedPolicy.NeverReset),
+			snapshotLevel: false);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				new TestEntity(_tagsManager, _cuesManager),
+				owner));
+
+		effect.SetSetByCallerMagnitude(setByCallerTag, 1);
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [2, 2, 0, 0]);
+
+		effect.SetSetByCallerMagnitude(setByCallerTag, 2);
+
+		target.EffectsManager.UpdateEffects(1f);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [4, 4, 0, 0]);
 	}
 
 	private sealed class DurationFromSourceAttributeCalculator : CustomModifierMagnitudeCalculator

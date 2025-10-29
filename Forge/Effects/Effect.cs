@@ -23,12 +23,17 @@ public class Effect(EffectData effectData, EffectOwnership ownership, int level 
 	public event Action<int>? OnLevelChanged;
 
 	/// <summary>
+	/// Event triggered when a <see cref="SetByCallerFloat"/> magnitude changes.
+	/// </summary>
+	public event Action<Tag, float>? OnSetByCallerFloatChanged;
+
+	/// <summary>
 	/// Gets the configuration data for this effect.
 	/// </summary>
 	public EffectData EffectData { get; } = effectData;
 
 	/// <summary>
-	/// Gets information about the owership and source of this effect.
+	/// Gets information about the ownership and source of this effect.
 	/// </summary>
 	public EffectOwnership Ownership { get; } = ownership;
 
@@ -68,7 +73,15 @@ public class Effect(EffectData effectData, EffectOwnership ownership, int level 
 	/// <param name="magnitude">The magnitude to be set for the given tag.</param>
 	public void SetSetByCallerMagnitude(Tag identifierTag, float magnitude)
 	{
+		if (DataTag.ContainsKey(identifierTag))
+		{
+			DataTag[identifierTag] = magnitude;
+			OnSetByCallerFloatChanged?.Invoke(identifierTag, magnitude);
+			return;
+		}
+
 		DataTag.Add(identifierTag, magnitude);
+		OnSetByCallerFloatChanged?.Invoke(identifierTag, magnitude);
 	}
 
 	internal static void Execute(in EffectEvaluatedData effectEvaluatedData)

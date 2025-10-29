@@ -54,12 +54,12 @@ public readonly record struct EffectData
 	public PeriodicData? PeriodicData { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether this effect snapshots the level at the momment of creation.
+	/// Gets a value indicating whether this effect snapshots the level at the moment of creation.
 	/// </summary>
-	public bool SnapshopLevel { get; }
+	public bool SnapshotLevel { get; }
 
 	/// <summary>
-	/// Gets the list of effect components that further customize this effect behaviour.
+	/// Gets the list of effect components that further customize this effect behavior.
 	/// </summary>
 	public IEffectComponent[] EffectComponents { get; }
 
@@ -86,10 +86,10 @@ public readonly record struct EffectData
 	/// <param name="modifiers">The list of modifiers for this effect.</param>
 	/// <param name="stackingData">The stacking data for this effect, if it's stackable.</param>
 	/// <param name="periodicData">The periodic data for this effect, if it's periodic.</param>
-	/// <param name="snapshopLevel">Whether or not this effect snapshots the level at the momment of creation.
+	/// <param name="snapshotLevel">Whether or not this effect snapshots the level at the moment of creation.
 	/// </param>
 	/// <param name="effectComponents">The list of effects components for this effect.</param>
-	/// <param name="requireModifierSuccessToTriggerCue">Wheter or not trigger cues only when modifiers are successfully
+	/// <param name="requireModifierSuccessToTriggerCue">Whether or not trigger cues only when modifiers are successfully
 	/// applied.</param>
 	/// <param name="suppressStackingCues">Whether or not to trigger cues when applying stacks.</param>
 	/// <param name="customExecutions">The list of custom executions for this effect.</param>
@@ -100,7 +100,7 @@ public readonly record struct EffectData
 		Modifier[]? modifiers = null,
 		StackingData? stackingData = null,
 		PeriodicData? periodicData = null,
-		bool snapshopLevel = true,
+		bool snapshotLevel = true,
 		IEffectComponent[]? effectComponents = null,
 		bool requireModifierSuccessToTriggerCue = false,
 		bool suppressStackingCues = false,
@@ -112,7 +112,7 @@ public readonly record struct EffectData
 		Modifiers = modifiers ?? [];
 		StackingData = stackingData;
 		PeriodicData = periodicData;
-		SnapshopLevel = snapshopLevel;
+		SnapshotLevel = snapshotLevel;
 		EffectComponents = effectComponents ?? [];
 		RequireModifierSuccessToTriggerCue = requireModifierSuccessToTriggerCue;
 		SuppressStackingCues = suppressStackingCues;
@@ -219,7 +219,7 @@ public readonly record struct EffectData
 			$"Effects set as {DurationType.Instant} and {MagnitudeCalculationType.AttributeBased} cannot be set as non Snapshot.");
 
 		Validation.Assert(
-			!(DurationData.DurationType == DurationType.Instant && !SnapshopLevel),
+			!(DurationData.DurationType == DurationType.Instant && !SnapshotLevel),
 			$"Effects set as {DurationType.Instant} cannot be set as non Snapshot for Level.");
 
 		Validation.Assert(

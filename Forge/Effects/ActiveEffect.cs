@@ -3,9 +3,11 @@
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Duration;
+using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Effects.Stacking;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Effects;
 
@@ -15,6 +17,8 @@ namespace Gamesmiths.Forge.Effects;
 internal sealed class ActiveEffect
 {
 	private const double Epsilon = 0.00001;
+
+	private readonly HashSet<Tag> _nonSnapshotSetByCallerTags;
 
 	private double _internalTime;
 
@@ -54,6 +58,27 @@ internal sealed class ActiveEffect
 		}
 
 		EffectEvaluatedData = new EffectEvaluatedData(effect, target, StackCount);
+
+		_nonSnapshotSetByCallerTags = [];
+
+		ModifierMagnitude? durationMagnitude = effect.EffectData.DurationData.DurationMagnitude;
+		if (durationMagnitude.HasValue
+			&& durationMagnitude.Value.MagnitudeCalculationType == MagnitudeCalculationType.SetByCaller
+			&& !durationMagnitude.Value.SetByCallerFloat!.Value.Snapshot)
+		{
+			_nonSnapshotSetByCallerTags.Add(
+				effect.EffectData.DurationData.DurationMagnitude!.Value.SetByCallerFloat!.Value.Tag);
+		}
+
+		for (var i = 0; i < EffectEvaluatedData.Effect.EffectData.Modifiers.Length; i++)
+		{
+			SetByCallerFloat? setByCallerFloat =
+				EffectEvaluatedData.Effect.EffectData.Modifiers[i].Magnitude.SetByCallerFloat;
+			if (setByCallerFloat.HasValue && !setByCallerFloat.Value.Snapshot)
+			{
+				_nonSnapshotSetByCallerTags.Add(setByCallerFloat.Value.Tag);
+			}
+		}
 	}
 
 	internal void Apply(bool reApplication = false, bool inhibited = false)
@@ -65,7 +90,7 @@ internal sealed class ActiveEffect
 			IsInhibited = inhibited;
 			RemainingDuration = EffectEvaluatedData.Duration;
 
-			if (!EffectData.SnapshopLevel)
+			if (!EffectData.SnapshotLevel)
 			{
 				Effect.OnLevelChanged += Effect_OnLevelChanged;
 			}
@@ -74,6 +99,8 @@ internal sealed class ActiveEffect
 			{
 				attribute.OnValueChanged += Attribute_OnValueChanged;
 			}
+
+			Effect.OnSetByCallerFloatChanged += Effect_OnSetByCallerFloatChanged;
 		}
 
 		if (EffectData.PeriodicData.HasValue)
@@ -111,10 +138,12 @@ internal sealed class ActiveEffect
 				attribute.OnValueChanged -= Attribute_OnValueChanged;
 			}
 
-			if (!EffectData.SnapshopLevel)
+			if (!EffectData.SnapshotLevel)
 			{
 				Effect.OnLevelChanged -= Effect_OnLevelChanged;
 			}
+
+			Effect.OnSetByCallerFloatChanged -= Effect_OnSetByCallerFloatChanged;
 		}
 	}
 
@@ -481,6 +510,16 @@ internal sealed class ActiveEffect
 
 	private void Effect_OnLevelChanged(int obj)
 	{
+		UpdateEffectEvaluation();
+	}
+
+	private void Effect_OnSetByCallerFloatChanged(Tag identifierTag, float magnitude)
+	{
+		if (!_nonSnapshotSetByCallerTags.Contains(identifierTag))
+		{
+			return;
+		}
+
 		UpdateEffectEvaluation();
 	}
 }
