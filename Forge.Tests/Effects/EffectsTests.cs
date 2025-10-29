@@ -65,7 +65,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 	[InlineData("TestAttributeSet.Attribute90", "TestAttributeSet.Attribute5", -1, 5, 2, 82)]
 	[InlineData("TestAttributeSet.Attribute3", "TestAttributeSet.Attribute5", 1.5f, 2.2f, 3.5f, 17)]
 	[InlineData("Invalid.Attribute", "Invalid.Attribute", 2, 1, 2, 0)]
-	[InlineData("TestAttributeSet.Attribute1", "Invalid.Attribute", 2, 1, 2, 1)]
+	[InlineData("TestAttributeSet.Attribute1", "Invalid.Attribute", 2, 1, 2, 5)]
 	[InlineData("Invalid.Attribute", "TestAttributeSet.Attribute1", 2, 1, 2, 0)]
 	public void Attribute_based_effect_modifies_values_based_on_source_attribute(
 		string targetAttribute,
@@ -111,7 +111,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 	[InlineData("TestAttributeSet.Attribute3", "TestAttributeSet.Attribute5", 1.5f, 2.2f, 3.5f, 4)]
 	[InlineData("TestAttributeSet.Attribute90", "TestAttributeSet.Attribute5", -1, 5, 2, 94)]
 	[InlineData("Invalid.Attribute", "Invalid.Attribute", 2, 1, 2, 0)]
-	[InlineData("TestAttributeSet.Attribute1", "Invalid.Attribute", 2, 1, 2, 1)]
+	[InlineData("TestAttributeSet.Attribute1", "Invalid.Attribute", 2, 1, 2, 5)]
 	[InlineData("Invalid.Attribute", "TestAttributeSet.Attribute1", 2, 1, 2, 0)]
 	public void Attribute_based_effect_with_curve_modifies_values_based_on_curve_lookup(
 		string targetAttribute,
@@ -1237,17 +1237,17 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		1f,
 		2f,
 		1f,
-		1,
+		5,
 		1f,
-		1,
+		9,
 		2f,
 		0,
 		1f,
-		1,
+		13,
 		0,
-		1,
+		13,
 		1f,
-		1)]
+		17)]
 	[InlineData(
 		"Invalid.Attribute",
 		"TestAttributeSet.Attribute2",
@@ -1421,12 +1421,12 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		2f,
 		1f,
 		2f,
-		new int[] { 1, 1, 0, 0 },
+		new int[] { 5, 1, 4, 0 },
 		2f,
 		0,
-		new int[] { 1, 1, 0, 0 },
+		new int[] { 5, 1, 4, 0 },
 		0,
-		new int[] { 1, 1, 0, 0 })]
+		new int[] { 5, 1, 4, 0 })]
 	[InlineData(
 		"Invalid.Attribute",
 		"TestAttributeSet.Attribute2",

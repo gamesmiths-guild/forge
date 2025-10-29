@@ -70,46 +70,44 @@ public readonly record struct AttributeBasedFloat(
 				break;
 		}
 
-		if (attribute is null)
-		{
-			return 0f;
-		}
-
 		float magnitude = 0;
 
-		switch (AttributeCalculationType)
+		if (attribute is not null)
 		{
-			case AttributeCalculationType.CurrentValue:
-				magnitude = attribute.CurrentValue;
-				break;
+			switch (AttributeCalculationType)
+			{
+				case AttributeCalculationType.CurrentValue:
+					magnitude = attribute.CurrentValue;
+					break;
 
-			case AttributeCalculationType.BaseValue:
-				magnitude = attribute.BaseValue;
-				break;
+				case AttributeCalculationType.BaseValue:
+					magnitude = attribute.BaseValue;
+					break;
 
-			case AttributeCalculationType.Modifier:
-				magnitude = attribute.Modifier;
-				break;
+				case AttributeCalculationType.Modifier:
+					magnitude = attribute.Modifier;
+					break;
 
-			case AttributeCalculationType.Overflow:
-				magnitude = attribute.Overflow;
-				break;
+				case AttributeCalculationType.Overflow:
+					magnitude = attribute.Overflow;
+					break;
 
-			case AttributeCalculationType.ValidModifier:
-				magnitude = attribute.ValidModifier;
-				break;
+				case AttributeCalculationType.ValidModifier:
+					magnitude = attribute.ValidModifier;
+					break;
 
-			case AttributeCalculationType.Min:
-				magnitude = attribute.Min;
-				break;
+				case AttributeCalculationType.Min:
+					magnitude = attribute.Min;
+					break;
 
-			case AttributeCalculationType.Max:
-				magnitude = attribute.Max;
-				break;
+				case AttributeCalculationType.Max:
+					magnitude = attribute.Max;
+					break;
 
-			case AttributeCalculationType.MagnitudeEvaluatedUpToChannel:
-				magnitude = attribute.CalculateMagnitudeUpToChannel(FinalChannel);
-				break;
+				case AttributeCalculationType.MagnitudeEvaluatedUpToChannel:
+					magnitude = attribute.CalculateMagnitudeUpToChannel(FinalChannel);
+					break;
+			}
 		}
 
 		var finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + magnitude))
