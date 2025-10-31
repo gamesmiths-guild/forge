@@ -96,10 +96,15 @@ public readonly record struct ModifierMagnitude
 	/// </summary>
 	/// <param name="effect">The effect to calculate the magnitude for.</param>
 	/// <param name="target">The target which might be used for the magnitude calculation.</param>
-	/// <param name="level">An optional custom level used for magnitude calculation. Will use the effect's level if not
-	/// provided.</param>
+	/// <param name="level">The level to use in the magnitude calculation.</param>
+	/// <param name="snapshotAttributes">The dictionary containing already captured snapshot attributes for this effect.
+	/// </param>
 	/// <returns>The evaluated magnitude.</returns>
-	public readonly float GetMagnitude(Effect effect, IForgeEntity target, int? level = null)
+	public readonly float GetMagnitude(
+		Effect effect,
+		IForgeEntity target,
+		int level,
+		Dictionary<AttributeSnapshotKey, float> snapshotAttributes)
 	{
 		switch (MagnitudeCalculationType)
 		{
@@ -107,19 +112,19 @@ public readonly record struct ModifierMagnitude
 				Validation.Assert(
 					ScalableFloatMagnitude.HasValue,
 					$"{nameof(ScalableFloatMagnitude)} should always have a value at this point.");
-				return ScalableFloatMagnitude.Value.GetValue(level ?? effect.Level);
+				return ScalableFloatMagnitude.Value.GetValue(level);
 
 			case MagnitudeCalculationType.AttributeBased:
 				Validation.Assert(
 					AttributeBasedFloat.HasValue,
 					$"{nameof(AttributeBasedFloat)} should always have a value at this point.");
-				return AttributeBasedFloat.Value.CalculateMagnitude(effect, target, level ?? effect.Level);
+				return AttributeBasedFloat.Value.CalculateMagnitude(effect, target, level, snapshotAttributes);
 
 			case MagnitudeCalculationType.CustomCalculatorClass:
 				Validation.Assert(
 					CustomCalculationBasedFloat.HasValue,
 					$"{nameof(CustomCalculationBasedFloat)} should always have a value at this point.");
-				return CustomCalculationBasedFloat.Value.CalculateMagnitude(effect, target, level ?? effect.Level);
+				return CustomCalculationBasedFloat.Value.CalculateMagnitude(effect, target, level);
 
 			case MagnitudeCalculationType.SetByCaller:
 				Validation.Assert(

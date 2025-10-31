@@ -3544,6 +3544,143 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [4, 4, 0, 0]);
 	}
 
+	[Fact]
+	[Trait("Periodic", null)]
+	public void Snapshot_attribute_based_magnitude_does_not_update_modifiers_when_attribute_updates()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var effectData = new EffectData(
+			"Buff",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Source, true),
+							AttributeCalculationType.BaseValue,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			],
+			snapshotLevel: false);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(owner, new TestEntity(_tagsManager, _cuesManager)));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [3, 1, 2, 0]);
+
+		var effectData2 = new EffectData(
+			"Buff2",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute2",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(2)))
+			]);
+
+		var effect2 = new Effect(
+			effectData2,
+			new EffectOwnership(owner, new TestEntity(_tagsManager, _cuesManager)));
+
+		owner.EffectsManager.ApplyEffect(effect2);
+		effect.LevelUp();
+
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute2", [4, 4, 0, 0]);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [3, 1, 2, 0]);
+
+		owner.EffectsManager.ApplyEffect(effect2);
+		effect.LevelUp();
+
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute2", [6, 6, 0, 0]);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [3, 1, 2, 0]);
+	}
+
+	[Fact]
+	[Trait("Periodic", null)]
+	public void Only_one_modifier_update_modifiers_when_attribute_updates()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var effectData = new EffectData(
+			"Buff",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Source, true),
+							AttributeCalculationType.BaseValue,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0)))),
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Source, false),
+							AttributeCalculationType.BaseValue,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			],
+			snapshotLevel: false);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(owner, new TestEntity(_tagsManager, _cuesManager)));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [5, 1, 4, 0]);
+
+		var effectData2 = new EffectData(
+			"Buff2",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute2",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(2)))
+			]);
+
+		var effect2 = new Effect(
+			effectData2,
+			new EffectOwnership(owner, new TestEntity(_tagsManager, _cuesManager)));
+
+		owner.EffectsManager.ApplyEffect(effect2);
+
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute2", [4, 4, 0, 0]);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [7, 1, 6, 0]);
+
+		owner.EffectsManager.ApplyEffect(effect2);
+
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute2", [6, 6, 0, 0]);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [9, 1, 8, 0]);
+	}
+
 	private sealed class DurationFromSourceAttributeCalculator : CustomModifierMagnitudeCalculator
 	{
 		private readonly AttributeCaptureDefinition _sourceAttr;

@@ -18,15 +18,19 @@ namespace Gamesmiths.Forge.Effects;
 /// <remarks>
 /// Optimizes performance by avoiding repeated complex calculations and serves as data for event arguments.
 /// </remarks>
-public readonly record struct EffectEvaluatedData
+public sealed class EffectEvaluatedData
 {
 	private const string InvalidPeriodicDataException = "Evaluated period must be greater than zero. A non-positive" +
 		" value would cause the effect to loop indefinitely.";
 
+	private readonly Dictionary<AttributeSnapshotKey, float> _snapshotAttributes;
+
+	private readonly int _snapshotLevel;
+
 	/// <summary>
 	/// Gets the effect for this evaluated data.
 	/// </summary>
-	public Effect Effect { get; }
+	public Effect Effect { get; private set; }
 
 	/// <summary>
 	/// Gets the target used for the evaluation of this effect.
@@ -36,27 +40,27 @@ public readonly record struct EffectEvaluatedData
 	/// <summary>
 	/// Gets the stack count of the effect at the moment of the evaluation.
 	/// </summary>
-	public int Stack { get; }
+	public int Stack { get; private set; }
 
 	/// <summary>
 	/// Gets the level of the effect at the moment of the evaluation.
 	/// </summary>
-	public int Level { get; }
+	public int Level { get; private set; }
 
 	/// <summary>
 	/// Gets the duration of the effect at the moment of the evaluation.
 	/// </summary>
-	public float Duration { get; }
+	public float Duration { get; private set; }
 
 	/// <summary>
 	/// Gets the period of the effect at the moment of the evaluation.
 	/// </summary>
-	public float Period { get; }
+	public float Period { get; private set; }
 
 	/// <summary>
 	/// Gets the evaluated data for the modifiers of the effect.
 	/// </summary>
-	public ModifierEvaluatedData[] ModifiersEvaluatedData { get; }
+	public ModifierEvaluatedData[] ModifiersEvaluatedData { get; private set; }
 
 	/// <summary>
 	/// Gets an array of the attributes to be captured by an active effect.
@@ -69,7 +73,7 @@ public readonly record struct EffectEvaluatedData
 	public Dictionary<StringKey, object>? CustomCueParameters { get; }
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="EffectEvaluatedData"/> struct.
+	/// Initializes a new instance of the <see cref="EffectEvaluatedData"/> class.
 	/// </summary>
 	/// <param name="effect">The target effect of this evaluated data.</param>
 	/// <param name="target">The target of this evaluated data.</param>
@@ -85,6 +89,13 @@ public readonly record struct EffectEvaluatedData
 		Target = target;
 		Stack = stack;
 		Level = level ?? effect.Level;
+
+		_snapshotAttributes = [];
+
+		if (effect.EffectData.SnapshotLevel)
+		{
+			_snapshotLevel = Level;
+		}
 
 		Duration = EvaluateDuration(effect.EffectData.DurationData);
 		Period = EvaluatePeriod(effect.EffectData.PeriodicData);
@@ -103,14 +114,32 @@ public readonly record struct EffectEvaluatedData
 		AttributesToCapture = EvaluateAttributesToCapture();
 	}
 
-	private float EvaluateDuration(DurationData durationData)
+	internal void ReEvaluate(Effect effect, int stack = 1, int? level = null)
+	{
+		Effect = effect;
+		Stack = stack;
+		Level = level ?? effect.Level;
+
+		if (level is null && effect.EffectData.SnapshotLevel)
+		{
+			Level = _snapshotLevel;
+		}
+
+		Duration = EvaluateDuration(effect.EffectData.DurationData);
+		Period = EvaluatePeriod(effect.EffectData.PeriodicData);
+
+		// Modifiers should be evaluated after duration and period because it requires those already evaluated.
+		ModifiersEvaluatedData = EvaluateModifiers();
+	}
+
+	internal float EvaluateDuration(DurationData durationData)
 	{
 		if (!durationData.DurationMagnitude.HasValue)
 		{
 			return 0;
 		}
 
-		return durationData.DurationMagnitude.Value.GetMagnitude(Effect, Target, Level);
+		return durationData.DurationMagnitude.Value.GetMagnitude(Effect, Target, Level, _snapshotAttributes);
 	}
 
 	private float EvaluatePeriod(PeriodicData? periodicData)
@@ -127,7 +156,7 @@ public readonly record struct EffectEvaluatedData
 			throw new ArgumentOutOfRangeException(nameof(periodicData), InvalidPeriodicDataException);
 		}
 
-		return periodicData.Value.Period.GetValue(Level);
+		return evaluatedDuration;
 	}
 
 	private ModifierEvaluatedData[] EvaluateModifiers()
@@ -142,11 +171,14 @@ public readonly record struct EffectEvaluatedData
 				continue;
 			}
 
+			var baseMagnitude = modifier.Magnitude.GetMagnitude(Effect, Target, Level, _snapshotAttributes);
+			var finalMagnitude = ApplyStackPolicy(baseMagnitude);
+
 			modifiersEvaluatedData.Add(
 				new ModifierEvaluatedData(
 					Target.Attributes[modifier.Attribute],
 					modifier.Operation,
-					EvaluateModifierMagnitude(modifier.Magnitude),
+					finalMagnitude,
 					modifier.Channel));
 		}
 
@@ -204,16 +236,16 @@ public readonly record struct EffectEvaluatedData
 		return [.. attributesToCapture];
 	}
 
-	private float EvaluateModifierMagnitude(ModifierMagnitude modifierMagnitude)
+	private float ApplyStackPolicy(float baseMagnitude)
 	{
-		float stackMultiplier = Stack;
+		var stackMultiplier = Stack;
 		if (Effect.EffectData.StackingData.HasValue &&
 			Effect.EffectData.StackingData.Value.MagnitudePolicy == StackMagnitudePolicy.DontStack)
 		{
 			stackMultiplier = 1;
 		}
 
-		return modifierMagnitude.GetMagnitude(Effect, Target, Level) * stackMultiplier;
+		return baseMagnitude * stackMultiplier;
 	}
 
 	private bool IsModifierSnapshot(ModifierMagnitude modifierMagnitude)

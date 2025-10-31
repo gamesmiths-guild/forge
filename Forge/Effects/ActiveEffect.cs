@@ -24,7 +24,7 @@ internal sealed class ActiveEffect
 
 	internal ActiveEffectHandle Handle { get; }
 
-	internal EffectEvaluatedData EffectEvaluatedData { get; private set; }
+	internal EffectEvaluatedData EffectEvaluatedData { get; }
 
 	internal bool IsInhibited { get; private set; }
 
@@ -50,7 +50,7 @@ internal sealed class ActiveEffect
 
 		if (effect.EffectData.StackingData.HasValue)
 		{
-			StackCount = effect.EffectData.StackingData.Value.InitialStack.GetValue(EffectEvaluatedData.Level);
+			StackCount = effect.EffectData.StackingData.Value.InitialStack.GetValue(effect.Level);
 		}
 		else
 		{
@@ -412,11 +412,7 @@ internal sealed class ActiveEffect
 	{
 		Unapply(true);
 
-		EffectEvaluatedData = new EffectEvaluatedData(
-			effect,
-			EffectEvaluatedData.Target,
-			StackCount,
-			level);
+		EffectEvaluatedData.ReEvaluate(effect, StackCount, level);
 
 		Apply(reApplication: true);
 
@@ -480,10 +476,7 @@ internal sealed class ActiveEffect
 			return;
 		}
 
-		var updatedDuration = EffectData.DurationData.DurationMagnitude.Value.GetMagnitude(
-				Effect,
-				EffectEvaluatedData.Target,
-				Effect.Level);
+		var updatedDuration = EffectEvaluatedData.EvaluateDuration(EffectData.DurationData);
 
 		if (EffectEvaluatedData.Duration > updatedDuration + Epsilon
 			|| EffectEvaluatedData.Duration < updatedDuration - Epsilon)

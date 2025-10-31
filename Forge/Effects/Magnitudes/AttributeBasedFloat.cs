@@ -42,72 +42,26 @@ public readonly record struct AttributeBasedFloat(
 	/// <param name="effect">The source effect that will be used to capture source attributes from.</param>
 	/// <param name="target">The target entity that will be used to capture source attributes from.</param>
 	/// <param name="level">Level to use in the magnitude calculation.</param>
+	/// <param name="snapshotAttributes">The dictionary containing already captured snapshot attributes for this effect.
+	/// </param>
 	/// <returns>The calculated magnitude for this <see cref="AttributeBasedFloat"/>.</returns>
-	public readonly float CalculateMagnitude(Effect effect, IForgeEntity target, int level)
+	public readonly float CalculateMagnitude(
+		Effect effect,
+		IForgeEntity target,
+		int level,
+		Dictionary<AttributeSnapshotKey, float> snapshotAttributes)
 	{
-		EntityAttribute? attribute = null;
+		float magnitude = 0;
 
 		switch (BackingAttribute.Source)
 		{
 			case AttributeCaptureSource.Source:
-
-				if (effect.Ownership.Owner?.Attributes.ContainsAttribute(BackingAttribute.Attribute) != true)
-				{
-					break;
-				}
-
-				attribute = effect.Ownership.Owner.Attributes[BackingAttribute.Attribute];
+				magnitude = CaptureAttributeSnapshotAware(effect.Ownership.Owner, snapshotAttributes);
 				break;
 
 			case AttributeCaptureSource.Target:
-
-				if (!target.Attributes.ContainsAttribute(BackingAttribute.Attribute))
-				{
-					break;
-				}
-
-				attribute = target.Attributes[BackingAttribute.Attribute];
+				magnitude = CaptureAttributeSnapshotAware(target, snapshotAttributes);
 				break;
-		}
-
-		float magnitude = 0;
-
-		if (attribute is not null)
-		{
-			switch (AttributeCalculationType)
-			{
-				case AttributeCalculationType.CurrentValue:
-					magnitude = attribute.CurrentValue;
-					break;
-
-				case AttributeCalculationType.BaseValue:
-					magnitude = attribute.BaseValue;
-					break;
-
-				case AttributeCalculationType.Modifier:
-					magnitude = attribute.Modifier;
-					break;
-
-				case AttributeCalculationType.Overflow:
-					magnitude = attribute.Overflow;
-					break;
-
-				case AttributeCalculationType.ValidModifier:
-					magnitude = attribute.ValidModifier;
-					break;
-
-				case AttributeCalculationType.Min:
-					magnitude = attribute.Min;
-					break;
-
-				case AttributeCalculationType.Max:
-					magnitude = attribute.Max;
-					break;
-
-				case AttributeCalculationType.MagnitudeEvaluatedUpToChannel:
-					magnitude = attribute.CalculateMagnitudeUpToChannel(FinalChannel);
-					break;
-			}
 		}
 
 		var finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + magnitude))
@@ -119,5 +73,53 @@ public readonly record struct AttributeBasedFloat(
 		}
 
 		return finalMagnitude;
+	}
+
+	private float CaptureAttributeSnapshotAware(
+		IForgeEntity? sourceEntity,
+		Dictionary<AttributeSnapshotKey, float> snapshotAttributes)
+	{
+		if (sourceEntity?.Attributes.ContainsAttribute(BackingAttribute.Attribute) != true)
+		{
+			return 0f;
+		}
+
+		EntityAttribute attribute = sourceEntity.Attributes[BackingAttribute.Attribute];
+
+		if (!BackingAttribute.Snapshot)
+		{
+			return CaptureNow(attribute);
+		}
+
+		var key = new AttributeSnapshotKey(
+			BackingAttribute.Attribute,
+			BackingAttribute.Source,
+			AttributeCalculationType,
+			FinalChannel);
+
+		if (snapshotAttributes.TryGetValue(key, out var cachedValue))
+		{
+			return cachedValue;
+		}
+
+		var currentValue = CaptureNow(attribute);
+		snapshotAttributes[key] = currentValue;
+		return currentValue;
+	}
+
+	private float CaptureNow(EntityAttribute attribute)
+	{
+		return AttributeCalculationType switch
+		{
+			AttributeCalculationType.CurrentValue => attribute.CurrentValue,
+			AttributeCalculationType.BaseValue => attribute.BaseValue,
+			AttributeCalculationType.Modifier => attribute.Modifier,
+			AttributeCalculationType.Overflow => attribute.Overflow,
+			AttributeCalculationType.ValidModifier => attribute.ValidModifier,
+			AttributeCalculationType.Min => attribute.Min,
+			AttributeCalculationType.Max => attribute.Max,
+			AttributeCalculationType.MagnitudeEvaluatedUpToChannel => attribute.CalculateMagnitudeUpToChannel(FinalChannel),
+			_ => 0f,
+		};
 	}
 }

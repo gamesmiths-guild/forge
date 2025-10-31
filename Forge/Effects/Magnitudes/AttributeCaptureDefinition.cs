@@ -7,7 +7,7 @@ using Gamesmiths.Forge.Core;
 namespace Gamesmiths.Forge.Effects.Magnitudes;
 
 /// <summary>
-/// Set of data that definies how an attribute is going to be captured.
+/// Set of data that defines how an attribute is going to be captured.
 /// </summary>
 /// <param name="Attribute">Which attribute to capture.</param>
 /// <param name="Source">From what target to capture the attribute from.</param>
