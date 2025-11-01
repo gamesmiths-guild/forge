@@ -3681,6 +3681,49 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [9, 1, 8, 0]);
 	}
 
+	[Fact]
+	[Trait("Periodic", null)]
+	public void Set_by_caller_magnitude_does_not_update_periodic_application_value()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var setByCallerTag = Tag.RequestTag(_tagsManager, "tag");
+
+		var effectData = new EffectData(
+			"Level Up",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.SetByCaller,
+						setByCallerFloat: new SetByCallerFloat(setByCallerTag, true)))
+			],
+			periodicData: new PeriodicData(new ScalableFloat(1f), true, PeriodInhibitionRemovedPolicy.NeverReset),
+			snapshotLevel: false);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				new TestEntity(_tagsManager, _cuesManager),
+				owner));
+
+		effect.SetSetByCallerMagnitude(setByCallerTag, 1);
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [2, 2, 0, 0]);
+
+		effect.SetSetByCallerMagnitude(setByCallerTag, 2);
+		effect.LevelUp();
+
+		target.EffectsManager.UpdateEffects(1f);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [3, 3, 0, 0]);
+	}
+
 	private sealed class DurationFromSourceAttributeCalculator : CustomModifierMagnitudeCalculator
 	{
 		private readonly AttributeCaptureDefinition _sourceAttr;

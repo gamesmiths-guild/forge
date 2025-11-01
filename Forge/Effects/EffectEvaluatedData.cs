@@ -9,6 +9,7 @@ using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Effects.Stacking;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Effects;
 
@@ -23,7 +24,9 @@ public sealed class EffectEvaluatedData
 	private const string InvalidPeriodicDataException = "Evaluated period must be greater than zero. A non-positive" +
 		" value would cause the effect to loop indefinitely.";
 
-	private readonly Dictionary<AttributeSnapshotKey, float> _snapshotAttributes;
+	private readonly Dictionary<AttributeSnapshotKey, float> _snapshotAttributes = [];
+
+	private readonly Dictionary<Tag, float> _snapshotSetByCallers = [];
 
 	private readonly int _snapshotLevel;
 
@@ -90,8 +93,6 @@ public sealed class EffectEvaluatedData
 		Stack = stack;
 		Level = level ?? effect.Level;
 
-		_snapshotAttributes = [];
-
 		if (effect.EffectData.SnapshotLevel)
 		{
 			_snapshotLevel = Level;
@@ -139,7 +140,8 @@ public sealed class EffectEvaluatedData
 			return 0;
 		}
 
-		return durationData.DurationMagnitude.Value.GetMagnitude(Effect, Target, Level, _snapshotAttributes);
+		return durationData.DurationMagnitude.Value.GetMagnitude(
+			Effect, Target, Level, _snapshotAttributes, _snapshotSetByCallers);
 	}
 
 	private float EvaluatePeriod(PeriodicData? periodicData)
@@ -171,7 +173,8 @@ public sealed class EffectEvaluatedData
 				continue;
 			}
 
-			var baseMagnitude = modifier.Magnitude.GetMagnitude(Effect, Target, Level, _snapshotAttributes);
+			var baseMagnitude = modifier.Magnitude.GetMagnitude(
+				Effect, Target, Level, _snapshotAttributes, _snapshotSetByCallers);
 			var finalMagnitude = ApplyStackPolicy(baseMagnitude);
 
 			modifiersEvaluatedData.Add(
@@ -223,7 +226,9 @@ public sealed class EffectEvaluatedData
 					IForgeEntity? attributeSource = attributeCaptureDefinition.Source
 						== AttributeCaptureSource.Source ? Effect.Ownership.Source : Target;
 
-					if (!attributeCaptureDefinition.TryGetAttribute(attributeSource, out EntityAttribute? attributeToCapture))
+					if (!attributeCaptureDefinition.TryGetAttribute(
+							attributeSource,
+							out EntityAttribute? attributeToCapture))
 					{
 						continue;
 					}

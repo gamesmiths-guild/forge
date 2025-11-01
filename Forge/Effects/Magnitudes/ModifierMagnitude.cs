@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Effects.Magnitudes;
 
@@ -99,12 +100,15 @@ public readonly record struct ModifierMagnitude
 	/// <param name="level">The level to use in the magnitude calculation.</param>
 	/// <param name="snapshotAttributes">The dictionary containing already captured snapshot attributes for this effect.
 	/// </param>
+	/// <param name="snapshotSetByCallerTags">The dictionary containing already captured snapshot SetByCaller for this
+	/// effect.</param>
 	/// <returns>The evaluated magnitude.</returns>
 	public readonly float GetMagnitude(
 		Effect effect,
 		IForgeEntity target,
 		int level,
-		Dictionary<AttributeSnapshotKey, float> snapshotAttributes)
+		Dictionary<AttributeSnapshotKey, float> snapshotAttributes,
+		Dictionary<Tag, float> snapshotSetByCallerTags)
 	{
 		switch (MagnitudeCalculationType)
 		{
@@ -130,6 +134,17 @@ public readonly record struct ModifierMagnitude
 				Validation.Assert(
 					SetByCallerFloat.HasValue,
 					$"{nameof(SetByCallerFloat)} should always have a value at this point.");
+
+				if (SetByCallerFloat.Value.Snapshot)
+				{
+					if (snapshotSetByCallerTags.TryGetValue(SetByCallerFloat.Value.Tag, out var snapshotValue))
+					{
+						return snapshotValue;
+					}
+
+					snapshotSetByCallerTags.Add(SetByCallerFloat.Value.Tag, effect.DataTag[SetByCallerFloat.Value.Tag]);
+				}
+
 				return effect.DataTag[SetByCallerFloat.Value.Tag];
 
 			default:

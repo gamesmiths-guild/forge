@@ -498,11 +498,21 @@ internal sealed class ActiveEffect
 
 	private void Attribute_OnValueChanged(EntityAttribute attribute, int change)
 	{
+		if (!EffectEvaluatedData.AttributesToCapture.Contains(attribute))
+		{
+			return;
+		}
+
 		UpdateEffectEvaluation();
 	}
 
-	private void Effect_OnLevelChanged(int obj)
+	private void Effect_OnLevelChanged(int newLevel)
 	{
+		if (EffectData.SnapshotLevel)
+		{
+			return;
+		}
+
 		UpdateEffectEvaluation();
 	}
 
