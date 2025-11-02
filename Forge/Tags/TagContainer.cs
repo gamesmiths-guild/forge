@@ -12,7 +12,7 @@ using Gamesmiths.Forge.Core;
 namespace Gamesmiths.Forge.Tags;
 
 /// <summary>
-/// A <see cref="TagContainer"/> represets a collection of <see cref="Tag"/>s, containing tags added
+/// A <see cref="TagContainer"/> represents a collection of <see cref="Tag"/>s, containing tags added
 /// explicitly and implicitly through their parent-child tag hierarchy.
 /// </summary>
 public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
@@ -117,7 +117,7 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 	/// </summary>
 	/// <param name="tagsManager">The manager responsible for tag lookup and net index handling.</param>
 	/// <param name="container">The <see cref="TagContainer"/> to be serialized.</param>
-	/// <param name="serializedContainerStream">The serialized stream for this caontainer.</param>
+	/// <param name="serializedContainerStream">The serialized stream for this container.</param>
 	/// <returns><see langword="true"/> if successfully serialized; <see langword="false"/> otherwise.</returns>
 	/// <exception cref="SerializationException">Throws if there are more tags than the configured max size.</exception>
 	public static bool NetSerialize(
@@ -147,7 +147,7 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 		// Containers at this point should always have a designated manager.
 		Validation.Assert(
 			container.TagsManager is not null,
-			$"Container isn't properly registred in a {typeof(TagsManager)}.");
+			$"Container isn't properly registered in a {typeof(TagsManager)}.");
 
 		if (tagsManager != container.TagsManager)
 		{
@@ -170,7 +170,7 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 		{
 			Tag.NetSerialize(tagsManager, tag, out var index);
 
-			// Read net index from buffer. This is just a practical example, use a BitStream reader here isntead.
+			// Read net index from buffer. This is just a practical example, use a BitStream reader here instead.
 			var netIndex = new ushort[] { index };
 			var netIndexStream = new byte[2];
 			Buffer.BlockCopy(netIndex, 0, netIndexStream, 0, 2);

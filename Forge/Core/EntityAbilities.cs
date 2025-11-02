@@ -9,11 +9,17 @@ namespace Gamesmiths.Forge.Core;
 /// <summary>
 /// Manager for handling an entity's abilities.
 /// </summary>
-public class EntityAbilities
+/// <param name="owner">The owner of this manager.</param>
+public class EntityAbilities(IForgeEntity owner)
 {
 	private readonly Dictionary<Ability, List<ActiveEffectHandle>?> _grantSources = [];
 
 	private readonly Dictionary<Ability, List<ActiveEffectHandle>?> _inhibitSources = [];
+
+	/// <summary>
+	/// Gets the owner of this effects manager.
+	/// </summary>
+	public IForgeEntity Owner { get; } = owner;
 
 	/// <summary>
 	/// Gets the set of abilities currently granted to the entity.
@@ -76,7 +82,7 @@ public class EntityAbilities
 			return;
 		}
 
-		var newAbility = new Ability(abilityData, abilityLevel, removalPolicy, inhibitionPolicy, sourceEntity);
+		var newAbility = new Ability(owner, abilityData, abilityLevel, removalPolicy, inhibitionPolicy, sourceEntity);
 		GrantedAbilities.Add(newAbility.Handle);
 	}
 
@@ -101,7 +107,7 @@ public class EntityAbilities
 
 				Validation.Assert(
 					inhibitSources is not null,
-					"InhibitAbilityBasedOnPolicy inhibitSources should not be null if grant grantSources are not null.");
+					"inhibitSources should not be null if grant grantSources are not null.");
 
 				// Ability already granted, just add the new source to the mapping.
 				grantSources.Add(sourceActiveEffectHandle);
@@ -128,7 +134,7 @@ public class EntityAbilities
 			return existingAbility.Handle;
 		}
 
-		var newAbility = new Ability(abilityData, abilityLevel, removalPolicy, inhibitionPolicy, sourceEntity);
+		var newAbility = new Ability(owner, abilityData, abilityLevel, removalPolicy, inhibitionPolicy, sourceEntity);
 		GrantedAbilities.Add(newAbility.Handle);
 		_grantSources[newAbility] = [sourceActiveEffectHandle];
 
@@ -180,7 +186,7 @@ public class EntityAbilities
 			case AbilityDeactivationPolicy.CancelImmediately:
 				if (abilityToRemove.IsActive)
 				{
-					abilityToRemove.Deactivate();
+					abilityToRemove.End();
 				}
 
 				RemoveAbility(abilityToRemove);
@@ -238,7 +244,7 @@ public class EntityAbilities
 			case AbilityDeactivationPolicy.CancelImmediately:
 				if (abilityToInhibit.IsActive)
 				{
-					abilityToInhibit.Deactivate();
+					abilityToInhibit.End();
 				}
 
 				InhibitAbility(abilityToInhibit);

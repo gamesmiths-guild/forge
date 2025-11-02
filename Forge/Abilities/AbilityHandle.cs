@@ -32,9 +32,11 @@ public class AbilityHandle
 	/// <summary>
 	/// Activates the ability associated with this handle.
 	/// </summary>
-	public void Activate()
+	/// <returns>Return <see langword="true"/> if the ability was successfully activated;
+	/// otherwise, <see langword="false"/>.</returns>
+	public bool Activate()
 	{
-		Ability?.Activate();
+		return Ability?.TryActivateAbility() ?? false;
 	}
 
 	/// <summary>
@@ -42,7 +44,15 @@ public class AbilityHandle
 	/// </summary>
 	public void End()
 	{
-		Ability?.Deactivate();
+		Ability?.End();
+	}
+
+	/// <summary>
+	/// Commits the ability cooldown and cost.
+	/// </summary>
+	public void CommitAbility()
+	{
+		Ability?.CommitAbility();
 	}
 
 	internal void Free()

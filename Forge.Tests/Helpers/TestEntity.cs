@@ -32,6 +32,6 @@ public class TestEntity : IForgeEntity
 		EffectsManager = new(this, cuesManager);
 		Attributes = new(PlayerAttributeSet);
 		Tags = new(originalTags);
-		Abilities = new();
+		Abilities = new(this);
 	}
 }

@@ -914,7 +914,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 			EffectsManager = new(this, cuesManager);
 			Attributes = new();
 			Tags = new(new TagContainer(tagsManager));
-			Abilities = new();
+			Abilities = new(this);
 		}
 	}
 }

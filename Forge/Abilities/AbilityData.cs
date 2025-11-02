@@ -37,7 +37,8 @@ namespace Gamesmiths.Forge.Abilities;
 /// <param name="SourceBlockedTags">Tags that, if present on the source, will block the ability from being activated.
 /// </param>
 /// <param name="TargetRequiredTags">Tags required on the target to activate the ability.</param>
-/// <param name="TargetBlockedTags">Tags that, if present on the target, will block the ability from being.</param>
+/// <param name="TargetBlockedTags">Tags that, if present on the target, will block the ability from being activated.
+/// </param>
 public readonly record struct AbilityData(
 	string Name,
 	EffectData? CostEffect = null,

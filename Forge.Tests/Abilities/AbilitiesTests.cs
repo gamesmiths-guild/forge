@@ -26,7 +26,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -52,7 +52,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -84,7 +84,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -122,7 +122,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -172,7 +172,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -210,7 +210,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -250,7 +250,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -291,7 +291,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -331,7 +331,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -371,7 +371,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -414,7 +414,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -460,7 +460,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -514,7 +514,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -556,7 +556,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -601,7 +601,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -643,7 +643,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -673,7 +673,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -702,7 +702,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 				new CurveKey(3, 5f), // Effect level 3 -> Ability level 5
 			]);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -726,7 +726,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		AbilityData abilityData = CreateAbiltyData(
+		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -781,7 +781,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		TestEntity entity2 = new(_tagsManager, _cuesManager);
 
 		// Create two different AbilityData instances (differ by name)
-		AbilityData abilityData1 = CreateAbiltyData(
+		AbilityData abilityData1 = CreateAbilityData(
 			"Fireball",
 			new ScalableFloat(3f),
 			"TestAttributeSet.Attribute90",
@@ -816,26 +816,72 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle2!.IsActive.Should().BeFalse();
 	}
 
-	private static AbilityData CreateAbiltyData(
+	[Fact]
+	[Trait("Cooldown", null)]
+	public void Ability_wont_activate_while_cooldown_is_active()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		var activated = abilityHandle!.Activate();
+
+		abilityHandle.IsActive.Should().BeTrue();
+		activated.Should().BeTrue();
+
+		abilityHandle.CommitAbility();
+
+		activated = abilityHandle!.Activate();
+
+		activated.Should().BeFalse();
+
+		entity.EffectsManager.UpdateEffects(2f);
+
+		activated = abilityHandle!.Activate();
+
+		activated.Should().BeFalse();
+
+		entity.EffectsManager.UpdateEffects(1f);
+
+		activated = abilityHandle!.Activate();
+
+		activated.Should().BeTrue();
+	}
+
+	private AbilityData CreateAbilityData(
 		string abilityName,
 		ScalableFloat cooldownDuration,
 		string costAttribute,
-		ScalableFloat costAmmount)
+		ScalableFloat costAmount)
 	{
-		var costEffectData = new EffectData(
+		var cooldownEffectData = new EffectData(
 			"Fireball Cooldown",
 			new DurationData(
 				DurationType.HasDuration,
-				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, cooldownDuration)));
+				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, cooldownDuration)),
+			effectComponents:
+			[
+				new ModifierTagsEffectComponent(new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["simple.tag"])))
+			]);
 
-		var cooldownEffectData = new EffectData(
+		var costEffectData = new EffectData(
 			"Fireball Cost",
 			new DurationData(DurationType.Instant),
 			[
 				new Modifier(
 					costAttribute,
 					ModifierOperation.FlatBonus,
-					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, costAmmount))
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, costAmount))
 			]);
 
 		return new(

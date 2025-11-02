@@ -766,7 +766,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			Attributes = new EntityAttributes(new PlayerAttributeSet());
 			Tags = new EntityTags(baseTags);
 			EffectsManager = new EffectsManager(this, cuesManager);
-			Abilities = new();
+			Abilities = new(this);
 		}
 	}
 

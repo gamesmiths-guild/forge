@@ -12,10 +12,7 @@ namespace Gamesmiths.Forge.Effects;
 /// A runtime version of a <see cref="Effects.EffectData"/> used to apply the effects with level and ownership
 /// information.
 /// </summary>
-/// <param name="effectData">The configuration data for this effect.</param>
-/// <param name="ownership">The ownership info for this effect.</param>
-/// <param name="level">The initial level for this effect.</param>
-public class Effect(EffectData effectData, EffectOwnership ownership, int level = 1)
+public class Effect
 {
 	/// <summary>
 	/// Event triggered when the level of this effect changes.
@@ -30,22 +27,54 @@ public class Effect(EffectData effectData, EffectOwnership ownership, int level 
 	/// <summary>
 	/// Gets the configuration data for this effect.
 	/// </summary>
-	public EffectData EffectData { get; } = effectData;
+	public EffectData EffectData { get; }
 
 	/// <summary>
 	/// Gets information about the ownership and source of this effect.
 	/// </summary>
-	public EffectOwnership Ownership { get; } = ownership;
+	public EffectOwnership Ownership { get; }
 
 	/// <summary>
 	/// Gets the current level o this effect.
 	/// </summary>
-	public int Level { get; private set; } = level;
+	public int Level { get; private set; }
 
 	/// <summary>
 	/// Gets the mapping for custom <see cref="SetByCallerFloat"/> magnitudes.
 	/// </summary>
 	public Dictionary<Tag, float> DataTag { get; } = [];
+
+	/// <summary>
+	/// Gets the cached granted tags from this effect, if any.
+	/// </summary>
+	public TagContainer? CachedGrantedTags { get; }
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="Effect"/> class.
+	/// </summary>
+	/// <param name="effectData">The configuration data for this effect.</param>
+	/// <param name="ownership">The ownership info for this effect.</param>
+	/// <param name="level">The initial level for this effect.</param>
+	public Effect(EffectData effectData, EffectOwnership ownership, int level = 1)
+	{
+		EffectData = effectData;
+		Ownership = ownership;
+		Level = level;
+
+		foreach (IEffectComponent component in EffectData.EffectComponents)
+		{
+			if (component is ModifierTagsEffectComponent modifierTagsComponent)
+			{
+				if (CachedGrantedTags is null)
+				{
+					CachedGrantedTags = new TagContainer(modifierTagsComponent.TagsToAdd);
+					continue;
+				}
+
+				CachedGrantedTags.AppendTags(modifierTagsComponent.TagsToAdd);
+			}
+		}
+	}
 
 	/// <summary>
 	/// Level up this effect by exactly one level.
