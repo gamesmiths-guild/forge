@@ -107,7 +107,7 @@ public readonly record struct AttributeBasedFloat(
 		return currentValue;
 	}
 
-	private float CaptureNow(EntityAttribute attribute)
+	private int CaptureNow(EntityAttribute attribute)
 	{
 		return AttributeCalculationType switch
 		{
@@ -118,8 +118,9 @@ public readonly record struct AttributeBasedFloat(
 			AttributeCalculationType.ValidModifier => attribute.ValidModifier,
 			AttributeCalculationType.Min => attribute.Min,
 			AttributeCalculationType.Max => attribute.Max,
-			AttributeCalculationType.MagnitudeEvaluatedUpToChannel => attribute.CalculateMagnitudeUpToChannel(FinalChannel),
-			_ => 0f,
+			AttributeCalculationType.MagnitudeEvaluatedUpToChannel =>
+				(int)attribute.CalculateMagnitudeUpToChannel(FinalChannel),
+			_ => 0,
 		};
 	}
 }

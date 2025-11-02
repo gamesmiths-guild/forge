@@ -2314,7 +2314,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		var owner = new TestEntity(_tagsManager, _cuesManager);
 		var target = new TestEntity(_tagsManager, _cuesManager);
 
-		var customCalculatorClass = new CustomTestExecutionClass();
+		var customCalculatorClass = new CustomTestExecutionClass(false);
 
 		var effectData = new EffectData(
 			"Test Effect",
@@ -2595,10 +2595,15 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			_exponent = exponent;
 		}
 
-		public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
+		public override float CalculateBaseMagnitude(
+			Effect effect,
+			IForgeEntity target,
+			EffectEvaluatedData effectEvaluatedData)
 		{
 			CustomCueParameters.Add("test", _exponent);
-			return (float)Math.Pow(CaptureAttributeMagnitude(Attribute1, effect, target), _exponent);
+			return (float)Math.Pow(
+				CaptureAttributeMagnitude(Attribute1, effect, target, effectEvaluatedData),
+				_exponent);
 		}
 	}
 }

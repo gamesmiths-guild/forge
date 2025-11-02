@@ -14,6 +14,8 @@ public abstract class CustomExecution : CustomCalculator
 	/// </summary>
 	/// <param name="effect">The effect to be used as context for the calculation.</param>
 	/// <param name="target">The target entity to be used as context for the calculation.</param>
-	/// <returns>An array of evaluated datas for each modified attribute.</returns>
-	public abstract ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target);
+	/// <param name="effectEvaluatedData">The evaluated data for the effect.</param>
+	/// <returns>An array of evaluated data for each modified attribute.</returns>
+	public abstract ModifierEvaluatedData[] EvaluateExecution(
+		Effect effect, IForgeEntity target, EffectEvaluatedData effectEvaluatedData);
 }

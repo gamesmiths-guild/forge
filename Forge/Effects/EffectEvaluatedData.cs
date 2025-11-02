@@ -14,7 +14,7 @@ using Gamesmiths.Forge.Tags;
 namespace Gamesmiths.Forge.Effects;
 
 /// <summary>
-/// Represents the precomputed static data for a effect that has been applied.
+/// Represents the precomputed data for a effect that has been applied.
 /// </summary>
 /// <remarks>
 /// Optimizes performance by avoiding repeated complex calculations and serves as data for event arguments.
@@ -23,10 +23,6 @@ public sealed class EffectEvaluatedData
 {
 	private const string InvalidPeriodicDataException = "Evaluated period must be greater than zero. A non-positive" +
 		" value would cause the effect to loop indefinitely.";
-
-	private readonly Dictionary<AttributeSnapshotKey, float> _snapshotAttributes = [];
-
-	private readonly Dictionary<Tag, float> _snapshotSetByCallers = [];
 
 	private readonly int _snapshotLevel;
 
@@ -74,6 +70,10 @@ public sealed class EffectEvaluatedData
 	/// Gets an array of custom cue parameters.
 	/// </summary>
 	public Dictionary<StringKey, object>? CustomCueParameters { get; }
+
+	internal Dictionary<AttributeSnapshotKey, float> SnapshotAttributes { get; } = [];
+
+	internal Dictionary<Tag, float> SnapshotSetByCallers { get; } = [];
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="EffectEvaluatedData"/> class.
@@ -140,8 +140,7 @@ public sealed class EffectEvaluatedData
 			return 0;
 		}
 
-		return durationData.DurationMagnitude.Value.GetMagnitude(
-			Effect, Target, Level, _snapshotAttributes, _snapshotSetByCallers);
+		return durationData.DurationMagnitude.Value.GetMagnitude(Effect, Target, Level, this);
 	}
 
 	private float EvaluatePeriod(PeriodicData? periodicData)
@@ -173,8 +172,7 @@ public sealed class EffectEvaluatedData
 				continue;
 			}
 
-			var baseMagnitude = modifier.Magnitude.GetMagnitude(
-				Effect, Target, Level, _snapshotAttributes, _snapshotSetByCallers);
+			var baseMagnitude = modifier.Magnitude.GetMagnitude(Effect, Target, Level, this);
 			var finalMagnitude = ApplyStackPolicy(baseMagnitude);
 
 			modifiersEvaluatedData.Add(
@@ -192,7 +190,7 @@ public sealed class EffectEvaluatedData
 				continue;
 			}
 
-			modifiersEvaluatedData.AddRange(execution.EvaluateExecution(Effect, Target));
+			modifiersEvaluatedData.AddRange(execution.EvaluateExecution(Effect, Target, this));
 		}
 
 		return [.. modifiersEvaluatedData];

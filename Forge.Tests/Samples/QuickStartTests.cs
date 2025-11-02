@@ -814,10 +814,13 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			AttributesToCapture.Add(SpeedAttribute);
 		}
 
-		public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
+		public override float CalculateBaseMagnitude(
+			Effect effect,
+			IForgeEntity target,
+			EffectEvaluatedData effectEvaluatedData)
 		{
-			int strength = CaptureAttributeMagnitude(StrengthAttribute, effect, target);
-			int speed = CaptureAttributeMagnitude(SpeedAttribute, effect, target);
+			int strength = CaptureAttributeMagnitude(StrengthAttribute, effect, target, effectEvaluatedData);
+			int speed = CaptureAttributeMagnitude(SpeedAttribute, effect, target, effectEvaluatedData);
 
 			// Base damage plus 50% of strength
 			float damage = (speed * 2) + (strength * 0.5f);
@@ -857,14 +860,29 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			AttributesToCapture.Add(SourceStrength);
 		}
 
-		public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target)
+		public override ModifierEvaluatedData[] EvaluateExecution(
+			Effect effect,
+			IForgeEntity target,
+			EffectEvaluatedData effectEvaluatedData)
 		{
 			var results = new List<ModifierEvaluatedData>();
 
 			// Get attribute values
-			int targetHealth = CaptureAttributeMagnitude(TargetHealth, effect, target);
-			int sourceHealth = CaptureAttributeMagnitude(SourceHealth, effect, effect.Ownership.Owner);
-			int sourceStrength = CaptureAttributeMagnitude(SourceStrength, effect, effect.Ownership.Owner);
+			int targetHealth = CaptureAttributeMagnitude(
+				TargetHealth,
+				effect,
+				target,
+				effectEvaluatedData);
+			int sourceHealth = CaptureAttributeMagnitude(
+				SourceHealth,
+				effect,
+				effect.Ownership.Owner,
+				effectEvaluatedData);
+			int sourceStrength = CaptureAttributeMagnitude(
+				SourceStrength,
+				effect,
+				effect.Ownership.Owner,
+				effectEvaluatedData);
 
 			// Calculate health drain amount based on source strength
 			float drainAmount = sourceStrength * 0.5f;

@@ -98,17 +98,13 @@ public readonly record struct ModifierMagnitude
 	/// <param name="effect">The effect to calculate the magnitude for.</param>
 	/// <param name="target">The target which might be used for the magnitude calculation.</param>
 	/// <param name="level">The level to use in the magnitude calculation.</param>
-	/// <param name="snapshotAttributes">The dictionary containing already captured snapshot attributes for this effect.
-	/// </param>
-	/// <param name="snapshotSetByCallerTags">The dictionary containing already captured snapshot SetByCaller for this
-	/// effect.</param>
+	/// <param name="effectEvaluatedData">The evaluated data for the effect.</param>
 	/// <returns>The evaluated magnitude.</returns>
 	public readonly float GetMagnitude(
 		Effect effect,
 		IForgeEntity target,
 		int level,
-		Dictionary<AttributeSnapshotKey, float> snapshotAttributes,
-		Dictionary<Tag, float> snapshotSetByCallerTags)
+		EffectEvaluatedData effectEvaluatedData)
 	{
 		switch (MagnitudeCalculationType)
 		{
@@ -122,13 +118,14 @@ public readonly record struct ModifierMagnitude
 				Validation.Assert(
 					AttributeBasedFloat.HasValue,
 					$"{nameof(AttributeBasedFloat)} should always have a value at this point.");
-				return AttributeBasedFloat.Value.CalculateMagnitude(effect, target, level, snapshotAttributes);
+				return AttributeBasedFloat.Value.CalculateMagnitude(
+					effect, target, level, effectEvaluatedData.SnapshotAttributes);
 
 			case MagnitudeCalculationType.CustomCalculatorClass:
 				Validation.Assert(
 					CustomCalculationBasedFloat.HasValue,
 					$"{nameof(CustomCalculationBasedFloat)} should always have a value at this point.");
-				return CustomCalculationBasedFloat.Value.CalculateMagnitude(effect, target, level);
+				return CustomCalculationBasedFloat.Value.CalculateMagnitude(effect, target, level, effectEvaluatedData);
 
 			case MagnitudeCalculationType.SetByCaller:
 				Validation.Assert(
@@ -137,12 +134,14 @@ public readonly record struct ModifierMagnitude
 
 				if (SetByCallerFloat.Value.Snapshot)
 				{
-					if (snapshotSetByCallerTags.TryGetValue(SetByCallerFloat.Value.Tag, out var snapshotValue))
+					if (effectEvaluatedData.SnapshotSetByCallers.TryGetValue(
+						SetByCallerFloat.Value.Tag, out var snapshotValue))
 					{
 						return snapshotValue;
 					}
 
-					snapshotSetByCallerTags.Add(SetByCallerFloat.Value.Tag, effect.DataTag[SetByCallerFloat.Value.Tag]);
+					effectEvaluatedData.SnapshotSetByCallers.Add(
+						SetByCallerFloat.Value.Tag, effect.DataTag[SetByCallerFloat.Value.Tag]);
 				}
 
 				return effect.DataTag[SetByCallerFloat.Value.Tag];

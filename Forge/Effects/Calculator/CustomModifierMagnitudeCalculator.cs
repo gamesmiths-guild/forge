@@ -14,6 +14,10 @@ public abstract class CustomModifierMagnitudeCalculator : CustomCalculator
 	/// </summary>
 	/// <param name="effect">The effect to be used as context for the calculation.</param>
 	/// <param name="target">The target entity to be used as context for the calculation.</param>
+	/// <param name="effectEvaluatedData">The evaluated data for the effect.</param>
 	/// <returns>The custom calculated base magnitude.</returns>
-	public abstract float CalculateBaseMagnitude(Effect effect, IForgeEntity target);
+	public abstract float CalculateBaseMagnitude(
+		Effect effect,
+		IForgeEntity target,
+		EffectEvaluatedData effectEvaluatedData);
 }

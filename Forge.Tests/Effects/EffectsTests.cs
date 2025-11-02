@@ -3738,9 +3738,12 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			AttributesToCapture.Add(_sourceAttr);
 		}
 
-		public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
+		public override float CalculateBaseMagnitude(
+			Effect effect,
+			IForgeEntity target,
+			EffectEvaluatedData effectEvaluatedData)
 		{
-			var value = CaptureAttributeMagnitude(_sourceAttr, effect, target);
+			var value = CaptureAttributeMagnitude(_sourceAttr, effect, target, effectEvaluatedData);
 			return value * 0.5f; // 2 * 0.5 = 1.0
 		}
 	}

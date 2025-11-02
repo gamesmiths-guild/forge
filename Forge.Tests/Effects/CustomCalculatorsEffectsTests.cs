@@ -44,6 +44,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
 			AttributeCaptureSource.Source,
+			false,
 			customMagnitudeCalculatorExponent);
 
 		var effectData = new EffectData(
@@ -98,6 +99,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
 			AttributeCaptureSource.Source,
+			false,
 			customMagnitudeCalculatorExponent);
 
 		var effectData = new EffectData(
@@ -263,6 +265,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
 			captureSource,
+			false,
 			customMagnitudeCalculatorExponent);
 
 		var effectData = new EffectData(
@@ -327,7 +330,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var owner = new TestEntity(_tagsManager, _cuesManager);
 		var target = new TestEntity(_tagsManager, _cuesManager);
 
-		var customCalculatorClass = new CustomTestExecutionClass();
+		var customCalculatorClass = new CustomTestExecutionClass(false);
 
 		var effectData = new EffectData(
 			"Test Effect",
@@ -366,7 +369,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var owner = new TestEntity(_tagsManager, _cuesManager);
 		var target = new TestEntity(_tagsManager, _cuesManager);
 
-		var customCalculatorClass = new CustomTestExecutionClass();
+		var customCalculatorClass = new CustomTestExecutionClass(false);
 
 		var effectData = new EffectData(
 			"Test Effect",
@@ -452,7 +455,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var owner = new NoAttributesEntity(_tagsManager, _cuesManager);
 		var target = new NoAttributesEntity(_tagsManager, _cuesManager);
 
-		var customCalculatorClass = new CustomTestExecutionClass();
+		var customCalculatorClass = new CustomTestExecutionClass(false);
 
 		var effectData = new EffectData(
 			"Test Effect",
@@ -482,7 +485,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var owner = new NoAttributesEntity(_tagsManager, _cuesManager);
 		var target = new TestEntity(_tagsManager, _cuesManager);
 
-		var customCalculatorClass = new CustomTestExecutionClass();
+		var customCalculatorClass = new CustomTestExecutionClass(false);
 
 		var effectData = new EffectData(
 			"Test Effect",
@@ -518,7 +521,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var owner = new TestEntity(_tagsManager, _cuesManager);
 		var target = new NoAttributesEntity(_tagsManager, _cuesManager);
 
-		var customCalculatorClass = new CustomTestExecutionClass();
+		var customCalculatorClass = new CustomTestExecutionClass(false);
 
 		var effectData = new EffectData(
 			"Test Effect",
@@ -553,6 +556,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			"TestAttributeSet.Attribute1",
 			AttributeCaptureSource.Source,
+			false,
 			1);
 
 		var effectData = new EffectData(
@@ -586,7 +590,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 	{
 		var target = new TestEntity(_tagsManager, _cuesManager);
 
-		var customCalculatorClass = new CustomTestExecutionClass();
+		var customCalculatorClass = new CustomTestExecutionClass(false);
 
 		var effectData = new EffectData(
 			"Test Effect",
@@ -659,6 +663,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
 			AttributeCaptureSource.Source,
+			false,
 			1,
 			attributeCalculationType);
 
@@ -701,6 +706,161 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults);
 	}
 
+	[Fact]
+	[Trait("Snapshot", null)]
+	public void Custom_calculator_class_snapshot_does_not_update_value_with_effect_level_up()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var customCalculatorClass = new CustomMagnitudeCalculator(
+			"TestAttributeSet.Attribute1",
+			AttributeCaptureSource.Source,
+			true,
+			1);
+
+		var effectData = new EffectData(
+			"Test Effect",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.CustomCalculatorClass,
+						customCalculationBasedFloat: new CustomCalculationBasedFloat(
+							customCalculatorClass,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			],
+			snapshotLevel: false);
+
+		var effectData2 = new EffectData(
+			"Backing Attribute Effect",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(1)))
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				owner,
+				owner));
+
+		var effect2 = new Effect(
+			effectData2,
+			new EffectOwnership(
+				owner,
+				owner));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [2, 1, 1, 0]);
+
+		owner.EffectsManager.ApplyEffect(effect2);
+		effect.LevelUp();
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [2, 1, 1, 0]);
+	}
+
+	[Fact]
+	[Trait("Snapshot", null)]
+	public void Custom_executions_does_not_update_with_snapshot_attributes_when_effect_level_up()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var customCalculatorClass = new CustomTestExecutionClass(true);
+
+		var effectData = new EffectData(
+			"Test Effect",
+			new DurationData(DurationType.Infinite),
+			snapshotLevel: false,
+			customExecutions:
+			[
+				customCalculatorClass
+			]);
+
+		var effectData2 = new EffectData(
+			"Backing Attribute Effect",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute3",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(1)))
+			]);
+
+		var effectData3 = new EffectData(
+			"Backing Attribute Effect",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+						"TestAttributeSet.Attribute5",
+						ModifierOperation.FlatBonus,
+						new ModifierMagnitude(
+							MagnitudeCalculationType.ScalableFloat,
+							new ScalableFloat(2)))
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				owner,
+				owner));
+
+		var effect2 = new Effect(
+			effectData2,
+			new EffectOwnership(
+				owner,
+				owner));
+
+		var effect3 = new Effect(
+			effectData3,
+			new EffectOwnership(
+				owner,
+				owner));
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [89, 90, -1, 0]);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+
+		ActiveEffectHandle? effectHandler1 = owner.EffectsManager.ApplyEffect(effect2);
+		effect.LevelUp();
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+
+		ActiveEffectHandle? effectHandler2 = owner.EffectsManager.ApplyEffect(effect3);
+		effect.LevelUp();
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+
+		owner.EffectsManager.UnapplyEffect(effectHandler2!);
+		effect.LevelUp();
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+
+		owner.EffectsManager.UnapplyEffect(effectHandler1!);
+		effect.LevelUp();
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+	}
+
 	private sealed class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator
 	{
 		private readonly float _exponent;
@@ -711,10 +871,11 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		public CustomMagnitudeCalculator(
 			StringKey attribute,
 			AttributeCaptureSource captureSource,
+			bool snapshot,
 			float exponent,
 			AttributeCalculationType attributeCalculationType = AttributeCalculationType.CurrentValue)
 		{
-			Attribute1 = new AttributeCaptureDefinition(attribute, captureSource, false);
+			Attribute1 = new AttributeCaptureDefinition(attribute, captureSource, snapshot);
 
 			AttributesToCapture.Add(Attribute1);
 
@@ -722,9 +883,17 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 			_attributeCalculationType = attributeCalculationType;
 		}
 
-		public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
+		public override float CalculateBaseMagnitude(
+			Effect effect,
+			IForgeEntity target,
+			EffectEvaluatedData effectEvaluatedData)
 		{
-			var capturedMagnitude = CaptureAttributeMagnitude(Attribute1, effect, target, _attributeCalculationType);
+			var capturedMagnitude = CaptureAttributeMagnitude(
+				Attribute1,
+				effect,
+				target,
+				effectEvaluatedData,
+				_attributeCalculationType);
 
 			return (float)Math.Pow(capturedMagnitude, _exponent);
 		}

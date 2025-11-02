@@ -27,6 +27,7 @@ public abstract class CustomCalculator
 	/// <param name="capturedAttribute">Definition for the attribute to be captured.</param>
 	/// <param name="effect">The effect which makes use of this custom calculator.</param>
 	/// <param name="target">The target of the effect.</param>
+	/// <param name="effectEvaluatedData">The evaluated data for the effect.</param>
 	/// <param name="calculationType">Which type of calculation to use to capture the magnitude.</param>
 	/// <param name="finalChannel">In case <paramref name="calculationType"/> ==
 	/// <see cref="AttributeCalculationType.MagnitudeEvaluatedUpToChannel"/> a final channel for the calculation
@@ -36,37 +37,63 @@ public abstract class CustomCalculator
 		AttributeCaptureDefinition capturedAttribute,
 		Effect effect,
 		IForgeEntity? target,
+		EffectEvaluatedData effectEvaluatedData,
 		AttributeCalculationType calculationType = AttributeCalculationType.CurrentValue,
 		int finalChannel = 0)
 	{
-		switch (capturedAttribute.Source)
+		IForgeEntity? captureTarget = capturedAttribute.Source switch
 		{
-			case AttributeCaptureSource.Source:
+			AttributeCaptureSource.Source => effect.Ownership.Owner,
+			AttributeCaptureSource.Target => target,
+			_ => null,
+		};
 
-				if (effect.Ownership.Owner?.Attributes.ContainsAttribute(capturedAttribute.Attribute) != true)
-				{
-					return 0;
-				}
-
-				return CaptureMagnitudeValue(
-					effect.Ownership.Owner.Attributes[capturedAttribute.Attribute],
-					calculationType,
-					finalChannel);
-
-			case AttributeCaptureSource.Target:
-
-				if (target?.Attributes.ContainsAttribute(capturedAttribute.Attribute) != true)
-				{
-					return 0;
-				}
-
-				return CaptureMagnitudeValue(
-					target.Attributes[capturedAttribute.Attribute],
-					calculationType,
-					finalChannel);
+		if (captureTarget is null)
+		{
+			return 0;
 		}
 
-		return 0;
+		return (int)CaptureAttributeSnapshotAware(
+					capturedAttribute,
+					calculationType,
+					finalChannel,
+					captureTarget,
+					effectEvaluatedData);
+	}
+
+	private static float CaptureAttributeSnapshotAware(
+		AttributeCaptureDefinition capturedAttribute,
+		AttributeCalculationType calculationType,
+		int finalChannel,
+		IForgeEntity? sourceEntity,
+		EffectEvaluatedData effectEvaluatedData)
+	{
+		if (sourceEntity?.Attributes.ContainsAttribute(capturedAttribute.Attribute) != true)
+		{
+			return 0f;
+		}
+
+		EntityAttribute attribute = sourceEntity.Attributes[capturedAttribute.Attribute];
+
+		if (!capturedAttribute.Snapshot)
+		{
+			return CaptureMagnitudeValue(attribute, calculationType, finalChannel);
+		}
+
+		var key = new AttributeSnapshotKey(
+			capturedAttribute.Attribute,
+			capturedAttribute.Source,
+			calculationType,
+			finalChannel);
+
+		if (effectEvaluatedData.SnapshotAttributes.TryGetValue(key, out var cachedValue))
+		{
+			return cachedValue;
+		}
+
+		var currentValue = CaptureMagnitudeValue(attribute, calculationType, finalChannel);
+		effectEvaluatedData.SnapshotAttributes[key] = currentValue;
+		return currentValue;
 	}
 
 	private static int CaptureMagnitudeValue(
@@ -85,7 +112,7 @@ public abstract class CustomCalculator
 			AttributeCalculationType.Max => attribute.Max,
 			AttributeCalculationType.MagnitudeEvaluatedUpToChannel =>
 				(int)attribute.CalculateMagnitudeUpToChannel(finalChannel),
-			_ => throw new ArgumentOutOfRangeException(nameof(calculationType), calculationType, null),
+			_ => 0,
 		};
 	}
 }

@@ -32,12 +32,17 @@ public readonly record struct CustomCalculationBasedFloat(
 	/// Calculates the final magnitude based on the CustomCalculationBasedFloat configurations.
 	/// </summary>
 	/// <param name="effect">The source effect that will be used for calculating this magnitude.</param>
-	/// <param name="target">The target of the effect to be used for calcuilating this magnitude.</param>
+	/// <param name="target">The target of the effect to be used for calculating this magnitude.</param>
 	/// <param name="level">Level to use in the final magnitude calculation.</param>
+	/// <param name="effectEvaluatedData">The evaluated data for the effect.</param>
 	/// <returns>The calculated magnitude for this <see cref="CustomCalculationBasedFloat"/>.</returns>
-	public float CalculateMagnitude(in Effect effect, IForgeEntity target, int level)
+	public float CalculateMagnitude(
+		in Effect effect,
+		IForgeEntity target,
+		int level,
+		EffectEvaluatedData effectEvaluatedData)
 	{
-		var baseMagnitude = MagnitudeCalculatorClass.CalculateBaseMagnitude(effect, target);
+		var baseMagnitude = MagnitudeCalculatorClass.CalculateBaseMagnitude(effect, target, effectEvaluatedData);
 
 		var finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + baseMagnitude))
 			+ PostMultiplyAdditiveValue.GetValue(level);
