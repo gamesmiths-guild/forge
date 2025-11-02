@@ -2384,6 +2384,109 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			]);
 	}
 
+	[Fact]
+	[Trait("Custom cues", null)]
+	public void Custom_calculator_class_sets_custom_update_cues_parameters_correctly()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var customCalculatorClass = new CustomMagnitudeCalculator(
+			"TestAttributeSet.Attribute1",
+			AttributeCaptureSource.Source,
+			1);
+
+		var effectData = new EffectData(
+			"Level Up",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.CustomCalculatorClass,
+						customCalculationBasedFloat: new CustomCalculationBasedFloat(
+							customCalculatorClass,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			],
+			snapshotLevel: false,
+			cues: [new CueData(
+				Tag.RequestTag(_tagsManager, "Test.Cue1").GetSingleTagContainer(),
+				0,
+				10,
+				CueMagnitudeType.EffectLevel)]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				new TestEntity(_tagsManager, _cuesManager),
+				owner));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [2, 1, 1, 0]);
+
+		_testCues[0].ApplyData.CustomParameters.Should().NotBeNull();
+		_testCues[0].ApplyData.CustomParameters.Should().Contain("test", 1);
+		_testCues[0].UpdateData.CustomParameters.Should().BeNull();
+
+		effect.LevelUp();
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [2, 1, 1, 0]);
+
+		_testCues[0].UpdateData.CustomParameters.Should().NotBeNull();
+		_testCues[0].UpdateData.CustomParameters.Should().Contain("test", 1);
+	}
+
+	[Fact]
+	[Trait("Custom cues", null)]
+	public void Custom_executions_sets_custom_update_cues_parameters_correctly()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var customCalculatorClass = new CustomTestExecutionClass(false);
+
+		var effectData = new EffectData(
+			"Test Effect",
+			new DurationData(DurationType.Infinite),
+			snapshotLevel: false,
+			customExecutions: [customCalculatorClass],
+			cues: [new CueData(Tag.RequestTag(_tagsManager, "Test.Cue1").GetSingleTagContainer(), 0, 10, CueMagnitudeType.EffectLevel)]);
+
+		var effect = new Effect(effectData, new EffectOwnership(owner, owner));
+
+		ResetCues();
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [89, 90, -1, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+
+		_testCues[0].ApplyData.Count.Should().Be(1);
+		_testCues[0].ApplyData.CustomParameters.Should().NotBeNull();
+
+		// 1 * (3 + 5) = 8
+		_testCues[0].ApplyData.CustomParameters.Should().Contain("custom.parameter", 8);
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		// 2 * (3 + 5) = 16
+		_testCues[0].ApplyData.CustomParameters.Should().Contain("custom.parameter", 16);
+		effect.LevelUp();
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [88, 90, -2, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [31, 1, 30, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [18, 2, 16, 0]);
+
+		_testCues[0].UpdateData.Count.Should().Be(2);
+		_testCues[0].UpdateData.CustomParameters.Should().NotBeNull();
+
+		// Updated twice because we have two instances of the effect, so 4 * (3 + 5) = 32
+		_testCues[0].UpdateData.CustomParameters.Should().Contain("custom.parameter", 32);
+	}
+
 	private static EffectData CreateInstantEffectData(
 		Modifier[] modifiers,
 		bool requireModifierSuccessToTriggerCue,
@@ -2600,7 +2703,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			IForgeEntity target,
 			EffectEvaluatedData effectEvaluatedData)
 		{
-			CustomCueParameters.Add("test", _exponent);
+			CustomCueParameters["test"] = _exponent;
 			return (float)Math.Pow(
 				CaptureAttributeMagnitude(Attribute1, effect, target, effectEvaluatedData),
 				_exponent);

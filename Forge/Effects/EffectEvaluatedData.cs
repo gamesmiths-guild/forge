@@ -69,7 +69,7 @@ public sealed class EffectEvaluatedData
 	/// <summary>
 	/// Gets an array of custom cue parameters.
 	/// </summary>
-	public Dictionary<StringKey, object>? CustomCueParameters { get; }
+	public Dictionary<StringKey, object>? CustomCueParameters { get; private set; }
 
 	internal Dictionary<AttributeSnapshotKey, float> SnapshotAttributes { get; } = [];
 
@@ -131,6 +131,8 @@ public sealed class EffectEvaluatedData
 
 		// Modifiers should be evaluated after duration and period because it requires those already evaluated.
 		ModifiersEvaluatedData = EvaluateModifiers();
+
+		CustomCueParameters = EvaluateCustomCueParameters();
 	}
 
 	internal float EvaluateDuration(DurationData durationData)
