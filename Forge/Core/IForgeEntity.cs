@@ -25,7 +25,7 @@ public interface IForgeEntity
 	EffectsManager EffectsManager { get; }
 
 	/// <summary>
-	/// Gets the abitilies manager for this entity.
+	/// Gets the abilities manager for this entity.
 	/// </summary>
 	EntityAbilities Abilities { get; }
 }

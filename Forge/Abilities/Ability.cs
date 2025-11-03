@@ -19,6 +19,8 @@ internal class Ability
 
 	private readonly Effect? _activationOwnedTagsEffect;
 
+	private readonly TagContainer? _abilityTags;
+
 	private ActiveEffectHandle? _activationOwnedTagsEffectHandle;
 
 	private int _activeCount;
@@ -124,6 +126,11 @@ internal class Ability
 				level);
 		}
 
+		if (abilityData.AbilityTags is not null)
+		{
+			_abilityTags = abilityData.AbilityTags;
+		}
+
 		Handle = new AbilityHandle(this);
 	}
 
@@ -143,8 +150,15 @@ internal class Ability
 			_activationOwnedTagsEffectHandle = Owner.EffectsManager.ApplyEffect(_activationOwnedTagsEffect);
 		}
 
-		//AbilityData.CancelAbilitiesWithTag
-		//AbilityData.BlockAbilitiesWithTag
+		if (AbilityData.CancelAbilitiesWithTag is not null)
+		{
+			//AbilityData.CancelAbilitiesWithTag
+		}
+
+		if (AbilityData.BlockAbilitiesWithTag is not null)
+		{
+			Owner.Abilities.BlockedAbilityTags.AddModifierTags(AbilityData.BlockAbilitiesWithTag);
+		}
 
 		_activeCount++;
 		Console.WriteLine($"Ability {AbilityData.Name} activated. Active count: {_activeCount}");
@@ -201,6 +215,10 @@ internal class Ability
 		}
 
 		// Check ability tags against BlockAbilitiesWithTag
+		if (_abilityTags?.HasAny(Owner.Abilities.BlockedAbilityTags.CombinedTags) == true)
+		{
+			return false;
+		}
 
 		return true;
 	}
@@ -259,7 +277,10 @@ internal class Ability
 		}
 
 		// Unblock abilities with tags.
-		//AbilityData.BlockAbilitiesWithTag
+		if (AbilityData.BlockAbilitiesWithTag is not null)
+		{
+			Owner.Abilities.BlockedAbilityTags.RemoveModifierTags(AbilityData.BlockAbilitiesWithTag);
+		}
 
 		_activeCount--;
 

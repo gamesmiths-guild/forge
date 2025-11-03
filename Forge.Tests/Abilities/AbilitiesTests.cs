@@ -1158,6 +1158,77 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		activated.Should().BeTrue();
 	}
 
+	[Fact]
+	[Trait("BlockAbilitiesWithTag", null)]
+	public void Ability_activation_blocks_other_abilities_with_blocked_tags()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData blockerAbilityData = CreateAbilityData(
+			"Blocker ability",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			blockAbilitiesWithTag: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"])));
+
+		AbilityData unblockedAbilityData = CreateAbilityData(
+			"Unblocked ability",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			abilityTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.blue"])));
+
+		AbilityData blockedAbilityData = CreateAbilityData(
+			"Blocked ability",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			abilityTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"])));
+
+		AbilityHandle? blockerAbilityHandle = SetupAbility(
+			entity,
+			blockerAbilityData,
+			new ScalableInt(1),
+			out _);
+
+		AbilityHandle? unblockedAbilityHandle = SetupAbility(
+			entity,
+			unblockedAbilityData,
+			new ScalableInt(1),
+			out _);
+
+		AbilityHandle? blockedAbilityHandle = SetupAbility(
+			entity,
+			blockedAbilityData,
+			new ScalableInt(1),
+			out _);
+
+		var activated = blockerAbilityHandle!.Activate();
+
+		blockerAbilityHandle.IsActive.Should().BeTrue();
+		activated.Should().BeTrue();
+
+		activated = unblockedAbilityHandle!.Activate();
+
+		unblockedAbilityHandle.IsActive.Should().BeTrue();
+		activated.Should().BeTrue();
+
+		activated = blockedAbilityHandle!.Activate();
+
+		blockedAbilityHandle.IsActive.Should().BeFalse();
+		activated.Should().BeFalse();
+
+		blockerAbilityHandle!.End();
+
+		activated = blockedAbilityHandle!.Activate();
+
+		blockedAbilityHandle.IsActive.Should().BeTrue();
+		activated.Should().BeTrue();
+	}
+
 	private static AbilityHandle? SetupAbility(
 		TestEntity targetEntity,
 		AbilityData abilityData,
@@ -1179,7 +1250,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			levelOverridePolicy);
 
 		Effect grantAbilityEffect = CreateAbilityApplierEffect(
-			"Grant Fireball",
+			"Grant Ability Effect",
 			grantAbilityConfig,
 			sourceEntity,
 			durationData,
@@ -1239,6 +1310,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		ScalableFloat cooldownDuration,
 		string costAttribute,
 		ScalableFloat costAmount,
+		TagContainer? abilityTags = null,
 		TagContainer? cancelAbilitiesWithTag = null,
 		TagContainer? blockAbilitiesWithTag = null,
 		TagContainer? activationOwnedTags = null,
@@ -1273,6 +1345,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			abilityName,
 			costEffectData,
 			cooldownEffectData,
+			AbilityTags: abilityTags,
 			CancelAbilitiesWithTag: cancelAbilitiesWithTag,
 			BlockAbilitiesWithTag: blockAbilitiesWithTag,
 			ActivationOwnedTags: activationOwnedTags,

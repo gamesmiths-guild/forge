@@ -3,12 +3,16 @@
 using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Core;
 
 /// <summary>
 /// Manager for handling an entity's abilities.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="EntityAbilities"/> class.
+/// </remarks>
 /// <param name="owner">The owner of this manager.</param>
 public class EntityAbilities(IForgeEntity owner)
 {
@@ -25,6 +29,11 @@ public class EntityAbilities(IForgeEntity owner)
 	/// Gets the set of abilities currently granted to the entity.
 	/// </summary>
 	public HashSet<AbilityHandle> GrantedAbilities { get; } = [];
+
+	/// <summary>
+	/// Gets the tags that block abilities from being used.
+	/// </summary>
+	public EntityTags BlockedAbilityTags { get; } = new EntityTags(new TagContainer(owner.Tags.BaseTags.TagsManager));
 
 	/// <summary>
 	/// Tries to get a granted ability from its data.
