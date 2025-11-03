@@ -890,6 +890,274 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		activated.Should().BeFalse();
 	}
 
+	[Fact]
+	[Trait("OwnerTag requirements", null)]
+	public void Ability_wont_activate_when_owner_missing_required_tag()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			activationRequiredTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"])));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		var activated = abilityHandle!.Activate();
+
+		abilityHandle.IsActive.Should().BeFalse();
+		activated.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("OwnerTag requirements", null)]
+	public void Ability_wont_activate_when_owner_has_blocked_tag()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			activationBlockedTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.green"])));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		var activated = abilityHandle!.Activate();
+
+		abilityHandle.IsActive.Should().BeFalse();
+		activated.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("SourceTag requirements", null)]
+	public void Ability_wont_activate_when_source_missing_required_tag()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+		TestEntity source = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			sourceRequiredTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"])));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			sourceEntity: source);
+
+		var activated = abilityHandle!.Activate();
+
+		abilityHandle.IsActive.Should().BeFalse();
+		activated.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("SourceTag requirements", null)]
+	public void Ability_wont_activate_when_source_has_blocked_tag()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+		TestEntity source = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			sourceBlockedTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.green"])));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			sourceEntity: source);
+
+		var activated = abilityHandle!.Activate();
+
+		abilityHandle.IsActive.Should().BeFalse();
+		activated.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("SourceTag requirements", null)]
+	public void Ability_wont_activate_when_source_is_missing_but_has_required_tags()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			sourceRequiredTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"])));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			sourceEntity: null);
+
+		var activated = abilityHandle!.Activate();
+
+		abilityHandle.IsActive.Should().BeFalse();
+		activated.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("SourceTag requirements", null)]
+	public void Ability_activates_when_source_is_missing_and_has_blocked_tags()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			sourceBlockedTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.green"])));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			sourceEntity: null);
+
+		var activated = abilityHandle!.Activate();
+
+		abilityHandle.IsActive.Should().BeTrue();
+		activated.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("TargetTag requirements", null)]
+	public void Ability_wont_activate_when_target_missing_required_tag()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+		TestEntity target = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			targetRequiredTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"])));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		var activated = abilityHandle!.Activate(target);
+
+		abilityHandle.IsActive.Should().BeFalse();
+		activated.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("TargetTag requirements", null)]
+	public void Ability_wont_activate_when_target_has_blocked_tag()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+		TestEntity target = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			targetBlockedTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.green"])));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		var activated = abilityHandle!.Activate(target);
+
+		abilityHandle.IsActive.Should().BeFalse();
+		activated.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("TargetTag requirements", null)]
+	public void Ability_wont_activate_when_target_is_missing_but_has_required_tags()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			sourceRequiredTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"])));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		var activated = abilityHandle!.Activate();
+
+		abilityHandle.IsActive.Should().BeFalse();
+		activated.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("TargetTag requirements", null)]
+	public void Ability_activates_when_target_is_missing_and_has_blocked_tags()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			sourceBlockedTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.green"])));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		var activated = abilityHandle!.Activate();
+
+		abilityHandle.IsActive.Should().BeTrue();
+		activated.Should().BeTrue();
+	}
+
 	private static AbilityHandle? SetupAbility(
 		TestEntity targetEntity,
 		AbilityData abilityData,
@@ -970,7 +1238,16 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		string abilityName,
 		ScalableFloat cooldownDuration,
 		string costAttribute,
-		ScalableFloat costAmount)
+		ScalableFloat costAmount,
+		TagContainer? cancelAbilitiesWithTag = null,
+		TagContainer? blockAbilitiesWithTag = null,
+		TagContainer? activationOwnedTags = null,
+		TagContainer? activationRequiredTags = null,
+		TagContainer? activationBlockedTags = null,
+		TagContainer? sourceRequiredTags = null,
+		TagContainer? sourceBlockedTags = null,
+		TagContainer? targetRequiredTags = null,
+		TagContainer? targetBlockedTags = null)
 	{
 		var cooldownEffectData = new EffectData(
 			"Fireball Cooldown",
@@ -995,6 +1272,15 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		return new(
 			abilityName,
 			costEffectData,
-			cooldownEffectData);
+			cooldownEffectData,
+			CancelAbilitiesWithTag: cancelAbilitiesWithTag,
+			BlockAbilitiesWithTag: blockAbilitiesWithTag,
+			ActivationOwnedTags: activationOwnedTags,
+			ActivationRequiredTags: activationRequiredTags,
+			ActivationBlockedTags: activationBlockedTags,
+			SourceRequiredTags: sourceRequiredTags,
+			SourceBlockedTags: sourceBlockedTags,
+			TargetRequiredTags: targetRequiredTags,
+			TargetBlockedTags: targetBlockedTags);
 	}
 }

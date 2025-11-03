@@ -2,6 +2,9 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Components;
+using Gamesmiths.Forge.Effects.Duration;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Abilities;
 
@@ -13,6 +16,10 @@ internal class Ability
 	private readonly Effect? _cooldownEffect;
 
 	private readonly Effect? _costEffect;
+
+	private readonly Effect? _activationOwnedTagsEffect;
+
+	private ActiveEffectHandle? _activationOwnedTagsEffectHandle;
 
 	private int _activeCount;
 
@@ -60,7 +67,8 @@ internal class Ability
 	/// <param name="owner">The entity that owns this ability.</param>
 	/// <param name="abilityData">The data defining this ability.</param>
 	/// <param name="level">The level of the ability.</param>
-	/// <param name="grantedAbilityRemovalPolicy">The policy that determines when this granted ability should be removed.
+	/// <param name="grantedAbilityRemovalPolicy">The policy that determines when this granted ability should be
+	/// removed.
 	/// </param>
 	/// <param name="grantedAbilityInhibitionPolicy">The policy that determines how this ability behaves when it is
 	/// inhibited.</param>
@@ -99,6 +107,23 @@ internal class Ability
 				level);
 		}
 
+		if (abilityData.ActivationOwnedTags is not null)
+		{
+			_activationOwnedTagsEffect = new Effect(
+				new EffectData(
+					name: $"{abilityData.Name}_ActivationOwnedTagsEffect",
+					new DurationData
+					{
+						DurationType = DurationType.Infinite,
+					},
+					effectComponents:
+					[
+						new ModifierTagsEffectComponent(abilityData.ActivationOwnedTags)
+					]),
+				new EffectOwnership(owner, sourceEntity),
+				level);
+		}
+
 		Handle = new AbilityHandle(this);
 	}
 
@@ -113,12 +138,20 @@ internal class Ability
 			return;
 		}
 
+		if (_activationOwnedTagsEffect is not null)
+		{
+			_activationOwnedTagsEffectHandle = Owner.EffectsManager.ApplyEffect(_activationOwnedTagsEffect);
+		}
+
+		//AbilityData.CancelAbilitiesWithTag
+		//AbilityData.BlockAbilitiesWithTag
+
 		_activeCount++;
 		Console.WriteLine($"Ability {AbilityData.Name} activated. Active count: {_activeCount}");
 	}
 
 	// TODO: Might need to return reasons why it can't be activated, including relevant tags.
-	internal bool CanActivate()
+	internal bool CanActivate(IForgeEntity? abilityTarget)
 	{
 		if (IsInhibited)
 		{
@@ -142,13 +175,39 @@ internal class Ability
 		}
 
 		// Check tags condition.
+		TagContainer ownerTags = Owner.Tags.CombinedTags;
+		TagContainer? sourceTags = SourceEntity?.Tags.CombinedTags;
+		TagContainer? targetTags = abilityTarget?.Tags.CombinedTags;
+
+		// Owner tags.
+		if (FailsRequiredTags(AbilityData.ActivationRequiredTags, ownerTags)
+			|| HasBlockedTags(AbilityData.ActivationBlockedTags, ownerTags))
+		{
+			return false;
+		}
+
+		// Source tags.
+		if (FailsRequiredTags(AbilityData.SourceRequiredTags, sourceTags)
+			|| HasBlockedTags(AbilityData.SourceBlockedTags, sourceTags))
+		{
+			return false;
+		}
+
+		// Target tags.
+		if (FailsRequiredTags(AbilityData.TargetRequiredTags, targetTags)
+			|| HasBlockedTags(AbilityData.TargetBlockedTags, targetTags))
+		{
+			return false;
+		}
+
+		// Check ability tags against BlockAbilitiesWithTag
 
 		return true;
 	}
 
-	internal bool TryActivateAbility()
+	internal bool TryActivateAbility(IForgeEntity? abilityTarget)
 	{
-		if (CanActivate())
+		if (CanActivate(abilityTarget))
 		{
 			Activate();
 			return true;
@@ -187,16 +246,34 @@ internal class Ability
 
 	internal void End()
 	{
-		OnAbilityDeactivated?.Invoke(this);
-
-		if (_activeCount > 0)
-		{
-			_activeCount--;
-			Console.WriteLine($"Ability {AbilityData.Name} deactivated. Active count: {_activeCount}");
-		}
-		else
+		if (_activeCount <= 0)
 		{
 			Console.WriteLine($"Ability {AbilityData.Name} is not active.");
+			return;
 		}
+
+		if (_activationOwnedTagsEffectHandle is not null)
+		{
+			Owner.EffectsManager.UnapplyEffect(_activationOwnedTagsEffectHandle);
+			_activationOwnedTagsEffectHandle.Free();
+		}
+
+		// Unblock abilities with tags.
+		//AbilityData.BlockAbilitiesWithTag
+
+		_activeCount--;
+
+		OnAbilityDeactivated?.Invoke(this);
+		Console.WriteLine($"Ability {AbilityData.Name} deactivated. Active count: {_activeCount}");
+	}
+
+	private static bool FailsRequiredTags(TagContainer? required, TagContainer? present)
+	{
+		return required is not null && (present?.HasAll(required) != true);
+	}
+
+	private static bool HasBlockedTags(TagContainer? blocked, TagContainer? present)
+	{
+		return blocked is not null && (present?.HasAny(blocked) == true);
 	}
 }

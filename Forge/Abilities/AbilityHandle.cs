@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Core;
+
 namespace Gamesmiths.Forge.Abilities;
 
 /// <summary>
@@ -32,11 +34,12 @@ public class AbilityHandle
 	/// <summary>
 	/// Activates the ability associated with this handle.
 	/// </summary>
+	/// <param name="target">The target entity for the ability activation.</param>
 	/// <returns>Return <see langword="true"/> if the ability was successfully activated;
 	/// otherwise, <see langword="false"/>.</returns>
-	public bool Activate()
+	public bool Activate(IForgeEntity? target = null)
 	{
-		return Ability?.TryActivateAbility() ?? false;
+		return Ability?.TryActivateAbility(target) ?? false;
 	}
 
 	/// <summary>
