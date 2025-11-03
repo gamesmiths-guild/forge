@@ -10,6 +10,6 @@ namespace Gamesmiths.Forge.Abilities;
 /// <param name="TriggerTag">The tag identifying the specific trigger. This value is used to categorize or distinguish
 /// the trigger.</param>
 /// <param name="TriggerSource">The source of the trigger, indicating where or how the trigger originated.</param>
-public readonly record struct AbilitTriggerData(
+public readonly record struct AbilityTriggerData(
 	Tag TriggerTag,
 	AbitityTriggerSource TriggerSource);

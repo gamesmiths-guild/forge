@@ -16,14 +16,14 @@ namespace Gamesmiths.Forge.Abilities;
 /// </remarks>
 /// <param name="Name">The name of the ability.</param>
 /// <param name="CostEffect">The effect that represents the cost of using the ability called when the ability is
-/// commited.</param>
+/// committed.</param>
 /// <param name="CooldownEffect">The effect that represents the cooldown of the ability.</param>
 /// <param name="AbilityTags">Tags associated with the ability for categorization and filtering.</param>
 /// <param name="InstancingPolicy">The instancing policy for the ability, determining how instances are created and
 /// managed.</param>
 /// <param name="RetriggerInstancedAbility">Flag indicating whether an instanced ability can be re-triggered while it is
 /// Still active. If on, it will stop and re-trigger the ability.</param>
-/// <param name="AbilitTriggerData">The trigger data associated with the ability, defining how and when the ability can
+/// <param name="AbilityTriggerData">The trigger data associated with the ability, defining how and when the ability can
 /// be executed.</param>
 /// <param name="CancelAbilitiesWithTag">Abilities with any of these tags will be canceled when this ability is
 /// executed.</param>
@@ -46,7 +46,7 @@ public readonly record struct AbilityData(
 	TagContainer? AbilityTags = null,
 	AbilityInstancingPolicy InstancingPolicy = AbilityInstancingPolicy.PerEntity,
 	bool RetriggerInstancedAbility = false,
-	AbilitTriggerData? AbilitTriggerData = null,
+	AbilityTriggerData? AbilityTriggerData = null,
 	TagContainer? CancelAbilitiesWithTag = null,
 	TagContainer? BlockAbilitiesWithTag = null,
 	TagContainer? ActivationOwnedTags = null,

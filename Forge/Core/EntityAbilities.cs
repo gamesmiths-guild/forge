@@ -82,7 +82,7 @@ public class EntityAbilities(IForgeEntity owner)
 			return;
 		}
 
-		var newAbility = new Ability(owner, abilityData, abilityLevel, removalPolicy, inhibitionPolicy, sourceEntity);
+		var newAbility = new Ability(Owner, abilityData, abilityLevel, removalPolicy, inhibitionPolicy, sourceEntity);
 		GrantedAbilities.Add(newAbility.Handle);
 	}
 
@@ -134,7 +134,7 @@ public class EntityAbilities(IForgeEntity owner)
 			return existingAbility.Handle;
 		}
 
-		var newAbility = new Ability(owner, abilityData, abilityLevel, removalPolicy, inhibitionPolicy, sourceEntity);
+		var newAbility = new Ability(Owner, abilityData, abilityLevel, removalPolicy, inhibitionPolicy, sourceEntity);
 		GrantedAbilities.Add(newAbility.Handle);
 		_grantSources[newAbility] = [sourceActiveEffectHandle];
 
