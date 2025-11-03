@@ -815,9 +815,9 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		}
 
 		public override float CalculateBaseMagnitude(
-			Effect effect,
-			IForgeEntity target,
-			EffectEvaluatedData effectEvaluatedData)
+				Effect effect,
+				IForgeEntity target,
+				EffectEvaluatedData? effectEvaluatedData)
 		{
 			int strength = CaptureAttributeMagnitude(StrengthAttribute, effect, target, effectEvaluatedData);
 			int speed = CaptureAttributeMagnitude(SpeedAttribute, effect, target, effectEvaluatedData);

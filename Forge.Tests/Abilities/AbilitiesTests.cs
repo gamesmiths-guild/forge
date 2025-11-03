@@ -839,7 +839,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsActive.Should().BeTrue();
 		activated.Should().BeTrue();
 
-		abilityHandle.CommitAbility();
+		abilityHandle.CommitCooldown();
 
 		activated = abilityHandle!.Activate();
 
@@ -858,36 +858,36 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		activated.Should().BeTrue();
 	}
 
-	private AbilityData CreateAbilityData(
-		string abilityName,
-		ScalableFloat cooldownDuration,
-		string costAttribute,
-		ScalableFloat costAmount)
+	[Theory]
+	[Trait("Cost", null)]
+	[InlineData(5)]
+	[InlineData(-50)]
+	public void Ability_wont_activate_if_cant_afford_cost(int cost)
 	{
-		var cooldownEffectData = new EffectData(
-			"Fireball Cooldown",
-			new DurationData(
-				DurationType.HasDuration,
-				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, cooldownDuration)),
-			effectComponents:
-			[
-				new ModifierTagsEffectComponent(new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["simple.tag"])))
-			]);
+		TestEntity entity = new(_tagsManager, _cuesManager);
 
-		var costEffectData = new EffectData(
-			"Fireball Cost",
-			new DurationData(DurationType.Instant),
-			[
-				new Modifier(
-					costAttribute,
-					ModifierOperation.FlatBonus,
-					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, costAmount))
-			]);
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(cost));
 
-		return new(
-			abilityName,
-			costEffectData,
-			cooldownEffectData);
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		var activated = abilityHandle!.Activate();
+
+		abilityHandle.IsActive.Should().BeTrue();
+		activated.Should().BeTrue();
+
+		abilityHandle.CommitCost();
+
+		activated = abilityHandle!.Activate();
+
+		activated.Should().BeFalse();
 	}
 
 	private static AbilityHandle? SetupAbility(
@@ -964,5 +964,37 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new EffectOwnership(entity, null));
 
 		return entity.EffectsManager.ApplyEffect(tagEffect);
+	}
+
+	private AbilityData CreateAbilityData(
+		string abilityName,
+		ScalableFloat cooldownDuration,
+		string costAttribute,
+		ScalableFloat costAmount)
+	{
+		var cooldownEffectData = new EffectData(
+			"Fireball Cooldown",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, cooldownDuration)),
+			effectComponents:
+			[
+				new ModifierTagsEffectComponent(new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["simple.tag"])))
+			]);
+
+		var costEffectData = new EffectData(
+			"Fireball Cost",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					costAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, costAmount))
+			]);
+
+		return new(
+			abilityName,
+			costEffectData,
+			cooldownEffectData);
 	}
 }

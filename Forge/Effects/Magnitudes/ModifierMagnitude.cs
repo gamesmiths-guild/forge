@@ -1,7 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
-using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Effects.Magnitudes;
 
@@ -104,7 +103,7 @@ public readonly record struct ModifierMagnitude
 		Effect effect,
 		IForgeEntity target,
 		int level,
-		EffectEvaluatedData effectEvaluatedData)
+		EffectEvaluatedData? effectEvaluatedData = null)
 	{
 		switch (MagnitudeCalculationType)
 		{
@@ -119,7 +118,7 @@ public readonly record struct ModifierMagnitude
 					AttributeBasedFloat.HasValue,
 					$"{nameof(AttributeBasedFloat)} should always have a value at this point.");
 				return AttributeBasedFloat.Value.CalculateMagnitude(
-					effect, target, level, effectEvaluatedData.SnapshotAttributes);
+					effect, target, level, effectEvaluatedData?.SnapshotAttributes);
 
 			case MagnitudeCalculationType.CustomCalculatorClass:
 				Validation.Assert(
@@ -132,7 +131,7 @@ public readonly record struct ModifierMagnitude
 					SetByCallerFloat.HasValue,
 					$"{nameof(SetByCallerFloat)} should always have a value at this point.");
 
-				if (SetByCallerFloat.Value.Snapshot)
+				if (SetByCallerFloat.Value.Snapshot && effectEvaluatedData is not null)
 				{
 					if (effectEvaluatedData.SnapshotSetByCallers.TryGetValue(
 						SetByCallerFloat.Value.Tag, out var snapshotValue))

@@ -19,5 +19,5 @@ public abstract class CustomModifierMagnitudeCalculator : CustomCalculator
 	public abstract float CalculateBaseMagnitude(
 		Effect effect,
 		IForgeEntity target,
-		EffectEvaluatedData effectEvaluatedData);
+		EffectEvaluatedData? effectEvaluatedData);
 }

@@ -12,6 +12,8 @@ internal class Ability
 {
 	private readonly Effect? _cooldownEffect;
 
+	private readonly Effect? _costEffect;
+
 	private int _activeCount;
 
 	internal event Action<Ability>? OnAbilityDeactivated;
@@ -89,6 +91,14 @@ internal class Ability
 				level);
 		}
 
+		if (abilityData.CostEffect is not null)
+		{
+			_costEffect = new Effect(
+				abilityData.CostEffect.Value,
+				new EffectOwnership(owner, sourceEntity),
+				level);
+		}
+
 		Handle = new AbilityHandle(this);
 	}
 
@@ -125,6 +135,11 @@ internal class Ability
 		}
 
 		// Check resources.
+		if (_costEffect is not null
+			&& !Owner.EffectsManager.CanApplyEffect(_costEffect, Level))
+		{
+			return false;
+		}
 
 		// Check tags condition.
 
@@ -145,6 +160,7 @@ internal class Ability
 	internal void CommitAbility()
 	{
 		CommitCooldown();
+		CommitCost();
 	}
 
 	internal void CommitCooldown()
@@ -152,6 +168,14 @@ internal class Ability
 		if (_cooldownEffect is not null)
 		{
 			Owner.EffectsManager.ApplyEffect(_cooldownEffect);
+		}
+	}
+
+	internal void CommitCost()
+	{
+		if (_costEffect is not null)
+		{
+			Owner.EffectsManager.ApplyEffect(_costEffect);
 		}
 	}
 

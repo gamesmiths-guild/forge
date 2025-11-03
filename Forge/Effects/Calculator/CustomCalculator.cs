@@ -37,7 +37,7 @@ public abstract class CustomCalculator
 		AttributeCaptureDefinition capturedAttribute,
 		Effect effect,
 		IForgeEntity? target,
-		EffectEvaluatedData effectEvaluatedData,
+		EffectEvaluatedData? effectEvaluatedData,
 		AttributeCalculationType calculationType = AttributeCalculationType.CurrentValue,
 		int finalChannel = 0)
 	{
@@ -66,7 +66,7 @@ public abstract class CustomCalculator
 		AttributeCalculationType calculationType,
 		int finalChannel,
 		IForgeEntity? sourceEntity,
-		EffectEvaluatedData effectEvaluatedData)
+		EffectEvaluatedData? effectEvaluatedData)
 	{
 		if (sourceEntity?.Attributes.ContainsAttribute(capturedAttribute.Attribute) != true)
 		{
@@ -75,7 +75,7 @@ public abstract class CustomCalculator
 
 		EntityAttribute attribute = sourceEntity.Attributes[capturedAttribute.Attribute];
 
-		if (!capturedAttribute.Snapshot)
+		if (!capturedAttribute.Snapshot || effectEvaluatedData is null)
 		{
 			return CaptureMagnitudeValue(attribute, calculationType, finalChannel);
 		}

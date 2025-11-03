@@ -55,6 +55,22 @@ public class AbilityHandle
 		Ability?.CommitAbility();
 	}
 
+	/// <summary>
+	/// Commits the ability cooldown.
+	/// </summary>
+	public void CommitCooldown()
+	{
+		Ability?.CommitCooldown();
+	}
+
+	/// <summary>
+	/// Commits the ability cost.
+	/// </summary>
+	public void CommitCost()
+	{
+		Ability?.CommitCost();
+	}
+
 	internal void Free()
 	{
 		Ability = null;

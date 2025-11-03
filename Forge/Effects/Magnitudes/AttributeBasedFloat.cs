@@ -49,7 +49,7 @@ public readonly record struct AttributeBasedFloat(
 		Effect effect,
 		IForgeEntity target,
 		int level,
-		Dictionary<AttributeSnapshotKey, float> snapshotAttributes)
+		Dictionary<AttributeSnapshotKey, float>? snapshotAttributes)
 	{
 		float magnitude = 0;
 
@@ -77,7 +77,7 @@ public readonly record struct AttributeBasedFloat(
 
 	private float CaptureAttributeSnapshotAware(
 		IForgeEntity? sourceEntity,
-		Dictionary<AttributeSnapshotKey, float> snapshotAttributes)
+		Dictionary<AttributeSnapshotKey, float>? snapshotAttributes)
 	{
 		if (sourceEntity?.Attributes.ContainsAttribute(BackingAttribute.Attribute) != true)
 		{
@@ -86,7 +86,7 @@ public readonly record struct AttributeBasedFloat(
 
 		EntityAttribute attribute = sourceEntity.Attributes[BackingAttribute.Attribute];
 
-		if (!BackingAttribute.Snapshot)
+		if (!BackingAttribute.Snapshot || snapshotAttributes is null)
 		{
 			return CaptureNow(attribute);
 		}

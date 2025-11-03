@@ -2701,7 +2701,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		public override float CalculateBaseMagnitude(
 			Effect effect,
 			IForgeEntity target,
-			EffectEvaluatedData effectEvaluatedData)
+			EffectEvaluatedData? effectEvaluatedData)
 		{
 			CustomCueParameters["test"] = _exponent;
 			return (float)Math.Pow(

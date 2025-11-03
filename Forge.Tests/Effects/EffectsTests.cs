@@ -3741,7 +3741,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		public override float CalculateBaseMagnitude(
 			Effect effect,
 			IForgeEntity target,
-			EffectEvaluatedData effectEvaluatedData)
+			EffectEvaluatedData? effectEvaluatedData)
 		{
 			var value = CaptureAttributeMagnitude(_sourceAttr, effect, target, effectEvaluatedData);
 			return value * 0.5f; // 2 * 0.5 = 1.0

@@ -40,7 +40,7 @@ public readonly record struct CustomCalculationBasedFloat(
 		in Effect effect,
 		IForgeEntity target,
 		int level,
-		EffectEvaluatedData effectEvaluatedData)
+		EffectEvaluatedData? effectEvaluatedData)
 	{
 		var baseMagnitude = MagnitudeCalculatorClass.CalculateBaseMagnitude(effect, target, effectEvaluatedData);
 
