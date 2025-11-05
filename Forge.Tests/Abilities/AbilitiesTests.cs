@@ -840,6 +840,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		activated.Should().BeTrue();
 
 		abilityHandle.CommitCooldown();
+		abilityHandle.End();
 
 		activated = abilityHandle!.Activate();
 
@@ -1229,6 +1230,555 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		activated.Should().BeTrue();
 	}
 
+	[Fact]
+	[Trait("Instancing", null)]
+	public void Ability_PerEntity_no_retrigger_activated_twice_does_not_start_second_instance()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"PerEntity_NoRetrigger",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute1",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			retriggerInstancedAbility: false);
+
+		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
+		handle.Should().NotBeNull();
+
+		var first = handle!.Activate();
+		var second = handle!.Activate();
+
+		first.Should().BeTrue();
+
+		// No retrigger, single instance.
+		second.Should().BeFalse();
+		handle.IsActive.Should().BeTrue();
+
+		handle.End();
+		handle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Instancing", null)]
+	public void Ability_PerEntity_retrigger_restarts_instance_and_fires_deactivated_once()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"PerEntity_Retrigger",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute2",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			retriggerInstancedAbility: true);
+
+		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
+		handle.Should().NotBeNull();
+
+		var first = handle!.Activate();
+		var second = handle!.Activate();
+
+		first.Should().BeTrue();
+
+		// Retrigger replaces the running instance.
+		second.Should().BeTrue();
+
+		// One End should fully deactivate because retrigger replaced the instance instead of stacking.
+		handle.End();
+		handle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Instancing", null)]
+	public void Ability_per_execution_multiple_activations_create_multiple_instances()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"PerExecution",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute3",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution);
+
+		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
+		handle.Should().NotBeNull();
+
+		var a = handle!.Activate();
+		var b = handle!.Activate();
+		var c = handle!.Activate();
+
+		a.Should().BeTrue();
+		b.Should().BeTrue();
+		c.Should().BeTrue();
+
+		handle.IsActive.Should().BeTrue();
+
+		// End most recent instance only; still active until all are ended.
+		handle.End();
+		handle.IsActive.Should().BeTrue();
+
+		handle.End();
+		handle.IsActive.Should().BeTrue();
+
+		handle.End();
+		handle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Instancing", null)]
+	public void Ability_End_ends_most_recent_instance_only()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"EndsMostRecent",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution);
+
+		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
+		handle.Should().NotBeNull();
+
+		handle!.Activate();
+		handle!.Activate();
+
+		handle.IsActive.Should().BeTrue();
+
+		// One End should not fully deactivate if multiple instances exist.
+		handle.End();
+		handle.IsActive.Should().BeTrue();
+
+		// Second End ends the remaining instance.
+		handle.End();
+		handle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Instancing", null)]
+	public void Ability_CancelAbility_cancels_all_active_instances()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"CancelAllInstances",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution);
+
+		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
+		handle.Should().NotBeNull();
+
+		handle!.Activate();
+		handle!.Activate();
+		handle!.Activate();
+
+		handle.Cancel();
+
+		handle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("CancelAbilitiesWithTag", null)]
+	public void CancelAbilitiesWithTag_cancels_all_matching_active_abilities_on_activation()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var cancelTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"]));
+
+		AbilityData canceller = CreateAbilityData(
+			"Canceller",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute3",
+			new ScalableFloat(-1),
+			cancelAbilitiesWithTag: cancelTags);
+
+		AbilityData victim = CreateAbilityData(
+			"Victim",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			abilityTags: new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"])));
+
+		AbilityHandle? cancellerHandle = SetupAbility(entity, canceller, new ScalableInt(1), out _);
+		AbilityHandle? victimHandle = SetupAbility(entity, victim, new ScalableInt(1), out _);
+
+		victimHandle!.Activate().Should().BeTrue();
+		victimHandle.IsActive.Should().BeTrue();
+
+		cancellerHandle!.Activate().Should().BeTrue();
+
+		victimHandle.IsActive.Should().BeFalse();
+		cancellerHandle.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("CancelAbilitiesWithTag", null)]
+	public void CancelAbilitiesWithTag_does_not_cancel_unrelated_abilities()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var cancelTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"]));
+
+		AbilityData canceller = CreateAbilityData(
+			"Canceller2",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute3",
+			new ScalableFloat(-1),
+			cancelAbilitiesWithTag: cancelTags);
+
+		AbilityData unrelated = CreateAbilityData(
+			"Unrelated",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			abilityTags: new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.blue"])));
+
+		AbilityHandle? cancellerHandle = SetupAbility(entity, canceller, new ScalableInt(1), out _);
+		AbilityHandle? unrelatedHandle = SetupAbility(entity, unrelated, new ScalableInt(1), out _);
+
+		unrelatedHandle!.Activate().Should().BeTrue();
+		unrelatedHandle.IsActive.Should().BeTrue();
+
+		cancellerHandle!.Activate().Should().BeTrue();
+
+		unrelatedHandle.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("CancelAbilitiesWithTag", null)]
+	public void CancelAbilitiesWithTag_cancels_all_instances_of_matching_abilities()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var cancelTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"]));
+
+		AbilityData canceller = CreateAbilityData(
+			"Canceller3",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute1",
+			new ScalableFloat(-1),
+			cancelAbilitiesWithTag: cancelTags);
+
+		AbilityData victim = CreateAbilityData(
+			"VictimMulti",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute2",
+			new ScalableFloat(-1),
+			abilityTags: new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"])),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution);
+
+		AbilityHandle? cancellerHandle = SetupAbility(entity, canceller, new ScalableInt(1), out _);
+		AbilityHandle? victimHandle = SetupAbility(entity, victim, new ScalableInt(1), out _);
+
+		victimHandle!.Activate();
+		victimHandle!.Activate();
+		victimHandle.IsActive.Should().BeTrue();
+
+		cancellerHandle!.Activate().Should().BeTrue();
+
+		victimHandle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("CancelAbilitiesWithTag", null)]
+	public void CancelAbilitiesWithTag_does_not_cancel_self_on_activation()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var redTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"]));
+
+		AbilityData selfCanceller = CreateAbilityData(
+			"SelfCanceller",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute1",
+			new ScalableFloat(-1),
+			abilityTags: redTags,
+			cancelAbilitiesWithTag: redTags);
+
+		AbilityHandle? handle = SetupAbility(entity, selfCanceller, new ScalableInt(1), out _);
+
+		handle!.Activate().Should().BeTrue();
+		handle.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("BlockAbilitiesWithTag", null)]
+	public void Blocked_ability_tags_are_removed_only_after_last_instance_ends()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var redTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"]));
+
+		AbilityData blocker = CreateAbilityData(
+			"BlockerMulti",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute1",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution,
+			blockAbilitiesWithTag: redTags);
+
+		AbilityData blocked = CreateAbilityData(
+			"BlockedRed",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			abilityTags: redTags);
+
+		AbilityHandle? blockerHandle = SetupAbility(entity, blocker, new ScalableInt(1), out _);
+		AbilityHandle? blockedHandle = SetupAbility(entity, blocked, new ScalableInt(1), out _);
+
+		blockerHandle!.Activate().Should().BeTrue();
+		blockerHandle!.Activate().Should().BeTrue();
+
+		// While any blocker instance active, blocked ability cannot activate.
+		blockedHandle!.Activate().Should().BeFalse();
+
+		// End one blocker instance; still blocked.
+		blockerHandle.End();
+		blockedHandle.Activate().Should().BeFalse();
+
+		// End last blocker instance; now unblocked.
+		blockerHandle.End();
+		blockedHandle.Activate().Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("ActivationOwnedTags", null)]
+	public void Activation_owned_tags_are_applied_on_activation_and_removed_on_end()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var ownedTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"]));
+
+		AbilityData abilityWithOwned = CreateAbilityData(
+			"OwnedTagsAbility",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			activationOwnedTags: ownedTags);
+
+		AbilityHandle? handle = SetupAbility(entity, abilityWithOwned, new ScalableInt(1), out _);
+
+		handle!.Activate().Should().BeTrue();
+		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
+
+		handle.End();
+		entity.Tags.CombinedTags.HasAny(ownedTags).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("ActivationOwnedTags", null)]
+	public void Activation_owned_tags_are_applied_on_activation_and_removed_after_last_instance_ends()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var ownedTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"]));
+
+		AbilityData abilityWithOwned = CreateAbilityData(
+			"OwnedTagsAbility",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution,
+			activationOwnedTags: ownedTags);
+
+		AbilityHandle? handle = SetupAbility(entity, abilityWithOwned, new ScalableInt(1), out _);
+
+		handle!.Activate().Should().BeTrue();
+		handle!.Activate().Should().BeTrue();
+		handle!.Activate().Should().BeTrue();
+		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
+
+		handle.End();
+		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
+
+		handle.End();
+		handle.End();
+		entity.Tags.CombinedTags.HasAny(ownedTags).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("ActivationOwnedTags", null)]
+	public void Activation_owned_tags_enable_other_ability_only_while_active()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var buffTag = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"]));
+
+		AbilityData giver = CreateAbilityData(
+			"Giver",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute1",
+			new ScalableFloat(-1),
+			activationOwnedTags: buffTag);
+
+		AbilityData requiresBuff = CreateAbilityData(
+			"NeedsBuff",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			activationRequiredTags: buffTag);
+
+		AbilityHandle? giverHandle = SetupAbility(entity, giver, new ScalableInt(1), out _);
+		AbilityHandle? needsHandle = SetupAbility(entity, requiresBuff, new ScalableInt(1), out _);
+
+		// Cannot activate without buff.
+		needsHandle!.Activate().Should().BeFalse();
+
+		// Gain buff, then can activate.
+		giverHandle!.Activate().Should().BeTrue();
+		needsHandle.Activate().Should().BeTrue();
+
+		// Lose buff, then cannot activate again.
+		giverHandle.End();
+		needsHandle.End();
+		needsHandle.Activate().Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Bookkeeping", null)]
+	public void OnAbilityDeactivated_is_fired_once_per_instance_end()
+	{
+		// Proxy via RemoveOnEnd semantics: ability is only removed after each instance ends once.
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"RemoveOnEndProxy",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute1",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution);
+
+		AbilityHandle? handle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? grantHandle,
+			AbilityDeactivationPolicy.RemoveOnEnd,
+			AbilityDeactivationPolicy.RemoveOnEnd);
+
+		handle.Should().NotBeNull();
+		grantHandle.Should().NotBeNull();
+
+		// Activate twice to simulate two instances.
+		handle!.Activate().Should().BeTrue();
+		handle!.Activate().Should().BeTrue();
+
+		// Remove grant; ability should not be removed until all instances end.
+		entity.EffectsManager.UnapplyEffect(grantHandle!);
+
+		// Still present because policy is RemoveOnEnd and still active.
+		entity.Abilities.GrantedAbilities.Should().Contain(handle);
+
+		// End one instance; still granted, one more end needed.
+		handle.End();
+		entity.Abilities.GrantedAbilities.Should().Contain(handle);
+
+		// End last instance; now removed.
+		handle.End();
+		entity.Abilities.GrantedAbilities.Should().NotContain(handle);
+	}
+
+	[Fact]
+	[Trait("Instancing", null)]
+	public void Persistent_instance_reference_is_cleared_on_end()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"PersistentCleared",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute3",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerEntity);
+
+		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
+		handle.Should().NotBeNull();
+
+		handle!.Activate().Should().BeTrue();
+		handle.End();
+		handle.IsActive.Should().BeFalse();
+
+		// Should be able to activate again, implying the persistent instance was cleared.
+		handle.Activate().Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("CancelAbilitiesWithTag", null)]
+	public void CancelAbilitiesWithTag_with_no_active_abilities_does_nothing()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var cancelTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"]));
+
+		AbilityData canceller = CreateAbilityData(
+			"Canceller",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute2",
+			new ScalableFloat(-1),
+			cancelAbilitiesWithTag: cancelTags);
+
+		AbilityData victim = CreateAbilityData(
+			"Victim",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute3",
+			new ScalableFloat(-1),
+			abilityTags: new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"])));
+
+		AbilityHandle? cancellerHandle = SetupAbility(entity, canceller, new ScalableInt(1), out _);
+		AbilityHandle? victimHandle = SetupAbility(entity, victim, new ScalableInt(1), out _);
+
+		// Victim is granted but inactive.
+		victimHandle!.IsActive.Should().BeFalse();
+
+		// Activating canceller should not affect inactive victim.
+		cancellerHandle!.Activate().Should().BeTrue();
+		victimHandle.IsActive.Should().BeFalse();
+		entity.Abilities.GrantedAbilities.Should().Contain(victimHandle);
+	}
+
+	[Fact]
+	[Trait("CancelAbilitiesWithTag", null)]
+	public void CancelAbilitiesWithTag_executes_before_applying_blocking_or_activation_tags()
+	{
+		// Approximated: ensure canceller activates and cancels victim reliably.
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var redTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"]));
+		var blockBlue = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.blue"]));
+
+		AbilityData canceller = CreateAbilityData(
+			"CancellerOrder",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute1",
+			new ScalableFloat(-1),
+			cancelAbilitiesWithTag: redTags,
+			blockAbilitiesWithTag: blockBlue,
+			activationOwnedTags: new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"])));
+
+		AbilityData victim = CreateAbilityData(
+			"VictimOrder",
+			new ScalableFloat(3f),
+			"TestAttributeSet.Attribute2",
+			new ScalableFloat(-1),
+			abilityTags: redTags);
+
+		AbilityHandle? cancellerHandle = SetupAbility(entity, canceller, new ScalableInt(1), out _);
+		AbilityHandle? victimHandle = SetupAbility(entity, victim, new ScalableInt(1), out _);
+
+		victimHandle!.Activate().Should().BeTrue();
+		cancellerHandle!.Activate().Should().BeTrue();
+
+		// Victim must be canceled; canceller remains active.
+		victimHandle.IsActive.Should().BeFalse();
+		cancellerHandle.IsActive.Should().BeTrue();
+	}
+
 	private static AbilityHandle? SetupAbility(
 		TestEntity targetEntity,
 		AbilityData abilityData,
@@ -1311,6 +1861,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		string costAttribute,
 		ScalableFloat costAmount,
 		TagContainer? abilityTags = null,
+		AbilityInstancingPolicy instancingPolicy = AbilityInstancingPolicy.PerEntity,
+		bool retriggerInstancedAbility = false,
 		TagContainer? cancelAbilitiesWithTag = null,
 		TagContainer? blockAbilitiesWithTag = null,
 		TagContainer? activationOwnedTags = null,
@@ -1346,6 +1898,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			costEffectData,
 			cooldownEffectData,
 			AbilityTags: abilityTags,
+			InstancingPolicy: instancingPolicy,
+			RetriggerInstancedAbility: retriggerInstancedAbility,
 			CancelAbilitiesWithTag: cancelAbilitiesWithTag,
 			BlockAbilitiesWithTag: blockAbilitiesWithTag,
 			ActivationOwnedTags: activationOwnedTags,

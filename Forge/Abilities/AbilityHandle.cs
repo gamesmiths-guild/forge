@@ -51,6 +51,14 @@ public class AbilityHandle
 	}
 
 	/// <summary>
+	/// Cancels all instances of the ability associated with this handle.
+	/// </summary>
+	public void Cancel()
+	{
+		Ability?.CancelAbility();
+	}
+
+	/// <summary>
 	/// Commits the ability cooldown and cost.
 	/// </summary>
 	public void CommitAbility()

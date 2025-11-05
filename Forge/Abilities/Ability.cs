@@ -2,8 +2,6 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
-using Gamesmiths.Forge.Effects.Components;
-using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Abilities;
@@ -17,13 +15,11 @@ internal class Ability
 
 	private readonly Effect? _costEffect;
 
-	private readonly Effect? _activationOwnedTagsEffect;
-
 	private readonly TagContainer? _abilityTags;
 
-	private ActiveEffectHandle? _activationOwnedTagsEffectHandle;
+	private readonly List<AbilityInstance> _activeInstances = [];
 
-	private int _activeCount;
+	private AbilityInstance? _persistentInstance;
 
 	internal event Action<Ability>? OnAbilityDeactivated;
 
@@ -61,7 +57,7 @@ internal class Ability
 
 	internal bool IsInhibited { get; set; }
 
-	internal bool IsActive => _activeCount > 0;
+	internal bool IsActive => _activeInstances.Count > 0;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Ability"/> class.
@@ -90,7 +86,6 @@ internal class Ability
 		GrantedAbilityInhibitionPolicy = grantedAbilityInhibitionPolicy;
 		SourceEntity = sourceEntity;
 
-		_activeCount = 0;
 		IsInhibited = false;
 
 		if (abilityData.CooldownEffect is not null)
@@ -109,23 +104,6 @@ internal class Ability
 				level);
 		}
 
-		if (abilityData.ActivationOwnedTags is not null)
-		{
-			_activationOwnedTagsEffect = new Effect(
-				new EffectData(
-					name: $"{abilityData.Name}_ActivationOwnedTagsEffect",
-					new DurationData
-					{
-						DurationType = DurationType.Infinite,
-					},
-					effectComponents:
-					[
-						new ModifierTagsEffectComponent(abilityData.ActivationOwnedTags)
-					]),
-				new EffectOwnership(owner, sourceEntity),
-				level);
-		}
-
 		if (abilityData.AbilityTags is not null)
 		{
 			_abilityTags = abilityData.AbilityTags;
@@ -135,7 +113,7 @@ internal class Ability
 	}
 
 	/// <summary>
-	/// Activates the ability and increments the active count.
+	/// Activates the ability by creating and starting an instance based on the instancing policy.
 	/// </summary>
 	internal void Activate()
 	{
@@ -145,23 +123,37 @@ internal class Ability
 			return;
 		}
 
-		if (_activationOwnedTagsEffect is not null)
-		{
-			_activationOwnedTagsEffectHandle = Owner.EffectsManager.ApplyEffect(_activationOwnedTagsEffect);
-		}
-
+		// Cancel conflicting abilities before we start this one.
 		if (AbilityData.CancelAbilitiesWithTag is not null)
 		{
-			//AbilityData.CancelAbilitiesWithTag
+			Owner.Abilities.CancelAbilitiesWithTag(AbilityData.CancelAbilitiesWithTag);
 		}
 
-		if (AbilityData.BlockAbilitiesWithTag is not null)
+		if (AbilityData.InstancingPolicy == AbilityInstancingPolicy.PerEntity)
 		{
-			Owner.Abilities.BlockedAbilityTags.AddModifierTags(AbilityData.BlockAbilitiesWithTag);
+			if (_persistentInstance?.IsActive == true)
+			{
+				if (!AbilityData.RetriggerInstancedAbility)
+				{
+					Console.WriteLine($"Ability {AbilityData.Name} already active (PerEntity).");
+					return;
+				}
+
+				_persistentInstance.Cancel();
+				_persistentInstance = null;
+			}
+
+			_persistentInstance ??= new AbilityInstance(this);
+			_activeInstances.Add(_persistentInstance);
+			_persistentInstance.Start();
+			Console.WriteLine($"Ability {AbilityData.Name} activated. Active count: {_activeInstances.Count}");
+			return;
 		}
 
-		_activeCount++;
-		Console.WriteLine($"Ability {AbilityData.Name} activated. Active count: {_activeCount}");
+		var instance = new AbilityInstance(this);
+		_activeInstances.Add(instance);
+		instance.Start();
+		Console.WriteLine($"Ability {AbilityData.Name} activated. Active count: {_activeInstances.Count}");
 	}
 
 	// TODO: Might need to return reasons why it can't be activated, including relevant tags.
@@ -172,7 +164,13 @@ internal class Ability
 			return false;
 		}
 
-		// Check instance.
+		// Check instance policy for non re-triggerable persistent instance.
+		if (AbilityData.InstancingPolicy == AbilityInstancingPolicy.PerEntity
+			&& !AbilityData.RetriggerInstancedAbility
+			&& _persistentInstance?.IsActive == true)
+		{
+			return false;
+		}
 
 		// Check cooldown.
 		if (_cooldownEffect?.CachedGrantedTags is not null
@@ -258,34 +256,56 @@ internal class Ability
 
 	internal void CancelAbility()
 	{
-		// TODO: Set flags for cancellation.
-		End();
+		// Cancel all active instances.
+		CancelAllInstances();
 	}
 
 	internal void End()
 	{
-		if (_activeCount <= 0)
+		// End the most recent active instance, if any.
+		if (_activeInstances.Count == 0)
 		{
 			Console.WriteLine($"Ability {AbilityData.Name} is not active.");
 			return;
 		}
 
-		if (_activationOwnedTagsEffectHandle is not null)
+		AbilityInstance last = _activeInstances[^1];
+		last.End();
+	}
+
+	internal void CancelAllInstances()
+	{
+		if (_activeInstances.Count == 0)
 		{
-			Owner.EffectsManager.UnapplyEffect(_activationOwnedTagsEffectHandle);
-			_activationOwnedTagsEffectHandle.Free();
+			return;
 		}
 
-		// Unblock abilities with tags.
-		if (AbilityData.BlockAbilitiesWithTag is not null)
+		// Copy to avoid modification during iteration.
+		foreach (AbilityInstance instance in _activeInstances.ToArray())
 		{
-			Owner.Abilities.BlockedAbilityTags.RemoveModifierTags(AbilityData.BlockAbilitiesWithTag);
+			instance.Cancel();
+		}
+	}
+
+	internal void OnInstanceStarted(AbilityInstance instance)
+	{
+		Console.WriteLine($"Ability {AbilityData.Name} started ({instance.IsActive}).");
+	}
+
+	internal void OnInstanceEnded(AbilityInstance instance)
+	{
+		_activeInstances.Remove(instance);
+
+		if (_persistentInstance == instance)
+		{
+			_persistentInstance = null;
 		}
 
-		_activeCount--;
-
-		OnAbilityDeactivated?.Invoke(this);
-		Console.WriteLine($"Ability {AbilityData.Name} deactivated. Active count: {_activeCount}");
+		if (_activeInstances.Count == 0)
+		{
+			OnAbilityDeactivated?.Invoke(this);
+			Console.WriteLine($"Ability {AbilityData.Name} deactivated. Active count: {_activeInstances.Count}");
+		}
 	}
 
 	private static bool FailsRequiredTags(TagContainer? required, TagContainer? present)

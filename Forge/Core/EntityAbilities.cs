@@ -59,6 +59,36 @@ public class EntityAbilities(IForgeEntity owner)
 		return false;
 	}
 
+	/// <summary>
+	/// Cancels all active abilities whose AbilityTags overlap the provided tags.
+	/// For PerEntity abilities, cancels the single active instance.
+	/// For per-execution abilities, cancels all active instances.
+	/// </summary>
+	/// <param name="tagsToCancel">Tags that identify abilities to cancel.</param>
+	public void CancelAbilitiesWithTag(TagContainer tagsToCancel)
+	{
+		if (tagsToCancel is null)
+		{
+			return;
+		}
+
+		// Enumerate snapshot to avoid modification during cancel.
+		foreach (AbilityHandle? handle in GrantedAbilities.ToArray())
+		{
+			Ability? ability = handle?.Ability;
+			if (ability is null)
+			{
+				continue;
+			}
+
+			TagContainer? abilityTags = ability.AbilityData.AbilityTags;
+			if (abilityTags?.HasAny(tagsToCancel) == true)
+			{
+				ability.CancelAllInstances();
+			}
+		}
+	}
+
 	internal void GrantAbilityPermanently(
 		AbilityData abilityData,
 		int abilityLevel,
