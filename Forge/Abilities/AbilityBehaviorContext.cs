@@ -22,33 +22,27 @@ public sealed class AbilityBehaviorContext
 	/// <summary>
 	/// Gets the target entity of this ability instance.
 	/// </summary>
-	public IForgeEntity? Target => Instance.Target;
+	public IForgeEntity? Target => InstanceHandle.Target;
 
 	/// <summary>
 	/// Gets the level of the ability at the time of execution.
 	/// </summary>
-	public int Level => Ability.Level;
+	public int Level => AbilityHandle.Level;
 
 	/// <summary>
-	/// Gets the handle to the ability being executed.
+	/// Gets the handle to the ability being executed (ability-level operations).
 	/// </summary>
-	/// <remarks>
-	/// Ability-level control (affects the granted ability as a whole: commit, cancel all, end last).
-	/// </remarks>
-	public AbilityHandle Ability { get; }
+	public AbilityHandle AbilityHandle { get; }
 
 	/// <summary>
-	/// Gets the public instance handle for per-instance operations.
+	/// Gets the per-instance handle for this execution (end/cancel this instance).
 	/// </summary>
-	/// <remarks>
-	/// This instance control (affects only this execution: end/cancel).
-	/// </remarks>
-	public AbilityInstanceHandle Instance { get; }
+	public AbilityInstanceHandle InstanceHandle { get; }
 
 	internal AbilityBehaviorContext(Ability ability, AbilityInstance instance)
 	{
-		Ability = ability.Handle;
-		Instance = new AbilityInstanceHandle(instance);
+		AbilityHandle = ability.Handle;
+		InstanceHandle = new AbilityInstanceHandle(instance);
 
 		Owner = ability.Owner;
 		Source = ability.SourceEntity;
