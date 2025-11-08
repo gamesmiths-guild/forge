@@ -11,6 +11,8 @@ namespace Gamesmiths.Forge.Abilities;
 /// </summary>
 internal class Ability
 {
+	private record struct BehaviorBinding(IAbilityBehavior Behavior, AbilityBehaviorContext Context);
+
 	private readonly Effect? _cooldownEffect;
 
 	private readonly Effect? _costEffect;
@@ -18,6 +20,8 @@ internal class Ability
 	private readonly TagContainer? _abilityTags;
 
 	private readonly List<AbilityInstance> _activeInstances = [];
+
+	private readonly Dictionary<AbilityInstance, BehaviorBinding> _behaviors = [];
 
 	private AbilityInstance? _persistentInstance;
 
@@ -28,29 +32,14 @@ internal class Ability
 	/// </summary>
 	public IForgeEntity Owner { get; }
 
-	/// <summary>
-	/// Gets the ability data for this ability.
-	/// </summary>
 	internal AbilityData AbilityData { get; }
 
-	/// <summary>
-	/// Gets or sets the current level o this ability.
-	/// </summary>
 	internal int Level { get; set; }
 
-	/// <summary>
-	/// Gets the policy that determines when this granted ability should be removed.
-	/// </summary>
 	internal AbilityDeactivationPolicy GrantedAbilityRemovalPolicy { get; }
 
-	/// <summary>
-	/// Gets the policy that determines how this ability behaves when it is inhibited.
-	/// </summary>
 	internal AbilityDeactivationPolicy GrantedAbilityInhibitionPolicy { get; }
 
-	/// <summary>
-	/// Gets the entity that is the source of this ability.
-	/// </summary>
 	internal IForgeEntity? SourceEntity { get; }
 
 	internal AbilityHandle Handle { get; }
@@ -85,7 +74,6 @@ internal class Ability
 		GrantedAbilityRemovalPolicy = grantedAbilityRemovalPolicy;
 		GrantedAbilityInhibitionPolicy = grantedAbilityInhibitionPolicy;
 		SourceEntity = sourceEntity;
-
 		IsInhibited = false;
 
 		if (abilityData.CooldownEffect is not null)
@@ -112,120 +100,11 @@ internal class Ability
 		Handle = new AbilityHandle(this);
 	}
 
-	/// <summary>
-	/// Activates the ability by creating and starting an instance based on the instancing policy.
-	/// </summary>
-	internal void Activate()
+	internal bool TryActivateAbility(IForgeEntity? abilityTarget, out AbilityActivationResult activationResult)
 	{
-		if (IsInhibited)
+		if (CanActivate(abilityTarget, out activationResult))
 		{
-			Console.WriteLine($"Ability {AbilityData.Name} is inhibited and cannot be activated.");
-			return;
-		}
-
-		// Cancel conflicting abilities before we start this one.
-		if (AbilityData.CancelAbilitiesWithTag is not null)
-		{
-			Owner.Abilities.CancelAbilitiesWithTag(AbilityData.CancelAbilitiesWithTag);
-		}
-
-		if (AbilityData.InstancingPolicy == AbilityInstancingPolicy.PerEntity)
-		{
-			if (_persistentInstance?.IsActive == true)
-			{
-				if (!AbilityData.RetriggerInstancedAbility)
-				{
-					Console.WriteLine($"Ability {AbilityData.Name} already active (PerEntity).");
-					return;
-				}
-
-				_persistentInstance.Cancel();
-				_persistentInstance = null;
-			}
-
-			_persistentInstance ??= new AbilityInstance(this);
-			_activeInstances.Add(_persistentInstance);
-			_persistentInstance.Start();
-			Console.WriteLine($"Ability {AbilityData.Name} activated. Active count: {_activeInstances.Count}");
-			return;
-		}
-
-		var instance = new AbilityInstance(this);
-		_activeInstances.Add(instance);
-		instance.Start();
-		Console.WriteLine($"Ability {AbilityData.Name} activated. Active count: {_activeInstances.Count}");
-	}
-
-	// TODO: Might need to return reasons why it can't be activated, including relevant tags.
-	internal bool CanActivate(IForgeEntity? abilityTarget)
-	{
-		if (IsInhibited)
-		{
-			return false;
-		}
-
-		// Check instance policy for non re-triggerable persistent instance.
-		if (AbilityData.InstancingPolicy == AbilityInstancingPolicy.PerEntity
-			&& !AbilityData.RetriggerInstancedAbility
-			&& _persistentInstance?.IsActive == true)
-		{
-			return false;
-		}
-
-		// Check cooldown.
-		if (_cooldownEffect?.CachedGrantedTags is not null
-			&& Owner.Tags.CombinedTags.HasAny(_cooldownEffect.CachedGrantedTags))
-		{
-			return false;
-		}
-
-		// Check resources.
-		if (_costEffect is not null
-			&& !Owner.EffectsManager.CanApplyEffect(_costEffect, Level))
-		{
-			return false;
-		}
-
-		// Check tags condition.
-		TagContainer ownerTags = Owner.Tags.CombinedTags;
-		TagContainer? sourceTags = SourceEntity?.Tags.CombinedTags;
-		TagContainer? targetTags = abilityTarget?.Tags.CombinedTags;
-
-		// Owner tags.
-		if (FailsRequiredTags(AbilityData.ActivationRequiredTags, ownerTags)
-			|| HasBlockedTags(AbilityData.ActivationBlockedTags, ownerTags))
-		{
-			return false;
-		}
-
-		// Source tags.
-		if (FailsRequiredTags(AbilityData.SourceRequiredTags, sourceTags)
-			|| HasBlockedTags(AbilityData.SourceBlockedTags, sourceTags))
-		{
-			return false;
-		}
-
-		// Target tags.
-		if (FailsRequiredTags(AbilityData.TargetRequiredTags, targetTags)
-			|| HasBlockedTags(AbilityData.TargetBlockedTags, targetTags))
-		{
-			return false;
-		}
-
-		// Check ability tags against BlockAbilitiesWithTag
-		if (_abilityTags?.HasAny(Owner.Abilities.BlockedAbilityTags.CombinedTags) == true)
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	internal bool TryActivateAbility(IForgeEntity? abilityTarget)
-	{
-		if (CanActivate(abilityTarget))
-		{
-			Activate();
+			Activate(abilityTarget);
 			return true;
 		}
 
@@ -256,7 +135,6 @@ internal class Ability
 
 	internal void CancelAbility()
 	{
-		// Cancel all active instances.
 		CancelAllInstances();
 	}
 
@@ -289,7 +167,29 @@ internal class Ability
 
 	internal void OnInstanceStarted(AbilityInstance instance)
 	{
-		Console.WriteLine($"Ability {AbilityData.Name} started ({instance.IsActive}).");
+		if (AbilityData.BehaviorFactory is null)
+		{
+			return;
+		}
+
+		IAbilityBehavior? behavior = AbilityData.BehaviorFactory.Invoke();
+		if (behavior is null)
+		{
+			return;
+		}
+
+		var context = new AbilityBehaviorContext(this, instance);
+		_behaviors[instance] = new BehaviorBinding(behavior, context);
+
+		try
+		{
+			behavior.OnStarted(context);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Ability behavior threw on start: {ex}");
+			instance.Cancel();
+		}
 	}
 
 	internal void OnInstanceEnded(AbilityInstance instance)
@@ -301,10 +201,21 @@ internal class Ability
 			_persistentInstance = null;
 		}
 
+		if (_behaviors.Remove(instance, out BehaviorBinding binding))
+		{
+			try
+			{
+				binding.Behavior.OnEnded(binding.Context);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Ability behavior threw on end: {ex}");
+			}
+		}
+
 		if (_activeInstances.Count == 0)
 		{
 			OnAbilityDeactivated?.Invoke(this);
-			Console.WriteLine($"Ability {AbilityData.Name} deactivated. Active count: {_activeInstances.Count}");
 		}
 	}
 
@@ -316,5 +227,108 @@ internal class Ability
 	private static bool HasBlockedTags(TagContainer? blocked, TagContainer? present)
 	{
 		return blocked is not null && (present?.HasAny(blocked) == true);
+	}
+
+	private bool CanActivate(IForgeEntity? abilityTarget, out AbilityActivationResult activationResult)
+	{
+		if (IsInhibited)
+		{
+			activationResult = AbilityActivationResult.FailedInhibition;
+			return false;
+		}
+
+		// Check instance policy for non re-triggerable persistent instance.
+		if (AbilityData.InstancingPolicy == AbilityInstancingPolicy.PerEntity
+			&& !AbilityData.RetriggerInstancedAbility
+			&& _persistentInstance?.IsActive == true)
+		{
+			activationResult = AbilityActivationResult.FailedPersistentInstanceActive;
+			return false;
+		}
+
+		// Check cooldown.
+		if (_cooldownEffect?.CachedGrantedTags is not null
+			&& Owner.Tags.CombinedTags.HasAny(_cooldownEffect.CachedGrantedTags))
+		{
+			activationResult = AbilityActivationResult.FailedCooldown;
+			return false;
+		}
+
+		// Check resources.
+		if (_costEffect is not null
+			&& !Owner.EffectsManager.CanApplyEffect(_costEffect, Level))
+		{
+			activationResult = AbilityActivationResult.FailedInsufficientResources;
+			return false;
+		}
+
+		// Check tags condition.
+		TagContainer ownerTags = Owner.Tags.CombinedTags;
+		TagContainer? sourceTags = SourceEntity?.Tags.CombinedTags;
+		TagContainer? targetTags = abilityTarget?.Tags.CombinedTags;
+
+		// Owner tags.
+		if (FailsRequiredTags(AbilityData.ActivationRequiredTags, ownerTags)
+			|| HasBlockedTags(AbilityData.ActivationBlockedTags, ownerTags))
+		{
+			activationResult = AbilityActivationResult.FailedOwnerTagRequirements;
+			return false;
+		}
+
+		// Source tags.
+		if (FailsRequiredTags(AbilityData.SourceRequiredTags, sourceTags)
+			|| HasBlockedTags(AbilityData.SourceBlockedTags, sourceTags))
+		{
+			activationResult = AbilityActivationResult.FailedSourceTagRequirements;
+			return false;
+		}
+
+		// Target tags.
+		if (FailsRequiredTags(AbilityData.TargetRequiredTags, targetTags)
+			|| HasBlockedTags(AbilityData.TargetBlockedTags, targetTags))
+		{
+			activationResult = AbilityActivationResult.FailedTargetTagRequirements;
+			return false;
+		}
+
+		// Check ability tags against BlockAbilitiesWithTag
+		if (_abilityTags?.HasAny(Owner.Abilities.BlockedAbilityTags.CombinedTags) == true)
+		{
+			activationResult = AbilityActivationResult.FailedBlockedByTags;
+			return false;
+		}
+
+		activationResult = AbilityActivationResult.Success;
+		return true;
+	}
+
+	private void Activate(IForgeEntity? abilityTarget)
+	{
+		// Cancel conflicting abilities before we start this one.
+		if (AbilityData.CancelAbilitiesWithTag is not null)
+		{
+			Owner.Abilities.CancelAbilitiesWithTag(AbilityData.CancelAbilitiesWithTag);
+		}
+
+		if (AbilityData.InstancingPolicy == AbilityInstancingPolicy.PerEntity)
+		{
+			if (_persistentInstance?.IsActive == true)
+			{
+				Validation.Assert(
+					!AbilityData.RetriggerInstancedAbility, "Should not reach here due to CanActivate check.");
+
+				_persistentInstance.Cancel();
+				_persistentInstance = null;
+			}
+
+			_persistentInstance ??= new AbilityInstance(this, abilityTarget);
+			_activeInstances.Add(_persistentInstance);
+			_persistentInstance.Start();
+			return;
+		}
+
+		var instance = new AbilityInstance(this, abilityTarget);
+		_activeInstances.Add(instance);
+		instance.Start();
 	}
 }

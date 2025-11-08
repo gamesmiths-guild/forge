@@ -34,12 +34,14 @@ public class AbilityHandle
 	/// <summary>
 	/// Activates the ability associated with this handle.
 	/// </summary>
+	/// <param name="activationResult">The result of the ability activation attempt.</param>
 	/// <param name="target">The target entity for the ability activation.</param>
 	/// <returns>Return <see langword="true"/> if the ability was successfully activated;
 	/// otherwise, <see langword="false"/>.</returns>
-	public bool Activate(IForgeEntity? target = null)
+	public bool Activate(out AbilityActivationResult activationResult, IForgeEntity? target = null)
 	{
-		return Ability?.TryActivateAbility(target) ?? false;
+		activationResult = AbilityActivationResult.FailedInvalidHandler;
+		return Ability?.TryActivateAbility(target, out activationResult) ?? false;
 	}
 
 	/// <summary>

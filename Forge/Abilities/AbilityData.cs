@@ -39,6 +39,7 @@ namespace Gamesmiths.Forge.Abilities;
 /// <param name="TargetRequiredTags">Tags required on the target to activate the ability.</param>
 /// <param name="TargetBlockedTags">Tags that, if present on the target, will block the ability from being activated.
 /// </param>
+/// <param name="BehaviorFactory">The factory function to create custom ability behavior instances.</param>
 public readonly record struct AbilityData(
 	string Name,
 	EffectData? CostEffect = null,
@@ -55,4 +56,5 @@ public readonly record struct AbilityData(
 	TagContainer? SourceRequiredTags = null,
 	TagContainer? SourceBlockedTags = null,
 	TagContainer? TargetRequiredTags = null,
-	TagContainer? TargetBlockedTags = null);
+	TagContainer? TargetBlockedTags = null,
+	Func<IAbilityBehavior>? BehaviorFactory = null);

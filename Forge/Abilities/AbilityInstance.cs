@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Abilities;
@@ -14,9 +15,12 @@ internal sealed class AbilityInstance
 
 	internal bool IsActive { get; private set; }
 
-	internal AbilityInstance(Ability ability)
+	internal IForgeEntity? Target { get; }
+
+	internal AbilityInstance(Ability ability, IForgeEntity? target)
 	{
 		_ability = ability;
+		Target = target;
 	}
 
 	internal void Start()
