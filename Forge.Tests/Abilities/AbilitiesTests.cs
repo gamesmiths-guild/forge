@@ -28,7 +28,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -54,7 +55,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -86,7 +88,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -124,7 +127,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -174,7 +178,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -212,7 +217,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -252,7 +258,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -293,7 +300,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -333,7 +341,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -373,7 +382,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -416,7 +426,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -462,7 +473,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -517,7 +529,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -559,7 +572,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -605,7 +619,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -648,7 +663,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -678,7 +694,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -707,7 +724,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -731,7 +749,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -786,7 +805,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		// Create two different AbilityData instances (differ by name)
 		AbilityData abilityData1 = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -828,7 +848,48 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
+		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle.IsActive.Should().BeTrue();
+
+		abilityHandle.CommitCooldown();
+		abilityHandle.End();
+
+		abilityHandle!.Activate(out activationResult).Should().BeFalse();
+		activationResult.Should().Be(AbilityActivationResult.FailedCooldown);
+
+		entity.EffectsManager.UpdateEffects(2f);
+
+		abilityHandle!.Activate(out activationResult).Should().BeFalse();
+		activationResult.Should().Be(AbilityActivationResult.FailedCooldown);
+
+		entity.EffectsManager.UpdateEffects(1f);
+
+		abilityHandle!.Activate(out activationResult).Should().BeTrue();
+		activationResult.Should().Be(AbilityActivationResult.Success);
+	}
+
+	[Fact]
+	[Trait("Cooldown", null)]
+	public void Ability_wont_activate_until_last_cooldown_effect_is_removed()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f), new ScalableFloat(1f)],
+			["simple.tag", "tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
@@ -869,7 +930,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(cost),
 			retriggerInstancedAbility: true);
@@ -898,7 +960,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			activationRequiredTags: new TagContainer(
@@ -923,7 +986,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			activationBlockedTags: new TagContainer(
@@ -949,7 +1013,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			sourceRequiredTags: new TagContainer(
@@ -976,7 +1041,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			sourceBlockedTags: new TagContainer(
@@ -1002,7 +1068,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			sourceRequiredTags: new TagContainer(
@@ -1028,7 +1095,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			sourceBlockedTags: new TagContainer(
@@ -1055,7 +1123,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			targetRequiredTags: new TagContainer(
@@ -1081,7 +1150,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			targetBlockedTags: new TagContainer(
@@ -1106,7 +1176,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			targetRequiredTags: new TagContainer(
@@ -1131,7 +1202,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"Fireball",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			targetBlockedTags: new TagContainer(
@@ -1156,7 +1228,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData blockerAbilityData = CreateAbilityData(
 			"Blocker ability",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			blockAbilitiesWithTag: new TagContainer(
@@ -1164,7 +1237,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData unblockedAbilityData = CreateAbilityData(
 			"Unblocked ability",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			abilityTags: new TagContainer(
@@ -1172,7 +1246,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData blockedAbilityData = CreateAbilityData(
 			"Blocked ability",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
 			abilityTags: new TagContainer(
@@ -1223,7 +1298,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"PerEntity_NoRetrigger",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute1",
 			new ScalableFloat(-1),
 			instancingPolicy: AbilityInstancingPolicy.PerEntity,
@@ -1253,7 +1329,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"PerEntity_Retrigger",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute2",
 			new ScalableFloat(-1),
 			instancingPolicy: AbilityInstancingPolicy.PerEntity,
@@ -1284,7 +1361,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"PerExecution",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute3",
 			new ScalableFloat(-1),
 			instancingPolicy: AbilityInstancingPolicy.PerExecution);
@@ -1323,7 +1401,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"EndsMostRecent",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute5",
 			new ScalableFloat(-1),
 			instancingPolicy: AbilityInstancingPolicy.PerExecution);
@@ -1356,7 +1435,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"CancelAllInstances",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute5",
 			new ScalableFloat(-1),
 			instancingPolicy: AbilityInstancingPolicy.PerExecution);
@@ -1391,14 +1471,16 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData canceller = CreateAbilityData(
 			"Canceller",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute3",
 			new ScalableFloat(-1),
 			cancelAbilitiesWithTag: cancelTags);
 
 		AbilityData victim = CreateAbilityData(
 			"Victim",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute5",
 			new ScalableFloat(-1),
 			abilityTags: new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"])));
@@ -1427,14 +1509,16 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData canceller = CreateAbilityData(
 			"Canceller2",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute3",
 			new ScalableFloat(-1),
 			cancelAbilitiesWithTag: cancelTags);
 
 		AbilityData unrelated = CreateAbilityData(
 			"Unrelated",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute5",
 			new ScalableFloat(-1),
 			abilityTags: new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.blue"])));
@@ -1463,14 +1547,16 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData canceller = CreateAbilityData(
 			"Canceller3",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute1",
 			new ScalableFloat(-1),
 			cancelAbilitiesWithTag: cancelTags);
 
 		AbilityData victim = CreateAbilityData(
 			"VictimMulti",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute2",
 			new ScalableFloat(-1),
 			abilityTags: new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"])),
@@ -1500,7 +1586,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData selfCanceller = CreateAbilityData(
 			"SelfCanceller",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute1",
 			new ScalableFloat(-1),
 			abilityTags: redTags,
@@ -1523,7 +1610,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData blocker = CreateAbilityData(
 			"BlockerMulti",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute1",
 			new ScalableFloat(-1),
 			instancingPolicy: AbilityInstancingPolicy.PerExecution,
@@ -1531,7 +1619,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData blocked = CreateAbilityData(
 			"BlockedRed",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute5",
 			new ScalableFloat(-1),
 			abilityTags: redTags);
@@ -1575,7 +1664,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityWithOwned = CreateAbilityData(
 			"OwnedTagsAbility",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute5",
 			new ScalableFloat(-1),
 			activationOwnedTags: ownedTags);
@@ -1601,7 +1691,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityWithOwned = CreateAbilityData(
 			"OwnedTagsAbility",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute5",
 			new ScalableFloat(-1),
 			instancingPolicy: AbilityInstancingPolicy.PerExecution,
@@ -1641,14 +1732,16 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData giver = CreateAbilityData(
 			"Giver",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute1",
 			new ScalableFloat(-1),
 			activationOwnedTags: buffTag);
 
 		AbilityData requiresBuff = CreateAbilityData(
 			"NeedsBuff",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute5",
 			new ScalableFloat(-1),
 			activationRequiredTags: buffTag);
@@ -1683,7 +1776,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"RemoveOnEndProxy",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute1",
 			new ScalableFloat(-1),
 			instancingPolicy: AbilityInstancingPolicy.PerExecution);
@@ -1728,7 +1822,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData abilityData = CreateAbilityData(
 			"PersistentCleared",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute3",
 			new ScalableFloat(-1),
 			instancingPolicy: AbilityInstancingPolicy.PerEntity);
@@ -1756,14 +1851,16 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData canceller = CreateAbilityData(
 			"Canceller",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute2",
 			new ScalableFloat(-1),
 			cancelAbilitiesWithTag: cancelTags);
 
 		AbilityData victim = CreateAbilityData(
 			"Victim",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute3",
 			new ScalableFloat(-1),
 			abilityTags: new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"])));
@@ -1793,7 +1890,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData canceller = CreateAbilityData(
 			"CancellerOrder",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute1",
 			new ScalableFloat(-1),
 			cancelAbilitiesWithTag: redTags,
@@ -1802,7 +1900,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityData victim = CreateAbilityData(
 			"VictimOrder",
-			new ScalableFloat(3f),
+			[new ScalableFloat(3f)],
+			["simple.tag"],
 			"TestAttributeSet.Attribute2",
 			new ScalableFloat(-1),
 			abilityTags: redTags);
@@ -1898,7 +1997,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 	private AbilityData CreateAbilityData(
 		string abilityName,
-		ScalableFloat cooldownDuration,
+		ScalableFloat[] cooldownDurations,
+		string[] cooldownTags,
 		string costAttribute,
 		ScalableFloat costAmount,
 		TagContainer? abilityTags = null,
@@ -1914,15 +2014,21 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		TagContainer? targetRequiredTags = null,
 		TagContainer? targetBlockedTags = null)
 	{
-		var cooldownEffectData = new EffectData(
-			"Fireball Cooldown",
-			new DurationData(
-				DurationType.HasDuration,
-				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, cooldownDuration)),
-			effectComponents:
-			[
-				new ModifierTagsEffectComponent(new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["simple.tag"])))
-			]);
+		var cooldownEffectData = new EffectData[cooldownDurations.Length];
+
+		for (var i = 0; i < cooldownDurations.Length; i++)
+		{
+			cooldownEffectData[i] = new EffectData(
+				"Fireball Cooldown",
+				new DurationData(
+					DurationType.HasDuration,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, cooldownDurations[i])),
+				effectComponents:
+				[
+					new ModifierTagsEffectComponent(
+						new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, [cooldownTags[i]])))
+				]);
+		}
 
 		var costEffectData = new EffectData(
 			"Fireball Cost",

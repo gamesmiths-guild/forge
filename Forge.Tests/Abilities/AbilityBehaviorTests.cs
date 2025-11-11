@@ -277,14 +277,18 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		float cooldownSeconds = 3f,
 		float costMagnitude = -1f)
 	{
-		var cooldownEffectData = new EffectData(
+		EffectData[] cooldownEffectData = [new EffectData(
 			$"{name} Cooldown",
 			new DurationData(
 				DurationType.HasDuration,
 				new ModifierMagnitude(
 					MagnitudeCalculationType.ScalableFloat,
 					scalableFloatMagnitude: new ScalableFloat(cooldownSeconds))),
-			effectComponents: [new ModifierTagsEffectComponent(new TagContainer(_tags, TestUtils.StringToTag(_tags, ["simple.tag"])))]);
+			effectComponents:
+			[
+				new ModifierTagsEffectComponent(
+					new TagContainer(_tags, TestUtils.StringToTag(_tags, ["simple.tag"])))
+			])];
 
 		var costEffectData = new EffectData(
 			$"{name} Cost",

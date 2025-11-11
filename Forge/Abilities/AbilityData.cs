@@ -17,7 +17,7 @@ namespace Gamesmiths.Forge.Abilities;
 /// <param name="Name">The name of the ability.</param>
 /// <param name="CostEffect">The effect that represents the cost of using the ability called when the ability is
 /// committed.</param>
-/// <param name="CooldownEffect">The effect that represents the cooldown of the ability.</param>
+/// <param name="CooldownEffects">A list of effects that represents the cooldowns of the ability.</param>
 /// <param name="AbilityTags">Tags associated with the ability for categorization and filtering.</param>
 /// <param name="InstancingPolicy">The instancing policy for the ability, determining how instances are created and
 /// managed.</param>
@@ -43,7 +43,7 @@ namespace Gamesmiths.Forge.Abilities;
 public readonly record struct AbilityData(
 	string Name,
 	EffectData? CostEffect = null,
-	EffectData? CooldownEffect = null,
+	EffectData[]? CooldownEffects = null,
 	TagContainer? AbilityTags = null,
 	AbilityInstancingPolicy InstancingPolicy = AbilityInstancingPolicy.PerEntity,
 	bool RetriggerInstancedAbility = false,

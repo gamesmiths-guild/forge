@@ -13,7 +13,7 @@ internal class Ability
 {
 	private record struct BehaviorBinding(IAbilityBehavior Behavior, AbilityBehaviorContext Context);
 
-	private readonly Effect? _cooldownEffect;
+	private readonly Effect[]? _cooldownEffects;
 
 	private readonly Effect? _costEffect;
 
@@ -76,12 +76,17 @@ internal class Ability
 		SourceEntity = sourceEntity;
 		IsInhibited = false;
 
-		if (abilityData.CooldownEffect is not null)
+		if (abilityData.CooldownEffects is not null)
 		{
-			_cooldownEffect = new Effect(
-				abilityData.CooldownEffect.Value,
-				new EffectOwnership(owner, sourceEntity),
-				level);
+			_cooldownEffects = new Effect[abilityData.CooldownEffects.Length];
+
+			for (var i = 0; i < abilityData.CooldownEffects.Length; i++)
+			{
+				_cooldownEffects[i] = new Effect(
+					abilityData.CooldownEffects[i],
+					new EffectOwnership(owner, sourceEntity),
+					level);
+			}
 		}
 
 		if (abilityData.CostEffect is not null)
@@ -119,9 +124,12 @@ internal class Ability
 
 	internal void CommitCooldown()
 	{
-		if (_cooldownEffect is not null)
+		if (_cooldownEffects is not null)
 		{
-			Owner.EffectsManager.ApplyEffect(_cooldownEffect);
+			foreach (Effect effect in _cooldownEffects)
+			{
+				Owner.EffectsManager.ApplyEffect(effect);
+			}
 		}
 	}
 
@@ -247,11 +255,16 @@ internal class Ability
 		}
 
 		// Check cooldown.
-		if (_cooldownEffect?.CachedGrantedTags is not null
-			&& Owner.Tags.CombinedTags.HasAny(_cooldownEffect.CachedGrantedTags))
+		if (_cooldownEffects is not null)
 		{
-			activationResult = AbilityActivationResult.FailedCooldown;
-			return false;
+			foreach (Effect effect in _cooldownEffects)
+			{
+				if (effect?.CachedGrantedTags is not null && Owner.Tags.CombinedTags.HasAny(effect.CachedGrantedTags))
+				{
+					activationResult = AbilityActivationResult.FailedCooldown;
+					return false;
+				}
+			}
 		}
 
 		// Check resources.
