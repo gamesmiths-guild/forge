@@ -920,6 +920,121 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		activationResult.Should().Be(AbilityActivationResult.Success);
 	}
 
+	[Fact]
+	[Trait("Cooldown", null)]
+	public void GetCooldownData_and_GetRemainingCooldownTime_return_correct_values()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f), new ScalableFloat(1f)],
+			["simple.tag", "tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
+		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle.IsActive.Should().BeTrue();
+
+		CooldownData[]? cooldownData = abilityHandle.GetCooldownData()!;
+		cooldownData.Should().HaveCount(2);
+
+		var simpleTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		var tag = Tag.RequestTag(_tagsManager, "tag");
+
+		cooldownData[0].TotalTime.Should().Be(3f);
+		cooldownData[0].RemainingTime.Should().Be(0f);
+		cooldownData[0].CooldownTags.Should().Contain(simpleTag);
+
+		cooldownData[1].TotalTime.Should().Be(1f);
+		cooldownData[1].RemainingTime.Should().Be(0f);
+		cooldownData[1].CooldownTags.Should().Contain(tag);
+
+		abilityHandle.GetRemainingCooldownTime(simpleTag).Should().Be(0f);
+		abilityHandle.GetRemainingCooldownTime(tag).Should().Be(0f);
+
+		abilityHandle.CommitCooldown();
+		abilityHandle.Cancel();
+
+		abilityHandle!.Activate(out activationResult).Should().BeFalse();
+		activationResult.Should().Be(AbilityActivationResult.FailedCooldown);
+
+		cooldownData = abilityHandle.GetCooldownData()!;
+		cooldownData.Should().HaveCount(2);
+
+		cooldownData[0].TotalTime.Should().Be(3f);
+		cooldownData[0].RemainingTime.Should().Be(3f);
+		cooldownData[0].CooldownTags.Should().Contain(simpleTag);
+
+		cooldownData[1].TotalTime.Should().Be(1f);
+		cooldownData[1].RemainingTime.Should().Be(1f);
+		cooldownData[1].CooldownTags.Should().Contain(tag);
+
+		abilityHandle.GetRemainingCooldownTime(simpleTag).Should().Be(3f);
+		abilityHandle.GetRemainingCooldownTime(tag).Should().Be(1f);
+
+		entity.EffectsManager.UpdateEffects(0.5f);
+
+		abilityHandle!.Activate(out activationResult).Should().BeFalse();
+		activationResult.Should().Be(AbilityActivationResult.FailedCooldown);
+
+		cooldownData = abilityHandle.GetCooldownData()!;
+		cooldownData.Should().HaveCount(2);
+
+		cooldownData[0].TotalTime.Should().Be(3f);
+		cooldownData[0].RemainingTime.Should().Be(2.5f);
+		cooldownData[0].CooldownTags.Should().Contain(simpleTag);
+
+		cooldownData[1].TotalTime.Should().Be(1f);
+		cooldownData[1].RemainingTime.Should().Be(0.5f);
+		cooldownData[1].CooldownTags.Should().Contain(tag);
+
+		abilityHandle.GetRemainingCooldownTime(simpleTag).Should().Be(2.5f);
+		abilityHandle.GetRemainingCooldownTime(tag).Should().Be(0.5f);
+
+		entity.EffectsManager.UpdateEffects(1f);
+
+		cooldownData = abilityHandle.GetCooldownData()!;
+		cooldownData.Should().HaveCount(2);
+
+		cooldownData[0].TotalTime.Should().Be(3f);
+		cooldownData[0].RemainingTime.Should().Be(1.5f);
+		cooldownData[0].CooldownTags.Should().Contain(simpleTag);
+
+		cooldownData[1].TotalTime.Should().Be(1f);
+		cooldownData[1].RemainingTime.Should().Be(0f);
+		cooldownData[1].CooldownTags.Should().Contain(tag);
+
+		abilityHandle.GetRemainingCooldownTime(simpleTag).Should().Be(1.5f);
+		abilityHandle.GetRemainingCooldownTime(tag).Should().Be(0f);
+
+		entity.EffectsManager.UpdateEffects(2f);
+
+		cooldownData = abilityHandle.GetCooldownData()!;
+		cooldownData.Should().HaveCount(2);
+
+		cooldownData[0].TotalTime.Should().Be(3f);
+		cooldownData[0].RemainingTime.Should().Be(0f);
+		cooldownData[0].CooldownTags.Should().Contain(simpleTag);
+
+		cooldownData[1].TotalTime.Should().Be(1f);
+		cooldownData[1].RemainingTime.Should().Be(0f);
+		cooldownData[1].CooldownTags.Should().Contain(tag);
+
+		abilityHandle.GetRemainingCooldownTime(simpleTag).Should().Be(0f);
+		abilityHandle.GetRemainingCooldownTime(tag).Should().Be(0f);
+
+		abilityHandle!.Activate(out activationResult).Should().BeTrue();
+		activationResult.Should().Be(AbilityActivationResult.Success);
+	}
+
 	[Theory]
 	[Trait("Cost", null)]
 	[InlineData(5)]

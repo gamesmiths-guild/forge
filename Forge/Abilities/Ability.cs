@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Abilities;
@@ -14,6 +15,8 @@ internal class Ability
 	private record struct BehaviorBinding(IAbilityBehavior Behavior, AbilityBehaviorContext Context);
 
 	private readonly Effect[]? _cooldownEffects;
+
+	private readonly ActiveEffectHandle?[]? _activeCooldownHandles;
 
 	private readonly Effect? _costEffect;
 
@@ -79,6 +82,7 @@ internal class Ability
 		if (abilityData.CooldownEffects is not null)
 		{
 			_cooldownEffects = new Effect[abilityData.CooldownEffects.Length];
+			_activeCooldownHandles = new ActiveEffectHandle[abilityData.CooldownEffects.Length];
 
 			for (var i = 0; i < abilityData.CooldownEffects.Length; i++)
 			{
@@ -126,9 +130,15 @@ internal class Ability
 	{
 		if (_cooldownEffects is not null)
 		{
-			foreach (Effect effect in _cooldownEffects)
+			Validation.Assert(
+				_activeCooldownHandles is not null
+				&& _activeCooldownHandles.Length == _cooldownEffects.Length,
+				"Active cooldown handles array should have been properly initialized.");
+
+			for (var i = 0; i < _cooldownEffects.Length; i++)
 			{
-				Owner.EffectsManager.ApplyEffect(effect);
+				Effect effect = _cooldownEffects[i];
+				_activeCooldownHandles[i] = Owner.EffectsManager.ApplyEffect(effect);
 			}
 		}
 	}
@@ -227,17 +237,7 @@ internal class Ability
 		}
 	}
 
-	private static bool FailsRequiredTags(TagContainer? required, TagContainer? present)
-	{
-		return required is not null && (present?.HasAll(required) != true);
-	}
-
-	private static bool HasBlockedTags(TagContainer? blocked, TagContainer? present)
-	{
-		return blocked is not null && (present?.HasAny(blocked) == true);
-	}
-
-	private bool CanActivate(IForgeEntity? abilityTarget, out AbilityActivationResult activationResult)
+	internal bool CanActivate(IForgeEntity? abilityTarget, out AbilityActivationResult activationResult)
 	{
 		if (IsInhibited)
 		{
@@ -313,6 +313,76 @@ internal class Ability
 
 		activationResult = AbilityActivationResult.Success;
 		return true;
+	}
+
+	internal CooldownData[] GetCooldownData()
+	{
+		var cooldownData = new CooldownData[_activeCooldownHandles?.Length ?? 0];
+
+		if (_activeCooldownHandles is not null)
+		{
+			for (var i = 0; i < _activeCooldownHandles.Length; i++)
+			{
+				ActiveEffectHandle? effectHandle = _activeCooldownHandles[i];
+				if (effectHandle?.ActiveEffect is not null)
+				{
+					ActiveEffect activeEffect = effectHandle.ActiveEffect;
+
+					TagContainer cooldownTags = activeEffect.Effect.CachedGrantedTags!;
+					var totalTime = activeEffect.EffectEvaluatedData.Duration;
+					var remainingTime = (float)activeEffect.RemainingDuration;
+
+					cooldownData[i] = new CooldownData(cooldownTags, totalTime, remainingTime);
+				}
+				else
+				{
+					EffectData effectData = _cooldownEffects![i].EffectData;
+
+					ModifierTagsEffectComponent modifierTagsComponent =
+						effectData.EffectComponents.OfType<ModifierTagsEffectComponent>().First();
+					TagContainer cooldownTags = modifierTagsComponent.TagsToAdd;
+
+					var totalTime = effectData.DurationData.DurationMagnitude!.Value.GetMagnitude(
+						_cooldownEffects[i], Owner, Level);
+
+					cooldownData[i] = new CooldownData(cooldownTags, totalTime, 0f);
+				}
+			}
+		}
+
+		return cooldownData;
+	}
+
+	internal float GetRemainingCooldownTime(Tag tag)
+	{
+		if (_activeCooldownHandles is not null)
+		{
+			for (var i = 0; i < _activeCooldownHandles.Length; i++)
+			{
+				ActiveEffectHandle? effectHandle = _activeCooldownHandles[i];
+				if (effectHandle?.ActiveEffect is not null)
+				{
+					ActiveEffect activeEffect = effectHandle.ActiveEffect;
+					TagContainer cooldownTags = activeEffect.Effect.CachedGrantedTags!;
+					if (cooldownTags.HasTag(tag))
+					{
+						return (float)activeEffect.RemainingDuration;
+					}
+				}
+			}
+		}
+
+		return 0f;
+	}
+
+	private static bool FailsRequiredTags(TagContainer? required, TagContainer? present)
+	{
+		return required is not null && (present?.HasAll(required) != true);
+	}
+
+	private static bool HasBlockedTags(TagContainer? blocked, TagContainer? present)
+	{
+		return blocked is not null && (present?.HasAny(blocked) == true);
 	}
 
 	private void Activate(IForgeEntity? abilityTarget)

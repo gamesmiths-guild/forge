@@ -422,7 +422,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 
 		public void End()
 		{
-			_context.InstanceHandle.End();
+			_context?.InstanceHandle.End();
 		}
 	}
 
