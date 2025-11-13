@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Abilities;
 
@@ -45,14 +46,6 @@ public class AbilityHandle
 	}
 
 	/// <summary>
-	/// End the ability associated with this handle.
-	/// </summary>
-	public void End()
-	{
-		Ability?.End();
-	}
-
-	/// <summary>
 	/// Cancels all instances of the ability associated with this handle.
 	/// </summary>
 	public void Cancel()
@@ -82,6 +75,39 @@ public class AbilityHandle
 	public void CommitCost()
 	{
 		Ability?.CommitCost();
+	}
+
+	/// <summary>
+	/// Checks if the ability can be activated for the given target.
+	/// </summary>
+	/// <param name="activationResult">The result of the ability activation check.</param>
+	/// <param name="abilityTarget">Optional target entity for the ability activation check.</param>
+	/// <returns>Returns <see langword="true"/> if the ability can be activated; otherwise, <see langword="false"/>.
+	/// </returns>
+	public bool CanActivate(out AbilityActivationResult activationResult, IForgeEntity? abilityTarget = null)
+	{
+		activationResult = AbilityActivationResult.FailedInvalidHandler;
+		return Ability?.CanActivate(abilityTarget, out activationResult) ?? false;
+	}
+
+	/// <summary>
+	/// Gets the cooldown data for the ability associated with this handle.
+	/// </summary>
+	/// <returns>A list of cooldown data. Returns <see langword="null"/> if the ability is invalid.</returns>
+	public CooldownData[]? GetCooldownData()
+	{
+		return Ability?.GetCooldownData();
+	}
+
+	/// <summary>
+	/// Gets the remaining cooldown time for a specific tag.
+	/// </summary>
+	/// <param name="tag">The tag to check for remaining cooldown time.</param>
+	/// <returns>The remaining cooldown time in seconds. Returns 0 if there is no cooldown or the ability is invalid.
+	/// </returns>
+	public float GetRemainingCooldownTime(Tag tag)
+	{
+		return Ability?.GetRemainingCooldownTime(tag) ?? 0f;
 	}
 
 	internal void Free()

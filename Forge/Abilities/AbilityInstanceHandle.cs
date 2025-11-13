@@ -34,12 +34,4 @@ public sealed class AbilityInstanceHandle
 	{
 		_instance.End();
 	}
-
-	/// <summary>
-	/// Cancels the ability instance.
-	/// </summary>
-	public void Cancel()
-	{
-		_instance.Cancel();
-	}
 }

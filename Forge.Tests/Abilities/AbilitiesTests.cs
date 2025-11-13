@@ -113,7 +113,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle.End();
+		abilityHandle.Cancel();
 
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
 		abilityHandle.IsActive.Should().BeFalse();
@@ -203,7 +203,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle.End();
+		abilityHandle.Cancel();
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 		abilityHandle.IsActive.Should().BeFalse();
@@ -604,7 +604,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsActive.Should().BeTrue();
 
 		// End the ability.
-		abilityHandle.End();
+		abilityHandle.Cancel();
 
 		// Now that it's no longer active, it should become inhibited.
 		abilityHandle.IsActive.Should().BeFalse();
@@ -649,7 +649,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsInhibited.Should().BeFalse();
 		abilityHandle.IsActive.Should().BeTrue();
 
-		abilityHandle.End();
+		abilityHandle.Cancel();
 
 		abilityHandle.IsInhibited.Should().BeFalse();
 		abilityHandle.IsActive.Should().BeFalse();
@@ -864,7 +864,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsActive.Should().BeTrue();
 
 		abilityHandle.CommitCooldown();
-		abilityHandle.End();
+		abilityHandle.Cancel();
 
 		abilityHandle!.Activate(out activationResult).Should().BeFalse();
 		activationResult.Should().Be(AbilityActivationResult.FailedCooldown);
@@ -904,7 +904,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsActive.Should().BeTrue();
 
 		abilityHandle.CommitCooldown();
-		abilityHandle.End();
+		abilityHandle.Cancel();
 
 		abilityHandle!.Activate(out activationResult).Should().BeFalse();
 		activationResult.Should().Be(AbilityActivationResult.FailedCooldown);
@@ -1283,7 +1283,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		activationResult.Should().Be(AbilityActivationResult.FailedBlockedByTags);
 		blockedAbilityHandle.IsActive.Should().BeFalse();
 
-		blockerAbilityHandle!.End();
+		blockerAbilityHandle!.Cancel();
 
 		blockedAbilityHandle!.Activate(out activationResult).Should().BeTrue();
 		activationResult.Should().Be(AbilityActivationResult.Success);
@@ -1317,7 +1317,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		activationResult.Should().Be(AbilityActivationResult.FailedPersistentInstanceActive);
 		handle.IsActive.Should().BeTrue();
 
-		handle.End();
+		handle.Cancel();
 		handle.IsActive.Should().BeFalse();
 	}
 
@@ -1349,7 +1349,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		handle.IsActive.Should().BeTrue();
 
 		// One End should fully deactivate because retrigger replaced the instance instead of stacking.
-		handle.End();
+		handle.Cancel();
 		handle.IsActive.Should().BeFalse();
 	}
 
@@ -1382,20 +1382,14 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		activationResult.Should().Be(AbilityActivationResult.Success);
 		handle.IsActive.Should().BeTrue();
 
-		// End most recent instance only; still active until all are ended.
-		handle.End();
-		handle.IsActive.Should().BeTrue();
-
-		handle.End();
-		handle.IsActive.Should().BeTrue();
-
-		handle.End();
+		// Cancel ends all instances.
+		handle.Cancel();
 		handle.IsActive.Should().BeFalse();
 	}
 
 	[Fact]
 	[Trait("Instancing", null)]
-	public void Ability_End_ends_most_recent_instance_only()
+	public void Ability_Cancel_ends_all_instances()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
@@ -1418,12 +1412,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		activationResult.Should().Be(AbilityActivationResult.Success);
 		handle.IsActive.Should().BeTrue();
 
-		// One End should not fully deactivate if multiple instances exist.
-		handle.End();
-		handle.IsActive.Should().BeTrue();
-
-		// Second End ends the remaining instance.
-		handle.End();
+		// One Cancel should fully deactivate if multiple instances exist.
+		handle.Cancel();
 		handle.IsActive.Should().BeFalse();
 	}
 
@@ -1602,7 +1592,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 	[Fact]
 	[Trait("BlockAbilitiesWithTag", null)]
-	public void Blocked_ability_tags_are_removed_only_after_last_instance_ends()
+	public void Blocked_ability_tags_are_removed_after_all_instance_ends()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
@@ -1641,14 +1631,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		activationResult.Should().Be(AbilityActivationResult.FailedBlockedByTags);
 		blockedHandle.IsActive.Should().BeFalse();
 
-		// End one blocker instance; still blocked.
-		blockerHandle.End();
-		blockedHandle.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedBlockedByTags);
-		blockedHandle.IsActive.Should().BeFalse();
-
-		// End last blocker instance; now unblocked.
-		blockerHandle.End();
+		// End all blocker instances.
+		blockerHandle.Cancel();
 		blockedHandle.Activate(out activationResult).Should().BeTrue();
 		activationResult.Should().Be(AbilityActivationResult.Success);
 		blockedHandle.IsActive.Should().BeTrue();
@@ -1656,7 +1640,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 	[Fact]
 	[Trait("ActivationOwnedTags", null)]
-	public void Activation_owned_tags_are_applied_on_activation_and_removed_on_end()
+	public void Activation_owned_tags_are_applied_on_activation_and_removed_on_Cancel()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
@@ -1677,13 +1661,13 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
 		handle.IsActive.Should().BeTrue();
 
-		handle.End();
+		handle.Cancel();
 		entity.Tags.CombinedTags.HasAny(ownedTags).Should().BeFalse();
 	}
 
 	[Fact]
 	[Trait("ActivationOwnedTags", null)]
-	public void Activation_owned_tags_are_applied_on_activation_and_removed_after_last_instance_ends()
+	public void Activation_owned_tags_are_applied_on_activation_and_removed_when_all_instances_ends()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
@@ -1714,11 +1698,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
 
-		handle.End();
-		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
-
-		handle.End();
-		handle.End();
+		handle.Cancel();
 		entity.Tags.CombinedTags.HasAny(ownedTags).Should().BeFalse();
 	}
 
@@ -1761,15 +1741,15 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		activationResult.Should().Be(AbilityActivationResult.Success);
 
 		// Lose buff, then cannot activate again.
-		giverHandle.End();
-		needsHandle.End();
+		giverHandle.Cancel();
+		needsHandle.Cancel();
 		needsHandle.Activate(out activationResult).Should().BeFalse();
 		activationResult.Should().Be(AbilityActivationResult.FailedOwnerTagRequirements);
 	}
 
 	[Fact]
 	[Trait("Bookkeeping", null)]
-	public void OnAbilityDeactivated_is_fired_once_per_instance_end()
+	public void Granted_ability_is_removed_when_all_instances_end()
 	{
 		// Proxy via RemoveOnEnd semantics: ability is only removed after each instance ends once.
 		TestEntity entity = new(_tagsManager, _cuesManager);
@@ -1805,18 +1785,14 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		// Still present because policy is RemoveOnEnd and still active.
 		entity.Abilities.GrantedAbilities.Should().Contain(handle);
 
-		// End one instance; still granted, one more end needed.
-		handle.End();
-		entity.Abilities.GrantedAbilities.Should().Contain(handle);
-
-		// End last instance; now removed.
-		handle.End();
+		// End all instances, remove grant.
+		handle.Cancel();
 		entity.Abilities.GrantedAbilities.Should().NotContain(handle);
 	}
 
 	[Fact]
 	[Trait("Instancing", null)]
-	public void Persistent_instance_reference_is_cleared_on_end()
+	public void Persistent_instance_reference_is_cleared_on_Cancel()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
@@ -1833,7 +1809,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		handle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
 		activationResult.Should().Be(AbilityActivationResult.Success);
-		handle.End();
+		handle.Cancel();
 		handle.IsActive.Should().BeFalse();
 
 		// Should be able to activate again, implying the persistent instance was cleared.
@@ -2044,17 +2020,17 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			abilityName,
 			costEffectData,
 			cooldownEffectData,
-			AbilityTags: abilityTags,
-			InstancingPolicy: instancingPolicy,
-			RetriggerInstancedAbility: retriggerInstancedAbility,
-			CancelAbilitiesWithTag: cancelAbilitiesWithTag,
-			BlockAbilitiesWithTag: blockAbilitiesWithTag,
-			ActivationOwnedTags: activationOwnedTags,
-			ActivationRequiredTags: activationRequiredTags,
-			ActivationBlockedTags: activationBlockedTags,
-			SourceRequiredTags: sourceRequiredTags,
-			SourceBlockedTags: sourceBlockedTags,
-			TargetRequiredTags: targetRequiredTags,
-			TargetBlockedTags: targetBlockedTags);
+			abilityTags: abilityTags,
+			instancingPolicy: instancingPolicy,
+			retriggerInstancedAbility: retriggerInstancedAbility,
+			cancelAbilitiesWithTag: cancelAbilitiesWithTag,
+			blockAbilitiesWithTag: blockAbilitiesWithTag,
+			activationOwnedTags: activationOwnedTags,
+			activationRequiredTags: activationRequiredTags,
+			activationBlockedTags: activationBlockedTags,
+			sourceRequiredTags: sourceRequiredTags,
+			sourceBlockedTags: sourceBlockedTags,
+			targetRequiredTags: targetRequiredTags,
+			targetBlockedTags: targetBlockedTags);
 	}
 }

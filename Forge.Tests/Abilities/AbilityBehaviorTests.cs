@@ -16,14 +16,14 @@ namespace Gamesmiths.Forge.Tests.Abilities;
 
 public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFixture>
 {
-	private readonly TagsManager _tags = fixture.TagsManager;
-	private readonly CuesManager _cues = fixture.CuesManager;
+	private readonly TagsManager _tagsManager = fixture.TagsManager;
+	private readonly CuesManager _cuesManager = fixture.CuesManager;
 
 	[Fact]
-	[Trait("Behavior", "Lifecycle")]
+	[Trait("Lifecycle", null)]
 	public void Behavior_OnStarted_and_OnEnded_are_invoked_per_instance()
 	{
-		var entity = new TestEntity(_tags, _cues);
+		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var behavior = new TrackingBehavior();
 		AbilityData data = CreateAbilityData("Tracked", behaviorFactory: () => behavior);
 		AbilityHandle? handle = Grant(entity, data);
@@ -34,16 +34,16 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		behavior.StartCount.Should().Be(1);
 		behavior.EndCount.Should().Be(0);
 
-		handle.End();
+		handle.Cancel();
 		behavior.StartCount.Should().Be(1);
 		behavior.EndCount.Should().Be(1);
 	}
 
 	[Fact]
-	[Trait("Behavior", "Multiple Instances")]
+	[Trait("Multiple Instances", null)]
 	public void PerExecution_creates_distinct_behavior_instances()
 	{
-		var entity = new TestEntity(_tags, _cues);
+		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var behaviors = new List<TrackingBehavior>();
 		AbilityData data = CreateAbilityData(
 			"Multi",
@@ -64,17 +64,99 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		behaviors.Sum(x => x.StartCount).Should().Be(3);
 		behaviors.Sum(x => x.EndCount).Should().Be(0);
 
-		handle.End();
-		behaviors[^1].EndCount.Should().Be(1);
-		behaviors[^2].EndCount.Should().Be(0);
-		behaviors[^3].EndCount.Should().Be(0);
+		handle.Cancel();
+		behaviors.Sum(x => x.EndCount).Should().Be(3);
 	}
 
 	[Fact]
-	[Trait("Behavior", "Retrigger")]
+	[Trait("Multiple Instances", null)]
+	public void Blocked_ability_tags_are_removed_only_after_last_instance_ends()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+		var behaviors = new List<TrackingBehavior>();
+
+		var redTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"]));
+
+		AbilityData blocker = CreateAbilityData(
+			"BlockerMulti",
+			behaviorFactory: () =>
+			{
+				var trackingBehavior = new TrackingBehavior();
+				behaviors.Add(trackingBehavior);
+				return trackingBehavior;
+			},
+			instancingPolicy: AbilityInstancingPolicy.PerExecution,
+			blockAbilitiesWithTag: redTags);
+
+		AbilityData blocked = CreateAbilityData(
+			"BlockedRed",
+			abilityTags: redTags);
+
+		AbilityHandle? blockerHandle = Grant(entity, blocker);
+		AbilityHandle? blockedHandle = Grant(entity, blocked);
+
+		blockerHandle!.Activate(out _).Should().BeTrue();
+		blockerHandle!.Activate(out _).Should().BeTrue();
+
+		// While any blocker instance active, blocked ability cannot activate.
+		blockedHandle!.Activate(out AbilityActivationResult activationResult).Should().BeFalse();
+		activationResult.Should().Be(AbilityActivationResult.FailedBlockedByTags);
+		blockedHandle.IsActive.Should().BeFalse();
+
+		// End one blocker instance; still blocked.
+		behaviors[0].End();
+		blockedHandle.Activate(out activationResult).Should().BeFalse();
+		activationResult.Should().Be(AbilityActivationResult.FailedBlockedByTags);
+		blockedHandle.IsActive.Should().BeFalse();
+
+		// End last blocker instance; now unblocked.
+		behaviors[1].End();
+		blockedHandle.Activate(out activationResult).Should().BeTrue();
+		activationResult.Should().Be(AbilityActivationResult.Success);
+		blockedHandle.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Multiple Instances", null)]
+	public void Activation_owned_tags_are_applied_on_activation_and_removed_after_last_instance_ends()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+		var behaviors = new List<TrackingBehavior>();
+
+		var ownedTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"]));
+
+		AbilityData abilityWithOwned = CreateAbilityData(
+			"OwnedTagsAbility",
+			behaviorFactory: () =>
+			{
+				var trackingBehavior = new TrackingBehavior();
+				behaviors.Add(trackingBehavior);
+				return trackingBehavior;
+			},
+			instancingPolicy: AbilityInstancingPolicy.PerExecution,
+			activationOwnedTags: ownedTags);
+
+		AbilityHandle? handle = Grant(entity, abilityWithOwned);
+
+		handle!.Activate(out _).Should().BeTrue();
+		handle!.Activate(out _).Should().BeTrue();
+		handle!.Activate(out _).Should().BeTrue();
+
+		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
+
+		behaviors[0].End();
+		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
+
+		behaviors[1].End();
+		behaviors[2].End();
+		entity.Tags.CombinedTags.HasAny(ownedTags).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Retrigger", null)]
 	public void PerEntity_retrigger_invokes_previous_OnEnded_before_new_OnStarted()
 	{
-		var entity = new TestEntity(_tags, _cues);
+		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var endedBeforeNew = false;
 		TrackingBehavior? previous = null;
 
@@ -108,11 +190,11 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	}
 
 	[Fact]
-	[Trait("Behavior", "Context")]
+	[Trait("Context", null)]
 	public void Context_provides_expected_values()
 	{
-		var source = new TestEntity(_tags, _cues);
-		var target = new TestEntity(_tags, _cues);
+		var source = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
 		AbilityBehaviorContext? captured = null;
 		var behavior = new CallbackBehavior(x => captured = x);
 
@@ -132,10 +214,10 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	}
 
 	[Fact]
-	[Trait("Behavior", "EndInsideStart")]
+	[Trait("EndInsideStart", null)]
 	public void Behavior_can_end_instance_during_OnStarted()
 	{
-		var entity = new TestEntity(_tags, _cues);
+		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var behavior = new CallbackBehavior(x => x.InstanceHandle.End());
 
 		AbilityData data = CreateAbilityData("EndInsideStart", behaviorFactory: () => behavior);
@@ -148,10 +230,10 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	}
 
 	[Fact]
-	[Trait("Behavior", "CommitAbility")]
+	[Trait("CommitAbility", null)]
 	public void Behavior_commits_cooldown_and_cost_on_start()
 	{
-		var entity = new TestEntity(_tags, _cues);
+		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var behavior = new CallbackBehavior(x => x.AbilityHandle.CommitAbility());
 
 		AbilityData data = CreateAbilityData(
@@ -180,10 +262,10 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	}
 
 	[Fact]
-	[Trait("Behavior", "ExceptionStart")]
+	[Trait("ExceptionStart", null)]
 	public void Exception_in_OnStarted_cancels_instance_and_does_not_crash()
 	{
-		var entity = new TestEntity(_tags, _cues);
+		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var behavior = new ExceptionBehaviorOnStart();
 
 		AbilityData data = CreateAbilityData("ThrowStart", behaviorFactory: () => behavior);
@@ -197,10 +279,10 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	}
 
 	[Fact]
-	[Trait("Behavior", "ExceptionEnd")]
+	[Trait("ExceptionEnd", null)]
 	public void Exception_in_OnEnded_does_not_prevent_deactivation()
 	{
-		var entity = new TestEntity(_tags, _cues);
+		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var behavior = new ExceptionBehaviorOnEnd();
 
 		AbilityData data = CreateAbilityData("ThrowEnd", behaviorFactory: () => behavior);
@@ -210,16 +292,16 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		handle!.Activate(out _).Should().BeTrue();
 		handle.IsActive.Should().BeTrue();
 
-		handle.End();
+		handle.Cancel();
 		behavior.EndAttempts.Should().Be(1);
 		handle.IsActive.Should().BeFalse();
 	}
 
 	[Fact]
-	[Trait("Behavior", "NullFactoryReturn")]
+	[Trait("NullFactoryReturn", null)]
 	public void Null_behavior_instance_is_ignored()
 	{
-		var entity = new TestEntity(_tags, _cues);
+		var entity = new TestEntity(_tagsManager, _cuesManager);
 		AbilityData data = CreateAbilityData("NullBehavior", behaviorFactory: () =>
 		{
 #pragma warning disable CS8603 // Possible null reference return.
@@ -233,7 +315,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		handle!.Activate(out _).Should().BeTrue();
 		handle.IsActive.Should().BeTrue();
 
-		handle.End();
+		handle.Cancel();
 		handle.IsActive.Should().BeFalse();
 	}
 
@@ -275,7 +357,10 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityInstancingPolicy instancingPolicy = AbilityInstancingPolicy.PerEntity,
 		bool retriggerInstancedAbility = false,
 		float cooldownSeconds = 3f,
-		float costMagnitude = -1f)
+		float costMagnitude = -1f,
+		TagContainer? abilityTags = null,
+		TagContainer? blockAbilitiesWithTag = null,
+		TagContainer? activationOwnedTags = null)
 	{
 		EffectData[] cooldownEffectData = [new EffectData(
 			$"{name} Cooldown",
@@ -287,7 +372,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 			effectComponents:
 			[
 				new ModifierTagsEffectComponent(
-					new TagContainer(_tags, TestUtils.StringToTag(_tags, ["simple.tag"])))
+					new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["simple.tag"])))
 			])];
 
 		var costEffectData = new EffectData(
@@ -306,14 +391,18 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 			name,
 			costEffectData,
 			cooldownEffectData,
-			InstancingPolicy: instancingPolicy,
-			RetriggerInstancedAbility: retriggerInstancedAbility,
-			BehaviorFactory: behaviorFactory ?? (() => behavior!));
+			abilityTags: abilityTags,
+			instancingPolicy: instancingPolicy,
+			retriggerInstancedAbility: retriggerInstancedAbility,
+			blockAbilitiesWithTag: blockAbilitiesWithTag,
+			activationOwnedTags: activationOwnedTags,
+			behaviorFactory: behaviorFactory ?? (() => behavior!));
 	}
 
 	private sealed class TrackingBehavior(Action? onStartExtra = null) : IAbilityBehavior
 	{
 		private readonly Action? _onStartExtra = onStartExtra;
+		private AbilityBehaviorContext? _context;
 
 		public int StartCount { get; private set; }
 
@@ -321,6 +410,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 
 		public void OnStarted(AbilityBehaviorContext context)
 		{
+			_context = context;
 			StartCount++;
 			_onStartExtra?.Invoke();
 		}
@@ -328,6 +418,11 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		public void OnEnded(AbilityBehaviorContext context)
 		{
 			EndCount++;
+		}
+
+		public void End()
+		{
+			_context.InstanceHandle.End();
 		}
 	}
 
