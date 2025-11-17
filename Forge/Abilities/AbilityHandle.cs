@@ -110,6 +110,26 @@ public class AbilityHandle
 		return Ability?.GetRemainingCooldownTime(tag) ?? 0f;
 	}
 
+	/// <summary>
+	/// Gets the cost data for the ability associated with this handle.
+	/// </summary>
+	/// <returns>The cost data. Returns <see langword="null"/> if the ability is invalid or has no cost.</returns>
+	public CostData[]? GetCostData()
+	{
+		return Ability?.GetCostData();
+	}
+
+	/// <summary>
+	/// Gets the cost for a specific attribute.
+	/// </summary>
+	/// <param name="attribute">The attribute key to get the cost for.</param>
+	/// <returns>The cost for the specified attribute. Returns 0 if the ability is invalid or has no cost for the
+	/// attribute.</returns>
+	public int GetCostForAttribute(StringKey attribute)
+	{
+		return Ability?.GetCostForAttribute(attribute) ?? 0;
+	}
+
 	internal void Free()
 	{
 		Ability = null;

@@ -100,8 +100,6 @@ public sealed class EffectEvaluatedData
 
 		Duration = EvaluateDuration(effect.EffectData.DurationData);
 		Period = EvaluatePeriod(effect.EffectData.PeriodicData);
-
-		// Modifiers should be evaluated after duration and period because it requires those already evaluated.
 		ModifiersEvaluatedData = EvaluateModifiers();
 
 		CustomCueParameters = EvaluateCustomCueParameters();
@@ -128,8 +126,6 @@ public sealed class EffectEvaluatedData
 
 		Duration = EvaluateDuration(effect.EffectData.DurationData);
 		Period = EvaluatePeriod(effect.EffectData.PeriodicData);
-
-		// Modifiers should be evaluated after duration and period because it requires those already evaluated.
 		ModifiersEvaluatedData = EvaluateModifiers();
 
 		CustomCueParameters = EvaluateCustomCueParameters();
@@ -187,7 +183,7 @@ public sealed class EffectEvaluatedData
 
 		foreach (CustomExecution execution in Effect.EffectData.CustomExecutions)
 		{
-			if (ExecutionHasInvalidAttributeCaptures(execution))
+			if (CustomExecution.ExecutionHasInvalidAttributeCaptures(execution, Effect, Target))
 			{
 				continue;
 			}
@@ -350,37 +346,6 @@ public sealed class EffectEvaluatedData
 		return attributeSource.TryGetAttribute(attributeSourceOwner, out backingAttribute);
 	}
 
-	private bool ExecutionHasInvalidAttributeCaptures(CustomExecution execution)
-	{
-		foreach (AttributeCaptureDefinition capturedAttribute in execution.AttributesToCapture)
-		{
-			switch (capturedAttribute.Source)
-			{
-				case AttributeCaptureSource.Target:
-
-					if (!Target.Attributes.ContainsAttribute(capturedAttribute.Attribute))
-					{
-						return true;
-					}
-
-					break;
-
-				case AttributeCaptureSource.Source:
-
-					IForgeEntity? sourceEntity = Effect.Ownership.Source;
-
-					if (sourceEntity?.Attributes.ContainsAttribute(capturedAttribute.Attribute) != true)
-					{
-						return true;
-					}
-
-					break;
-			}
-		}
-
-		return false;
-	}
-
 	private Dictionary<StringKey, object>? EvaluateCustomCueParameters()
 	{
 		var customParameters = new Dictionary<StringKey, object>();
@@ -409,7 +374,7 @@ public sealed class EffectEvaluatedData
 
 		foreach (CustomExecution execution in Effect.EffectData.CustomExecutions)
 		{
-			if (ExecutionHasInvalidAttributeCaptures(execution))
+			if (CustomExecution.ExecutionHasInvalidAttributeCaptures(execution, Effect, Target))
 			{
 				continue;
 			}

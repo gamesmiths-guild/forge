@@ -2010,6 +2010,93 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		cancellerHandle.IsActive.Should().BeTrue();
 	}
 
+	[Theory]
+	[InlineData(ModifierOperation.FlatBonus, -1f, -1, 89)]
+	[InlineData(ModifierOperation.FlatBonus, 1f, 1, 91)]
+	[InlineData(ModifierOperation.PercentBonus, -0.1f, -9, 81)]
+	[InlineData(ModifierOperation.PercentBonus, 0.1f, 9, 99)]
+	[InlineData(ModifierOperation.Override, 1f, -89, 1)]
+	[InlineData(ModifierOperation.Override, 98f, 8, 98)]
+	[Trait("Ability cost", null)]
+	public void Cost_effect_reports_configured_cost_and_applies_on_commit(
+		ModifierOperation operation, float magnitude, int expectedCost, int finalValue)
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var costEffectData = new EffectData(
+			"Fireball Cost",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute90",
+					operation,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(magnitude)))
+			]);
+
+		AbilityData abilityData = new("Fireball", costEffectData);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		abilityHandle.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		CostData[]? costData = abilityHandle!.GetCostData();
+		costData.Should().ContainSingle();
+		costData![0].Attribute.Should().Be("TestAttributeSet.Attribute90");
+		costData![0].Cost.Should().Be(expectedCost);
+
+		abilityHandle.GetCostForAttribute("TestAttributeSet.Attribute90").Should().Be(expectedCost);
+
+		abilityHandle.CommitCost();
+		entity.Attributes["TestAttributeSet.Attribute90"].CurrentValue.Should().Be(finalValue);
+	}
+
+	[Fact]
+	[Trait("Ability cost", null)]
+	public void Cost_effect_with_multiple_modifiers_reports_configured_cost_and_applies_on_commit()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var costEffectData = new EffectData(
+			"Fireball Cost",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute90",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(1f))),
+				new Modifier(
+					"TestAttributeSet.Attribute90",
+					ModifierOperation.PercentBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-0.1f)))
+			]);
+
+		AbilityData abilityData = new("Fireball", costEffectData);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		abilityHandle.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		CostData[]? costData = abilityHandle!.GetCostData();
+		costData.Should().ContainSingle();
+		costData![0].Attribute.Should().Be("TestAttributeSet.Attribute90");
+		costData![0].Cost.Should().Be(-9);
+
+		abilityHandle.GetCostForAttribute("TestAttributeSet.Attribute90").Should().Be(-9);
+
+		abilityHandle.CommitCost();
+		entity.Attributes["TestAttributeSet.Attribute90"].CurrentValue.Should().Be(81);
+	}
+
 	private static AbilityHandle? SetupAbility(
 		TestEntity targetEntity,
 		AbilityData abilityData,

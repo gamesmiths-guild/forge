@@ -2,7 +2,9 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Calculator;
 using Gamesmiths.Forge.Effects.Components;
+using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Abilities;
@@ -375,6 +377,69 @@ internal class Ability
 		return 0f;
 	}
 
+	internal CostData[]? GetCostData(StringKey? specificAttribute = null)
+	{
+		if (_costEffect is null)
+		{
+			return null;
+		}
+
+		ModifierEvaluatedData[] allModifiersEvaluatedData = EvaluateInstantModifiers(_costEffect, specificAttribute);
+
+		Dictionary<StringKey, float> costByAttribute = [];
+
+		foreach (ModifierEvaluatedData modifierEvaluatedData in allModifiersEvaluatedData)
+		{
+			if (!costByAttribute.TryGetValue(modifierEvaluatedData.Attribute.Key, out var value))
+			{
+				value = 0f;
+				costByAttribute[modifierEvaluatedData.Attribute.Key] = value;
+			}
+
+			var baseValue = modifierEvaluatedData.Attribute.BaseValue
+				+ value;
+
+			switch (modifierEvaluatedData.ModifierOperation)
+			{
+				case ModifierOperation.FlatBonus:
+					costByAttribute[modifierEvaluatedData.Attribute.Key] += modifierEvaluatedData.Magnitude;
+					break;
+
+				case ModifierOperation.PercentBonus:
+					costByAttribute[modifierEvaluatedData.Attribute.Key] +=
+						(int)(baseValue * (1 + modifierEvaluatedData.Magnitude)) - baseValue;
+					break;
+
+				case ModifierOperation.Override:
+					costByAttribute[modifierEvaluatedData.Attribute.Key] +=
+						modifierEvaluatedData.Magnitude - baseValue;
+					break;
+			}
+		}
+
+		return [.. costByAttribute.Select(x => new CostData(x.Key, (int)x.Value))];
+	}
+
+	internal int GetCostForAttribute(StringKey attributeKey)
+	{
+		CostData[]? costData = GetCostData(attributeKey);
+
+		if (costData is null)
+		{
+			return 0;
+		}
+
+		foreach (CostData cost in costData)
+		{
+			if (cost.Attribute == attributeKey)
+			{
+				return cost.Cost;
+			}
+		}
+
+		return 0;
+	}
+
 	private static bool FailsRequiredTags(TagContainer? required, TagContainer? present)
 	{
 		return required is not null && (present?.HasAll(required) != true);
@@ -413,5 +478,39 @@ internal class Ability
 		var instance = new AbilityInstance(this, abilityTarget);
 		_activeInstances.Add(instance);
 		instance.Start();
+	}
+
+	private ModifierEvaluatedData[] EvaluateInstantModifiers(Effect effect, StringKey? specificAttribute = null)
+	{
+		var modifiersEvaluatedData = new List<ModifierEvaluatedData>(effect.EffectData.Modifiers.Length);
+
+		foreach (Modifier modifier in effect.EffectData.Modifiers)
+		{
+			// Ignore modifiers for attributes not present in the target.
+			if (!Owner.Attributes.ContainsAttribute(modifier.Attribute) ||
+				(specificAttribute.HasValue && specificAttribute.Value != modifier.Attribute))
+			{
+				continue;
+			}
+
+			modifiersEvaluatedData.Add(
+				new ModifierEvaluatedData(
+					Owner.Attributes[modifier.Attribute],
+					modifier.Operation,
+					modifier.Magnitude.GetMagnitude(effect, Owner, Level, null),
+					modifier.Channel));
+		}
+
+		foreach (CustomExecution execution in effect.EffectData.CustomExecutions)
+		{
+			if (CustomExecution.ExecutionHasInvalidAttributeCaptures(execution, effect, Owner))
+			{
+				continue;
+			}
+
+			modifiersEvaluatedData.AddRange(execution.EvaluateExecution(effect, Owner, null));
+		}
+
+		return [.. modifiersEvaluatedData];
 	}
 }

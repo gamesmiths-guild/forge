@@ -56,7 +56,7 @@ public readonly struct Tag : IEquatable<Tag>
 	/// Serializes the given <see cref="Tag"/> into a <see cref="ushort"/> net index.
 	/// </summary>
 	/// <remarks>
-	/// TODO: Use a propper BitStream or similar solution in the future.
+	/// TODO: Use a proper BitStream or similar solution in the future.
 	/// </remarks>
 	/// <param name="tagsManager">The manager responsible for tag lookup and net index handling.</param>
 	/// <param name="tag">The <see cref="Tag"/> to be serialized.</param>
@@ -89,7 +89,7 @@ public readonly struct Tag : IEquatable<Tag>
 	/// Deserializes a <see cref="Tag"/> from a given <see cref="ushort"/> net index value.
 	/// </summary>
 	/// <remarks>
-	/// TODO: Use a propper BitStream or similar solution in the future.
+	/// TODO: Use a proper BitStream or similar solution in the future.
 	/// </remarks>
 	/// <param name="tagsManager">The manager responsible for tag lookup and net index handling.</param>
 	/// <param name="stream">The data stream to be deserialized.</param>

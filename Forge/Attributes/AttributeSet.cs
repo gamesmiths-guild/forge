@@ -92,8 +92,9 @@ public abstract class AttributeSet
 	{
 		Validation.Assert(!string.IsNullOrEmpty(attributeName), "attributeName should never be null or empty.");
 
-		var attribute = new EntityAttribute(defaultValue, minValue, maxValue, channels);
-		AttributesMap.Add($"{GetType().Name}.{attributeName}", attribute);
+		StringKey attributeKey = $"{GetType().Name}.{attributeName}";
+		var attribute = new EntityAttribute(attributeKey, defaultValue, minValue, maxValue, channels);
+		AttributesMap.Add(attributeKey, attribute);
 		attribute.OnValueChanged += AttributeOnValueChanged;
 		return attribute;
 	}

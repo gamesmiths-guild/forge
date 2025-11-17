@@ -27,6 +27,11 @@ public sealed class EntityAttribute
 	public event Action<EntityAttribute, int>? OnValueChanged;
 
 	/// <summary>
+	/// Gets the unique key identifying this attribute.
+	/// </summary>
+	public StringKey Key { get; internal set; }
+
+	/// <summary>
 	/// Gets the base value for this attribute.
 	/// </summary>
 	public int BaseValue { get; private set; }
@@ -73,11 +78,14 @@ public sealed class EntityAttribute
 	internal int PendingValueChange { get; private set; }
 
 	internal EntityAttribute(
+		StringKey key,
 		int defaultValue,
 		int minValue,
 		int maxValue,
 		int channels)
 	{
+		Key = key;
+
 		PendingValueChange = 0;
 
 		Min = minValue;

@@ -58,7 +58,7 @@ public class CustomTestExecutionClass : CustomExecution
 	public override ModifierEvaluatedData[] EvaluateExecution(
 		Effect effect,
 		IForgeEntity target,
-		EffectEvaluatedData effectEvaluatedData)
+		EffectEvaluatedData? effectEvaluatedData)
 	{
 		var result = new List<ModifierEvaluatedData>();
 

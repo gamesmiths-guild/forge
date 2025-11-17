@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Reflection.Emit;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Components;
@@ -108,7 +107,7 @@ public readonly record struct AbilityData
 	public Func<IAbilityBehavior>? BehaviorFactory { get; }
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="AbilityData"/> structure. 
+	/// Initializes a new instance of the <see cref="AbilityData"/> structure.
 	/// </summary>
 	/// <param name="name">The name of the ability.</param>
 	/// <param name="costEffect">The effect that represents the cost of using the ability called when the ability is
