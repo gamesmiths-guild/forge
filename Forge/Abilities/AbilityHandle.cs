@@ -50,7 +50,7 @@ public class AbilityHandle
 	/// </summary>
 	public void Cancel()
 	{
-		Ability?.CancelAbility();
+		Ability?.CancelAllInstances();
 	}
 
 	/// <summary>

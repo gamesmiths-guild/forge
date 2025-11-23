@@ -16,6 +16,8 @@ namespace Gamesmiths.Forge.Core;
 /// <param name="owner">The owner of this manager.</param>
 public class EntityAbilities(IForgeEntity owner)
 {
+	public Action<AbilityEndedData>? OnAbilityEnded;
+
 	private readonly Dictionary<Ability, List<ActiveEffectHandle>?> _grantSources = [];
 
 	private readonly Dictionary<Ability, List<ActiveEffectHandle>?> _inhibitSources = [];
@@ -271,6 +273,11 @@ public class EntityAbilities(IForgeEntity owner)
 				abilityToInhibit.IsInhibited = false;
 			}
 		}
+	}
+
+	internal void NotifyAbilityEnded(AbilityEndedData abilityEndedData)
+	{
+		OnAbilityEnded?.Invoke(abilityEndedData);
 	}
 
 	private void InhibitAbilityBasedOnPolicy(Ability abilityToInhibit)

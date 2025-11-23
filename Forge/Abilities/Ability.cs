@@ -153,11 +153,6 @@ internal class Ability
 		}
 	}
 
-	internal void CancelAbility()
-	{
-		CancelAllInstances();
-	}
-
 	internal void End()
 	{
 		// End the most recent active instance, if any.
@@ -169,6 +164,8 @@ internal class Ability
 
 		AbilityInstance last = _activeInstances[^1];
 		last.End();
+
+		Owner.Abilities.NotifyAbilityEnded(new AbilityEndedData(Handle, false));
 	}
 
 	internal void CancelAllInstances()
@@ -183,6 +180,8 @@ internal class Ability
 		{
 			instance.Cancel();
 		}
+
+		Owner.Abilities.NotifyAbilityEnded(new AbilityEndedData(Handle, true));
 	}
 
 	internal void OnInstanceStarted(AbilityInstance instance)
