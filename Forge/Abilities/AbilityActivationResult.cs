@@ -61,4 +61,14 @@ public enum AbilityActivationResult
 	/// Failed to activate the ability due to being blocked by tags.
 	/// </summary>
 	FailedBlockedByTags = 9,
+
+	/// <summary>
+	/// Failed to activate the ability because the target tag is not present.
+	/// </summary>
+	FailedTargetTagNotPresent = 10,
+
+	/// <summary>
+	/// Failed to activate the ability due to invalid tag configuration.
+	/// </summary>
+	FailedInvalidTagConfiguration = 11,
 }

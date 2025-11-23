@@ -108,6 +108,19 @@ internal class Ability
 			_abilityTags = abilityData.AbilityTags;
 		}
 
+		if (abilityData.AbilityTriggerData is not null)
+		{
+			switch (abilityData.AbilityTriggerData.Value.TriggerSource)
+			{
+				case AbitityTriggerSource.TagAdded:
+					owner.Tags.OnTagsChanged += TagAdded_OnTagChanged;
+					break;
+				case AbitityTriggerSource.TagPresent:
+					owner.Tags.OnTagsChanged += TagPresent_OnTagChanged;
+					break;
+			}
+		}
+
 		Handle = new AbilityHandle(this);
 	}
 
@@ -511,5 +524,25 @@ internal class Ability
 		}
 
 		return [.. modifiersEvaluatedData];
+	}
+
+	private void TagPresent_OnTagChanged(TagContainer container)
+	{
+		if (container.HasTag(AbilityData.AbilityTriggerData!.Value.TriggerTag))
+		{
+			Activate(null);
+		}
+		else
+		{
+			CancelAllInstances();
+		}
+	}
+
+	private void TagAdded_OnTagChanged(TagContainer container)
+	{
+		if (container.HasTag(AbilityData.AbilityTriggerData!.Value.TriggerTag))
+		{
+			Activate(null);
+		}
 	}
 }

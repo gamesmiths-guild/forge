@@ -16,11 +16,14 @@ namespace Gamesmiths.Forge.Core;
 /// <param name="owner">The owner of this manager.</param>
 public class EntityAbilities(IForgeEntity owner)
 {
-	public Action<AbilityEndedData>? OnAbilityEnded;
-
 	private readonly Dictionary<Ability, List<ActiveEffectHandle>?> _grantSources = [];
 
 	private readonly Dictionary<Ability, List<ActiveEffectHandle>?> _inhibitSources = [];
+
+	/// <summary>
+	/// Event invoked when an ability ends.
+	/// </summary>
+	public event Action<AbilityEndedData>? OnAbilityEnded;
 
 	/// <summary>
 	/// Gets the owner of this effects manager.
@@ -89,6 +92,83 @@ public class EntityAbilities(IForgeEntity owner)
 				ability.CancelAllInstances();
 			}
 		}
+	}
+
+	/// <summary>
+	/// Tries to activate all abilities whose AbilityTags overlap the provided tags.
+	/// </summary>
+	/// <param name="tagsToActivate">Tags that identify abilities to activate.</param>
+	/// <param name="target">Optional target for the abilities.</param>
+	/// <param name="activationResult">The result of the ability activation attempt.</param>
+	/// <returns>Returns <see langword="true"/> if any abilities were activated; otherwise, <see langword="false"/>.
+	/// </returns>
+	public bool TryActivateAbilitiesByTag(
+		TagContainer tagsToActivate,
+		IForgeEntity? target,
+		out AbilityActivationResult activationResult)
+	{
+		if (tagsToActivate is null)
+		{
+			activationResult = AbilityActivationResult.FailedInvalidTagConfiguration;
+			return false;
+		}
+
+		var anyActivated = false;
+		activationResult = AbilityActivationResult.FailedTargetTagNotPresent;
+
+		// Enumerate snapshot to avoid modification during activation.
+		foreach (AbilityHandle? handle in GrantedAbilities.ToArray())
+		{
+			Ability? ability = handle?.Ability;
+			if (ability is null)
+			{
+				continue;
+			}
+
+			TagContainer? abilityTags = ability.AbilityData.AbilityTags;
+			if (abilityTags?.HasAny(tagsToActivate) == true)
+			{
+				anyActivated |= ability.TryActivateAbility(target, out activationResult);
+			}
+		}
+
+		return anyActivated;
+	}
+
+	/// <summary>
+	/// Grants an ability and activates it once.
+	/// </summary>
+	/// <param name="abilityData">The configuration data of the ability to grant and activate.</param>
+	/// <param name="abilityLevel">The level at which to grant the ability.</param>
+	/// <param name="removalPolicy">The policy for removing the granted ability.</param>
+	/// <param name="inhibitionPolicy">The policy for inhibiting the granted ability.</param>
+	/// <param name="levelOverridePolicy">The policy for overriding the level of an existing granted ability.</param>
+	/// <param name="sourceActiveEffectHandle">The handle of the active effect that is the source of this granted
+	/// ability.</param>
+	/// <param name="sourceEntity">The source entity of the granted ability, if any.</param>
+	/// <param name="activationResult">The result of the ability activation attempt.</param>
+	/// <returns>Returns <see langword="true"/> if the ability was successfully activated; otherwise,
+	/// <see langword="false"/>.</returns>
+	public bool GrantAbilityAndActivateOnce(
+		AbilityData abilityData,
+		int abilityLevel,
+		AbilityDeactivationPolicy removalPolicy,
+		AbilityDeactivationPolicy inhibitionPolicy,
+		LevelComparison levelOverridePolicy,
+		ActiveEffectHandle sourceActiveEffectHandle,
+		IForgeEntity? sourceEntity,
+		out AbilityActivationResult activationResult)
+	{
+		AbilityHandle abilityHandle = GrantAbility(
+			abilityData,
+			abilityLevel,
+			removalPolicy,
+			inhibitionPolicy,
+			levelOverridePolicy,
+			sourceActiveEffectHandle,
+			sourceEntity);
+
+		return abilityHandle.Activate(out activationResult, null);
 	}
 
 	internal void GrantAbilityPermanently(
