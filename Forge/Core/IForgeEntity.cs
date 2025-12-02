@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Events;
 
 namespace Gamesmiths.Forge.Core;
 
@@ -32,5 +33,5 @@ public interface IForgeEntity
 	/// <summary>
 	/// Gets the event bus for this entity.
 	/// </summary>
-	EntityEvents Events { get; }
+	EventManager Events { get; }
 }

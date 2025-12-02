@@ -3,6 +3,7 @@
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
@@ -19,6 +20,8 @@ public class TestEntity : IForgeEntity
 
 	public EntityAbilities Abilities { get; }
 
+	public EventManager Events { get; }
+
 	public TestEntity(TagsManager tagsManager, CuesManager cuesManager)
 	{
 		PlayerAttributeSet = new TestAttributeSet();
@@ -33,5 +36,6 @@ public class TestEntity : IForgeEntity
 		Attributes = new(PlayerAttributeSet);
 		Tags = new(originalTags);
 		Abilities = new(this);
+		Events = new();
 	}
 }

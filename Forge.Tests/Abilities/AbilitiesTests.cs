@@ -9,6 +9,7 @@ using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
+using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Core;
 using Gamesmiths.Forge.Tests.Helpers;
@@ -2097,6 +2098,131 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		entity.Attributes["TestAttributeSet.Attribute90"].CurrentValue.Should().Be(81);
 	}
 
+	[Fact]
+	[Trait("Event", null)]
+	public void Ability_gets_activated_by_proper_event_with_tag()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var triggerTag = Tag.RequestTag(_tagsManager, "color.red");
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			abilityTriggerData: new()
+			{
+				TriggerTag = triggerTag,
+				TriggerSource = AbitityTriggerSource.Event,
+			});
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		var nonActivatingEventData = new EventData
+		{
+			EventTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.blue"])),
+			Source = entity,
+			Target = entity,
+		};
+
+		entity.Events.Raise(in nonActivatingEventData);
+		abilityHandle!.IsActive.Should().BeFalse();
+
+		var activatingEventData = new EventData
+		{
+			EventTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"])),
+			Source = entity,
+			Target = entity,
+		};
+
+		entity.Events.Raise(in activatingEventData);
+		abilityHandle.IsActive.Should().BeTrue();
+
+		abilityHandle.Cancel();
+		abilityHandle!.IsActive.Should().BeFalse();
+
+		entity.Events.Raise(in activatingEventData);
+		abilityHandle.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Event", null)]
+	public void Ability_gets_activated_by_tag_addition()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var triggerTag = Tag.RequestTag(_tagsManager, "color.red");
+		TagContainer? triggerTagContainer = triggerTag.GetSingleTagContainer();
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			abilityTriggerData: new()
+			{
+				TriggerTag = triggerTag,
+				TriggerSource = AbitityTriggerSource.TagAdded,
+			});
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		abilityHandle!.IsActive.Should().BeFalse();
+
+		CreateAndApplyTagEffect(entity, triggerTagContainer!);
+
+		abilityHandle!.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Event", null)]
+	public void Ability_gets_activated_while_tag_present()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var triggerTag = Tag.RequestTag(_tagsManager, "color.red");
+		TagContainer? triggerTagContainer = triggerTag.GetSingleTagContainer();
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			abilityTriggerData: new()
+			{
+				TriggerTag = triggerTag,
+				TriggerSource = AbitityTriggerSource.TagPresent,
+			});
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		abilityHandle!.IsActive.Should().BeFalse();
+
+		ActiveEffectHandle? effectHandle = CreateAndApplyTagEffect(entity, triggerTagContainer!);
+
+		abilityHandle!.IsActive.Should().BeTrue();
+
+		entity.EffectsManager.UnapplyEffect(effectHandle!);
+
+		abilityHandle!.IsActive.Should().BeFalse();
+	}
+
 	private static AbilityHandle? SetupAbility(
 		TestEntity targetEntity,
 		AbilityData abilityData,
@@ -2182,6 +2308,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		TagContainer? abilityTags = null,
 		AbilityInstancingPolicy instancingPolicy = AbilityInstancingPolicy.PerEntity,
 		bool retriggerInstancedAbility = false,
+		AbilityTriggerData? abilityTriggerData = null,
 		TagContainer? cancelAbilitiesWithTag = null,
 		TagContainer? blockAbilitiesWithTag = null,
 		TagContainer? activationOwnedTags = null,
@@ -2225,6 +2352,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			abilityTags: abilityTags,
 			instancingPolicy: instancingPolicy,
 			retriggerInstancedAbility: retriggerInstancedAbility,
+			abilityTriggerData: abilityTriggerData,
 			cancelAbilitiesWithTag: cancelAbilitiesWithTag,
 			blockAbilitiesWithTag: blockAbilitiesWithTag,
 			activationOwnedTags: activationOwnedTags,

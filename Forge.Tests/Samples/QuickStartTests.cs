@@ -17,6 +17,7 @@ using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Effects.Stacking;
+using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests;
 using Gamesmiths.Forge.Tests.Core;
@@ -753,6 +754,8 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		public EffectsManager EffectsManager { get; }
 		public EntityAbilities Abilities { get; }
 
+		public EventManager Events { get; }
+
 		public Player(TagsManager tagsManager, CuesManager cuesManager)
 		{
 			// Initialize base tags during construction
@@ -767,6 +770,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			Tags = new EntityTags(baseTags);
 			EffectsManager = new EffectsManager(this, cuesManager);
 			Abilities = new(this);
+			Events = new();
 		}
 	}
 
