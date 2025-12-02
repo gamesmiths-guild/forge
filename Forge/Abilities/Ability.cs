@@ -118,6 +118,12 @@ internal class Ability
 				case AbitityTriggerSource.TagPresent:
 					owner.Tags.OnTagsChanged += TagPresent_OnTagChanged;
 					break;
+				case AbitityTriggerSource.Event:
+					owner.Events.Subscribe(
+						abilityData.AbilityTriggerData.Value.TriggerTag,
+						x => TryActivateAbility(x.Target, out _),
+						priority: 0);
+					break;
 			}
 		}
 
@@ -530,7 +536,7 @@ internal class Ability
 	{
 		if (container.HasTag(AbilityData.AbilityTriggerData!.Value.TriggerTag))
 		{
-			Activate(null);
+			TryActivateAbility(null, out _);
 		}
 		else
 		{
@@ -542,7 +548,7 @@ internal class Ability
 	{
 		if (container.HasTag(AbilityData.AbilityTriggerData!.Value.TriggerTag))
 		{
-			Activate(null);
+			TryActivateAbility(null, out _);
 		}
 	}
 }

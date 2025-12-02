@@ -28,4 +28,9 @@ public interface IForgeEntity
 	/// Gets the abilities manager for this entity.
 	/// </summary>
 	EntityAbilities Abilities { get; }
+
+	/// <summary>
+	/// Gets the event bus for this entity.
+	/// </summary>
+	EntityEvents Events { get; }
 }
