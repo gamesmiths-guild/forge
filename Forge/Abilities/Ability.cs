@@ -254,6 +254,7 @@ internal class Ability
 		if (_activeInstances.Count == 0)
 		{
 			OnAbilityDeactivated?.Invoke(this);
+			Owner.Abilities.NotifyAbilityEnded(new AbilityEndedData(Handle, false));
 		}
 	}
 

@@ -2223,6 +2223,42 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle!.IsActive.Should().BeFalse();
 	}
 
+	[Fact]
+	[Trait("Ability Ended Event", null)]
+	public void OnAbilityEnded_fires_when_ability_instance_is_canceled()
+	{
+		var targetEntity = new TestEntity(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Test Ability",
+			[],
+			[],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerEntity);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			targetEntity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		abilityHandle.Should().NotBeNull();
+
+		AbilityEndedData? capturedData = null;
+
+		targetEntity.Abilities.OnAbilityEnded += x => { capturedData = x; };
+
+		// Activate the ability
+		abilityHandle!.Activate(out AbilityActivationResult result).Should().BeTrue();
+		abilityHandle.Cancel();
+
+		// Verify event was fired
+		capturedData.Should().NotBeNull();
+		capturedData!.Value.Ability.Should().Be(abilityHandle);
+		capturedData.Value.WasCanceled.Should().BeTrue();
+	}
+
 	private static AbilityHandle? SetupAbility(
 		TestEntity targetEntity,
 		AbilityData abilityData,
