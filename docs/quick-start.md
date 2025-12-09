@@ -45,6 +45,8 @@ public class Player : IForgeEntity
     public EntityAttributes Attributes { get; }
     public EntityTags Tags { get; }
     public EffectsManager EffectsManager { get; }
+    public EntityAbilities Abilities { get; }
+    public EventManager Events { get; }
 
     public Player(TagsManager tagsManager, CuesManager cuesManager)
     {
@@ -60,6 +62,8 @@ public class Player : IForgeEntity
         Attributes = new EntityAttributes(new PlayerAttributeSet());
         Tags = new EntityTags(baseTags);
         EffectsManager = new EffectsManager(this, cuesManager);
+        Abilities = new(this);
+        Events = new();
     }
 }
 
@@ -154,7 +158,13 @@ The following effect increases the player's strength by +5 for 10 seconds:
 // Create a strength buff effect that lasts for 10 seconds
 var strengthBuffEffectData = new EffectData(
     "Strength Potion",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)), // 10 seconds duration
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f) // 10 seconds duration
+        )
+    ),
     new[] {
         new Modifier(
             "PlayerAttributeSet.Strength",
@@ -250,7 +260,13 @@ This poison effect ticks every 2 seconds for 10 seconds, causing -5 damage per t
 // Create a poison effect that ticks every 2 seconds for 10 seconds
 var poisonEffectData = new EffectData(
     "Poison",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f)
+        )
+    ),
     new[] {
         new Modifier(
             "PlayerAttributeSet.Health",
@@ -290,7 +306,13 @@ This example shows a poison effect that ticks every 2 seconds for -3 damage per 
 // Create a poison effect that stacks up to 3 times
 var stackingPoisonEffectData = new EffectData(
     "Stacking Poison",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(6.0f)), // Each stack lasts 6 seconds
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(6.0f) // Each stack lasts 6 seconds
+        )
+    ),
     new[] {
         new Modifier(
             "PlayerAttributeSet.Health",
@@ -312,7 +334,7 @@ var stackingPoisonEffectData = new EffectData(
         overflowPolicy: StackOverflowPolicy.DenyApplication, // Deny if max stacks reached
         magnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
         expirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
-        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication, // Refresh duration on new stack
+        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
         stackPolicy: StackPolicy.AggregateBySource, // Aggregate stacks from the same source
         stackLevelPolicy: StackLevelPolicy.SegregateLevels, // Each stack can have its own level
 
@@ -347,7 +369,13 @@ This example shows an effect that is unique to a target and can be overridden on
 // Define the unique effect data
 var uniqueEffectData = new EffectData(
     "Unique Buff",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)), // Lasts 10 seconds
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f) // Lasts 10 seconds
+        )
+    ),
     new[] {
         new Modifier(
             "PlayerAttributeSet.Strength",
@@ -368,7 +396,7 @@ var uniqueEffectData = new EffectData(
         overflowPolicy: StackOverflowPolicy.AllowApplication, // Allow application even if max stacks reached
         magnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
         expirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
-        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication, // Refresh duration on new stack
+        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
         stackPolicy: StackPolicy.AggregateByTarget, // Only one effect per target
         ownerDenialPolicy: StackOwnerDenialPolicy.AlwaysAllow, // Always allow application regardless of owner
         ownerOverridePolicy: StackOwnerOverridePolicy.Override, // Override existing effect if applied again
@@ -401,7 +429,13 @@ This example shows how to add a temporary "status.stunned" tag to the target whi
 // Create a "Stunned" effect that adds a tag and reduces speed to 0
 var stunEffectData = new EffectData(
     "Stunned",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(3.0f)), // 3 seconds duration
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(3.0f) // 3 seconds duration
+        )
+    ),
     new[] {
         new Modifier(
             "PlayerAttributeSet.Speed",
@@ -557,10 +591,10 @@ public class StrengthDamageCalculator : CustomModifierMagnitudeCalculator
         AttributesToCapture.Add(SpeedAttribute);
     }
 
-    public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
+    public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
     {
-        int strength = CaptureAttributeMagnitude(StrengthAttribute, effect, target);
-        int speed = CaptureAttributeMagnitude(SpeedAttribute, effect, target);
+        int strength = CaptureAttributeMagnitude(StrengthAttribute, effect, target, effectEvaluatedData);
+        int speed = CaptureAttributeMagnitude(SpeedAttribute, effect, target, effectEvaluatedData);
 
         // Calculate damage based on strength and speed
         float damage = (speed * 2) + (strength * 0.5f);
@@ -635,14 +669,14 @@ public class HealthDrainExecution : CustomExecution
         AttributesToCapture.Add(SourceStrength);
     }
 
-    public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target)
+    public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target, EffectEvaluatedData effectEvaluatedData)
     {
         var results = new List<ModifierEvaluatedData>();
 
         // Get attribute values
-        int targetHealth = CaptureAttributeMagnitude(TargetHealth, effect, target);
-        int sourceHealth = CaptureAttributeMagnitude(SourceHealth, effect, effect.Ownership.Owner);
-        int sourceStrength = CaptureAttributeMagnitude(SourceStrength, effect, effect.Ownership.Owner);
+        int targetHealth = CaptureAttributeMagnitude(TargetHealth, effect, target, effectEvaluatedData);
+        int sourceHealth = CaptureAttributeMagnitude(SourceHealth, effect, effect.Ownership.Owner, effectEvaluatedData);
+        int sourceStrength = CaptureAttributeMagnitude(SourceStrength, effect, effect.Ownership.Owner, effectEvaluatedData);
 
         // Calculate health drain amount based on source strength
         float drainAmount = sourceStrength * 0.5f;
@@ -718,7 +752,13 @@ This example shows how to trigger cues as part of an effect:
 // Define a burning effect that includes the fire damage cue
 var burningEffectData = new EffectData(
     "Burning",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(5.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(5.0f)
+        )
+    ),
     new[] {
         new Modifier(
             "PlayerAttributeSet.Health",
