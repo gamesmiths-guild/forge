@@ -33,7 +33,7 @@ public class PlayerAttributeSet : AttributeSet
     public PlayerAttributeSet()
     {
         // Initialize the attributes with the current, min and max values.
-        Health = InitializeAttribute(nameof(Health), 100, 0, 100);
+        Health = InitializeAttribute(nameof(Health), 100, 0, 150);
         Strength = InitializeAttribute(nameof(Strength), 10, 0, 99);
         Speed = InitializeAttribute(nameof(Speed), 5, 0, 10);
     }
@@ -271,6 +271,13 @@ var poisonEffectData = new EffectData(
 // Apply the poison effect
 var poisonEffect = new Effect(poisonEffectData, new EffectOwnership(player, player));
 player.EffectsManager.ApplyEffect(poisonEffect);
+
+// Simulate 10 seconds of game time
+player.EffectsManager.UpdateEffects(10f);
+
+// After 6 ticks total (including the initial execute), health should be 70 if it started at 100
+int currentHealthAfterPoison = player.Attributes["PlayerAttributeSet.Health"].CurrentValue; // 70
+int baseHealthAfterPoison = player.Attributes["PlayerAttributeSet.Health"].BaseValue; // 70
 ```
 
 ---
@@ -322,6 +329,12 @@ var stackingPoisonEffect = new Effect(stackingPoisonEffectData, new EffectOwners
 player.EffectsManager.ApplyEffect(stackingPoisonEffect);
 player.EffectsManager.ApplyEffect(stackingPoisonEffect);
 player.EffectsManager.ApplyEffect(stackingPoisonEffect);
+
+// Simulate 6 seconds of game time
+player.EffectsManager.UpdateEffects(6f);
+
+// After three ticks at -9 per tick, total damage is -27
+var healthAfterStacks = player.Attributes["PlayerAttributeSet.Health"].CurrentValue; // 73 if starting at 100
 ```
 
 ---
@@ -459,7 +472,7 @@ player.EffectsManager.ApplyEffect(fireAttack);
 
 You can extend effects with custom logic using components.
 
-This component applies an additional effect when the target's Health attribute falls below a specified threshold:
+This component applies an additional effect when the target's Health attribute falls below a specified threshold at the time of application:
 
 ```csharp
 // Custom component that applies extra effect when Health is below threshold
@@ -504,8 +517,9 @@ var thresholdAttackData = new EffectData(
     ]
 );
 
-// Apply the effect
+// Apply the effect twice (second application should trigger the stun)
 var thresholdAttack = new Effect(thresholdAttackData, new EffectOwnership(player, player));
+player.EffectsManager.ApplyEffect(thresholdAttack);
 player.EffectsManager.ApplyEffect(thresholdAttack);
 
 // Check if the stun was applied (will be true if health was 90 or less after damage)
@@ -734,6 +748,7 @@ var burningEffectData = new EffectData(
 // Apply the burning effect
 var burningEffect = new Effect(burningEffectData, new EffectOwnership(player, player));
 player.EffectsManager.ApplyEffect(burningEffect);
+player.EffectsManager.UpdateEffects(5f);
 ```
 
 ---
