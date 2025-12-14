@@ -263,7 +263,13 @@ The component specifically uses the `NextSingle()` method, which returns a rando
 // Create a "Stun" effect with a 25% chance to apply
 var stunEffectData = new EffectData(
     "Stun",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(3.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(3.0f)
+        )
+    ),
     effectComponents: new[] {
         new ChanceToApplyEffectComponent(
             randomProvider,  // Your game's random number generator
@@ -320,7 +326,13 @@ Usage example:
 // Create a "Burning" effect that adds the "Status.Burning" tag to the target
 var burningEffectData = new EffectData(
     "Burning",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f)
+        )
+    ),
     new[] {
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
     },
@@ -426,7 +438,13 @@ query.Build(new TagQueryExpression(tagsManager)
 // is removed if target gains the "Fire" tag, and is inhibited if target has the "Cold.Immune" tag
 var frostEffectData = new EffectData(
     "Frost",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(8.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(8.0f)
+        )
+    ),
     [/*...*/],
     effectComponents: new[] {
         new TargetTagRequirementsEffectComponent(

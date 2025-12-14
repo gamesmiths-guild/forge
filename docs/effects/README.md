@@ -282,7 +282,7 @@ var effectData = new EffectData(
 // Instant effect (execute once and end)
 var healData = new EffectData(
     "Instant Heal",
-    durationData: new DurationData(DurationType.Instant)
+    durationData: new DurationData(DurationType.Instant),
     modifiers: [/*...*/],
 );
 
@@ -291,7 +291,10 @@ var buffData = new EffectData(
     "Temporary Buff",
     durationData: new DurationData(
         DurationType.HasDuration,
-        new ScalableFloat(10.0f)    // 10 second duration
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f)    // 10 second duration
+        )
     ),
     modifiers: [/*...*/]
 );
@@ -317,7 +320,13 @@ var curseData = new EffectData(
 ```csharp
 var effectData = new EffectData(
     "Strength Potion",
-    durationData: new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
+    durationData: new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f)
+        )
+    ),
     modifiers: [
         // First modifier - flat strength bonus
         new Modifier(
@@ -369,7 +378,10 @@ var stackingEffectData = new EffectData(
     "Bleed",
     durationData: new DurationData(
         DurationType.HasDuration,
-        new ScalableFloat(5.0f)
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(5.0f)
+        )
     ),
     modifiers: [/*...*/],
     stackingData: new StackingData(
@@ -407,7 +419,10 @@ var dotEffectData = new EffectData(
     "Poison",
     durationData: new DurationData(
         DurationType.HasDuration,
-        new ScalableFloat(8.0f),     // 8 second total duration
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(8.0f)     // 8 second total duration
+        )
     ),
     modifiers: [/*...*/],
     periodicData: new PeriodicData(
