@@ -13,6 +13,8 @@ At the center of Forge is the entity system, represented by `IForgeEntity`. Each
 - **Attributes**: Numeric values that define an entity's capabilities and state.
 - **Tags**: Labels that identify entity characteristics and enable queries.
 - **Effects**: Gameplay effects that can modify attributes and behaviors.
+- **Abilities**: Granted and activated gameplay abilities with instancing, costs, cooldowns, and tag requirements.
+- **Events**: Gameplay events dispatched and listened to for triggers and reactions.
 
 Entities serve as containers for these components, allowing for modular construction of game objects.
 
@@ -47,6 +49,25 @@ Tags are central to many Forge systems, enabling contextual application of effec
 - **Duration**: Controls how long effects remain active.
 
 Effects can be instant or persistent, with various duration types including infinite, timed, and conditional.
+
+### Ability System
+
+[Abilities](abilities.md) manage creation and use of gameplay abilities:
+
+- **Granting**: Add abilities to entities, including level scaling and ownership.
+- **Activation**: Start ability instances with checks for inhibition and requirements.
+- **Costs and Cooldowns**: Apply cost effects and cooldown effects via the effects system.
+- **Instancing Policies**: Control per-entity or per-execution instances, retrigger behavior, and cancellation.
+- **Tag Rules**: Use tags to require, block, cancel, or inhibit abilities.
+
+### Event System
+
+[Events](events.md) deliver gameplay event data for triggers and reactions:
+
+- **Event Data**: Structured payloads carrying source, target, and parameters.
+- **Tagging**: Event tags for filtering and matching listeners.
+- **Dispatching**: Raise events through entity event managers.
+- **Listeners and Triggers**: Drive ability activation and other game logic from event hooks.
 
 ### Cue System
 
@@ -95,6 +116,8 @@ For more detailed information about specific systems, refer to these documentati
 - [Attributes](attributes.md): Details on attribute definition, evaluation, and channels.
 - [Effects](effects/README.md): Creating and applying effects to entities.
 - [Tags](tags.md): Using the tag system for entity identification.
+- [Abilities](abilities.md): Ability granting, activation, instancing, costs, cooldowns, and tag requirements.
+- [Events](events.md): Event data, tagging, and trigger hooks.
 - [Cues](cues.md): Connecting gameplay events to visual and audio feedback.
 
 ### Effect Features
