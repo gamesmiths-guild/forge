@@ -2,7 +2,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Abilities;
-using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Core;
@@ -16,9 +15,7 @@ namespace Gamesmiths.Forge.Core;
 /// <param name="owner">The owner of this manager.</param>
 public class EntityAbilities(IForgeEntity owner)
 {
-	private readonly Dictionary<Ability, List<ActiveEffectHandle>?> _grantSources = [];
-
-	private readonly Dictionary<Ability, List<ActiveEffectHandle>?> _inhibitSources = [];
+	private readonly Dictionary<Ability, List<IAbilityGrantSource>> _grantSources = [];
 
 	/// <summary>
 	/// Event invoked when an ability ends.
@@ -140,42 +137,48 @@ public class EntityAbilities(IForgeEntity owner)
 	/// </summary>
 	/// <param name="abilityData">The configuration data of the ability to grant and activate.</param>
 	/// <param name="abilityLevel">The level at which to grant the ability.</param>
-	/// <param name="removalPolicy">The policy for removing the granted ability.</param>
-	/// <param name="inhibitionPolicy">The policy for inhibiting the granted ability.</param>
 	/// <param name="levelOverridePolicy">The policy for overriding the level of an existing granted ability.</param>
-	/// <param name="sourceActiveEffectHandle">The handle of the active effect that is the source of this granted
-	/// ability.</param>
 	/// <param name="sourceEntity">The source entity of the granted ability, if any.</param>
+	/// <param name="targetEntity">The target entity for the ability activation, if any.</param>
 	/// <param name="activationResult">The result of the ability activation attempt.</param>
-	/// <returns>Returns <see langword="true"/> if the ability was successfully activated; otherwise,
-	/// <see langword="false"/>.</returns>
-	public bool GrantAbilityAndActivateOnce(
+	/// <returns>The handle of the granted ability.</returns>
+	public AbilityHandle GrantAbilityAndActivateOnce(
 		AbilityData abilityData,
 		int abilityLevel,
-		AbilityDeactivationPolicy removalPolicy,
-		AbilityDeactivationPolicy inhibitionPolicy,
 		LevelComparison levelOverridePolicy,
-		ActiveEffectHandle sourceActiveEffectHandle,
 		IForgeEntity? sourceEntity,
+		IForgeEntity? targetEntity,
 		out AbilityActivationResult activationResult)
 	{
+		var grantSource = new TransientGrantSource();
+
 		AbilityHandle abilityHandle = GrantAbility(
 			abilityData,
 			abilityLevel,
-			removalPolicy,
-			inhibitionPolicy,
 			levelOverridePolicy,
-			sourceActiveEffectHandle,
+			grantSource,
 			sourceEntity);
 
-		return abilityHandle.Activate(out activationResult, null);
+		abilityHandle.Activate(out activationResult, targetEntity);
+
+		RemoveGrantedAbility(abilityHandle, grantSource);
+
+		return abilityHandle;
 	}
 
-	internal void GrantAbilityPermanently(
+	/// <summary>
+	/// Grants an ability permanently.
+	/// </summary>
+	/// <remarks>
+	/// Abilities granted permanently cannot be removed nor inhibited.
+	/// </remarks>
+	/// <param name="abilityData">The configuration data of the ability to grant.</param>
+	/// <param name="abilityLevel">The level at which to grant the ability.</param>
+	/// <param name="levelOverridePolicy">The policy for overriding the level of an existing granted ability.</param>
+	/// <param name="sourceEntity">The source entity of the granted ability, if any.</param>
+	public void GrantAbilityPermanently(
 		AbilityData abilityData,
 		int abilityLevel,
-		AbilityDeactivationPolicy removalPolicy,
-		AbilityDeactivationPolicy inhibitionPolicy,
 		LevelComparison levelOverridePolicy,
 		IForgeEntity? sourceEntity)
 	{
@@ -184,8 +187,7 @@ public class EntityAbilities(IForgeEntity owner)
 
 		if (existingAbility is not null && existingAbility.SourceEntity == sourceEntity)
 		{
-			_grantSources[existingAbility] = null;
-			_inhibitSources.Remove(existingAbility);
+			_grantSources[existingAbility].Add(new PermanentGrantSource());
 
 			// If the ability was fully inhibited, this permanent grant should re-enable it.
 			existingAbility.IsInhibited = false;
@@ -203,17 +205,16 @@ public class EntityAbilities(IForgeEntity owner)
 			return;
 		}
 
-		var newAbility = new Ability(Owner, abilityData, abilityLevel, removalPolicy, inhibitionPolicy, sourceEntity);
+		var newAbility = new Ability(Owner, abilityData, abilityLevel, sourceEntity);
 		GrantedAbilities.Add(newAbility.Handle);
+		_grantSources[newAbility] = [new PermanentGrantSource()];
 	}
 
 	internal AbilityHandle GrantAbility(
 		AbilityData abilityData,
 		int abilityLevel,
-		AbilityDeactivationPolicy removalPolicy,
-		AbilityDeactivationPolicy inhibitionPolicy,
 		LevelComparison levelOverridePolicy,
-		ActiveEffectHandle sourceActiveEffectHandle,
+		IAbilityGrantSource grantSource,
 		IForgeEntity? sourceEntity)
 	{
 		Ability? existingAbility =
@@ -221,26 +222,11 @@ public class EntityAbilities(IForgeEntity owner)
 
 		if (existingAbility is not null && existingAbility.SourceEntity == sourceEntity)
 		{
-			if (_grantSources.TryGetValue(existingAbility, out List<ActiveEffectHandle>? grantSources)
-				&& grantSources is not null)
-			{
-				List<ActiveEffectHandle>? inhibitSources = _inhibitSources[existingAbility];
+			// Ability already granted, just add the new source to the mapping.
+			_grantSources[existingAbility].Add(grantSource);
 
-				Validation.Assert(
-					inhibitSources is not null,
-					"inhibitSources should not be null if grant grantSources are not null.");
-
-				// Ability already granted, just add the new source to the mapping.
-				grantSources.Add(sourceActiveEffectHandle);
-
-				if (sourceActiveEffectHandle.IsInhibited)
-				{
-					inhibitSources.Add(sourceActiveEffectHandle);
-				}
-
-				// If the ability was fully inhibited, this new grant may need to re-enable it.
-				existingAbility.IsInhibited = inhibitSources.Count == grantSources.Count;
-			}
+			// If the ability was fully inhibited, this new grant may need to re-enable it.
+			existingAbility.IsInhibited = CheckIsInhibited();
 
 			var shouldOverride =
 				(levelOverridePolicy.HasFlag(LevelComparison.Higher) && abilityLevel > existingAbility.Level) ||
@@ -255,51 +241,42 @@ public class EntityAbilities(IForgeEntity owner)
 			return existingAbility.Handle;
 		}
 
-		var newAbility = new Ability(Owner, abilityData, abilityLevel, removalPolicy, inhibitionPolicy, sourceEntity);
+		var newAbility = new Ability(Owner, abilityData, abilityLevel, sourceEntity);
 		GrantedAbilities.Add(newAbility.Handle);
-		_grantSources[newAbility] = [sourceActiveEffectHandle];
+		_grantSources[newAbility] = [grantSource];
 
-		newAbility.IsInhibited = sourceActiveEffectHandle.IsInhibited;
-		_inhibitSources[newAbility] = newAbility.IsInhibited ? [sourceActiveEffectHandle] : [];
+		newAbility.IsInhibited = grantSource.IsInhibited;
 
 		return newAbility.Handle;
 	}
 
-	internal void RemoveGrantedAbility(AbilityHandle abilityHandle, ActiveEffectHandle effectHandle)
+	internal void RemoveGrantedAbility(AbilityHandle abilityHandle, IAbilityGrantSource grantSource)
 	{
-		RemoveGrantedAbility(GrantedAbilities.FirstOrDefault(x => x == abilityHandle)?.Ability, effectHandle);
+		RemoveGrantedAbility(GrantedAbilities.FirstOrDefault(x => x == abilityHandle)?.Ability, grantSource);
 	}
 
-	internal void RemoveGrantedAbility(Ability? abilityToRemove, ActiveEffectHandle effectHandle)
+	internal void RemoveGrantedAbility(Ability? abilityToRemove, IAbilityGrantSource grantSource)
 	{
-		if (abilityToRemove is null
-			|| abilityToRemove.GrantedAbilityRemovalPolicy == AbilityDeactivationPolicy.Ignore
-			|| !_grantSources.TryGetValue(abilityToRemove, out List<ActiveEffectHandle>? grantSources)
-			|| grantSources is null)
+		if (abilityToRemove is null || grantSource.RemovalPolicy == AbilityDeactivationPolicy.Ignore)
 		{
 			return;
 		}
 
-		List<ActiveEffectHandle>? inhibitSources = _inhibitSources[abilityToRemove];
+		List<IAbilityGrantSource> grantSources = _grantSources[abilityToRemove];
 
-		Validation.Assert(
-			inhibitSources is not null,
-			"InhibitAbilityBasedOnPolicy inhibitSources should not be null if grant grantSources are not null.");
-
-		grantSources.Remove(effectHandle);
-		inhibitSources.Remove(effectHandle);
+		grantSources.Remove(grantSource);
 
 		if (grantSources.Count > 0)
 		{
-			if (inhibitSources.Count == grantSources.Count)
+			if (CheckIsInhibited())
 			{
-				InhibitAbilityBasedOnPolicy(abilityToRemove);
+				InhibitAbilityBasedOnPolicy(abilityToRemove, grantSource.InhibitionPolicy);
 			}
 
 			return;
 		}
 
-		switch (abilityToRemove.GrantedAbilityRemovalPolicy)
+		switch (grantSource.RemovalPolicy)
 		{
 			case AbilityDeactivationPolicy.Ignore:
 				return;
@@ -323,36 +300,19 @@ public class EntityAbilities(IForgeEntity owner)
 		}
 	}
 
-	internal void InhibitGrantedAbility(AbilityHandle abilityHandle, bool inhibit, ActiveEffectHandle effectHandle)
+	internal void InhibitGrantedAbility(AbilityHandle abilityHandle, IAbilityGrantSource grantSource)
 	{
-		InhibitGrantedAbility(GrantedAbilities.FirstOrDefault(x => x == abilityHandle)?.Ability, inhibit, effectHandle);
+		InhibitGrantedAbility(GrantedAbilities.FirstOrDefault(x => x == abilityHandle)?.Ability, grantSource);
 	}
 
-	internal void InhibitGrantedAbility(Ability? abilityToInhibit, bool inhibit, ActiveEffectHandle effectHandle)
+	internal void InhibitGrantedAbility(Ability? abilityToInhibit, IAbilityGrantSource grantSource)
 	{
-		if (abilityToInhibit is null
-			|| abilityToInhibit.GrantedAbilityInhibitionPolicy == AbilityDeactivationPolicy.Ignore
-			|| !_inhibitSources.TryGetValue(abilityToInhibit, out List<ActiveEffectHandle>? inhibitSources)
-			|| inhibitSources is null)
+		if (abilityToInhibit is null || grantSource.InhibitionPolicy == AbilityDeactivationPolicy.Ignore)
 		{
 			return;
 		}
 
-		if (inhibit)
-		{
-			inhibitSources.Add(effectHandle);
-
-			InhibitAbilityBasedOnPolicy(abilityToInhibit);
-		}
-		else
-		{
-			inhibitSources.Remove(effectHandle);
-
-			if (_inhibitSources[abilityToInhibit]?.Count < _grantSources[abilityToInhibit]?.Count)
-			{
-				abilityToInhibit.IsInhibited = false;
-			}
-		}
+		InhibitAbilityBasedOnPolicy(abilityToInhibit, grantSource.InhibitionPolicy);
 	}
 
 	internal void NotifyAbilityEnded(AbilityEndedData abilityEndedData)
@@ -360,9 +320,9 @@ public class EntityAbilities(IForgeEntity owner)
 		OnAbilityEnded?.Invoke(abilityEndedData);
 	}
 
-	private void InhibitAbilityBasedOnPolicy(Ability abilityToInhibit)
+	private void InhibitAbilityBasedOnPolicy(Ability abilityToInhibit, AbilityDeactivationPolicy inhibitionPolicy)
 	{
-		switch (abilityToInhibit.GrantedAbilityInhibitionPolicy)
+		switch (inhibitionPolicy)
 		{
 			case AbilityDeactivationPolicy.Ignore:
 				return;
@@ -390,7 +350,7 @@ public class EntityAbilities(IForgeEntity owner)
 	{
 		abilityToRemove.OnAbilityDeactivated -= RemoveAbility;
 
-		if (_grantSources.TryGetValue(abilityToRemove, out List<ActiveEffectHandle>? grantSources)
+		if (_grantSources.TryGetValue(abilityToRemove, out List<IAbilityGrantSource>? grantSources)
 			&& grantSources?.Count > 0)
 		{
 			return;
@@ -403,10 +363,14 @@ public class EntityAbilities(IForgeEntity owner)
 	private void InhibitAbility(Ability abilityToInhibit)
 	{
 		abilityToInhibit.OnAbilityDeactivated -= InhibitAbility;
+		abilityToInhibit.IsInhibited = CheckIsInhibited();
+	}
 
-		if (_grantSources[abilityToInhibit]?.Count == _inhibitSources[abilityToInhibit]?.Count)
+	private bool CheckIsInhibited()
+	{
+		return _grantSources.Values.All(x =>
 		{
-			abilityToInhibit.IsInhibited = true;
-		}
+			return x.TrueForAll(source => source.IsInhibited);
+		});
 	}
 }

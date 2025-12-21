@@ -41,10 +41,6 @@ internal class Ability
 
 	internal int Level { get; set; }
 
-	internal AbilityDeactivationPolicy GrantedAbilityRemovalPolicy { get; }
-
-	internal AbilityDeactivationPolicy GrantedAbilityInhibitionPolicy { get; }
-
 	internal IForgeEntity? SourceEntity { get; }
 
 	internal AbilityHandle Handle { get; }
@@ -59,25 +55,16 @@ internal class Ability
 	/// <param name="owner">The entity that owns this ability.</param>
 	/// <param name="abilityData">The data defining this ability.</param>
 	/// <param name="level">The level of the ability.</param>
-	/// <param name="grantedAbilityRemovalPolicy">The policy that determines when this granted ability should be
-	/// removed.
-	/// </param>
-	/// <param name="grantedAbilityInhibitionPolicy">The policy that determines how this ability behaves when it is
-	/// inhibited.</param>
 	/// <param name="sourceEntity">The entity that granted us this ability.</param>
 	internal Ability(
 		IForgeEntity owner,
 		AbilityData abilityData,
 		int level,
-		AbilityDeactivationPolicy grantedAbilityRemovalPolicy = AbilityDeactivationPolicy.CancelImmediately,
-		AbilityDeactivationPolicy grantedAbilityInhibitionPolicy = AbilityDeactivationPolicy.CancelImmediately,
 		IForgeEntity? sourceEntity = null)
 	{
 		Owner = owner;
 		AbilityData = abilityData;
 		Level = level;
-		GrantedAbilityRemovalPolicy = grantedAbilityRemovalPolicy;
-		GrantedAbilityInhibitionPolicy = grantedAbilityInhibitionPolicy;
 		SourceEntity = sourceEntity;
 		IsInhibited = false;
 
