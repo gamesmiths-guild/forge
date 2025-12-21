@@ -138,17 +138,17 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <param name="abilityData">The configuration data of the ability to grant and activate.</param>
 	/// <param name="abilityLevel">The level at which to grant the ability.</param>
 	/// <param name="levelOverridePolicy">The policy for overriding the level of an existing granted ability.</param>
-	/// <param name="sourceEntity">The source entity of the granted ability, if any.</param>
-	/// <param name="targetEntity">The target entity for the ability activation, if any.</param>
 	/// <param name="activationResult">The result of the ability activation attempt.</param>
+	/// <param name="targetEntity">The target entity for the ability activation, if any.</param>
+	/// <param name="sourceEntity">The source entity of the granted ability, if any.</param>
 	/// <returns>The handle of the granted ability.</returns>
 	public AbilityHandle GrantAbilityAndActivateOnce(
 		AbilityData abilityData,
 		int abilityLevel,
 		LevelComparison levelOverridePolicy,
-		IForgeEntity? sourceEntity,
-		IForgeEntity? targetEntity,
-		out AbilityActivationResult activationResult)
+		out AbilityActivationResult activationResult,
+		IForgeEntity? targetEntity = null,
+		IForgeEntity? sourceEntity = null)
 	{
 		var grantSource = new TransientGrantSource();
 

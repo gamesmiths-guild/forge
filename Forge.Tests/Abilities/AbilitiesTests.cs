@@ -2259,6 +2259,36 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		capturedData.Value.WasCanceled.Should().BeTrue();
 	}
 
+	[Fact]
+	[Trait("Grant ability", null)]
+	public void Ability_is_granted_and_activated_once()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle abilityHandle = entity.Abilities.GrantAbilityAndActivateOnce(
+			abilityData,
+			1,
+			LevelComparison.None,
+			out AbilityActivationResult activationResult,
+			entity,
+			entity);
+
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle.IsActive.Should().BeTrue();
+
+		abilityHandle.Cancel();
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+	}
+
 	private static AbilityHandle? SetupAbility(
 		TestEntity targetEntity,
 		AbilityData abilityData,

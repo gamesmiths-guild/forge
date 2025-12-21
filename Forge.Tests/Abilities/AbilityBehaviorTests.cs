@@ -347,6 +347,32 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		capturedData.Value.WasCanceled.Should().BeFalse();
 	}
 
+	[Fact]
+	[Trait("Ability Ended Event", null)]
+	public void Ability_is_granted_and_activated_once()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var behavior = new TrackingBehavior();
+
+		AbilityData data = CreateAbilityData("Tracked", behaviorFactory: () => behavior);
+		entity.Abilities.GrantAbilityAndActivateOnce(
+			data,
+			1,
+			LevelComparison.None,
+			out AbilityActivationResult result);
+
+		result.Should().Be(AbilityActivationResult.Success);
+
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+		behavior.StartCount.Should().Be(1);
+		behavior.EndCount.Should().Be(0);
+
+		behavior.End();
+		behavior.StartCount.Should().Be(1);
+		behavior.EndCount.Should().Be(1);
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+	}
+
 	private static AbilityHandle? Grant(
 		TestEntity target,
 		AbilityData data,
