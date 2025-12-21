@@ -83,7 +83,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 	[Fact]
 	[Trait("Remove ability", null)]
-	public void Ability_is_only_removed_after_being_deactivated()
+	public void Ability_is_removed_only_after_deactivation_when_granted_with_RemoveOnEnd()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
 
@@ -117,6 +117,101 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.Cancel();
 
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+		abilityHandle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Remove ability", null)]
+	public void Grants_with_different_remove_policies_work_independently()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? effectHandle,
+			AbilityDeactivationPolicy.RemoveOnEnd,
+			AbilityDeactivationPolicy.RemoveOnEnd);
+
+		AbilityHandle? abilityHandle2 = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? effectHandle2,
+			AbilityDeactivationPolicy.CancelImmediately,
+			AbilityDeactivationPolicy.RemoveOnEnd);
+
+		abilityHandle.Should().NotBeNull();
+		abilityHandle2.Should().Be(abilityHandle);
+		effectHandle.Should().NotBeNull();
+		effectHandle2.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
+		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle.IsActive.Should().BeTrue();
+
+		entity.EffectsManager.UnapplyEffect(effectHandle!);
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+		abilityHandle.IsActive.Should().BeTrue();
+
+		entity.EffectsManager.UnapplyEffect(effectHandle2!);
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+		abilityHandle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Remove ability", null)]
+	public void CancelImmediately_takes_precedence_and_removes_the_ability_immediately()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? effectHandle,
+			AbilityDeactivationPolicy.RemoveOnEnd,
+			AbilityDeactivationPolicy.Ignore);
+
+		AbilityHandle? abilityHandle2 = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? effectHandle2,
+			AbilityDeactivationPolicy.CancelImmediately,
+			AbilityDeactivationPolicy.Ignore);
+
+		abilityHandle.Should().NotBeNull();
+		abilityHandle2.Should().Be(abilityHandle);
+		effectHandle.Should().NotBeNull();
+		effectHandle2.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
+		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle.IsActive.Should().BeTrue();
+
+		entity.EffectsManager.UnapplyEffect(effectHandle!);
+		entity.EffectsManager.UnapplyEffect(effectHandle2!);
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
@@ -685,6 +780,74 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 		abilityHandle!.IsInhibited.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Inhibit ability", null)]
+	public void Grants_with_different_inhibit_policies_work_independently()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			grantedAbilityInhibitionPolicy: AbilityDeactivationPolicy.RemoveOnEnd,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(
+					IgnoreTags: ignoreTags)));
+
+		abilityHandle.Should().NotBeNull();
+
+		TagContainer? ignoreTags2 = Tag.RequestTag(_tagsManager, "simple.tag").GetSingleTagContainer();
+		ignoreTags2.Should().NotBeNull();
+
+		AbilityHandle? abilityHandle2 = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			grantedAbilityInhibitionPolicy: AbilityDeactivationPolicy.CancelImmediately,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(
+					IgnoreTags: ignoreTags2)));
+
+		abilityHandle2.Should().NotBeNull();
+		abilityHandle.Should().Be(abilityHandle2);
+
+		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
+		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle.IsActive.Should().BeTrue();
+		abilityHandle2!.IsActive.Should().BeTrue();
+
+		// Inhibit the granting effect with RemoveOnEnd policy.
+		CreateAndApplyTagEffect(entity, ignoreTags!);
+
+		// With RemoveOnEnd policy, the ability is not inhibited while active.
+		abilityHandle.IsInhibited.Should().BeFalse();
+		abilityHandle.IsActive.Should().BeTrue();
+		abilityHandle2!.IsInhibited.Should().BeFalse();
+		abilityHandle2.IsActive.Should().BeTrue();
+
+		// Inhibit the second granting effect with CancelImmediately policy.
+		CreateAndApplyTagEffect(entity, ignoreTags2!);
+
+		// Now that it's no longer active, it should become inhibited.
+		abilityHandle.IsActive.Should().BeFalse();
+		abilityHandle.IsInhibited.Should().BeTrue();
+		abilityHandle2.IsActive.Should().BeFalse();
+		abilityHandle2.IsInhibited.Should().BeTrue();
 	}
 
 	[Fact]
