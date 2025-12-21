@@ -294,8 +294,10 @@ public class EntityAbilities(IForgeEntity owner)
 				if (abilityToRemove.IsActive)
 				{
 					abilityToRemove.OnAbilityDeactivated += RemoveAbility;
+					return;
 				}
 
+				RemoveAbility(abilityToRemove);
 				return;
 		}
 	}
