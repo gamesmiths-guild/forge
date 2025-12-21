@@ -17,10 +17,13 @@ internal sealed class AbilityInstance
 
 	internal IForgeEntity? Target { get; }
 
+	internal AbilityInstanceHandle Handle { get; }
+
 	internal AbilityInstance(Ability ability, IForgeEntity? target)
 	{
 		_ability = ability;
 		Target = target;
+		Handle = new AbilityInstanceHandle(this);
 	}
 
 	internal void Start()

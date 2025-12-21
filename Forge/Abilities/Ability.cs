@@ -238,6 +238,8 @@ internal class Ability
 			}
 		}
 
+		instance.Handle.Free();
+
 		if (_activeInstances.Count == 0)
 		{
 			OnAbilityDeactivated?.Invoke(this);

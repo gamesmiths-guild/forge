@@ -2435,7 +2435,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1));
 
-		AbilityHandle abilityHandle = entity.Abilities.GrantAbilityAndActivateOnce(
+		AbilityHandle? abilityHandle = entity.Abilities.GrantAbilityAndActivateOnce(
 			abilityData,
 			1,
 			LevelComparison.None,
@@ -2446,7 +2446,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
 		activationResult.Should().Be(AbilityActivationResult.Success);
-		abilityHandle.IsActive.Should().BeTrue();
+		abilityHandle!.IsActive.Should().BeTrue();
 
 		abilityHandle.Cancel();
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
@@ -2465,7 +2465,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-100));
 
-		AbilityHandle abilityHandle = entity.Abilities.GrantAbilityAndActivateOnce(
+		AbilityHandle? abilityHandle = entity.Abilities.GrantAbilityAndActivateOnce(
 			abilityData,
 			1,
 			LevelComparison.None,
@@ -2475,7 +2475,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
 		activationResult.Should().Be(AbilityActivationResult.FailedInsufficientResources);
-		abilityHandle.IsActive.Should().BeFalse();
+		abilityHandle.Should().BeNull();
 	}
 
 	private static AbilityHandle? SetupAbility(

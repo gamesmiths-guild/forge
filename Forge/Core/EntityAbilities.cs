@@ -133,7 +133,7 @@ public class EntityAbilities(IForgeEntity owner)
 	}
 
 	/// <summary>
-	/// Grants an ability and activates it once.
+	/// Grants an ability and activates it once. The ability grant will be removed if activation fails or after it ends.
 	/// </summary>
 	/// <param name="abilityData">The configuration data of the ability to grant and activate.</param>
 	/// <param name="abilityLevel">The level at which to grant the ability.</param>
@@ -141,8 +141,9 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <param name="activationResult">The result of the ability activation attempt.</param>
 	/// <param name="targetEntity">The target entity for the ability activation, if any.</param>
 	/// <param name="sourceEntity">The source entity of the granted ability, if any.</param>
-	/// <returns>The handle of the granted ability.</returns>
-	public AbilityHandle GrantAbilityAndActivateOnce(
+	/// <returns>The handle of the granted and activated ability, or <see langword="null"/> if activation failed.
+	/// </returns>
+	public AbilityHandle? GrantAbilityAndActivateOnce(
 		AbilityData abilityData,
 		int abilityLevel,
 		LevelComparison levelOverridePolicy,
@@ -163,7 +164,7 @@ public class EntityAbilities(IForgeEntity owner)
 
 		RemoveGrantedAbility(abilityHandle, grantSource);
 
-		return abilityHandle;
+		return abilityHandle.IsValid ? abilityHandle : null;
 	}
 
 	/// <summary>

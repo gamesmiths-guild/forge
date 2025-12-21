@@ -21,6 +21,11 @@ public class AbilityHandle
 	public bool IsInhibited => Ability?.IsInhibited == true;
 
 	/// <summary>
+	/// Gets a value indicating whether the handle is valid.
+	/// </summary>
+	public bool IsValid => Ability is not null;
+
+	/// <summary>
 	/// Gets a value indicating the level of the ability associated with this handle.
 	/// </summary>
 	public int Level => Ability?.Level ?? 0;

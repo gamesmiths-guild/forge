@@ -42,7 +42,7 @@ public sealed class AbilityBehaviorContext
 	internal AbilityBehaviorContext(Ability ability, AbilityInstance instance)
 	{
 		AbilityHandle = ability.Handle;
-		InstanceHandle = new AbilityInstanceHandle(instance);
+		InstanceHandle = instance.Handle;
 
 		Owner = ability.Owner;
 		Source = ability.SourceEntity;

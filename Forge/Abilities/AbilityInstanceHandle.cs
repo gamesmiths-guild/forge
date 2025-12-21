@@ -10,17 +10,22 @@ namespace Gamesmiths.Forge.Abilities;
 /// </summary>
 public sealed class AbilityInstanceHandle
 {
-	private readonly AbilityInstance _instance;
+	private AbilityInstance? _instance;
 
 	/// <summary>
 	/// Gets the target entity of this ability instance.
 	/// </summary>
-	public IForgeEntity? Target => _instance.Target;
+	public IForgeEntity? Target => _instance?.Target;
 
 	/// <summary>
 	/// Gets a value indicating whether this ability instance is currently active.
 	/// </summary>
-	public bool IsActive => _instance.IsActive;
+	public bool IsActive => _instance?.IsActive ?? false;
+
+	/// <summary>
+	/// Gets a value indicating whether the handle is valid.
+	/// </summary>
+	public bool IsValid => _instance is not null;
 
 	internal AbilityInstanceHandle(AbilityInstance instance)
 	{
@@ -32,6 +37,11 @@ public sealed class AbilityInstanceHandle
 	/// </summary>
 	public void End()
 	{
-		_instance.End();
+		_instance?.End();
+	}
+
+	internal void Free()
+	{
+		_instance = null;
 	}
 }

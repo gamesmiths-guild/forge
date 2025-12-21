@@ -12,6 +12,11 @@ public class ActiveEffectHandle
 	/// </summary>
 	public bool IsInhibited => ActiveEffect?.IsInhibited ?? false;
 
+	/// <summary>
+	/// Gets a value indicating whether the handle is valid.
+	/// </summary>
+	public bool IsValid => ActiveEffect is not null;
+
 	internal ActiveEffect? ActiveEffect { get; private set; }
 
 	internal ActiveEffectHandle(ActiveEffect activeEffect)
