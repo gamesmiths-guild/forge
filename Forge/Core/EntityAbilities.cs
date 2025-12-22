@@ -74,7 +74,6 @@ public class EntityAbilities(IForgeEntity owner)
 			return;
 		}
 
-		// Enumerate snapshot to avoid modification during cancel.
 		foreach (AbilityHandle? handle in GrantedAbilities.ToArray())
 		{
 			Ability? ability = handle?.Ability;
@@ -96,26 +95,29 @@ public class EntityAbilities(IForgeEntity owner)
 	/// </summary>
 	/// <param name="tagsToActivate">Tags that identify abilities to activate.</param>
 	/// <param name="target">Optional target for the abilities.</param>
-	/// <param name="activationResult">The result of the ability activation attempt.</param>
+	/// <param name="failureFlags">Flags indicating the failure reasons for the abilities activation.</param>
 	/// <returns>Returns <see langword="true"/> if any abilities were activated; otherwise, <see langword="false"/>.
 	/// </returns>
 	public bool TryActivateAbilitiesByTag(
 		TagContainer tagsToActivate,
 		IForgeEntity? target,
-		out AbilityActivationResult activationResult)
+		out AbilityActivationFailures[] failureFlags)
 	{
 		if (tagsToActivate is null)
 		{
-			activationResult = AbilityActivationResult.FailedInvalidTagConfiguration;
+			failureFlags =
+				[.. Enumerable.Repeat(AbilityActivationFailures.InvalidTagConfiguration, GrantedAbilities.Count)];
 			return false;
 		}
 
 		var anyActivated = false;
-		activationResult = AbilityActivationResult.FailedTargetTagNotPresent;
+		failureFlags =
+				[.. Enumerable.Repeat(AbilityActivationFailures.TargetTagNotPresent, GrantedAbilities.Count)];
 
-		// Enumerate snapshot to avoid modification during activation.
-		foreach (AbilityHandle? handle in GrantedAbilities.ToArray())
+		AbilityHandle[] array = [.. GrantedAbilities];
+		for (var i = 0; i < array.Length; i++)
 		{
+			AbilityHandle? handle = array[i];
 			Ability? ability = handle?.Ability;
 			if (ability is null)
 			{
@@ -125,7 +127,7 @@ public class EntityAbilities(IForgeEntity owner)
 			TagContainer? abilityTags = ability.AbilityData.AbilityTags;
 			if (abilityTags?.HasAny(tagsToActivate) == true)
 			{
-				anyActivated |= ability.TryActivateAbility(target, out activationResult);
+				anyActivated |= ability.TryActivateAbility(target, out failureFlags[i]);
 			}
 		}
 
@@ -138,7 +140,7 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <param name="abilityData">The configuration data of the ability to grant and activate.</param>
 	/// <param name="abilityLevel">The level at which to grant the ability.</param>
 	/// <param name="levelOverridePolicy">The policy for overriding the level of an existing granted ability.</param>
-	/// <param name="activationResult">The result of the ability activation attempt.</param>
+	/// <param name="failureFlags">Flags indicating the failure reasons for the ability activation.</param>
 	/// <param name="targetEntity">The target entity for the ability activation, if any.</param>
 	/// <param name="sourceEntity">The source entity of the granted ability, if any.</param>
 	/// <returns>The handle of the granted and activated ability, or <see langword="null"/> if activation failed.
@@ -147,7 +149,7 @@ public class EntityAbilities(IForgeEntity owner)
 		AbilityData abilityData,
 		int abilityLevel,
 		LevelComparison levelOverridePolicy,
-		out AbilityActivationResult activationResult,
+		out AbilityActivationFailures failureFlags,
 		IForgeEntity? targetEntity = null,
 		IForgeEntity? sourceEntity = null)
 	{
@@ -160,7 +162,7 @@ public class EntityAbilities(IForgeEntity owner)
 			grantSource,
 			sourceEntity);
 
-		abilityHandle.Activate(out activationResult, targetEntity);
+		abilityHandle.Activate(out failureFlags, targetEntity);
 
 		RemoveGrantedAbility(abilityHandle, grantSource);
 

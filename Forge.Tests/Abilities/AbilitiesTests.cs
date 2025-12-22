@@ -43,8 +43,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 	}
 
@@ -71,14 +71,17 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		effectHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
 		entity.EffectsManager.UnapplyEffect(effectHandle!);
 
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
 		abilityHandle.IsActive.Should().BeFalse();
+
+		abilityHandle.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.InvalidHandler);
 	}
 
 	[Fact]
@@ -106,8 +109,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		effectHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
 		entity.EffectsManager.UnapplyEffect(effectHandle!);
@@ -155,8 +158,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		effectHandle2.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
 		entity.EffectsManager.UnapplyEffect(effectHandle!);
@@ -204,8 +207,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		effectHandle2.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
 		entity.EffectsManager.UnapplyEffect(effectHandle!);
@@ -243,16 +246,16 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
 		ActiveEffectHandle? tagEffectHandle = CreateAndApplyTagEffect(entity, ignoreTags!);
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedInhibition);
+		abilityHandle.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.Inhibited);
 		abilityHandle.IsActive.Should().BeFalse();
 		abilityHandle.IsInhibited.Should().BeTrue();
 
@@ -260,8 +263,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 		abilityHandle.IsInhibited.Should().BeFalse();
 	}
@@ -291,8 +294,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		effectHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
 		entity.EffectsManager.UnapplyEffect(effectHandle!);
@@ -599,8 +602,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		abilityHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
 		// Inhibit the first effect.
@@ -688,8 +691,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		abilityHandle.Should().NotBeNull();
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
 		// Inhibit the granting effect.
@@ -735,8 +738,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		abilityHandle.Should().NotBeNull();
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		// Inhibit the granting effect.
 		CreateAndApplyTagEffect(entity, ignoreTags!);
@@ -826,8 +829,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle2.Should().NotBeNull();
 		abilityHandle.Should().Be(abilityHandle2);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 		abilityHandle2!.IsActive.Should().BeTrue();
 
@@ -998,8 +1001,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		entity1.Abilities.GrantedAbilities.Should().HaveCount(2);
 
 		// Activate one and ensure the other is not affected
-		abilityHandle1!.Activate(out AbilityActivationResult activationResult1).Should().BeTrue();
-		activationResult1.Should().Be(AbilityActivationResult.Success);
+		abilityHandle1!.Activate(out AbilityActivationFailures failureFlags1).Should().BeTrue();
+		failureFlags1.Should().Be(AbilityActivationFailures.None);
 		abilityHandle1.IsActive.Should().BeTrue();
 		abilityHandle2!.IsActive.Should().BeFalse();
 	}
@@ -1023,25 +1026,25 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out _);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
 		abilityHandle.CommitCooldown();
 		abilityHandle.Cancel();
 
-		abilityHandle!.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedCooldown);
+		abilityHandle!.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.Cooldown);
 
 		entity.EffectsManager.UpdateEffects(2f);
 
-		abilityHandle!.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedCooldown);
+		abilityHandle!.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.Cooldown);
 
 		entity.EffectsManager.UpdateEffects(1f);
 
-		abilityHandle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 	}
 
 	[Fact]
@@ -1063,25 +1066,25 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out _);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
 		abilityHandle.CommitCooldown();
 		abilityHandle.Cancel();
 
-		abilityHandle!.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedCooldown);
+		abilityHandle!.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.Cooldown);
 
 		entity.EffectsManager.UpdateEffects(2f);
 
-		abilityHandle!.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedCooldown);
+		abilityHandle!.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.Cooldown);
 
 		entity.EffectsManager.UpdateEffects(1f);
 
-		abilityHandle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 	}
 
 	[Fact]
@@ -1103,8 +1106,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out _);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
 		CooldownData[]? cooldownData = abilityHandle.GetCooldownData()!;
@@ -1127,8 +1130,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.CommitCooldown();
 		abilityHandle.Cancel();
 
-		abilityHandle!.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedCooldown);
+		abilityHandle!.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.Cooldown);
 
 		cooldownData = abilityHandle.GetCooldownData()!;
 		cooldownData.Should().HaveCount(2);
@@ -1146,8 +1149,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		entity.EffectsManager.UpdateEffects(0.5f);
 
-		abilityHandle!.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedCooldown);
+		abilityHandle!.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.Cooldown);
 
 		cooldownData = abilityHandle.GetCooldownData()!;
 		cooldownData.Should().HaveCount(2);
@@ -1195,8 +1198,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.GetRemainingCooldownTime(simpleTag).Should().Be(0f);
 		abilityHandle.GetRemainingCooldownTime(tag).Should().Be(0f);
 
-		abilityHandle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 	}
 
 	[Theory]
@@ -1221,14 +1224,14 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out _);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
 		abilityHandle.CommitCost();
 
-		abilityHandle!.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedInsufficientResources);
+		abilityHandle!.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.InsufficientResources);
 	}
 
 	[Fact]
@@ -1252,8 +1255,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out _);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedOwnerTagRequirements);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.OwnerTagRequirements);
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
@@ -1278,8 +1281,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out _);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedOwnerTagRequirements);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.OwnerTagRequirements);
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
@@ -1306,8 +1309,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			out _,
 			sourceEntity: source);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedSourceTagRequirements);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.SourceTagRequirements);
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
@@ -1334,8 +1337,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			out _,
 			sourceEntity: source);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedSourceTagRequirements);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.SourceTagRequirements);
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
@@ -1361,8 +1364,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			out _,
 			sourceEntity: null);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedSourceTagRequirements);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.SourceTagRequirements);
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
@@ -1388,8 +1391,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			out _,
 			sourceEntity: null);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 	}
 
@@ -1415,8 +1418,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out _);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult, target).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedTargetTagRequirements);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags, target).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.TargetTagRequirements);
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
@@ -1442,8 +1445,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out _);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult, target).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedTargetTagRequirements);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags, target).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.TargetTagRequirements);
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
@@ -1468,8 +1471,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out _);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedTargetTagRequirements);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.TargetTagRequirements);
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
@@ -1494,8 +1497,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out _);
 
-		abilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 	}
 
@@ -1550,22 +1553,22 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new ScalableInt(1),
 			out _);
 
-		blockerAbilityHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		blockerAbilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		blockerAbilityHandle.IsActive.Should().BeTrue();
 
-		unblockedAbilityHandle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		unblockedAbilityHandle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		unblockedAbilityHandle.IsActive.Should().BeTrue();
 
-		blockedAbilityHandle!.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedBlockedByTags);
+		blockedAbilityHandle!.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.BlockedByTags);
 		blockedAbilityHandle.IsActive.Should().BeFalse();
 
 		blockerAbilityHandle!.Cancel();
 
-		blockedAbilityHandle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		blockedAbilityHandle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		blockedAbilityHandle.IsActive.Should().BeTrue();
 	}
 
@@ -1587,13 +1590,13 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
 		// No retrigger, single instance.
-		handle!.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedPersistentInstanceActive);
+		handle!.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.PersistentInstanceActive);
 		handle.IsActive.Should().BeTrue();
 
 		handle.Cancel();
@@ -1618,13 +1621,13 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
 		// Retrigger replaces the running instance.
-		handle!.Activate(out AbilityActivationResult activationResult2).Should().BeTrue();
-		activationResult2.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out AbilityActivationFailures failureFlags2).Should().BeTrue();
+		failureFlags2.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
 		// One End should fully deactivate because retrigger replaced the instance instead of stacking.
@@ -1649,16 +1652,16 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
-		handle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
-		handle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
 		// Cancel ends all instances.
@@ -1683,12 +1686,12 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
-		handle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
 		// One Cancel should fully deactivate if multiple instances exist.
@@ -1713,16 +1716,16 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
-		handle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
-		handle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
 		handle.Cancel();
@@ -1757,12 +1760,12 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityHandle? cancellerHandle = SetupAbility(entity, canceller, new ScalableInt(1), out _);
 		AbilityHandle? victimHandle = SetupAbility(entity, victim, new ScalableInt(1), out _);
 
-		victimHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		victimHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		victimHandle.IsActive.Should().BeTrue();
 
-		cancellerHandle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		cancellerHandle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		cancellerHandle.IsActive.Should().BeTrue();
 
 		victimHandle.IsActive.Should().BeFalse();
@@ -1795,12 +1798,12 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityHandle? cancellerHandle = SetupAbility(entity, canceller, new ScalableInt(1), out _);
 		AbilityHandle? unrelatedHandle = SetupAbility(entity, unrelated, new ScalableInt(1), out _);
 
-		unrelatedHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		unrelatedHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		unrelatedHandle.IsActive.Should().BeTrue();
 
-		cancellerHandle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		cancellerHandle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		cancellerHandle.IsActive.Should().BeTrue();
 
 		unrelatedHandle.IsActive.Should().BeTrue();
@@ -1834,12 +1837,12 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityHandle? cancellerHandle = SetupAbility(entity, canceller, new ScalableInt(1), out _);
 		AbilityHandle? victimHandle = SetupAbility(entity, victim, new ScalableInt(1), out _);
 
-		victimHandle!.Activate(out AbilityActivationResult activationResultA).Should().BeTrue();
-		activationResultA.Should().Be(AbilityActivationResult.Success);
+		victimHandle!.Activate(out AbilityActivationFailures failureFlagsA).Should().BeTrue();
+		failureFlagsA.Should().Be(AbilityActivationFailures.None);
 		victimHandle.IsActive.Should().BeTrue();
 
-		cancellerHandle!.Activate(out AbilityActivationResult activationResultB).Should().BeTrue();
-		activationResultB.Should().Be(AbilityActivationResult.Success);
+		cancellerHandle!.Activate(out AbilityActivationFailures failureFlagsB).Should().BeTrue();
+		failureFlagsB.Should().Be(AbilityActivationFailures.None);
 		cancellerHandle.IsActive.Should().BeTrue();
 
 		victimHandle.IsActive.Should().BeFalse();
@@ -1864,8 +1867,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityHandle? handle = SetupAbility(entity, selfCanceller, new ScalableInt(1), out _);
 
-		handle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 	}
 
@@ -1897,23 +1900,23 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityHandle? blockerHandle = SetupAbility(entity, blocker, new ScalableInt(1), out _);
 		AbilityHandle? blockedHandle = SetupAbility(entity, blocked, new ScalableInt(1), out _);
 
-		blockerHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		blockerHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		blockerHandle.IsActive.Should().BeTrue();
 
-		blockerHandle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		blockerHandle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		blockerHandle.IsActive.Should().BeTrue();
 
 		// While any blocker instance active, blocked ability cannot activate.
-		blockedHandle!.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedBlockedByTags);
+		blockedHandle!.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.BlockedByTags);
 		blockedHandle.IsActive.Should().BeFalse();
 
 		// End all blocker instances.
 		blockerHandle.Cancel();
-		blockedHandle.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		blockedHandle.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		blockedHandle.IsActive.Should().BeTrue();
 	}
 
@@ -1935,8 +1938,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityHandle? handle = SetupAbility(entity, abilityWithOwned, new ScalableInt(1), out _);
 
-		handle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
 		handle.IsActive.Should().BeTrue();
 
@@ -1963,16 +1966,16 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		AbilityHandle? handle = SetupAbility(entity, abilityWithOwned, new ScalableInt(1), out _);
 
-		handle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
-		handle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
-		handle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
 		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
@@ -2009,21 +2012,21 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityHandle? needsHandle = SetupAbility(entity, requiresBuff, new ScalableInt(1), out _);
 
 		// Cannot activate without buff.
-		needsHandle!.Activate(out AbilityActivationResult activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedOwnerTagRequirements);
+		needsHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.OwnerTagRequirements);
 		needsHandle.IsActive.Should().BeFalse();
 
 		// Gain buff, then can activate.
-		giverHandle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
-		needsHandle.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		giverHandle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+		needsHandle.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		// Lose buff, then cannot activate again.
 		giverHandle.Cancel();
 		needsHandle.Cancel();
-		needsHandle.Activate(out activationResult).Should().BeFalse();
-		activationResult.Should().Be(AbilityActivationResult.FailedOwnerTagRequirements);
+		needsHandle.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.OwnerTagRequirements);
 	}
 
 	[Fact]
@@ -2053,10 +2056,10 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		grantHandle.Should().NotBeNull();
 
 		// Activate twice to simulate two instances.
-		handle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
-		handle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+		handle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		// Remove grant; ability should not be removed until all instances end.
 		entity.EffectsManager.UnapplyEffect(grantHandle!);
@@ -2086,14 +2089,14 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.Cancel();
 		handle.IsActive.Should().BeFalse();
 
 		// Should be able to activate again, implying the persistent instance was cleared.
-		handle.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		handle.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 	}
 
 	[Fact]
@@ -2127,8 +2130,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		victimHandle!.IsActive.Should().BeFalse();
 
 		// Activating canceller should not affect inactive victim.
-		cancellerHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		cancellerHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		victimHandle.IsActive.Should().BeFalse();
 		entity.Abilities.GrantedAbilities.Should().Contain(victimHandle);
 	}
@@ -2164,10 +2167,10 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityHandle? cancellerHandle = SetupAbility(entity, canceller, new ScalableInt(1), out _);
 		AbilityHandle? victimHandle = SetupAbility(entity, victim, new ScalableInt(1), out _);
 
-		victimHandle!.Activate(out AbilityActivationResult activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
-		cancellerHandle!.Activate(out activationResult).Should().BeTrue();
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		victimHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+		cancellerHandle!.Activate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		// Victim must be canceled; canceller remains active.
 		victimHandle.IsActive.Should().BeFalse();
@@ -2413,7 +2416,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		targetEntity.Abilities.OnAbilityEnded += x => { capturedData = x; };
 
 		// Activate the ability
-		abilityHandle!.Activate(out AbilityActivationResult result).Should().BeTrue();
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		abilityHandle.Cancel();
 
 		// Verify event was fired
@@ -2439,13 +2442,13 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			abilityData,
 			1,
 			LevelComparison.None,
-			out AbilityActivationResult activationResult,
+			out AbilityActivationFailures failureFlags,
 			entity,
 			entity);
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		activationResult.Should().Be(AbilityActivationResult.Success);
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle!.IsActive.Should().BeTrue();
 
 		abilityHandle.Cancel();
@@ -2469,13 +2472,44 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			abilityData,
 			1,
 			LevelComparison.None,
-			out AbilityActivationResult activationResult,
+			out AbilityActivationFailures failureFlags,
 			entity,
 			entity);
 
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
-		activationResult.Should().Be(AbilityActivationResult.FailedInsufficientResources);
+		failureFlags.Should().Be(AbilityActivationFailures.InsufficientResources);
 		abilityHandle.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Failure reason", null)]
+	public void Failure_reason_contains_all_failureFlags_reasons()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-50),
+			retriggerInstancedAbility: true);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+		abilityHandle.IsActive.Should().BeTrue();
+
+		abilityHandle.CommitAbility();
+
+		abilityHandle!.Activate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.InsufficientResources |
+			AbilityActivationFailures.Cooldown);
 	}
 
 	private static AbilityHandle? SetupAbility(

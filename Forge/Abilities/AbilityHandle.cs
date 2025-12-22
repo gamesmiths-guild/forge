@@ -40,14 +40,14 @@ public class AbilityHandle
 	/// <summary>
 	/// Activates the ability associated with this handle.
 	/// </summary>
-	/// <param name="activationResult">The result of the ability activation attempt.</param>
+	/// <param name="failureFlags">Flags indicating the failure reasons for the ability activation.</param>
 	/// <param name="target">The target entity for the ability activation.</param>
 	/// <returns>Return <see langword="true"/> if the ability was successfully activated;
 	/// otherwise, <see langword="false"/>.</returns>
-	public bool Activate(out AbilityActivationResult activationResult, IForgeEntity? target = null)
+	public bool Activate(out AbilityActivationFailures failureFlags, IForgeEntity? target = null)
 	{
-		activationResult = AbilityActivationResult.FailedInvalidHandler;
-		return Ability?.TryActivateAbility(target, out activationResult) ?? false;
+		failureFlags = AbilityActivationFailures.InvalidHandler;
+		return Ability?.TryActivateAbility(target, out failureFlags) ?? false;
 	}
 
 	/// <summary>
@@ -85,14 +85,14 @@ public class AbilityHandle
 	/// <summary>
 	/// Checks if the ability can be activated for the given target.
 	/// </summary>
-	/// <param name="activationResult">The result of the ability activation check.</param>
+	/// <param name="failureFlags">Flags indicating the failure reasons for the ability activation.</param>
 	/// <param name="abilityTarget">Optional target entity for the ability activation check.</param>
 	/// <returns>Returns <see langword="true"/> if the ability can be activated; otherwise, <see langword="false"/>.
 	/// </returns>
-	public bool CanActivate(out AbilityActivationResult activationResult, IForgeEntity? abilityTarget = null)
+	public bool CanActivate(out AbilityActivationFailures failureFlags, IForgeEntity? abilityTarget = null)
 	{
-		activationResult = AbilityActivationResult.FailedInvalidHandler;
-		return Ability?.CanActivate(abilityTarget, out activationResult) ?? false;
+		failureFlags = AbilityActivationFailures.InvalidHandler;
+		return Ability?.CanActivate(abilityTarget, out failureFlags) ?? false;
 	}
 
 	/// <summary>

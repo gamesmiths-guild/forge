@@ -3,72 +3,73 @@
 namespace Gamesmiths.Forge.Abilities;
 
 /// <summary>
-/// Represents the result of an attempt to activate an ability.
+/// Flags indicating the result of an ability activation attempt.
 /// </summary>
 /// <remarks>
 /// This enumeration provides detailed outcomes for ability activation attempts, allowing the caller to determine the
 /// specific reason for success or failure. Use this result to handle activation logic appropriately based on the
 /// returned value.
 /// </remarks>
-public enum AbilityActivationResult
+[Flags]
+public enum AbilityActivationFailures
 {
 	/// <summary>
 	/// Successfully activated the ability.
 	/// </summary>
-	Success = 0,
+	None = 0,
 
 	/// <summary>
 	/// Failed to activate the ability due to an invalid handler.
 	/// </summary>
-	FailedInvalidHandler = 1,
+	InvalidHandler = 1 << 0,
 
 	/// <summary>
 	/// Failed to activate the ability because it is currently inhibited.
 	/// </summary>
-	FailedInhibition = 2,
+	Inhibited = 1 << 1,
 
 	/// <summary>
 	/// Failed to activate the ability because a persistent instance is already active.
 	/// </summary>
-	FailedPersistentInstanceActive = 3,
+	PersistentInstanceActive = 1 << 2,
 
 	/// <summary>
 	/// Failed to activate the ability because it is on cooldown.
 	/// </summary>
-	FailedCooldown = 4,
+	Cooldown = 1 << 3,
 
 	/// <summary>
 	/// Failed to activate the ability due to insufficient resources.
 	/// </summary>
-	FailedInsufficientResources = 5,
+	InsufficientResources = 1 << 4,
 
 	/// <summary>
 	/// Failed to activate the ability due to unmet tag requirements.
 	/// </summary>
-	FailedOwnerTagRequirements = 6,
+	OwnerTagRequirements = 1 << 5,
 
 	/// <summary>
 	/// Failed to activate the ability due to unmet source tag requirements.
 	/// </summary>
-	FailedSourceTagRequirements = 7,
+	SourceTagRequirements = 1 << 6,
 
 	/// <summary>
 	/// Failed to activate the ability due to unmet target tag requirements.
 	/// </summary>
-	FailedTargetTagRequirements = 8,
+	TargetTagRequirements = 1 << 7,
 
 	/// <summary>
 	/// Failed to activate the ability due to being blocked by tags.
 	/// </summary>
-	FailedBlockedByTags = 9,
+	BlockedByTags = 1 << 8,
 
 	/// <summary>
 	/// Failed to activate the ability because the target tag is not present.
 	/// </summary>
-	FailedTargetTagNotPresent = 10,
+	TargetTagNotPresent = 1 << 9,
 
 	/// <summary>
 	/// Failed to activate the ability due to invalid tag configuration.
 	/// </summary>
-	FailedInvalidTagConfiguration = 11,
+	InvalidTagConfiguration = 1 << 11,
 }

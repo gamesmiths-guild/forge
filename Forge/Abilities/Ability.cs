@@ -117,9 +117,9 @@ internal class Ability
 		Handle = new AbilityHandle(this);
 	}
 
-	internal bool TryActivateAbility(IForgeEntity? abilityTarget, out AbilityActivationResult activationResult)
+	internal bool TryActivateAbility(IForgeEntity? abilityTarget, out AbilityActivationFailures failureFlags)
 	{
-		if (CanActivate(abilityTarget, out activationResult))
+		if (CanActivate(abilityTarget, out failureFlags))
 		{
 			Activate(abilityTarget);
 			return true;
@@ -247,12 +247,15 @@ internal class Ability
 		}
 	}
 
-	internal bool CanActivate(IForgeEntity? abilityTarget, out AbilityActivationResult activationResult)
+	internal bool CanActivate(IForgeEntity? abilityTarget, out AbilityActivationFailures failureFlags)
 	{
+		var canActivate = true;
+		failureFlags = AbilityActivationFailures.None;
+
 		if (IsInhibited)
 		{
-			activationResult = AbilityActivationResult.FailedInhibition;
-			return false;
+			failureFlags |= AbilityActivationFailures.Inhibited;
+			canActivate = false;
 		}
 
 		// Check instance policy for non re-triggerable persistent instance.
@@ -260,8 +263,8 @@ internal class Ability
 			&& !AbilityData.RetriggerInstancedAbility
 			&& _persistentInstance?.IsActive == true)
 		{
-			activationResult = AbilityActivationResult.FailedPersistentInstanceActive;
-			return false;
+			failureFlags |= AbilityActivationFailures.PersistentInstanceActive;
+			canActivate = false;
 		}
 
 		// Check cooldown.
@@ -271,8 +274,8 @@ internal class Ability
 			{
 				if (effect?.CachedGrantedTags is not null && Owner.Tags.CombinedTags.HasAny(effect.CachedGrantedTags))
 				{
-					activationResult = AbilityActivationResult.FailedCooldown;
-					return false;
+					failureFlags |= AbilityActivationFailures.Cooldown;
+					canActivate = false;
 				}
 			}
 		}
@@ -281,8 +284,8 @@ internal class Ability
 		if (_costEffect is not null
 			&& !Owner.EffectsManager.CanApplyEffect(_costEffect, Level))
 		{
-			activationResult = AbilityActivationResult.FailedInsufficientResources;
-			return false;
+			failureFlags |= AbilityActivationFailures.InsufficientResources;
+			canActivate = false;
 		}
 
 		// Check tags condition.
@@ -294,35 +297,34 @@ internal class Ability
 		if (FailsRequiredTags(AbilityData.ActivationRequiredTags, ownerTags)
 			|| HasBlockedTags(AbilityData.ActivationBlockedTags, ownerTags))
 		{
-			activationResult = AbilityActivationResult.FailedOwnerTagRequirements;
-			return false;
+			failureFlags |= AbilityActivationFailures.OwnerTagRequirements;
+			canActivate = false;
 		}
 
 		// Source tags.
 		if (FailsRequiredTags(AbilityData.SourceRequiredTags, sourceTags)
 			|| HasBlockedTags(AbilityData.SourceBlockedTags, sourceTags))
 		{
-			activationResult = AbilityActivationResult.FailedSourceTagRequirements;
-			return false;
+			failureFlags |= AbilityActivationFailures.SourceTagRequirements;
+			canActivate = false;
 		}
 
 		// Target tags.
 		if (FailsRequiredTags(AbilityData.TargetRequiredTags, targetTags)
 			|| HasBlockedTags(AbilityData.TargetBlockedTags, targetTags))
 		{
-			activationResult = AbilityActivationResult.FailedTargetTagRequirements;
-			return false;
+			failureFlags |= AbilityActivationFailures.TargetTagRequirements;
+			canActivate = false;
 		}
 
 		// Check ability tags against BlockAbilitiesWithTag
 		if (_abilityTags?.HasAny(Owner.Abilities.BlockedAbilityTags.CombinedTags) == true)
 		{
-			activationResult = AbilityActivationResult.FailedBlockedByTags;
-			return false;
+			failureFlags |= AbilityActivationFailures.BlockedByTags;
+			canActivate = false;
 		}
 
-		activationResult = AbilityActivationResult.Success;
-		return true;
+		return canActivate;
 	}
 
 	internal CooldownData[] GetCooldownData()
