@@ -224,6 +224,53 @@ Components can be used to implement complex systems that integrate with your gam
 
 Forge includes several built-in components that demonstrate the component system's capabilities and provide ready-to-use functionality.
 
+### GrantAbilityEffectComponent
+
+Grants one or more abilities to the target entity. This is the primary bridge between the Effects system and the Abilities system.
+
+```csharp
+public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfigs) : IEffectComponent
+{
+    public IReadOnlyList<AbilityHandle> GrantedAbilities { get; }
+    // Implementation...
+}
+```
+
+#### Usage Example
+
+```csharp
+var grantConfig = new GrantAbilityConfig(
+    abilityData: fireballData,
+    abilityLevel: new ScalableInt(1), // Scales with effect level
+    removalPolicy: AbilityDeactivationPolicy.CancelImmediately, // Cancels running instances immediately when effect ends
+    inhibitionPolicy: AbilityDeactivationPolicy.CancelImmediately, // Cancels running instances immediately if effect is inhibited
+    levelOverridePolicy: LevelComparison.Higher // Update level if higher than existing grant
+);
+
+// Keep a reference to the component if you need to access the granted ability handles later
+var grantComponent = new GrantAbilityEffectComponent([grantConfig]);
+
+var grantEffect = new EffectData(
+    "Grant Fireball",
+    new DurationData(DurationType.Infinite),
+    effectComponents: [grantComponent]
+);
+
+// Apply the effect
+entity.EffectsManager.ApplyEffect(new Effect(grantEffect, ownership));
+
+// Access the handle directly from the component instance
+AbilityHandle fireballHandle = grantComponent.GrantedAbilities[0];
+```
+
+Key points:
+
+- **Direct Handle Access**: You can hold onto the component instance to access `GrantedAbilities`. This provides direct references to the `AbilityHandle`s created by this specific effect application, which is often more reliable than searching via `TryGetAbility`.
+- **Lifecycle Management**: Automatically handles granting, removing, and inhibiting abilities based on the effect's lifecycle and the configured policies.
+- **Permanent vs. Temporary**: 
+  - If used in an **Instant** effect, the ability is granted permanently.
+  - If used in a **Duration** effect, the ability exists only while the effect is active (unless removal policy is set to `Ignore`).
+
 ### ChanceToApplyEffectComponent
 
 Adds a random chance for effects to be applied, with support for level-based scaling.

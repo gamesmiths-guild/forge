@@ -72,39 +72,38 @@ var grantAbilityConfig = new GrantAbilityConfig(
     grantedAbilityInhibitionPolicy: AbilityDeactivationPolicy.CancelImmediately,
     levelOverridePolicy: LevelComparison.Higher);
 
+var grantComponent = new GrantAbilityEffectComponent([grantAbilityConfig]);
+
 var grantEffect = new EffectData(
     "Grant Fireball",
     new DurationData(DurationType.Infinite),
-    effectComponents: [new GrantAbilityEffectComponent([grantAbilityConfig])]);
+    effectComponents: [grantComponent]);
 
 // If the effect is applied at level 5, the ScalableInt calculates the ability level accordingly
 entity.EffectsManager.ApplyEffect(new Effect(grantEffect, ownership, level: 5));
 ```
 
-Abilities granted by **duration or infinite effects** are generally temporary and tied to the effect's lifecycle, unless configured otherwise (see below).
+**Tip:** By holding a reference to the `GrantAbilityEffectComponent` used in your `EffectData`, you can access the `grantComponent.GrantedAbilities` list. This provides a direct reference to the `AbilityHandle`s created by the effect, which can be more reliable than searching via `TryGetAbility` if you need to manipulate that specific instance immediately.
+
+Abilities granted by **instant effects** become permanent, while abilities granted by **duration or infinite effects** are temporary and tied to the effect's lifecycle.
 
 ### Granting Permanently
 
-There are three primary ways to grant an ability that persists permanently on an entity:
+There are three ways to grant an ability that persists permanently:
 
-1.  **GrantAbilityPermanently Method**:
-    Using `entity.Abilities.GrantAbilityPermanently(...)` creates a grant that cannot be removed or inhibited by any means. Useful for base character skills.
+1.  **Direct API**: Use `entity.Abilities.GrantAbilityPermanently(...)`. These abilities cannot be removed or inhibited by the effects system.
+2.  **Instant Effects**: Apply an effect with `DurationType.Instant` that contains a `GrantAbilityEffectComponent`. These behave exactly like manually granted permanent abilities.
+3.  **Ignore Policy**: Apply a Duration/Infinite effect with a `GrantAbilityEffectComponent` configured with `RemovalPolicy = AbilityDeactivationPolicy.Ignore`.
+    *   Unlike the other two methods, abilities granted this way *can* still be inhibited if the source effect is inhibited (depending on `InhibitionPolicy`).
+    *   They will simply not be removed when the source effect is removed.
 
-    ```csharp
-    entity.Abilities.GrantAbilityPermanently(
-        abilityData: fireballAbility,
-        abilityLevel: 1,
-        levelOverridePolicy: LevelComparison.Higher,
-        sourceEntity: null);
-    ```
-
-2.  **Instant Effects**:
-    Using `GrantAbilityEffectComponent` inside an effect with `DurationType.Instant`. Because the effect applies and immediately expires (leaving no handle behind), the grant becomes permanent and cannot be inhibited.
-
-3.  **Removal Policy Ignore**:
-    Using a standard Duration/Infinite effect but setting `grantedAbilityRemovalPolicy` to `Ignore`.
-    *   **Note**: Unlike the first two methods, the granting effect *remains* on the entity.
-    *   If you set `grantedAbilityInhibitionPolicy` to something other than `Ignore`, the ability **can still be inhibited** if the effect is inhibited (e.g., via tags), even though the ability won't be removed when the effect ends.
+```csharp
+entity.Abilities.GrantAbilityPermanently(
+    abilityData: fireballAbility,
+    abilityLevel: 1,
+    levelOverridePolicy: LevelComparison.Higher,
+    sourceEntity: null);
+```
 
 ### Granting and Activating Once
 
@@ -521,11 +520,12 @@ Cost is checked during activation but only applied when `CommitCost()` or `Commi
 ### Developer Responsibilities
 
 1.  **Ending Instances**: It is up to the developer to call `context.InstanceHandle.End()` when the ability logic is complete. If you fail to do this, the system will consider the ability "Active" indefinitely.
-    *   **Passive Abilities**: For passive abilities, you may intentionally **not** call `End()`. This keeps the ability active (and listening to events/tags) until it is manually canceled or the grant is removed.
 2.  **Committing**: Resources and Cooldowns are not applied automatically. You must call `context.AbilityHandle.CommitAbility()` (or `CommitCost` / `CommitCooldown` separately).
     *   `CommitAbility()` calls both `CommitCost()` and `CommitCooldown()`.
     *   Do **not** call all three; it is redundant.
     *   Deferring commits allows for mechanics like "free cast if cancelled early."
+
+**Note**: It is entirely possible to **not end** an ability. This is useful for passive abilities or toggles that should run continuously until cancelled externally or by tag triggers.
 
 ```csharp
 public class FireballBehavior : IAbilityBehavior
@@ -698,7 +698,7 @@ var channelAbility = new AbilityData(
     activationOwnedTags: channelingTags);
 
 // While Channel is active, owner has "status.channeling" tag
-// Other abilities can check for this tag in requirements
+// Other abilities can check for this tag in their requirements
 ```
 
 ## Inhibition
