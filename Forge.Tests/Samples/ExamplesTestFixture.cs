@@ -25,8 +25,12 @@ public class ExamplesTestFixture
 			"class.warrior",
 			"status.stunned",
 			"status.burning",
+			"status.enraged",
 			"status.immune.fire",
-			"cues.damage.fire"
+			"cues.damage.fire",
+			"events.combat.damage",
+			"events.combat.hit",
+			"cooldown.fireball"
 		});
 
 		CuesManager.RegisterCue(

@@ -98,7 +98,7 @@ There are three ways to grant an ability that persists permanently:
     *   They will simply not be removed when the source effect is removed.
 
 ```csharp
-entity.Abilities.GrantAbilityPermanently(
+AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
     abilityData: fireballAbility,
     abilityLevel: 1,
     levelOverridePolicy: LevelComparison.Higher,

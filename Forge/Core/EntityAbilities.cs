@@ -179,7 +179,8 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <param name="abilityLevel">The level at which to grant the ability.</param>
 	/// <param name="levelOverridePolicy">The policy for overriding the level of an existing granted ability.</param>
 	/// <param name="sourceEntity">The source entity of the granted ability, if any.</param>
-	public void GrantAbilityPermanently(
+	/// <returns>The handle of the granted ability.</returns>
+	public AbilityHandle GrantAbilityPermanently(
 		AbilityData abilityData,
 		int abilityLevel,
 		LevelComparison levelOverridePolicy,
@@ -205,12 +206,14 @@ public class EntityAbilities(IForgeEntity owner)
 				existingAbility.Level = abilityLevel;
 			}
 
-			return;
+			return existingAbility.Handle;
 		}
 
 		var newAbility = new Ability(Owner, abilityData, abilityLevel, sourceEntity);
 		GrantedAbilities.Add(newAbility.Handle);
 		_grantSources[newAbility] = [new PermanentGrantSource()];
+
+		return newAbility.Handle;
 	}
 
 	internal AbilityHandle GrantAbility(

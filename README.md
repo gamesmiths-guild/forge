@@ -82,7 +82,7 @@ Install via NuGet, reference the Forge project directly, or download the precomp
 Install the package via .NET CLI:
 
 ```shell
-dotnet add package Gamesmiths.Forge --version 0.1.2
+dotnet add package Gamesmiths.Forge --version 0.2.0
 ```
 
 Or search for `Gamesmiths.Forge` in the NuGet Package Manager UI in Visual Studio.

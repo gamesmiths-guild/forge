@@ -6,6 +6,7 @@ using System.Buffers.Text;
 using FluentAssertions;
 using Gamesmiths;
 using Gamesmiths.Forge;
+using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
@@ -42,6 +43,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		var player = new Player(tagsManager, cuesManager);
 
 		player.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(100);
+		player.Attributes["PlayerAttributeSet.Mana"].CurrentValue.Should().Be(100);
 		player.Attributes["PlayerAttributeSet.Strength"].CurrentValue.Should().Be(10);
 		player.Attributes["PlayerAttributeSet.Speed"].CurrentValue.Should().Be(5);
 	}
@@ -733,15 +735,346 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		mockCueHandler.Magnitudes.Should().Contain(25);
 	}
 
+	[Fact]
+	[Trait("QuickStart", null)]
+	public void Subscribing_and_raising_an_event()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+		var damageTag = Tag.RequestTag(tagsManager, "events.combat.damage");
+
+		float receivedDamage = 0f;
+		bool eventFired = false;
+
+		player.Events.Subscribe(damageTag, eventData =>
+		{
+			eventFired = true;
+			receivedDamage = eventData.EventMagnitude;
+		});
+
+		player.Events.Raise(new EventData
+		{
+			EventTags = damageTag.GetSingleTagContainer(),
+			Source = null,
+			Target = player,
+			EventMagnitude = 50f
+		});
+
+		eventFired.Should().BeTrue();
+		receivedDamage.Should().Be(50f);
+	}
+
+	[Fact]
+	[Trait("QuickStart", null)]
+	public void Strongly_typed_events()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+		var damageTag = Tag.RequestTag(tagsManager, "events.combat.damage");
+
+		string logMessage = string.Empty;
+		int logValue = 0;
+
+		// Subscribe with generic type
+		player.Events.Subscribe<CombatLogPayload>(damageTag, eventData =>
+		{
+			logMessage = eventData.Payload.Message;
+			logValue = eventData.Payload.Value;
+		});
+
+		// Raise with generic type
+		player.Events.Raise(new EventData<CombatLogPayload>
+		{
+			EventTags = damageTag.GetSingleTagContainer(),
+			Source = null,
+			Target = player,
+			Payload = new CombatLogPayload("Critical Hit", 9999)
+		});
+
+		logMessage.Should().Be("Critical Hit");
+		logValue.Should().Be(9999);
+	}
+
+	[Fact]
+	[Trait("QuickStart", null)]
+	public void Granting_activating_and_removing_an_ability()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+
+		var fireballCostEffect = new EffectData(
+			"Fireball Mana Cost",
+			new DurationData(DurationType.Instant),
+			new[] {
+				new Modifier(
+					"PlayerAttributeSet.Mana",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(-20) // -20 mana cost
+					)
+				)
+			});
+
+		var fireballCooldownEffect = new EffectData(
+			"Fireball Cooldown",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(10.0f))), // 10 seconds cooldown
+			effectComponents: new[] {
+				new ModifierTagsEffectComponent(
+					tagsManager.RequestTagContainer(new[] { "cooldown.fireball" })
+				)
+			});
+
+		var fireballData = new AbilityData(
+			name: "Fireball",
+			costEffect: fireballCostEffect,
+			cooldownEffects: [fireballCooldownEffect],
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			behaviorFactory: () => new CustomAbilityBehavior("Fireball"));
+
+		var grantConfig = new GrantAbilityConfig
+		{
+			AbilityData = fireballData,
+			ScalableLevel = new ScalableInt(1),
+			LevelOverridePolicy = LevelComparison.None,
+			RemovalPolicy = AbilityDeactivationPolicy.CancelImmediately,
+			InhibitionPolicy = AbilityDeactivationPolicy.CancelImmediately,
+		};
+
+		var grantAbilityComponent = new GrantAbilityEffectComponent([grantConfig]);
+
+		var grantFireballEffect = new EffectData(
+			"Grant Fireball Effect",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [grantAbilityComponent]
+			);
+
+		var grantEffectHandle = player.EffectsManager.ApplyEffect(
+			new Effect(grantFireballEffect, new EffectOwnership(player, player)));
+
+		// Retrieve handle directly from component as shown in docs
+		var fireballAbilityHandle = grantAbilityComponent.GrantedAbilities[0];
+
+		bool successfulActivation = fireballAbilityHandle.Activate(out AbilityActivationFailures failures);
+
+		successfulActivation.Should().BeTrue();
+		failures.Should().Be(AbilityActivationFailures.None);
+		fireballAbilityHandle.IsActive.Should().BeFalse();
+
+		player.EffectsManager.UnapplyEffect(grantEffectHandle);
+		fireballAbilityHandle.IsValid.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("QuickStart", null)]
+	public void Activating_an_ability_with_checks()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+
+		// Setup ability with cost and cooldown
+		var fireballCostEffect = new EffectData(
+			"Fireball Mana Cost",
+			new DurationData(DurationType.Instant),
+			new[] {
+				new Modifier(
+					"PlayerAttributeSet.Mana",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(-20)
+					)
+				)
+			});
+
+		var fireballCooldownEffect = new EffectData(
+			"Fireball Cooldown",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(10.0f))),
+			effectComponents: new[] {
+				new ModifierTagsEffectComponent(
+					tagsManager.RequestTagContainer(new[] { "cooldown.fireball" })
+				)
+			});
+
+		var fireballData = new AbilityData(
+			name: "Fireball",
+			costEffect: fireballCostEffect,
+			cooldownEffects: [fireballCooldownEffect],
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			behaviorFactory: () => new CustomAbilityBehavior("Fireball"));
+
+		// Grant permanently
+		AbilityHandle handle = player.Abilities.GrantAbilityPermanently(
+			fireballData,
+			abilityLevel: 1,
+			levelOverridePolicy: LevelComparison.None,
+			sourceEntity: player);
+
+		// Check Cooldown
+		var cooldowns = handle.GetCooldownData();
+		cooldowns.Should().NotBeEmpty();
+		cooldowns[0].RemainingTime.Should().Be(0);
+
+		// Check Cost
+		var costs = handle.GetCostData();
+		costs.Should().Contain(c => c.Attribute == "PlayerAttributeSet.Mana" && c.Cost == -20);
+
+		// Activate
+		bool success = handle.Activate(out AbilityActivationFailures failures);
+		success.Should().BeTrue();
+
+		// Verify resources consumed and cooldown started
+		player.Attributes["PlayerAttributeSet.Mana"].CurrentValue.Should().Be(80);
+		handle.GetCooldownData()[0].RemainingTime.Should().BeGreaterThan(0);
+	}
+
+	[Fact]
+	[Trait("QuickStart", null)]
+	public void Granting_an_ability_and_activating_once()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+
+		// Simple fireball data
+		var fireballData = new AbilityData(
+			name: "Fireball",
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			behaviorFactory: () => new CustomAbilityBehavior("Fireball"));
+
+		// Simulate using a scroll
+		AbilityHandle? handle = player.Abilities.GrantAbilityAndActivateOnce(
+			abilityData: fireballData,
+			abilityLevel: 1,
+			levelOverridePolicy: LevelComparison.None,
+			out AbilityActivationFailures failureFlags,
+			targetEntity: player, // Target of the fireball
+			sourceEntity: player  // Source (e.g., the scroll item)
+		);
+
+		// Fireball ends instantly so handle is null
+		handle.Should().BeNull();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+	}
+
+	[Fact]
+	[Trait("QuickStart", null)]
+	public void Triggering_an_ability_through_an_event()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+		var hitTag = Tag.RequestTag(tagsManager, "events.combat.hit");
+
+		var autoShieldData = new AbilityData(
+			name: "Auto Shield",
+			// Configure the trigger
+			abilityTriggerData: new AbilityTriggerData(
+				TriggerTag: hitTag,
+				TriggerSource: AbitityTriggerSource.Event
+			),
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			behaviorFactory: () => new CustomAbilityBehavior("Auto Shield"));
+
+		var handle = player.Abilities.GrantAbilityPermanently(autoShieldData, 1, LevelComparison.None, player);
+
+		handle!.IsActive.Should().BeFalse();
+
+		player.Events.Raise(new EventData
+		{
+			EventTags = hitTag.GetSingleTagContainer(),
+		});
+
+		// Ability ends itself instantly so it should be false here
+		handle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("QuickStart", null)]
+	public void Triggering_an_ability_through_tags()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+		var rageTag = Tag.RequestTag(tagsManager, "status.enraged");
+
+		// Ability configuration
+		var rageAbilityData = new AbilityData(
+			"Rage Aura",
+			abilityTriggerData: new AbilityTriggerData(
+				TriggerTag: rageTag,
+				TriggerSource: AbitityTriggerSource.TagPresent),
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			// Using a persistent behavior to verify active state
+			behaviorFactory: () => new PersistentAbilityBehavior());
+
+		// Grant permanently
+		var handle = player.Abilities.GrantAbilityPermanently(rageAbilityData, 1, LevelComparison.None, player);
+
+		handle.IsActive.Should().BeFalse();
+
+		// Apply effect that adds the tag
+		var enrageEffect = new EffectData(
+			"Enrage",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(10f))),
+			effectComponents: [
+				new ModifierTagsEffectComponent(tagsManager.RequestTagContainer(["status.enraged"]))
+			]);
+
+		var effectHandle = player.EffectsManager.ApplyEffect(
+			new Effect(enrageEffect, new EffectOwnership(player, player)));
+
+		// Should activate automatically
+		handle.IsActive.Should().BeTrue();
+
+		// Remove effect (removes tag)
+		player.EffectsManager.UnapplyEffect(effectHandle);
+
+		// Should deactivate automatically
+		handle.IsActive.Should().BeFalse();
+	}
+
 	public class PlayerAttributeSet : AttributeSet
 	{
 		public EntityAttribute Health { get; }
+		public EntityAttribute Mana { get; }
 		public EntityAttribute Strength { get; }
 		public EntityAttribute Speed { get; }
 
 		public PlayerAttributeSet()
 		{
 			Health = InitializeAttribute(nameof(Health), 100, 0, 150);
+			Mana = InitializeAttribute(nameof(Mana), 100, 0, 100);
 			Strength = InitializeAttribute(nameof(Strength), 10, 0, 99);
 			Speed = InitializeAttribute(nameof(Speed), 5, 0, 10);
 		}
@@ -950,4 +1283,38 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			Magnitudes.Clear();
 		}
 	}
+
+	private class CustomAbilityBehavior(string parameter) : IAbilityBehavior
+	{
+		public void OnStarted(AbilityBehaviorContext context)
+		{
+			context.AbilityHandle.CommitAbility();
+
+			// Instantiate a projectile here (omitted for brevity)
+			Console.WriteLine($"{context.Owner} used ability ({parameter}) on target {context.Target}");
+
+			context.InstanceHandle.End();
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
+			// Cleanup if necessary
+		}
+	}
+
+	private class PersistentAbilityBehavior : IAbilityBehavior
+	{
+		public void OnStarted(AbilityBehaviorContext context)
+		{
+			context.AbilityHandle.CommitAbility();
+			// Does NOT call End() to simulate a persistent effect/aura
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
+			// Cleanup
+		}
+	}
+
+	public record struct CombatLogPayload(string Message, int Value);
 }
