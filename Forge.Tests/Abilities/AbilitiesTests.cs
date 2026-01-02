@@ -2278,11 +2278,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
-			abilityTriggerData: new()
-			{
-				TriggerTag = triggerTag,
-				TriggerSource = AbitityTriggerSource.Event,
-			});
+			abilityTriggerData: AbilityTriggerData.ForEvent(triggerTag));
 
 		AbilityHandle? abilityHandle = SetupAbility(
 			entity,
@@ -2332,11 +2328,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
-			abilityTriggerData: new()
-			{
-				TriggerTag = triggerTag,
-				TriggerSource = AbitityTriggerSource.TagAdded,
-			});
+			abilityTriggerData: AbilityTriggerData.ForTagAdded(triggerTag));
 
 		AbilityHandle? abilityHandle = SetupAbility(
 			entity,
@@ -2366,11 +2358,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			["simple.tag"],
 			"TestAttributeSet.Attribute90",
 			new ScalableFloat(-1),
-			abilityTriggerData: new()
-			{
-				TriggerTag = triggerTag,
-				TriggerSource = AbitityTriggerSource.TagPresent,
-			});
+			abilityTriggerData: AbilityTriggerData.ForTagPresent(triggerTag));
 
 		AbilityHandle? abilityHandle = SetupAbility(
 			entity,

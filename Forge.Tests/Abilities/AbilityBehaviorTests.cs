@@ -9,6 +9,7 @@ using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
+using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
@@ -373,6 +374,306 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
 	}
 
+	[Fact]
+	[Trait("CustomContext", null)]
+	public void Generic_activate_creates_typed_context_with_payload()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		AbilityBehaviorContext? capturedContext = null;
+
+		AbilityData data = CreateAbilityData(
+			"TypedContextAbility",
+			behaviorFactory: () => new CallbackBehavior(ctx => capturedContext = ctx));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		var activationData = new TestActivationData("TestValue", 42);
+		handle!.Activate(activationData, out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		capturedContext.Should().NotBeNull();
+		capturedContext.Should().BeOfType<AbilityBehaviorContext<TestActivationData>>();
+
+		var typedContext = (AbilityBehaviorContext<TestActivationData>)capturedContext!;
+		typedContext.Payload.StringValue.Should().Be("TestValue");
+		typedContext.Payload.IntValue.Should().Be(42);
+	}
+
+	[Fact]
+	[Trait("CustomContext", null)]
+	public void Non_generic_activate_creates_base_context()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		AbilityBehaviorContext? capturedContext = null;
+
+		AbilityData data = CreateAbilityData(
+			"NoContextFactoryAbility",
+			behaviorFactory: () => new CallbackBehavior(ctx => capturedContext = ctx));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		capturedContext.Should().NotBeNull();
+		capturedContext.Should().BeOfType<AbilityBehaviorContext>();
+	}
+
+	[Fact]
+	[Trait("CustomContext", null)]
+	public void Value_type_payload_is_preserved_in_context()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		AbilityBehaviorContext? capturedContext = null;
+
+		AbilityData data = CreateAbilityData(
+			"ValueTypeContextAbility",
+			behaviorFactory: () => new CallbackBehavior(ctx => capturedContext = ctx));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		var activationData = new ValueTypeActivationData(1.5f, 2.5f, 3.5f);
+		handle!.Activate(activationData, out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		capturedContext.Should().NotBeNull();
+		capturedContext.Should().BeOfType<AbilityBehaviorContext<ValueTypeActivationData>>();
+
+		var typedContext = (AbilityBehaviorContext<ValueTypeActivationData>)capturedContext!;
+		typedContext.Payload.X.Should().Be(1.5f);
+		typedContext.Payload.Y.Should().Be(2.5f);
+		typedContext.Payload.Z.Should().Be(3.5f);
+	}
+
+	[Fact]
+	[Trait("CustomContext", null)]
+	public void Context_data_is_passed_through_for_each_instance_in_PerExecution()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var capturedContexts = new List<AbilityBehaviorContext>();
+
+		AbilityData data = CreateAbilityData(
+			"PerExecutionContextAbility",
+			behaviorFactory: () => new CallbackBehavior(ctx => capturedContexts.Add(ctx)),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution);
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		var activationData1 = new TestActivationData("First", 1);
+		var activationData2 = new TestActivationData("Second", 2);
+
+		handle!.Activate(activationData1, out _).Should().BeTrue();
+		handle.Activate(activationData2, out _).Should().BeTrue();
+
+		capturedContexts.Should().HaveCount(2);
+
+		capturedContexts[0].Should().BeOfType<AbilityBehaviorContext<TestActivationData>>();
+		capturedContexts[1].Should().BeOfType<AbilityBehaviorContext<TestActivationData>>();
+
+		var context1 = (AbilityBehaviorContext<TestActivationData>)capturedContexts[0];
+		var context2 = (AbilityBehaviorContext<TestActivationData>)capturedContexts[1];
+
+		context1.Payload.StringValue.Should().Be("First");
+		context1.Payload.IntValue.Should().Be(1);
+		context2.Payload.StringValue.Should().Be("Second");
+		context2.Payload.IntValue.Should().Be(2);
+	}
+
+	[Fact]
+	[Trait("CustomContext", null)]
+	public void PerEntity_retrigger_passes_new_context_data()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var capturedContexts = new List<AbilityBehaviorContext>();
+
+		AbilityData data = CreateAbilityData(
+			"RetriggerContextAbility",
+			behaviorFactory: () => new CallbackBehavior(ctx => capturedContexts.Add(ctx)),
+			retriggerInstancedAbility: true);
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		var activationData1 = new TestActivationData("First", 1);
+		var activationData2 = new TestActivationData("Second", 2);
+
+		handle!.Activate(activationData1, out _).Should().BeTrue();
+		handle.Activate(activationData2, out _).Should().BeTrue();
+
+		// Both activations should have succeeded with their own context data
+		capturedContexts.Should().HaveCount(2);
+
+		var context1 = (AbilityBehaviorContext<TestActivationData>)capturedContexts[0];
+		var context2 = (AbilityBehaviorContext<TestActivationData>)capturedContexts[1];
+
+		context1.Payload.StringValue.Should().Be("First");
+		context2.Payload.StringValue.Should().Be("Second");
+	}
+
+	[Fact]
+	[Trait("EventTrigger", null)]
+	public void Event_triggered_ability_activates_on_event()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var behavior = new TrackingBehavior();
+		var eventTag = Tag.RequestTag(_tagsManager, "color.red");
+
+		AbilityData data = CreateAbilityData(
+			"EventTriggered",
+			behaviorFactory: () => behavior,
+			abilityTriggerData: AbilityTriggerData.ForEvent(eventTag));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		behavior.StartCount.Should().Be(0);
+
+		// Raise the event
+		entity.Events.Raise(new EventData
+		{
+			EventTags = eventTag.GetSingleTagContainer()!,
+		});
+
+		behavior.StartCount.Should().Be(1);
+		handle!.IsActive.Should().BeTrue();
+
+		handle.Cancel();
+		behavior.EndCount.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("EventTrigger", null)]
+	public void Event_triggered_ability_with_typed_payload_receives_payload()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		TestEventPayload? capturedPayload = null;
+		AbilityBehaviorContext? capturedContext = null;
+
+		var eventTag = Tag.RequestTag(_tagsManager, "color.green");
+
+		AbilityData data = CreateAbilityData(
+			"TypedEventTriggered",
+			behaviorFactory: () => new TypedPayloadBehavior<TestEventPayload>((ctx, payload) =>
+			{
+				capturedContext = ctx;
+				capturedPayload = payload;
+			}),
+			abilityTriggerData: AbilityTriggerData.ForEvent<TestEventPayload>(eventTag));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		var expectedPayload = new TestEventPayload("Damage received", 42, true);
+
+		// Raise the typed event
+		entity.Events.Raise(new EventData<TestEventPayload>
+		{
+			EventTags = eventTag.GetSingleTagContainer()!,
+			Payload = expectedPayload,
+		});
+
+		capturedContext.Should().NotBeNull();
+		capturedPayload.Should().NotBeNull();
+		capturedPayload!.Message.Should().Be("Damage received");
+		capturedPayload.Value.Should().Be(42);
+		capturedPayload.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("EventTrigger", null)]
+	public void Event_triggered_ability_with_value_type_payload_receives_payload()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		ValueTypeActivationData capturedPayload = default;
+
+		var eventTag = Tag.RequestTag(_tagsManager, "color.blue");
+
+		AbilityData data = CreateAbilityData(
+			"ValueTypeEventTriggered",
+			behaviorFactory: () => new TypedPayloadBehavior<ValueTypeActivationData>((_, payload) =>
+			{
+				capturedPayload = payload;
+			}),
+			abilityTriggerData: AbilityTriggerData.ForEvent<ValueTypeActivationData>(eventTag));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		var expectedPayload = new ValueTypeActivationData(1.5f, 2.5f, 3.5f);
+
+		// Raise the typed event
+		entity.Events.Raise(new EventData<ValueTypeActivationData>
+		{
+			EventTags = eventTag.GetSingleTagContainer()!,
+			Payload = expectedPayload,
+		});
+
+		capturedPayload.X.Should().Be(1.5f);
+		capturedPayload.Y.Should().Be(2.5f);
+		capturedPayload.Z.Should().Be(3.5f);
+	}
+
+	[Fact]
+	[Trait("EventTrigger", null)]
+	public void Event_triggered_ability_respects_cooldown()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var behavior = new CallbackBehavior(x => x.AbilityHandle.CommitAbility());
+		var eventTag = Tag.RequestTag(_tagsManager, "color.dark.red");
+
+		AbilityData data = CreateAbilityData(
+			"EventWithCooldown",
+			behaviorFactory: () => behavior,
+			cooldownSeconds: 5f,
+			abilityTriggerData: AbilityTriggerData.ForEvent(eventTag));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		// First event should activate
+		entity.Events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
+		handle!.IsActive.Should().BeTrue();
+		handle.Cancel();
+
+		// Second event should fail due to cooldown
+		entity.Events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
+		handle.IsActive.Should().BeFalse();
+
+		// After cooldown expires, should work again
+		entity.EffectsManager.UpdateEffects(5f);
+		entity.Events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
+		handle.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("EventTrigger", null)]
+	public void Event_triggered_ability_multiple_events_with_PerExecution()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var activationCount = 0;
+		var eventTag = Tag.RequestTag(_tagsManager, "color.dark.green");
+
+		AbilityData data = CreateAbilityData(
+			"MultiEventPerExecution",
+			behaviorFactory: () => new CallbackBehavior(_ => activationCount++),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution,
+			abilityTriggerData: AbilityTriggerData.ForEvent(eventTag));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		// Raise multiple events
+		entity.Events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
+		entity.Events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
+		entity.Events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
+
+		activationCount.Should().Be(3);
+	}
+
 	private static AbilityHandle? Grant(
 		TestEntity target,
 		AbilityData data,
@@ -414,7 +715,8 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		float costMagnitude = -1f,
 		TagContainer? abilityTags = null,
 		TagContainer? blockAbilitiesWithTag = null,
-		TagContainer? activationOwnedTags = null)
+		TagContainer? activationOwnedTags = null,
+		AbilityTriggerData? abilityTriggerData = null)
 	{
 		EffectData[] cooldownEffectData = [new EffectData(
 			$"{name} Cooldown",
@@ -448,10 +750,17 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 			abilityTags: abilityTags,
 			instancingPolicy: instancingPolicy,
 			retriggerInstancedAbility: retriggerInstancedAbility,
+			abilityTriggerData: abilityTriggerData,
 			blockAbilitiesWithTag: blockAbilitiesWithTag,
 			activationOwnedTags: activationOwnedTags,
 			behaviorFactory: behaviorFactory ?? (() => behavior!));
 	}
+
+	private sealed record TestActivationData(string StringValue, int IntValue);
+
+	private readonly record struct ValueTypeActivationData(float X, float Y, float Z);
+
+	private sealed record TestEventPayload(string Message, int Value, bool IsActive);
 
 	private sealed class TrackingBehavior(Action? onStartExtra = null) : IAbilityBehavior
 	{
@@ -485,6 +794,21 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		public void OnStarted(AbilityBehaviorContext context)
 		{
 			callback(context);
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
+			// No-op
+		}
+	}
+
+	private sealed class TypedPayloadBehavior<TPayload>(
+		Action<AbilityBehaviorContext, TPayload> callback) : IAbilityBehavior<TPayload>
+	{
+		public void OnStarted(AbilityBehaviorContext context, TPayload payload)
+		{
+			callback(context, payload);
+			context.InstanceHandle.End();
 		}
 
 		public void OnEnded(AbilityBehaviorContext context)

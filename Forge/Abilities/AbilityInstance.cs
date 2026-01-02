@@ -33,21 +33,21 @@ internal sealed class AbilityInstance
 			return;
 		}
 
-		// Apply activation-owned tags.
-		if (_ability.AbilityData.ActivationOwnedTags is not null)
-		{
-			_ability.Owner.Tags.AddModifierTags(_ability.AbilityData.ActivationOwnedTags);
-		}
-
-		// Block abilities with tags while this instance is active.
-		TagContainer? blockTags = _ability.AbilityData.BlockAbilitiesWithTag;
-		if (blockTags is not null)
-		{
-			_ability.Owner.Abilities.BlockedAbilityTags.AddModifierTags(blockTags);
-		}
-
+		ApplyActivationState();
 		IsActive = true;
 		_ability.OnInstanceStarted(this);
+	}
+
+	internal void Start<TPayload>(TPayload payload)
+	{
+		if (IsActive)
+		{
+			return;
+		}
+
+		ApplyActivationState();
+		IsActive = true;
+		_ability.OnInstanceStarted(this, payload);
 	}
 
 	internal void End()
@@ -77,5 +77,21 @@ internal sealed class AbilityInstance
 	internal void Cancel()
 	{
 		End();
+	}
+
+	private void ApplyActivationState()
+	{
+		// Apply activation-owned tags.
+		if (_ability.AbilityData.ActivationOwnedTags is not null)
+		{
+			_ability.Owner.Tags.AddModifierTags(_ability.AbilityData.ActivationOwnedTags);
+		}
+
+		// Block abilities with tags while this instance is active.
+		TagContainer? blockTags = _ability.AbilityData.BlockAbilitiesWithTag;
+		if (blockTags is not null)
+		{
+			_ability.Owner.Abilities.BlockedAbilityTags.AddModifierTags(blockTags);
+		}
 	}
 }

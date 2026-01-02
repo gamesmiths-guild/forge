@@ -993,10 +993,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		var autoShieldData = new AbilityData(
 			name: "Auto Shield",
 			// Configure the trigger
-			abilityTriggerData: new AbilityTriggerData(
-				TriggerTag: hitTag,
-				TriggerSource: AbitityTriggerSource.Event
-			),
+			abilityTriggerData: AbilityTriggerData.ForEvent(hitTag),
 			instancingPolicy: AbilityInstancingPolicy.PerEntity,
 			behaviorFactory: () => new CustomAbilityBehavior("Auto Shield"));
 
@@ -1027,9 +1024,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Ability configuration
 		var rageAbilityData = new AbilityData(
 			"Rage Aura",
-			abilityTriggerData: new AbilityTriggerData(
-				TriggerTag: rageTag,
-				TriggerSource: AbitityTriggerSource.TagPresent),
+			abilityTriggerData: AbilityTriggerData.ForTagPresent(rageTag),
 			instancingPolicy: AbilityInstancingPolicy.PerEntity,
 			// Using a persistent behavior to verify active state
 			behaviorFactory: () => new PersistentAbilityBehavior());

@@ -5,9 +5,9 @@ using Gamesmiths.Forge.Core;
 namespace Gamesmiths.Forge.Abilities;
 
 /// <summary>
-/// Runtime context for a single ability activation. Provides data and helpers for user behaviors.
+/// Runtime context for a single ability activation.
 /// </summary>
-public sealed class AbilityBehaviorContext
+public class AbilityBehaviorContext
 {
 	/// <summary>
 	/// Gets the owner of this ability.
@@ -43,7 +43,6 @@ public sealed class AbilityBehaviorContext
 	{
 		AbilityHandle = ability.Handle;
 		InstanceHandle = instance.Handle;
-
 		Owner = ability.Owner;
 		Source = ability.SourceEntity;
 	}

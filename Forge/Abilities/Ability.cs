@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Reflection;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Calculator;
@@ -97,7 +98,9 @@ internal class Ability
 
 		if (abilityData.AbilityTriggerData is not null)
 		{
-			switch (abilityData.AbilityTriggerData.Value.TriggerSource)
+			AbilityTriggerData triggerData = abilityData.AbilityTriggerData.Value;
+
+			switch (triggerData.TriggerSource)
 			{
 				case AbitityTriggerSource.TagAdded:
 					owner.Tags.OnTagsChanged += TagAdded_OnTagChanged;
@@ -106,10 +109,18 @@ internal class Ability
 					owner.Tags.OnTagsChanged += TagPresent_OnTagChanged;
 					break;
 				case AbitityTriggerSource.Event:
-					owner.Events.Subscribe(
-						abilityData.AbilityTriggerData.Value.TriggerTag,
-						x => TryActivateAbility(x.Target, out _),
-						priority: 0);
+					if (triggerData.PayloadType is not null)
+					{
+						SubscribeTypedEvent(triggerData);
+					}
+					else
+					{
+						owner.Events.Subscribe(
+							triggerData.TriggerTag,
+							x => TryActivateAbility(x.Target, out _),
+							triggerData.Priority);
+					}
+
 					break;
 			}
 		}
@@ -117,11 +128,27 @@ internal class Ability
 		Handle = new AbilityHandle(this);
 	}
 
-	internal bool TryActivateAbility(IForgeEntity? abilityTarget, out AbilityActivationFailures failureFlags)
+	internal bool TryActivateAbility(
+		IForgeEntity? abilityTarget,
+		out AbilityActivationFailures failureFlags)
 	{
 		if (CanActivate(abilityTarget, out failureFlags))
 		{
 			Activate(abilityTarget);
+			return true;
+		}
+
+		return false;
+	}
+
+	internal bool TryActivateAbility<TPayload>(
+		IForgeEntity? abilityTarget,
+		out AbilityActivationFailures failureFlags,
+		TPayload payload)
+	{
+		if (CanActivate(abilityTarget, out failureFlags))
+		{
+			Activate(abilityTarget, payload);
 			return true;
 		}
 
@@ -209,6 +236,40 @@ internal class Ability
 		try
 		{
 			behavior.OnStarted(context);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Ability behavior threw on start: {ex}");
+			instance.Cancel();
+		}
+	}
+
+	internal void OnInstanceStarted<TPayload>(AbilityInstance instance, TPayload payload)
+	{
+		if (AbilityData.BehaviorFactory is null)
+		{
+			return;
+		}
+
+		IAbilityBehavior? behavior = AbilityData.BehaviorFactory.Invoke();
+		if (behavior is null)
+		{
+			return;
+		}
+
+		var context = new AbilityBehaviorContext<TPayload>(this, instance, payload);
+		_behaviors[instance] = new BehaviorBinding(behavior, context);
+
+		try
+		{
+			if (behavior is IAbilityBehavior<TPayload> typedBehavior)
+			{
+				typedBehavior.OnStarted(context, payload);
+			}
+			else
+			{
+				behavior.OnStarted(context);
+			}
 		}
 		catch (Exception ex)
 		{
@@ -460,7 +521,41 @@ internal class Ability
 		return blocked is not null && (present?.HasAny(blocked) == true);
 	}
 
+	private void SubscribeTypedEvent(AbilityTriggerData triggerData)
+	{
+#pragma warning disable S3011 // Reflection should not be used to increase accessibility of classes, methods, or fields
+		// Do not attempt this in production environments without adult supervision.
+		MethodInfo method = typeof(Ability)
+			.GetMethod(nameof(SubscribeTypedEventCore), BindingFlags.NonPublic | BindingFlags.Instance)!
+			.MakeGenericMethod(triggerData.PayloadType!);
+#pragma warning restore S3011 // Reflection should not be used to increase accessibility of classes, methods, or fields
+
+		method.Invoke(this, [triggerData.TriggerTag, triggerData.Priority]);
+	}
+
+	private void SubscribeTypedEventCore<TPayload>(Tag tag, int priority)
+	{
+		Owner.Events.Subscribe<TPayload>(
+			tag,
+			x => TryActivateAbility(x.Target, out _, x.Payload),
+			priority: priority);
+	}
+
 	private void Activate(IForgeEntity? abilityTarget)
+	{
+		AbilityInstance instance = CreateInstance(abilityTarget);
+		_activeInstances.Add(instance);
+		instance.Start();
+	}
+
+	private void Activate<TPayload>(IForgeEntity? abilityTarget, TPayload payload)
+	{
+		AbilityInstance instance = CreateInstance(abilityTarget);
+		_activeInstances.Add(instance);
+		instance.Start(payload);
+	}
+
+	private AbilityInstance CreateInstance(IForgeEntity? abilityTarget)
 	{
 		// Cancel conflicting abilities before we start this one.
 		if (AbilityData.CancelAbilitiesWithTag is not null)
@@ -480,14 +575,10 @@ internal class Ability
 			}
 
 			_persistentInstance ??= new AbilityInstance(this, abilityTarget);
-			_activeInstances.Add(_persistentInstance);
-			_persistentInstance.Start();
-			return;
+			return _persistentInstance;
 		}
 
-		var instance = new AbilityInstance(this, abilityTarget);
-		_activeInstances.Add(instance);
-		instance.Start();
+		return new AbilityInstance(this, abilityTarget);
 	}
 
 	private ModifierEvaluatedData[] EvaluateInstantModifiers(Effect effect, StringKey? specificAttribute = null)

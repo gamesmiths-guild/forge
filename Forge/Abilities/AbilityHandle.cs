@@ -1,4 +1,4 @@
-// Copyright © Gamesmiths Guild.
+// Copyr	ight © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Tags;
@@ -48,6 +48,29 @@ public class AbilityHandle
 	{
 		failureFlags = AbilityActivationFailures.InvalidHandler;
 		return Ability?.TryActivateAbility(target, out failureFlags) ?? false;
+	}
+
+	/// <summary>
+	/// Activates the ability associated with this handle with strongly-typed payload data.
+	/// </summary>
+	/// <typeparam name="TPayload">The type of payload data to pass to the ability behavior.</typeparam>
+	/// <param name="payload">The payload data to pass to the behavior.</param>
+	/// <param name="failureFlags">Flags indicating the failure reasons for the ability activation.</param>
+	/// <param name="target">The target entity for the ability activation.</param>
+	/// <returns>Return <see langword="true"/> if the ability was successfully activated; otherwise,
+	/// <see langword="false"/>.</returns>
+	public bool Activate<TPayload>(
+		TPayload payload,
+		out AbilityActivationFailures failureFlags,
+		IForgeEntity? target = null)
+	{
+		if (Ability is null)
+		{
+			failureFlags = AbilityActivationFailures.InvalidHandler;
+			return false;
+		}
+
+		return Ability.TryActivateAbility(target, out failureFlags, payload);
 	}
 
 	/// <summary>
