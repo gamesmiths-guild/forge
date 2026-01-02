@@ -736,7 +736,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	}
 
 	[Fact]
-	[Trait("QuickStart", null)]
+	[Trait("Quick Start", null)]
 	public void Subscribing_and_raising_an_event()
 	{
 		// Initialize managers
@@ -768,7 +768,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	}
 
 	[Fact]
-	[Trait("QuickStart", null)]
+	[Trait("Quick Start", null)]
 	public void Strongly_typed_events()
 	{
 		// Initialize managers
@@ -802,7 +802,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	}
 
 	[Fact]
-	[Trait("QuickStart", null)]
+	[Trait("Quick Start", null)]
 	public void Granting_activating_and_removing_an_ability()
 	{
 		// Initialize managers
@@ -879,7 +879,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	}
 
 	[Fact]
-	[Trait("QuickStart", null)]
+	[Trait("Quick Start", null)]
 	public void Activating_an_ability_with_checks()
 	{
 		// Initialize managers
@@ -949,7 +949,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	}
 
 	[Fact]
-	[Trait("QuickStart", null)]
+	[Trait("Quick Start", null)]
 	public void Granting_an_ability_and_activating_once()
 	{
 		// Initialize managers
@@ -980,7 +980,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	}
 
 	[Fact]
-	[Trait("QuickStart", null)]
+	[Trait("Quick Start", null)]
 	public void Triggering_an_ability_through_an_event()
 	{
 		// Initialize managers
@@ -1011,7 +1011,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	}
 
 	[Fact]
-	[Trait("QuickStart", null)]
+	[Trait("Quick Start", null)]
 	public void Triggering_an_ability_through_tags()
 	{
 		// Initialize managers

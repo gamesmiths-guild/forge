@@ -79,7 +79,10 @@ public sealed class EventManager
 	/// <param name="handler">The handler to invoke when the event is raised.</param>
 	/// <param name="priority">The priority of the subscription; higher values indicate higher priority.</param>
 	/// <returns>The subscription token for later un-subscription.</returns>
-	public EventSubscriptionToken Subscribe<TPayload>(Tag eventTag, Action<EventData<TPayload>> handler, int priority = 0)
+	public EventSubscriptionToken Subscribe<TPayload>(
+		Tag eventTag,
+		Action<EventData<TPayload>> handler,
+		int priority = 0)
 	{
 		var token = new EventSubscriptionToken(Guid.NewGuid());
 		Type key = typeof(TPayload);
