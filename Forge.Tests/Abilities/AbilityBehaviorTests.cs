@@ -674,6 +674,190 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		activationCount.Should().Be(3);
 	}
 
+	#region Magnitude Tests
+
+	[Fact]
+	[Trait("Magnitude", null)]
+	public void Context_contains_magnitude_when_activated_with_magnitude()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		AbilityBehaviorContext? capturedContext = null;
+
+		AbilityData data = CreateAbilityData(
+			"MagnitudeAbility",
+			behaviorFactory: () => new CallbackBehavior(ctx => capturedContext = ctx));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		handle!.Activate(out AbilityActivationFailures failureFlags, magnitude: 75.5f).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		capturedContext.Should().NotBeNull();
+		capturedContext!.Magnitude.Should().Be(75.5f);
+	}
+
+	[Fact]
+	[Trait("Magnitude", null)]
+	public void Context_magnitude_defaults_to_zero_when_not_specified()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		AbilityBehaviorContext? capturedContext = null;
+
+		AbilityData data = CreateAbilityData(
+			"NoMagnitudeAbility",
+			behaviorFactory: () => new CallbackBehavior(ctx => capturedContext = ctx));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		capturedContext.Should().NotBeNull();
+		capturedContext!.Magnitude.Should().Be(0f);
+	}
+
+	[Fact]
+	[Trait("Magnitude", null)]
+	public void Event_triggered_ability_receives_magnitude_from_event()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		float capturedMagnitude = 0f;
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+
+		AbilityData data = CreateAbilityData(
+			"EventMagnitudeAbility",
+			behaviorFactory: () => new CallbackBehavior(ctx =>
+			{
+				capturedMagnitude = ctx.Magnitude;
+			}),
+			abilityTriggerData: AbilityTriggerData.ForEvent(eventTag));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		entity.Events.Raise(new EventData
+		{
+			EventTags = eventTag.GetSingleTagContainer()!,
+			EventMagnitude = 123.5f,
+		});
+
+		capturedMagnitude.Should().Be(123.5f);
+		handle!.Cancel();
+	}
+
+	[Fact]
+	[Trait("Magnitude", null)]
+	public void Typed_event_triggered_ability_receives_both_magnitude_and_data()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		float capturedMagnitude = 0f;
+		TestEventPayload? capturedData = null;
+		var eventTag = Tag.RequestTag(_tagsManager, "tag");
+
+		AbilityData data = CreateAbilityData(
+			"TypedEventMagnitudeAbility",
+			behaviorFactory: () => new TypedPayloadBehavior<TestEventPayload>((ctx, payload) =>
+			{
+				capturedMagnitude = ctx.Magnitude;
+				capturedData = payload;
+			}),
+			abilityTriggerData: AbilityTriggerData.ForEvent<TestEventPayload>(eventTag));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		entity.Events.Raise(new EventData<TestEventPayload>
+		{
+			EventTags = eventTag.GetSingleTagContainer()!,
+			EventMagnitude = 50f,
+			Payload = new TestEventPayload("Test", 42, true),
+		});
+
+		capturedMagnitude.Should().Be(50f);
+		capturedData.Should().NotBeNull();
+		capturedData!.Message.Should().Be("Test");
+		capturedData.Value.Should().Be(42);
+	}
+
+	[Fact]
+	[Trait("Magnitude", null)]
+	public void Generic_activate_passes_both_data_and_magnitude()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		AbilityBehaviorContext? capturedContext = null;
+
+		AbilityData data = CreateAbilityData(
+			"DataAndMagnitudeAbility",
+			behaviorFactory: () => new CallbackBehavior(ctx => capturedContext = ctx));
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		var activationData = new TestActivationData("TestValue", 42);
+		handle!.Activate(activationData, out AbilityActivationFailures failureFlags, magnitude: 100f).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		capturedContext.Should().NotBeNull();
+		capturedContext.Should().BeOfType<AbilityBehaviorContext<TestActivationData>>();
+
+		var typedContext = (AbilityBehaviorContext<TestActivationData>)capturedContext!;
+		typedContext.Magnitude.Should().Be(100f);
+		typedContext.Data.StringValue.Should().Be("TestValue");
+		typedContext.Data.IntValue.Should().Be(42);
+	}
+
+	[Fact]
+	[Trait("Magnitude", null)]
+	public void Magnitude_is_preserved_across_instances_in_PerExecution()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var capturedMagnitudes = new List<float>();
+
+		AbilityData data = CreateAbilityData(
+			"MultiMagnitudeAbility",
+			behaviorFactory: () => new CallbackBehavior(ctx => capturedMagnitudes.Add(ctx.Magnitude)),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution);
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		handle!.Activate(out _, magnitude: 10f).Should().BeTrue();
+		handle.Activate(out _, magnitude: 20f).Should().BeTrue();
+		handle.Activate(out _, magnitude: 30f).Should().BeTrue();
+
+		capturedMagnitudes.Should().HaveCount(3);
+		capturedMagnitudes[0].Should().Be(10f);
+		capturedMagnitudes[1].Should().Be(20f);
+		capturedMagnitudes[2].Should().Be(30f);
+	}
+
+	[Fact]
+	[Trait("Magnitude", null)]
+	public void PerEntity_retrigger_uses_new_magnitude()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var capturedMagnitudes = new List<float>();
+
+		AbilityData data = CreateAbilityData(
+			"RetriggerMagnitudeAbility",
+			behaviorFactory: () => new CallbackBehavior(ctx => capturedMagnitudes.Add(ctx.Magnitude)),
+			retriggerInstancedAbility: true);
+
+		AbilityHandle? handle = Grant(entity, data);
+		handle.Should().NotBeNull();
+
+		handle!.Activate(out _, magnitude: 50f).Should().BeTrue();
+		handle.Activate(out _, magnitude: 75f).Should().BeTrue();
+
+		capturedMagnitudes.Should().HaveCount(2);
+		capturedMagnitudes[0].Should().Be(50f);
+		capturedMagnitudes[1].Should().Be(75f);
+	}
+
+	#endregion
+
 	private static AbilityHandle? Grant(
 		TestEntity target,
 		AbilityData data,

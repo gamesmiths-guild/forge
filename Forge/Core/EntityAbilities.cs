@@ -127,7 +127,7 @@ public class EntityAbilities(IForgeEntity owner)
 			TagContainer? abilityTags = ability.AbilityData.AbilityTags;
 			if (abilityTags?.HasAny(tagsToActivate) == true)
 			{
-				anyActivated |= ability.TryActivateAbility(target, out failureFlags[i]);
+				anyActivated |= ability.TryActivateAbility(target, out failureFlags[i], 0f);
 			}
 		}
 
