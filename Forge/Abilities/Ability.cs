@@ -117,7 +117,7 @@ internal class Ability
 					{
 						owner.Events.Subscribe(
 							triggerData.TriggerTag,
-							x => TryActivateAbility(x.Target, out _),
+							x => TryActivateAbility(x.Target, out _, x.EventMagnitude),
 							triggerData.Priority);
 					}
 
@@ -130,25 +130,27 @@ internal class Ability
 
 	internal bool TryActivateAbility(
 		IForgeEntity? abilityTarget,
-		out AbilityActivationFailures failureFlags)
+		out AbilityActivationFailures failureFlags,
+		float magnitude)
 	{
 		if (CanActivate(abilityTarget, out failureFlags))
 		{
-			Activate(abilityTarget);
+			Activate(abilityTarget, magnitude);
 			return true;
 		}
 
 		return false;
 	}
 
-	internal bool TryActivateAbility<TPayload>(
+	internal bool TryActivateAbility<TData>(
 		IForgeEntity? abilityTarget,
 		out AbilityActivationFailures failureFlags,
-		TPayload payload)
+		TData data,
+		float magnitude)
 	{
 		if (CanActivate(abilityTarget, out failureFlags))
 		{
-			Activate(abilityTarget, payload);
+			Activate(abilityTarget, data, magnitude);
 			return true;
 		}
 
@@ -217,7 +219,7 @@ internal class Ability
 		Owner.Abilities.NotifyAbilityEnded(new AbilityEndedData(Handle, true));
 	}
 
-	internal void OnInstanceStarted(AbilityInstance instance)
+	internal void OnInstanceStarted(AbilityInstance instance, float magnitude)
 	{
 		if (AbilityData.BehaviorFactory is null)
 		{
@@ -230,7 +232,7 @@ internal class Ability
 			return;
 		}
 
-		var context = new AbilityBehaviorContext(this, instance);
+		var context = new AbilityBehaviorContext(this, instance, magnitude);
 		_behaviors[instance] = new BehaviorBinding(behavior, context);
 
 		try
@@ -244,7 +246,7 @@ internal class Ability
 		}
 	}
 
-	internal void OnInstanceStarted<TPayload>(AbilityInstance instance, TPayload payload)
+	internal void OnInstanceStarted<TPayload>(AbilityInstance instance, TPayload payload, float magnitude)
 	{
 		if (AbilityData.BehaviorFactory is null)
 		{
@@ -257,7 +259,7 @@ internal class Ability
 			return;
 		}
 
-		var context = new AbilityBehaviorContext<TPayload>(this, instance, payload);
+		var context = new AbilityBehaviorContext<TPayload>(this, instance, payload, magnitude);
 		_behaviors[instance] = new BehaviorBinding(behavior, context);
 
 		try
@@ -537,22 +539,22 @@ internal class Ability
 	{
 		Owner.Events.Subscribe<TPayload>(
 			tag,
-			x => TryActivateAbility(x.Target, out _, x.Payload),
+			x => TryActivateAbility(x.Target, out _, x.Payload, x.EventMagnitude),
 			priority: priority);
 	}
 
-	private void Activate(IForgeEntity? abilityTarget)
+	private void Activate(IForgeEntity? abilityTarget, float magnitude)
 	{
 		AbilityInstance instance = CreateInstance(abilityTarget);
 		_activeInstances.Add(instance);
-		instance.Start();
+		instance.Start(magnitude);
 	}
 
-	private void Activate<TPayload>(IForgeEntity? abilityTarget, TPayload payload)
+	private void Activate<TData>(IForgeEntity? abilityTarget, TData data, float magnitude)
 	{
 		AbilityInstance instance = CreateInstance(abilityTarget);
 		_activeInstances.Add(instance);
-		instance.Start(payload);
+		instance.Start(data, magnitude);
 	}
 
 	private AbilityInstance CreateInstance(IForgeEntity? abilityTarget)
@@ -619,7 +621,7 @@ internal class Ability
 	{
 		if (container.HasTag(AbilityData.AbilityTriggerData!.Value.TriggerTag))
 		{
-			TryActivateAbility(null, out _);
+			TryActivateAbility(null, out _, 0f);
 		}
 		else
 		{
@@ -631,7 +633,7 @@ internal class Ability
 	{
 		if (container.HasTag(AbilityData.AbilityTriggerData!.Value.TriggerTag))
 		{
-			TryActivateAbility(null, out _);
+			TryActivateAbility(null, out _, 0f);
 		}
 	}
 }

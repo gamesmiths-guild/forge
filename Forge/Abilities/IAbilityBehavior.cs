@@ -21,17 +21,17 @@ public interface IAbilityBehavior
 }
 
 /// <summary>
-/// Interface for defining custom behavior with a strongly-typed payload.
+/// Interface for defining custom behavior with strongly-typed additional data.
 /// </summary>
-/// <typeparam name="TPayload">The type of payload expected from the triggering event.</typeparam>
-public interface IAbilityBehavior<in TPayload> : IAbilityBehavior
+/// <typeparam name="TData">The type of the additional data expected.</typeparam>
+public interface IAbilityBehavior<in TData> : IAbilityBehavior
 {
 	/// <summary>
-	/// Called when an ability instance has started with a typed payload.
+	/// Called when an ability instance has started with a typed data.
 	/// </summary>
 	/// <param name="context">The context for the started ability instance.</param>
-	/// <param name="payload">The strongly-typed payload from the triggering event.</param>
-	void OnStarted(AbilityBehaviorContext context, TPayload payload);
+	/// <param name="data">The strongly-typed additional data from the triggering event.</param>
+	void OnStarted(AbilityBehaviorContext context, TData data);
 
 	/// <inheritdoc/>
 	void IAbilityBehavior.OnStarted(AbilityBehaviorContext context)

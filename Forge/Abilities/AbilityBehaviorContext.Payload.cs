@@ -3,23 +3,24 @@
 namespace Gamesmiths.Forge.Abilities;
 
 /// <summary>
-/// Context that carries strongly-typed activation data.
-/// Created automatically when using <see cref="AbilityHandle.Activate{TContextData}"/>.
+/// Context that carries strongly-typed additional data.
+/// Created automatically when using <see cref="AbilityHandle.Activate{TData}"/>.
 /// </summary>
-/// <typeparam name="TPayload">The activation data type.</typeparam>
-public sealed class AbilityBehaviorContext<TPayload> : AbilityBehaviorContext
+/// <typeparam name="TData">The activation data type.</typeparam>
+public sealed class AbilityBehaviorContext<TData> : AbilityBehaviorContext
 {
 	/// <summary>
-	/// Gets the activation data passed during ability activation.
+	/// Gets the additional data passed during ability activation.
 	/// </summary>
-	public TPayload Payload { get; }
+	public TData Data { get; }
 
 	internal AbilityBehaviorContext(
 		Ability ability,
 		AbilityInstance instance,
-		TPayload payload)
-		: base(ability, instance)
+		TData data,
+		float magnitude)
+		: base(ability, instance, magnitude)
 	{
-		Payload = payload;
+		Data = data;
 	}
 }

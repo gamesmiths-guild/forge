@@ -26,7 +26,7 @@ internal sealed class AbilityInstance
 		Handle = new AbilityInstanceHandle(this);
 	}
 
-	internal void Start()
+	internal void Start(float magnitude = 0f)
 	{
 		if (IsActive)
 		{
@@ -35,10 +35,10 @@ internal sealed class AbilityInstance
 
 		ApplyActivationState();
 		IsActive = true;
-		_ability.OnInstanceStarted(this);
+		_ability.OnInstanceStarted(this, magnitude);
 	}
 
-	internal void Start<TPayload>(TPayload payload)
+	internal void Start<TData>(TData data, float magnitude = 0f)
 	{
 		if (IsActive)
 		{
@@ -47,7 +47,7 @@ internal sealed class AbilityInstance
 
 		ApplyActivationState();
 		IsActive = true;
-		_ability.OnInstanceStarted(this, payload);
+		_ability.OnInstanceStarted(this, data, magnitude);
 	}
 
 	internal void End()

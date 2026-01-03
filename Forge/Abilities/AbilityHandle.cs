@@ -1,4 +1,4 @@
-// Copyr	ight © Gamesmiths Guild.
+// Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Tags;
@@ -41,28 +41,34 @@ public class AbilityHandle
 	/// Activates the ability associated with this handle.
 	/// </summary>
 	/// <param name="failureFlags">Flags indicating the failure reasons for the ability activation.</param>
-	/// <param name="target">The target entity for the ability activation.</param>
+	/// <param name="target">Optional target entity for the ability activation.</param>
+	/// <param name="magnitude">Optional magnitude value for the ability activation.</param>
 	/// <returns>Return <see langword="true"/> if the ability was successfully activated;
 	/// otherwise, <see langword="false"/>.</returns>
-	public bool Activate(out AbilityActivationFailures failureFlags, IForgeEntity? target = null)
+	public bool Activate(
+		out AbilityActivationFailures failureFlags,
+		IForgeEntity? target = null,
+		float magnitude = 0)
 	{
 		failureFlags = AbilityActivationFailures.InvalidHandler;
-		return Ability?.TryActivateAbility(target, out failureFlags) ?? false;
+		return Ability?.TryActivateAbility(target, out failureFlags, magnitude) ?? false;
 	}
 
 	/// <summary>
-	/// Activates the ability associated with this handle with strongly-typed payload data.
+	/// Activates the ability associated with this handle with strongly-typed additional data.
 	/// </summary>
-	/// <typeparam name="TPayload">The type of payload data to pass to the ability behavior.</typeparam>
-	/// <param name="payload">The payload data to pass to the behavior.</param>
+	/// <typeparam name="TData">The type of the data to pass to the ability behavior.</typeparam>
+	/// <param name="data">Additional data to pass to the behavior.</param>
 	/// <param name="failureFlags">Flags indicating the failure reasons for the ability activation.</param>
-	/// <param name="target">The target entity for the ability activation.</param>
+	/// <param name="target">Optional target entity for the ability activation.</param>
+	/// <param name="magnitude">Optional magnitude value for the ability activation.</param>
 	/// <returns>Return <see langword="true"/> if the ability was successfully activated; otherwise,
 	/// <see langword="false"/>.</returns>
-	public bool Activate<TPayload>(
-		TPayload payload,
+	public bool Activate<TData>(
+		TData data,
 		out AbilityActivationFailures failureFlags,
-		IForgeEntity? target = null)
+		IForgeEntity? target = null,
+		float magnitude = 0f)
 	{
 		if (Ability is null)
 		{
@@ -70,7 +76,7 @@ public class AbilityHandle
 			return false;
 		}
 
-		return Ability.TryActivateAbility(target, out failureFlags, payload);
+		return Ability.TryActivateAbility(target, out failureFlags, data, magnitude);
 	}
 
 	/// <summary>

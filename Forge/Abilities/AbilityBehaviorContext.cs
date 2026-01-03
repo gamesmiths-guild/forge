@@ -39,11 +39,17 @@ public class AbilityBehaviorContext
 	/// </summary>
 	public AbilityInstanceHandle InstanceHandle { get; }
 
-	internal AbilityBehaviorContext(Ability ability, AbilityInstance instance)
+	/// <summary>
+	/// Gets the magnitude associated with the activation of this ability, if applicable.
+	/// </summary>
+	public float Magnitude { get; }
+
+	internal AbilityBehaviorContext(Ability ability, AbilityInstance instance, float magnitude)
 	{
 		AbilityHandle = ability.Handle;
 		InstanceHandle = instance.Handle;
 		Owner = ability.Owner;
 		Source = ability.SourceEntity;
+		Magnitude = magnitude;
 	}
 }

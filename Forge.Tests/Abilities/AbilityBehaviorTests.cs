@@ -396,8 +396,8 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		capturedContext.Should().BeOfType<AbilityBehaviorContext<TestActivationData>>();
 
 		var typedContext = (AbilityBehaviorContext<TestActivationData>)capturedContext!;
-		typedContext.Payload.StringValue.Should().Be("TestValue");
-		typedContext.Payload.IntValue.Should().Be(42);
+		typedContext.Data.StringValue.Should().Be("TestValue");
+		typedContext.Data.IntValue.Should().Be(42);
 	}
 
 	[Fact]
@@ -443,9 +443,9 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		capturedContext.Should().BeOfType<AbilityBehaviorContext<ValueTypeActivationData>>();
 
 		var typedContext = (AbilityBehaviorContext<ValueTypeActivationData>)capturedContext!;
-		typedContext.Payload.X.Should().Be(1.5f);
-		typedContext.Payload.Y.Should().Be(2.5f);
-		typedContext.Payload.Z.Should().Be(3.5f);
+		typedContext.Data.X.Should().Be(1.5f);
+		typedContext.Data.Y.Should().Be(2.5f);
+		typedContext.Data.Z.Should().Be(3.5f);
 	}
 
 	[Fact]
@@ -477,10 +477,10 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		var context1 = (AbilityBehaviorContext<TestActivationData>)capturedContexts[0];
 		var context2 = (AbilityBehaviorContext<TestActivationData>)capturedContexts[1];
 
-		context1.Payload.StringValue.Should().Be("First");
-		context1.Payload.IntValue.Should().Be(1);
-		context2.Payload.StringValue.Should().Be("Second");
-		context2.Payload.IntValue.Should().Be(2);
+		context1.Data.StringValue.Should().Be("First");
+		context1.Data.IntValue.Should().Be(1);
+		context2.Data.StringValue.Should().Be("Second");
+		context2.Data.IntValue.Should().Be(2);
 	}
 
 	[Fact]
@@ -510,8 +510,8 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		var context1 = (AbilityBehaviorContext<TestActivationData>)capturedContexts[0];
 		var context2 = (AbilityBehaviorContext<TestActivationData>)capturedContexts[1];
 
-		context1.Payload.StringValue.Should().Be("First");
-		context2.Payload.StringValue.Should().Be("Second");
+		context1.Data.StringValue.Should().Be("First");
+		context2.Data.StringValue.Should().Be("Second");
 	}
 
 	[Fact]
