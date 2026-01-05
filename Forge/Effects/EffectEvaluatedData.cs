@@ -118,6 +118,7 @@ public sealed class EffectEvaluatedData
 		Effect = effect;
 		Stack = stack;
 		Level = level ?? effect.Level;
+		ModifiersEvaluatedData = [];
 
 		if (level is null && effect.EffectData.SnapshotLevel)
 		{
@@ -180,6 +181,13 @@ public sealed class EffectEvaluatedData
 					finalMagnitude,
 					modifier.Channel));
 		}
+
+		if (Effect.EffectData.CustomExecutions.Length == 0)
+		{
+			return [.. modifiersEvaluatedData];
+		}
+
+		ModifiersEvaluatedData = [.. modifiersEvaluatedData];
 
 		foreach (CustomExecution execution in Effect.EffectData.CustomExecutions)
 		{

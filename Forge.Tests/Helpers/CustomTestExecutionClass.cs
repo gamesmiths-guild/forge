@@ -65,12 +65,19 @@ public class CustomTestExecutionClass : CustomExecution
 		var sourceAttribute1value = CaptureAttributeMagnitude(
 			SourceAttribute1,
 			effect,
-			effect.Ownership.Source,
+			target,
 			effectEvaluatedData);
+
 		var sourceAttribute2value = CaptureAttributeMagnitude(
 			SourceAttribute2,
 			effect,
-			effect.Ownership.Source,
+			target,
+			effectEvaluatedData);
+
+		var targetAttribute1value = CaptureAttributeMagnitude(
+			TargetAttribute1,
+			effect,
+			target,
 			effectEvaluatedData);
 
 		if (TargetAttribute1.TryGetAttribute(target, out EntityAttribute? targetAttribute1))
@@ -86,7 +93,7 @@ public class CustomTestExecutionClass : CustomExecution
 			result.Add(new ModifierEvaluatedData(
 				targetAttribute2,
 				ModifierOperation.FlatBonus,
-				sourceAttribute1value + sourceAttribute2value));
+				sourceAttribute1value + sourceAttribute2value + targetAttribute1value));
 		}
 
 		if (SourceAttribute3.TryGetAttribute(effect.Ownership.Source, out EntityAttribute? sourceAttribute3))

@@ -20,7 +20,10 @@ public abstract class CustomExecution : CustomCalculator
 	public abstract ModifierEvaluatedData[] EvaluateExecution(
 		Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData);
 
-	internal static bool ExecutionHasInvalidAttributeCaptures(CustomExecution execution, Effect effect, IForgeEntity target)
+	internal static bool ExecutionHasInvalidAttributeCaptures(
+		CustomExecution execution,
+		Effect effect,
+		IForgeEntity target)
 	{
 		foreach (AttributeCaptureDefinition capturedAttribute in execution.AttributesToCapture)
 		{

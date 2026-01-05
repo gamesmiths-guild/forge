@@ -2320,7 +2320,11 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			"Test Effect",
 			new DurationData(DurationType.Instant),
 			customExecutions: [customCalculatorClass],
-			cues: [new CueData(Tag.RequestTag(_tagsManager, "Test.Cue1").GetSingleTagContainer(), 0, 10, CueMagnitudeType.EffectLevel)]);
+			cues: [new CueData(
+				Tag.RequestTag(_tagsManager, "Test.Cue1").GetSingleTagContainer(),
+				0,
+				10,
+				CueMagnitudeType.EffectLevel)]);
 
 		var effect = new Effect(effectData, new EffectOwnership(owner, owner));
 
@@ -2329,7 +2333,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		target.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [89, 89, 0, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 16, 0, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 10, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 11, 0, 0]);
 
 		_testCues[0].ExecuteData.Count.Should().Be(1);
 		_testCues[0].ExecuteData.CustomParameters.Should().NotBeNull();
@@ -2338,7 +2342,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		target.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [88, 88, 0, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [31, 31, 0, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [18, 18, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [35, 35, 0, 0]);
 
 		_testCues[0].ExecuteData.Count.Should().Be(2);
 		_testCues[0].ExecuteData.CustomParameters.Should().NotBeNull();
@@ -2347,7 +2351,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		target.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [87, 87, 0, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [46, 46, 0, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [26, 26, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [74, 74, 0, 0]);
 
 		_testCues[0].ExecuteData.Count.Should().Be(3);
 		_testCues[0].ExecuteData.CustomParameters.Should().NotBeNull();
@@ -2454,7 +2458,11 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new DurationData(DurationType.Infinite),
 			snapshotLevel: false,
 			customExecutions: [customCalculatorClass],
-			cues: [new CueData(Tag.RequestTag(_tagsManager, "Test.Cue1").GetSingleTagContainer(), 0, 10, CueMagnitudeType.EffectLevel)]);
+			cues: [new CueData(
+				Tag.RequestTag(_tagsManager, "Test.Cue1").GetSingleTagContainer(),
+				0,
+				10,
+				CueMagnitudeType.EffectLevel)]);
 
 		var effect = new Effect(effectData, new EffectOwnership(owner, owner));
 
@@ -2463,7 +2471,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		target.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [89, 90, -1, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
 
 		_testCues[0].ApplyData.Count.Should().Be(1);
 		_testCues[0].ApplyData.CustomParameters.Should().NotBeNull();
@@ -2478,7 +2486,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		effect.LevelUp();
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [88, 90, -2, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [31, 1, 30, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [18, 2, 16, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [35, 2, 33, 0]);
 
 		_testCues[0].UpdateData.Count.Should().Be(2);
 		_testCues[0].UpdateData.CustomParameters.Should().NotBeNull();

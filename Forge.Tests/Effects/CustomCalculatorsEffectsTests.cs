@@ -350,17 +350,17 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		target.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [89, 89, 0, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 16, 0, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 10, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 11, 0, 0]);
 
 		target.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [88, 88, 0, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [31, 31, 0, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [18, 18, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [35, 35, 0, 0]);
 
 		target.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [87, 87, 0, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [46, 46, 0, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [26, 26, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [74, 74, 0, 0]);
 	}
 
 	[Fact]
@@ -426,27 +426,27 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [89, 90, -1, 0]);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
 
 		ActiveEffectHandle? effectHandler1 = owner.EffectsManager.ApplyEffect(effect2);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [21, 1, 20, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [12, 2, 10, 0]);
 
 		ActiveEffectHandle? effectHandler2 = owner.EffectsManager.ApplyEffect(effect3);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [29, 1, 28, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [13, 2, 11, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [14, 2, 12, 0]);
 
 		owner.EffectsManager.UnapplyEffect(effectHandler2!);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [21, 1, 20, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [12, 2, 10, 0]);
 
 		owner.EffectsManager.UnapplyEffect(effectHandler1!);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
 	}
 
 	[Fact]
@@ -546,6 +546,53 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		target.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [90, 90, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Execution", null)]
+	public void Custom_execution_captures_pending_modifiers_from_same_effect()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var customCalculatorClass = new CustomTestExecutionClass(false);
+
+		var effectData = new EffectData(
+			"Test Effect",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(5))),
+			],
+			customExecutions:
+			[
+				customCalculatorClass
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				owner,
+				owner));
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [89, 89, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [21, 21, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [16, 16, 0, 0]);
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [88, 88, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [50, 50, 0, 0]);
+
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [87, 87, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [61, 61, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [99, 99, 0, 0]);
 	}
 
 	[Fact]
@@ -835,31 +882,31 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [89, 90, -1, 0]);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
 
 		ActiveEffectHandle? effectHandler1 = owner.EffectsManager.ApplyEffect(effect2);
 		effect.LevelUp();
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
 
 		ActiveEffectHandle? effectHandler2 = owner.EffectsManager.ApplyEffect(effect3);
 		effect.LevelUp();
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
 
 		owner.EffectsManager.UnapplyEffect(effectHandler2!);
 		effect.LevelUp();
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
 
 		owner.EffectsManager.UnapplyEffect(effectHandler1!);
 		effect.LevelUp();
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
-		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [10, 2, 8, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
 	}
 
 	private sealed class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator

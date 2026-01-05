@@ -3,6 +3,7 @@
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Magnitudes;
+using Gamesmiths.Forge.Effects.Modifiers;
 
 namespace Gamesmiths.Forge.Effects.Calculator;
 
@@ -53,12 +54,59 @@ public abstract class CustomCalculator
 			return 0;
 		}
 
-		return (int)CaptureAttributeSnapshotAware(
+		var capturedValue = (int)CaptureAttributeSnapshotAware(
 					capturedAttribute,
 					calculationType,
 					finalChannel,
 					captureTarget,
 					effectEvaluatedData);
+
+		capturedValue += GetPendingModifierContribution(
+			capturedAttribute.Attribute,
+			capturedValue,
+			effectEvaluatedData);
+
+		return capturedValue;
+	}
+
+	private static int GetPendingModifierContribution(
+		StringKey attribute,
+		int currentValue,
+		EffectEvaluatedData? effectEvaluatedData)
+	{
+		var flatBonus = 0f;
+		var percentBonus = 0f;
+
+		if (effectEvaluatedData is null || effectEvaluatedData.ModifiersEvaluatedData is null)
+		{
+			return 0;
+		}
+
+		foreach (ModifierEvaluatedData modifier in effectEvaluatedData.ModifiersEvaluatedData)
+		{
+			if (modifier.Attribute.Key != attribute)
+			{
+				continue;
+			}
+
+			switch (modifier.ModifierOperation)
+			{
+				case ModifierOperation.FlatBonus:
+					flatBonus += modifier.Magnitude;
+					break;
+				case ModifierOperation.PercentBonus:
+					percentBonus += modifier.Magnitude;
+					break;
+				case ModifierOperation.Override:
+					return (int)modifier.Magnitude - currentValue;
+			}
+		}
+
+		// Apply flat first, then percent (matching the attribute calculation order)
+		var withFlat = currentValue + flatBonus;
+		var withPercent = withFlat * (1 + percentBonus);
+
+		return (int)(withPercent - currentValue);
 	}
 
 	private static float CaptureAttributeSnapshotAware(
