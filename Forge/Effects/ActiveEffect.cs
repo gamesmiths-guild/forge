@@ -44,7 +44,7 @@ internal sealed class ActiveEffect
 
 	internal Effect Effect => EffectEvaluatedData.Effect;
 
-	internal ActiveEffect(Effect effect, IForgeEntity target)
+	internal ActiveEffect(Effect effect, IForgeEntity target, EffectApplicationContext? applicationContext = null)
 	{
 		Handle = new ActiveEffectHandle(this);
 
@@ -57,7 +57,7 @@ internal sealed class ActiveEffect
 			StackCount = 1;
 		}
 
-		EffectEvaluatedData = new EffectEvaluatedData(effect, target, StackCount);
+		EffectEvaluatedData = new EffectEvaluatedData(effect, target, StackCount, applicationContext: applicationContext);
 
 		_nonSnapshotSetByCallerTags = [];
 

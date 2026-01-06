@@ -33,47 +33,26 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// </returns>
 	public ActiveEffectHandle? ApplyEffect(Effect effect)
 	{
-		if (!effect.CanApply(Owner))
-		{
-			return null;
-		}
+		return ApplyEffectInternal(effect, applicationContext: null);
+	}
 
-		if (effect.EffectData.DurationData.DurationType == DurationType.Instant)
-		{
-			var evaluatedData = new EffectEvaluatedData(effect, Owner);
-
-			foreach (IEffectComponent component in effect.EffectData.EffectComponents)
-			{
-				component.OnEffectApplied(Owner, in evaluatedData);
-			}
-
-			Effect.Execute(in evaluatedData);
-			return null;
-		}
-
-		if (!effect.EffectData.StackingData.HasValue)
-		{
-			return ApplyNewEffect(effect).Handle;
-		}
-
-		ActiveEffect? stackableEffect = FindStackableEffect(effect);
-
-		if (stackableEffect is not null)
-		{
-			var successfulApplication = stackableEffect.AddStack(effect);
-
-			if (successfulApplication)
-			{
-				foreach (IEffectComponent component in stackableEffect.EffectData.EffectComponents)
-				{
-					component.OnEffectApplied(Owner, stackableEffect.EffectEvaluatedData);
-				}
-			}
-
-			return stackableEffect.Handle;
-		}
-
-		return ApplyNewEffect(effect).Handle;
+	/// <summary>
+	/// Applies an effect to the owner of this manager with custom context data.
+	/// </summary>
+	/// <typeparam name="TData">The type of custom data to pass through the effect pipeline.</typeparam>
+	/// <param name="effect">The instance of the effect to be applied.</param>
+	/// <param name="contextData">Custom data to pass through the effect pipeline to CustomCalculators and
+	/// CustomExecutions.</param>
+	/// <returns>A handle to the applied effect if it was successfully applied as an <see cref="ActiveEffect"/>.
+	/// </returns>
+	/// <remarks>
+	/// The context data can be accessed in <see cref="Calculator.CustomExecution"/> or
+	/// <see cref="Calculator.CustomModifierMagnitudeCalculator"/> via
+	/// <see cref="EffectEvaluatedData.TryGetContextData{TData}(out TData?)"/>.
+	/// </remarks>
+	public ActiveEffectHandle? ApplyEffect<TData>(Effect effect, TData contextData)
+	{
+		return ApplyEffectInternal(effect, new EffectApplicationContext<TData>(contextData));
 	}
 
 	/// <summary>
@@ -264,9 +243,54 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			MatchesStackLevelPolicy(x, effect));
 	}
 
-	private ActiveEffect ApplyNewEffect(Effect effect)
+	private ActiveEffectHandle? ApplyEffectInternal(Effect effect, EffectApplicationContext? applicationContext)
 	{
-		var activeEffect = new ActiveEffect(effect, Owner);
+		if (!effect.CanApply(Owner))
+		{
+			return null;
+		}
+
+		if (effect.EffectData.DurationData.DurationType == DurationType.Instant)
+		{
+			var evaluatedData = new EffectEvaluatedData(effect, Owner, applicationContext: applicationContext);
+
+			foreach (IEffectComponent component in effect.EffectData.EffectComponents)
+			{
+				component.OnEffectApplied(Owner, in evaluatedData);
+			}
+
+			Effect.Execute(in evaluatedData);
+			return null;
+		}
+
+		if (!effect.EffectData.StackingData.HasValue)
+		{
+			return ApplyNewEffect(effect, applicationContext).Handle;
+		}
+
+		ActiveEffect? stackableEffect = FindStackableEffect(effect);
+
+		if (stackableEffect is not null)
+		{
+			var successfulApplication = stackableEffect.AddStack(effect);
+
+			if (successfulApplication)
+			{
+				foreach (IEffectComponent component in stackableEffect.EffectData.EffectComponents)
+				{
+					component.OnEffectApplied(Owner, stackableEffect.EffectEvaluatedData);
+				}
+			}
+
+			return stackableEffect.Handle;
+		}
+
+		return ApplyNewEffect(effect, applicationContext).Handle;
+	}
+
+	private ActiveEffect ApplyNewEffect(Effect effect, EffectApplicationContext? applicationContext = null)
+	{
+		var activeEffect = new ActiveEffect(effect, Owner, applicationContext);
 		_activeEffects.Add(activeEffect);
 
 		var remainActive = true;

@@ -71,6 +71,15 @@ public sealed class EffectEvaluatedData
 	/// </summary>
 	public Dictionary<StringKey, object>? CustomCueParameters { get; private set; }
 
+	/// <summary>
+	/// Gets the optional application context for this effect evaluation.
+	/// </summary>
+	/// <remarks>
+	/// Contains custom data passed during effect application via
+	/// <see cref="EffectsManager.ApplyEffect{TData}(Effect, TData)"/>.
+	/// </remarks>
+	public EffectApplicationContext? ApplicationContext { get; }
+
 	internal Dictionary<AttributeSnapshotKey, float> SnapshotAttributes { get; } = [];
 
 	internal Dictionary<Tag, float> SnapshotSetByCallers { get; } = [];
@@ -82,16 +91,19 @@ public sealed class EffectEvaluatedData
 	/// <param name="target">The target of this evaluated data.</param>
 	/// <param name="stack">The stack for this evaluated data.</param>
 	/// <param name="level">The level for this evaluated data.</param>
+	/// <param name="applicationContext">Optional custom context data for this effect application.</param>
 	public EffectEvaluatedData(
 		Effect effect,
 		IForgeEntity target,
 		int stack = 1,
-		int? level = null)
+		int? level = null,
+		EffectApplicationContext? applicationContext = null)
 	{
 		Effect = effect;
 		Target = target;
 		Stack = stack;
 		Level = level ?? effect.Level;
+		ApplicationContext = applicationContext;
 
 		if (effect.EffectData.SnapshotLevel)
 		{
@@ -111,6 +123,27 @@ public sealed class EffectEvaluatedData
 		}
 
 		AttributesToCapture = EvaluateAttributesToCapture();
+	}
+
+	/// <summary>
+	/// Gets the application context data as a specific type, if available.
+	/// </summary>
+	/// <typeparam name="TData">The expected data type.</typeparam>
+	/// <param name="data">The extracted data, if successful.</param>
+	/// <returns><see langword="true"/> if the context contains data of the expected type.</returns>
+	public bool TryGetContextData<TData>([NotNullWhen(true)] out TData? data)
+	{
+		if (ApplicationContext is EffectApplicationContext<TData> typedContext)
+		{
+			data = typedContext.Data;
+			Validation.Assert(
+				data is not null,
+				"EffectApplicationContext data should never be null for a successfully typed context.");
+			return true;
+		}
+
+		data = default;
+		return false;
 	}
 
 	internal void ReEvaluate(Effect effect, int stack = 1, int? level = null)
