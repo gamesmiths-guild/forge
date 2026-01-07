@@ -48,7 +48,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <remarks>
 	/// The context data can be accessed in <see cref="Calculator.CustomExecution"/> or
 	/// <see cref="Calculator.CustomModifierMagnitudeCalculator"/> via
-	/// <see cref="EffectEvaluatedData.TryGetContextData{TData}(out TData?)"/>.
+	/// <see cref="EffectEvaluatedData.TryGetContextData{TData}(out TData)"/>.
 	/// </remarks>
 	public ActiveEffectHandle? ApplyEffect<TData>(Effect effect, TData contextData)
 	{
@@ -103,12 +103,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <param name="deltaTime">Time passed since the last update call.</param>
 	public void UpdateEffects(double deltaTime)
 	{
-		foreach (ActiveEffect effect in _activeEffects)
+		ActiveEffect[] effectsToUpdate = [.. _activeEffects];
+		foreach (ActiveEffect effect in effectsToUpdate)
 		{
 			effect.Update(deltaTime);
 		}
 
-		foreach (ActiveEffect expiredEffect in _activeEffects.Where(x => x.IsExpired).ToArray())
+		foreach (ActiveEffect expiredEffect in effectsToUpdate.Where(x => x.IsExpired).ToArray())
 		{
 			RemoveActiveEffect(expiredEffect, false);
 		}
