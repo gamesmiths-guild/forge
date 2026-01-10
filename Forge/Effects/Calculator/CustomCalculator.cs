@@ -55,15 +55,16 @@ public abstract class CustomCalculator
 		}
 
 		var capturedValue = (int)CaptureAttributeSnapshotAware(
-					capturedAttribute,
-					calculationType,
-					finalChannel,
-					captureTarget,
-					effectEvaluatedData);
+			capturedAttribute,
+			calculationType,
+			finalChannel,
+			captureTarget,
+			effectEvaluatedData);
 
 		capturedValue += GetPendingModifierContribution(
 			capturedAttribute.Attribute,
 			capturedValue,
+			captureTarget,
 			effectEvaluatedData);
 
 		return capturedValue;
@@ -72,15 +73,17 @@ public abstract class CustomCalculator
 	private static int GetPendingModifierContribution(
 		StringKey attribute,
 		int currentValue,
+		IForgeEntity captureTarget,
 		EffectEvaluatedData? effectEvaluatedData)
 	{
-		var flatBonus = 0f;
-		var percentBonus = 0f;
-
-		if (effectEvaluatedData is null || effectEvaluatedData.ModifiersEvaluatedData is null)
+		if (!captureTarget.Attributes.ContainsAttribute(attribute) || effectEvaluatedData?.ModifiersEvaluatedData is null)
 		{
 			return 0;
 		}
+
+		Dictionary<int, float>? pendingFlatBonusByChannel = null;
+		Dictionary<int, float>? pendingPercentBonusByChannel = null;
+		Dictionary<int, float>? pendingOverrideByChannel = null;
 
 		foreach (ModifierEvaluatedData modifier in effectEvaluatedData.ModifiersEvaluatedData)
 		{
@@ -92,21 +95,46 @@ public abstract class CustomCalculator
 			switch (modifier.ModifierOperation)
 			{
 				case ModifierOperation.FlatBonus:
-					flatBonus += modifier.Magnitude;
+					pendingFlatBonusByChannel ??= [];
+					if (!pendingFlatBonusByChannel.TryGetValue(modifier.Channel, out var flatValue))
+					{
+						flatValue = 0f;
+					}
+
+					pendingFlatBonusByChannel[modifier.Channel] = flatValue + modifier.Magnitude;
 					break;
+
 				case ModifierOperation.PercentBonus:
-					percentBonus += modifier.Magnitude;
+					pendingPercentBonusByChannel ??= [];
+					if (!pendingPercentBonusByChannel.TryGetValue(modifier.Channel, out var percentValue))
+					{
+						percentValue = 0f;
+					}
+
+					pendingPercentBonusByChannel[modifier.Channel] = percentValue + modifier.Magnitude;
 					break;
+
 				case ModifierOperation.Override:
-					return (int)modifier.Magnitude - currentValue;
+					pendingOverrideByChannel ??= [];
+					pendingOverrideByChannel[modifier.Channel] = modifier.Magnitude;
+					break;
 			}
 		}
 
-		// Apply flat first, then percent (matching the attribute calculation order)
-		var withFlat = currentValue + flatBonus;
-		var withPercent = withFlat * (1 + percentBonus);
+		if (pendingFlatBonusByChannel is null &&
+			pendingPercentBonusByChannel is null &&
+			pendingOverrideByChannel is null)
+		{
+			return 0;
+		}
 
-		return (int)(withPercent - currentValue);
+		EntityAttribute entityAttribute = captureTarget.Attributes[attribute];
+		var newValue = (int)entityAttribute.CalculateValueWithPendingModifiers(
+			pendingFlatBonusByChannel,
+			pendingPercentBonusByChannel,
+			pendingOverrideByChannel);
+
+		return newValue - currentValue;
 	}
 
 	private static float CaptureAttributeSnapshotAware(

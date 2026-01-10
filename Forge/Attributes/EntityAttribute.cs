@@ -279,6 +279,49 @@ public sealed class EntityAttribute
 		return Math.Clamp((int)evaluatedValue, Min, Max);
 	}
 
+	internal float CalculateValueWithPendingModifiers(
+		Dictionary<int, float>? pendingFlatBonusByChannel,
+		Dictionary<int, float>? pendingPercentBonusByChannel,
+		Dictionary<int, float>? pendingOverrideByChannel)
+	{
+		var evaluatedValue = (float)BaseValue;
+
+		for (var i = 0; i < _channels.Length; i++)
+		{
+			if (pendingOverrideByChannel is not null &&
+				pendingOverrideByChannel.TryGetValue(i, out var pendingOverride))
+			{
+				evaluatedValue = pendingOverride;
+				continue;
+			}
+
+			var channelOverride = _channels[i].Override;
+			if (channelOverride.HasValue)
+			{
+				evaluatedValue = channelOverride.Value;
+				continue;
+			}
+
+			var flatBonus = _channels[i].FlatModifier;
+			if (pendingFlatBonusByChannel is not null &&
+				pendingFlatBonusByChannel.TryGetValue(i, out var pendingFlat))
+			{
+				flatBonus += (int)pendingFlat;
+			}
+
+			var percentMultiplier = _channels[i].PercentModifier;
+			if (pendingPercentBonusByChannel is not null &&
+				pendingPercentBonusByChannel.TryGetValue(i, out var pendingPercent))
+			{
+				percentMultiplier += pendingPercent;
+			}
+
+			evaluatedValue = (evaluatedValue + flatBonus) * percentMultiplier;
+		}
+
+		return Math.Clamp((int)evaluatedValue, Min, Max);
+	}
+
 	internal void ApplyPendingValueChanges()
 	{
 		if (PendingValueChange != 0)

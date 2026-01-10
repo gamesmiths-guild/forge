@@ -596,6 +596,63 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 	}
 
 	[Fact]
+	[Trait("Execution", null)]
+	public void Custom_execution_considers_previously_applied_modifiers_on_different_channels()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var buffEffectData = new EffectData(
+			"Test Buff Effect",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.PercentBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(0.5f)),
+					1),
+			]);
+
+		var buffEffect = new Effect(
+			buffEffectData,
+			new EffectOwnership(
+				owner,
+				owner));
+
+		var customCalculatorClass = new CustomTestExecutionClass(false);
+
+		var effectData = new EffectData(
+			"Test Effect",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.Override,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(20))),
+			],
+			customExecutions:
+			[
+				customCalculatorClass
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				owner,
+				owner));
+
+		target.EffectsManager.ApplyEffect(buffEffect);
+		target.EffectsManager.ApplyEffect(effect);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [89, 89, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [52, 35, 17, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [40, 40, 0, 0]);
+	}
+
+	[Fact]
 	[Trait("Instant", null)]
 	public void Custom_calculator_class_with_invalid_ownership_applies_with_no_attribute_changes()
 	{
