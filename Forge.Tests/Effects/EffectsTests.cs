@@ -156,12 +156,63 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, [expectedResult, expectedResult, 0, 0]);
 	}
 
+	[Fact]
+	[Trait("Duration", null)]
+	public void Multiple_instant_effects_of_different_operations_modify_base_value_accordingly_2()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var effectData = new EffectData(
+			"Level Up",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1000",
+					ModifierOperation.PercentBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(-0.8f)),
+					1)
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(owner, new TestEntity(_tagsManager, _cuesManager)));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1000", [0, 0, 0, 0]);
+
+		var effectData2 = new EffectData(
+			"Rank Up",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1000",
+					ModifierOperation.Override,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(100)))
+			]);
+
+		var effect2 = new Effect(
+			effectData2,
+			new EffectOwnership(owner, new TestEntity(_tagsManager, _cuesManager)));
+
+		target.EffectsManager.ApplyEffect(effect2);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1000", [20, 0, 20, 0]);
+	}
+
+
 	[Theory]
 	[Trait("Instant", null)]
 	[InlineData("TestAttributeSet.Attribute1", 4, 5, 4, 25, -0.66f, 8, 42, 42)]
 	[InlineData("TestAttributeSet.Attribute2", 8, 10, 2, 30, -0.66f, 10, 99, 99)]
 	[InlineData("TestAttributeSet.Attribute3", 20, 23, 0.5f, 34, 1, 68, -10, 0)]
 	[InlineData("TestAttributeSet.Attribute90", 90, 99, 0.3f, 99, 0f, 99, 100, 99)]
+	[InlineData("TestAttributeSet.Attribute1000", 100, 100, -0.8f, 20, 0.2f, 24, 200, 200)]
 	[InlineData("Invalid.Attribute", 4, 0, 4, 0, -0.66f, 0, 42, 0)]
 	public void Multiple_instant_effects_of_different_operations_modify_base_value_accordingly(
 		string targetAttribute,

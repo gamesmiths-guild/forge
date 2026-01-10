@@ -430,18 +430,18 @@ internal sealed class ActiveEffect
 
 	private void ApplyModifiers(bool unapply = false)
 	{
-		var multiplier = unapply ? -1 : 1;
-
 		foreach (ModifierEvaluatedData modifier in EffectEvaluatedData.ModifiersEvaluatedData)
 		{
 			switch (modifier.ModifierOperation)
 			{
 				case ModifierOperation.FlatBonus:
-					modifier.Attribute.AddFlatModifier(multiplier * (int)modifier.Magnitude, modifier.Channel);
+					var flatMagnitude = unapply ? -(int)modifier.Magnitude : (int)modifier.Magnitude;
+					modifier.Attribute.AddFlatModifier(flatMagnitude, modifier.Channel);
 					break;
 
 				case ModifierOperation.PercentBonus:
-					modifier.Attribute.AddPercentModifier(multiplier * modifier.Magnitude, modifier.Channel);
+					var percentMagnitude = unapply ? -modifier.Magnitude : modifier.Magnitude;
+					modifier.Attribute.AddPercentModifier(percentMagnitude, modifier.Channel);
 					break;
 
 				case ModifierOperation.Override:
@@ -449,13 +449,13 @@ internal sealed class ActiveEffect
 						modifier.AttributeOverride is not null,
 						"AttributeOverrideData should never be null at this point.");
 
-					if (multiplier == 1)
+					if (unapply)
 					{
-						modifier.Attribute.AddOverride(modifier.AttributeOverride.Value);
+						modifier.Attribute.ClearOverride(modifier.AttributeOverride.Value);
 						break;
 					}
 
-					modifier.Attribute.ClearOverride(modifier.AttributeOverride.Value);
+					modifier.Attribute.AddOverride(modifier.AttributeOverride.Value);
 					break;
 			}
 		}

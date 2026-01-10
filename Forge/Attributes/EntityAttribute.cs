@@ -177,7 +177,7 @@ public sealed class EntityAttribute
 	{
 		var oldValue = CurrentValue;
 
-		BaseValue = Math.Clamp((int)(BaseValue * (1 + value)), Min, Max);
+		BaseValue = Math.Clamp((int)(BaseValue * Math.Round(1 + value, 6)), Min, Max);
 
 		UpdateCachedValues();
 
@@ -249,7 +249,7 @@ public sealed class EntityAttribute
 		var oldValue = CurrentValue;
 
 		ref ChannelData channelData = ref _channels[channel];
-		channelData.PercentModifier += value;
+		channelData.PercentModifier += Math.Round(value, 6);
 
 		UpdateCachedValues();
 
@@ -273,7 +273,7 @@ public sealed class EntityAttribute
 				continue;
 			}
 
-			evaluatedValue = (evaluatedValue + _channels[i].FlatModifier) * _channels[i].PercentModifier;
+			evaluatedValue = (float)((evaluatedValue + _channels[i].FlatModifier) * _channels[i].PercentModifier);
 		}
 
 		return Math.Clamp((int)evaluatedValue, Min, Max);
@@ -316,7 +316,7 @@ public sealed class EntityAttribute
 				percentMultiplier += pendingPercent;
 			}
 
-			evaluatedValue = (evaluatedValue + flatBonus) * percentMultiplier;
+			evaluatedValue = (float)((evaluatedValue + flatBonus) * percentMultiplier);
 		}
 
 		return Math.Clamp((int)evaluatedValue, Min, Max);
@@ -344,7 +344,7 @@ public sealed class EntityAttribute
 				continue;
 			}
 
-			evaluatedValue = (evaluatedValue + channel.FlatModifier) * channel.PercentModifier;
+			evaluatedValue = (float)((evaluatedValue + channel.FlatModifier) * channel.PercentModifier);
 		}
 
 		CurrentValue = Math.Clamp((int)evaluatedValue, Min, Max);

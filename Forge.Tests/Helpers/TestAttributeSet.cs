@@ -16,6 +16,8 @@ public class TestAttributeSet : AttributeSet
 
 	public EntityAttribute Attribute90 { get; }
 
+	public EntityAttribute Attribute1000 { get; }
+
 	public TestAttributeSet()
 	{
 		Attribute1 = InitializeAttribute(nameof(Attribute1), 1, 0, 99, 2);
@@ -23,5 +25,6 @@ public class TestAttributeSet : AttributeSet
 		Attribute3 = InitializeAttribute(nameof(Attribute3), 3, 0, 99, 2);
 		Attribute5 = InitializeAttribute(nameof(Attribute5), 5, 0, 99, 2);
 		Attribute90 = InitializeAttribute(nameof(Attribute90), 90, 0, 99, 2);
+		Attribute1000 = InitializeAttribute(nameof(Attribute1000), 0, 0, 1000, 2);
 	}
 }
