@@ -205,8 +205,11 @@ public readonly record struct AbilityData
 					"Cost effects should be instant.");
 		}
 
-		Validation.Assert(
-			RetriggerInstancedAbility && InstancingPolicy == AbilityInstancingPolicy.PerEntity,
-			"RetriggerInstancedAbility is only used when InstancingPolicy is PerEntity.");
+		if (RetriggerInstancedAbility)
+		{
+			Validation.Assert(
+				InstancingPolicy == AbilityInstancingPolicy.PerEntity,
+				"RetriggerInstancedAbility can only be true when InstancingPolicy is PerEntity.");
+		}
 	}
 }
