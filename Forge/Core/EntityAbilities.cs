@@ -16,6 +16,8 @@ namespace Gamesmiths.Forge.Core;
 public class EntityAbilities(IForgeEntity owner)
 {
 	private readonly Dictionary<Ability, List<IAbilityGrantSource>> _grantSources = [];
+	private Action<Ability>? _removeAbility;
+	private Action<Ability>? _inhibitAbility;
 
 	/// <summary>
 	/// Event invoked when an ability ends.
@@ -299,7 +301,8 @@ public class EntityAbilities(IForgeEntity owner)
 			case AbilityDeactivationPolicy.RemoveOnEnd:
 				if (abilityToRemove.IsActive)
 				{
-					abilityToRemove.OnAbilityDeactivated += RemoveAbility;
+					_removeAbility = RemoveAbility;
+					abilityToRemove.OnAbilityDeactivated += _removeAbility;
 					return;
 				}
 
@@ -347,16 +350,22 @@ public class EntityAbilities(IForgeEntity owner)
 			case AbilityDeactivationPolicy.RemoveOnEnd:
 				if (abilityToInhibit.IsActive)
 				{
-					abilityToInhibit.OnAbilityDeactivated += InhibitAbility;
+					_inhibitAbility = InhibitAbility;
+					abilityToInhibit.OnAbilityDeactivated += _inhibitAbility;
 				}
 
 				return;
 		}
 	}
 
+
 	private void RemoveAbility(Ability abilityToRemove)
 	{
-		abilityToRemove.OnAbilityDeactivated -= RemoveAbility;
+		if (_removeAbility is not null)
+		{
+			abilityToRemove.OnAbilityDeactivated -= _removeAbility;
+			_removeAbility = null;
+		}
 
 		if (_grantSources.TryGetValue(abilityToRemove, out List<IAbilityGrantSource>? grantSources)
 			&& grantSources?.Count > 0)
@@ -364,13 +373,19 @@ public class EntityAbilities(IForgeEntity owner)
 			return;
 		}
 
+		abilityToRemove.Cleanup();
 		abilityToRemove.Handle.Free();
 		GrantedAbilities.Remove(abilityToRemove.Handle);
 	}
 
 	private void InhibitAbility(Ability abilityToInhibit)
 	{
-		abilityToInhibit.OnAbilityDeactivated -= InhibitAbility;
+		if (_inhibitAbility is not null)
+		{
+			abilityToInhibit.OnAbilityDeactivated -= _inhibitAbility;
+			_inhibitAbility = null;
+		}
+		
 		abilityToInhibit.IsInhibited = CheckIsInhibited();
 	}
 

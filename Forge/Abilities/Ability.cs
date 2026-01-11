@@ -6,6 +6,7 @@ using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Calculator;
 using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Modifiers;
+using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Abilities;
@@ -28,6 +29,10 @@ internal class Ability
 	private readonly List<AbilityInstance> _activeInstances = [];
 
 	private readonly Dictionary<AbilityInstance, BehaviorBinding> _behaviors = [];
+
+	private readonly Action<TagContainer>? _tagChangedHandler;
+
+	private readonly EventSubscriptionToken? _eventSubscriptionToken;
 
 	private AbilityInstance? _persistentInstance;
 
@@ -103,19 +108,21 @@ internal class Ability
 			switch (triggerData.TriggerSource)
 			{
 				case AbitityTriggerSource.TagAdded:
-					owner.Tags.OnTagsChanged += TagAdded_OnTagChanged;
+					_tagChangedHandler = TagAdded_OnTagChanged;
+					owner.Tags.OnTagsChanged += _tagChangedHandler;
 					break;
 				case AbitityTriggerSource.TagPresent:
-					owner.Tags.OnTagsChanged += TagPresent_OnTagChanged;
+					_tagChangedHandler = TagPresent_OnTagChanged;
+					owner.Tags.OnTagsChanged += _tagChangedHandler;
 					break;
 				case AbitityTriggerSource.Event:
 					if (triggerData.PayloadType is not null)
 					{
-						SubscribeTypedEvent(triggerData);
+						_eventSubscriptionToken = SubscribeTypedEvent(triggerData);
 					}
 					else
 					{
-						owner.Events.Subscribe(
+						_eventSubscriptionToken = owner.Events.Subscribe(
 							triggerData.TriggerTag,
 							x => TryActivateAbility(x.Target, out _, x.EventMagnitude),
 							triggerData.Priority);
@@ -215,6 +222,19 @@ internal class Ability
 		}
 
 		Owner.Abilities.NotifyAbilityEnded(new AbilityEndedData(Handle, true));
+	}
+
+	internal void Cleanup()
+	{
+		if (_tagChangedHandler is not null)
+		{
+			Owner.Tags.OnTagsChanged -= _tagChangedHandler;
+		}
+
+		if (_eventSubscriptionToken is not null)
+		{
+			Owner.Events.Unsubscribe(_eventSubscriptionToken.Value);
+		}
 	}
 
 	internal void OnInstanceStarted(AbilityInstance instance, float magnitude)
@@ -521,7 +541,7 @@ internal class Ability
 		return blocked is not null && (present?.HasAny(blocked) == true);
 	}
 
-	private void SubscribeTypedEvent(AbilityTriggerData triggerData)
+	private EventSubscriptionToken SubscribeTypedEvent(AbilityTriggerData triggerData)
 	{
 #pragma warning disable S3011 // Reflection should not be used to increase accessibility of classes, methods, or fields
 		// Do not attempt this in production environments without adult supervision.
@@ -530,12 +550,12 @@ internal class Ability
 			.MakeGenericMethod(triggerData.PayloadType!);
 #pragma warning restore S3011 // Reflection should not be used to increase accessibility of classes, methods, or fields
 
-		method.Invoke(this, [triggerData.TriggerTag, triggerData.Priority]);
+		return (EventSubscriptionToken)method.Invoke(this, [triggerData.TriggerTag, triggerData.Priority])!;
 	}
 
-	private void SubscribeTypedEventCore<TPayload>(Tag tag, int priority)
+	private EventSubscriptionToken SubscribeTypedEventCore<TPayload>(Tag tag, int priority)
 	{
-		Owner.Events.Subscribe<TPayload>(
+		return Owner.Events.Subscribe<TPayload>(
 			tag,
 			x => TryActivateAbility(x.Target, out _, x.Payload, x.EventMagnitude),
 			priority: priority);

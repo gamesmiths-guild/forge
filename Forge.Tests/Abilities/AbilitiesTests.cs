@@ -2822,6 +2822,246 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
+	[Fact]
+	[Trait("Cleanup", null)]
+	public void Removed_ability_with_TagAdded_trigger_does_not_activate_after_removal()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var triggerTag = Tag.RequestTag(_tagsManager, "simple.tag");
+
+		var activationCount = 0;
+
+		AbilityData abilityData = new(
+			"Triggered Ability",
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			abilityTriggerData: AbilityTriggerData.ForTagAdded(triggerTag),
+			behaviorFactory: () => new CountingAbilityBehavior(() => activationCount++));
+
+		// Grant the ability via effect
+		var grantConfig = new GrantAbilityConfig(
+			abilityData,
+			new ScalableInt(1),
+			AbilityDeactivationPolicy.CancelImmediately,
+			AbilityDeactivationPolicy.CancelImmediately);
+
+		var grantComponent = new GrantAbilityEffectComponent([grantConfig]);
+		var grantEffectData = new EffectData(
+			"Grant Ability",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [grantComponent]);
+
+		var effect = new Effect(grantEffectData, new EffectOwnership(entity, entity));
+		ActiveEffectHandle? effectHandle = entity.EffectsManager.ApplyEffect(effect);
+
+		AbilityHandle abilityHandle = grantComponent.GrantedAbilities[0];
+		abilityHandle.IsValid.Should().BeTrue();
+
+		// Create an effect that adds the trigger tag
+		TagContainer? triggerTagContainer = triggerTag.GetSingleTagContainer();
+		var tagEffectData = new EffectData(
+			"Add Trigger Tag",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [new ModifierTagsEffectComponent(triggerTagContainer!)]);
+
+		var tagEffect = new Effect(tagEffectData, new EffectOwnership(entity, entity));
+
+		// Add tag to trigger the ability
+		ActiveEffectHandle? tagEffectHandle = entity.EffectsManager.ApplyEffect(tagEffect);
+		activationCount.Should().Be(1);
+
+		// Remove the tag
+		entity.EffectsManager.RemoveEffect(tagEffectHandle!);
+
+		// Remove the granting effect (removes the ability)
+		entity.EffectsManager.RemoveEffect(effectHandle!);
+		abilityHandle.IsValid.Should().BeFalse();
+
+		// Add tag again, this should NOT trigger the ability since it's been removed
+		entity.EffectsManager.ApplyEffect(tagEffect);
+		activationCount.Should().Be(1); // Should still be 1, not 2
+	}
+
+	[Fact]
+	[Trait("Cleanup", null)]
+	public void Removed_ability_with_TagPresent_trigger_does_not_activate_after_removal()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var triggerTag = Tag.RequestTag(_tagsManager, "simple.tag");
+
+		var activationCount = 0;
+
+		AbilityData abilityData = new(
+			"Triggered Ability",
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			abilityTriggerData: AbilityTriggerData.ForTagPresent(triggerTag),
+			behaviorFactory: () => new CountingAbilityBehavior(() => activationCount++));
+
+		// Grant the ability via effect
+		var grantConfig = new GrantAbilityConfig(
+			abilityData,
+			new ScalableInt(1),
+			AbilityDeactivationPolicy.CancelImmediately,
+			AbilityDeactivationPolicy.CancelImmediately);
+
+		var grantComponent = new GrantAbilityEffectComponent([grantConfig]);
+		var grantEffectData = new EffectData(
+			"Grant Ability",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [grantComponent]);
+
+		var effect = new Effect(grantEffectData, new EffectOwnership(entity, entity));
+		ActiveEffectHandle? effectHandle = entity.EffectsManager.ApplyEffect(effect);
+
+		AbilityHandle abilityHandle = grantComponent.GrantedAbilities[0];
+		abilityHandle.IsValid.Should().BeTrue();
+
+		// Create an effect that adds the trigger tag
+		TagContainer? triggerTagContainer = triggerTag.GetSingleTagContainer();
+		var tagEffectData = new EffectData(
+			"Add Trigger Tag",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [new ModifierTagsEffectComponent(triggerTagContainer!)]);
+
+		var tagEffect = new Effect(tagEffectData, new EffectOwnership(entity, entity));
+
+		// Add tag to trigger the ability
+		ActiveEffectHandle? tagEffectHandle = entity.EffectsManager.ApplyEffect(tagEffect);
+		activationCount.Should().Be(1);
+
+		// Remove the tag (this will cancel the ability for TagPresent)
+		entity.EffectsManager.RemoveEffect(tagEffectHandle!);
+
+		// Remove the granting effect (removes the ability)
+		entity.EffectsManager.RemoveEffect(effectHandle!);
+		abilityHandle.IsValid.Should().BeFalse();
+
+		// Add tag again, this should NOT trigger the ability since it's been removed
+		entity.EffectsManager.ApplyEffect(tagEffect);
+		activationCount.Should().Be(1); // Should still be 1, not 2
+	}
+
+	[Fact]
+	[Trait("Cleanup", null)]
+	public void Removed_ability_with_Event_trigger_does_not_activate_after_removal()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+
+		var activationCount = 0;
+
+		AbilityData abilityData = new(
+			"Triggered Ability",
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			abilityTriggerData: AbilityTriggerData.ForEvent(eventTag),
+			behaviorFactory: () => new CountingAbilityBehavior(() => activationCount++));
+
+		// Grant the ability via effect
+		var grantConfig = new GrantAbilityConfig(
+			abilityData,
+			new ScalableInt(1),
+			AbilityDeactivationPolicy.CancelImmediately,
+			AbilityDeactivationPolicy.CancelImmediately);
+
+		var grantComponent = new GrantAbilityEffectComponent([grantConfig]);
+		var grantEffectData = new EffectData(
+			"Grant Ability",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [grantComponent]);
+
+		var effect = new Effect(grantEffectData, new EffectOwnership(entity, entity));
+		ActiveEffectHandle? effectHandle = entity.EffectsManager.ApplyEffect(effect);
+
+		AbilityHandle abilityHandle = grantComponent.GrantedAbilities[0];
+		abilityHandle.IsValid.Should().BeTrue();
+
+		// Raise event to trigger the ability
+		entity.Events.Raise(new EventData
+		{
+			EventTags = eventTag.GetSingleTagContainer()!,
+			Source = entity,
+			Target = entity,
+		});
+		activationCount.Should().Be(1);
+
+		// Remove the granting effect (removes the ability)
+		entity.EffectsManager.RemoveEffect(effectHandle!);
+		abilityHandle.IsValid.Should().BeFalse();
+
+		// Raise event again, this should NOT trigger the ability since it's been removed
+		entity.Events.Raise(new EventData
+		{
+			EventTags = eventTag.GetSingleTagContainer()!,
+			Source = entity,
+			Target = entity,
+		});
+
+		activationCount.Should().Be(1); // Should still be 1, not 2
+	}
+
+	[Fact]
+	[Trait("Cleanup", null)]
+	public void Removed_ability_with_typed_Event_trigger_does_not_activate_after_removal()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+
+		var activationCount = 0;
+
+		AbilityData abilityData = new(
+			"Triggered Ability",
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			abilityTriggerData: AbilityTriggerData.ForEvent<int>(eventTag),
+			behaviorFactory: () => new CountingAbilityBehavior(() => activationCount++));
+
+		// Grant the ability via effect
+		var grantConfig = new GrantAbilityConfig(
+			abilityData,
+			new ScalableInt(1),
+			AbilityDeactivationPolicy.CancelImmediately,
+			AbilityDeactivationPolicy.CancelImmediately);
+
+		var grantComponent = new GrantAbilityEffectComponent([grantConfig]);
+		var grantEffectData = new EffectData(
+			"Grant Ability",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [grantComponent]);
+
+		var effect = new Effect(grantEffectData, new EffectOwnership(entity, entity));
+		ActiveEffectHandle? effectHandle = entity.EffectsManager.ApplyEffect(effect);
+
+		AbilityHandle abilityHandle = grantComponent.GrantedAbilities[0];
+		abilityHandle.IsValid.Should().BeTrue();
+
+		// Raise typed event to trigger the ability
+		entity.Events.Raise(new EventData<int>
+		{
+			EventTags = eventTag.GetSingleTagContainer()!,
+			Source = entity,
+			Target = entity,
+			Payload = 42,
+		});
+		activationCount.Should().Be(1);
+
+		// Remove the granting effect (removes the ability)
+		entity.EffectsManager.RemoveEffect(effectHandle!);
+		abilityHandle.IsValid.Should().BeFalse();
+
+		// Raise typed event again, this should NOT trigger the ability since it's been removed
+		entity.Events.Raise(new EventData<int>
+		{
+			EventTags = eventTag.GetSingleTagContainer()!,
+			Source = entity,
+			Target = entity,
+			Payload = 100,
+		});
+
+		activationCount.Should().Be(1); // Should still be 1, not 2
+	}
+
 	private static AbilityHandle? SetupAbility(
 		TestEntity targetEntity,
 		AbilityData abilityData,
@@ -2969,5 +3209,20 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			sourceBlockedTags: sourceBlockedTags,
 			targetRequiredTags: targetRequiredTags,
 			targetBlockedTags: targetBlockedTags);
+	}
+
+	private sealed class CountingAbilityBehavior(Action onStarted) : IAbilityBehavior
+	{
+		private readonly Action _onStarted = onStarted;
+
+		public void OnStarted(AbilityBehaviorContext context)
+		{
+			_onStarted();
+			context.InstanceHandle.End();
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
+		}
 	}
 }
