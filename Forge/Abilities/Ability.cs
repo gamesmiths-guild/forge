@@ -190,10 +190,8 @@ internal class Ability
 
 	internal void End()
 	{
-		// End the most recent active instance, if any.
 		if (_activeInstances.Count == 0)
 		{
-			Console.WriteLine($"Ability {AbilityData.Name} is not active.");
 			return;
 		}
 
