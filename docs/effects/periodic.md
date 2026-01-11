@@ -124,21 +124,21 @@ var neverResetPolicy = new PeriodicData(
     period: new ScalableFloat(5.0f),
     executeOnApplication: false,
     periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.NeverReset
-    // When uninhibited, continues with original timing - might execute immediately if period elapsed
+    // When re-enabled, continues with original timing - might execute immediately if period elapsed
 );
 
 var resetPolicy = new PeriodicData(
     period: new ScalableFloat(5.0f),
     executeOnApplication: false,
     periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
-    // When uninhibited, restarts the period counter
+    // When re-enabled, restarts the period counter
 );
 
 var executeAndResetPolicy = new PeriodicData(
     period: new ScalableFloat(5.0f),
     executeOnApplication: false,
     periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ExecuteAndResetPeriod
-    // When uninhibited, executes immediately and restarts the period counter
+    // When re-enabled, executes immediately and restarts the period counter
 );
 ```
 
