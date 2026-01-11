@@ -868,6 +868,8 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 			new ScalableInt(1),
 			AbilityDeactivationPolicy.CancelImmediately,
 			AbilityDeactivationPolicy.CancelImmediately,
+			false,
+			false,
 			LevelComparison.Higher);
 
 		Effect grantEffect = CreateGrantEffect("Grant", grantConfig, sourceEntity);

@@ -50,6 +50,15 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 		{
 			_isInhibited = activeEffectEvaluatedData.ActiveEffectHandle.IsInhibited;
 			InhibitGrantedAbilities(target);
+			return;
+		}
+
+		for (var i = 0; i < _grantAbilityConfigs.Length; i++)
+		{
+			if (_grantAbilityConfigs[i].TryActivateOnGrant)
+			{
+				_grantedAbilities[i].Activate(out _);
+			}
 		}
 	}
 
@@ -72,6 +81,17 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 		{
 			_isInhibited = activeEffectEvaluatedData.ActiveEffectHandle.IsInhibited;
 			InhibitGrantedAbilities(target);
+
+			if (!_isInhibited)
+			{
+				for (var i = 0; i < _grantAbilityConfigs.Length; i++)
+				{
+					if (_grantAbilityConfigs[i].TryActivateOnEnable)
+					{
+						_grantedAbilities[i].Activate(out _);
+					}
+				}
+			}
 		}
 	}
 
@@ -81,11 +101,22 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 		{
 			GrantAbilityConfig config = _grantAbilityConfigs[i];
 
-			target.Abilities.GrantAbilityPermanently(
+			_grantedAbilities[i] = target.Abilities.GrantAbilityPermanently(
 				config.AbilityData,
 				config.ScalableLevel.GetValue(effectEvaluatedData.Level),
 				config.LevelOverridePolicy,
 				effectEvaluatedData.Effect.Ownership.Source);
+		}
+
+		_hasGrantedAbilities = true;
+
+		// Try to activate on grant for permanent abilities
+		for (var i = 0; i < _grantAbilityConfigs.Length; i++)
+		{
+			if (_grantAbilityConfigs[i].TryActivateOnGrant)
+			{
+				_grantedAbilities[i].Activate(out _);
+			}
 		}
 	}
 

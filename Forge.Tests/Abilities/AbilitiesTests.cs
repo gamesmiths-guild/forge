@@ -2540,6 +2540,288 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsActive.Should().BeFalse();
 	}
 
+	[Fact]
+	[Trait("TryActivateOnGrant", null)]
+	public void Duration_effect_with_TryActivateOnGrant_activates_ability_immediately()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			tryActivateOnGrant: true);
+
+		abilityHandle.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+		abilityHandle!.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("TryActivateOnGrant", null)]
+	public void Instant_effect_with_TryActivateOnGrant_activates_ability_immediately()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			durationData: new DurationData(DurationType.Instant),
+			tryActivateOnGrant: true);
+
+		abilityHandle.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+		abilityHandle!.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("TryActivateOnGrant", null)]
+	public void Effect_inhibited_at_grant_does_not_try_to_activate_ability()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
+
+		// Apply the inhibiting tag before granting the ability
+		CreateAndApplyTagEffect(entity, ignoreTags!);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(IgnoreTags: ignoreTags)),
+			tryActivateOnGrant: true);
+
+		abilityHandle.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+		abilityHandle!.IsInhibited.Should().BeTrue();
+		abilityHandle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("TryActivateOnEnable", null)]
+	public void Effect_enabled_from_inhibition_with_TryActivateOnEnable_activates_ability()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
+
+		// Apply the inhibiting tag before granting the ability
+		ActiveEffectHandle? tagEffectHandle = CreateAndApplyTagEffect(entity, ignoreTags!);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(IgnoreTags: ignoreTags)),
+			tryActivateOnEnable: true);
+
+		abilityHandle.Should().NotBeNull();
+		abilityHandle!.IsInhibited.Should().BeTrue();
+		abilityHandle.IsActive.Should().BeFalse();
+
+		// Remove the inhibiting tag to enable the effect
+		entity.EffectsManager.UnapplyEffect(tagEffectHandle!);
+
+		abilityHandle.IsInhibited.Should().BeFalse();
+		abilityHandle.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("TryActivateOnEnable", null)]
+	public void Effect_enabled_from_inhibition_without_TryActivateOnEnable_does_not_activate_ability()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
+
+		// Apply the inhibiting tag before granting the ability
+		ActiveEffectHandle? tagEffectHandle = CreateAndApplyTagEffect(entity, ignoreTags!);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(IgnoreTags: ignoreTags)),
+			tryActivateOnEnable: false);
+
+		abilityHandle.Should().NotBeNull();
+		abilityHandle!.IsInhibited.Should().BeTrue();
+		abilityHandle.IsActive.Should().BeFalse();
+
+		// Remove the inhibiting tag to enable the effect
+		entity.EffectsManager.UnapplyEffect(tagEffectHandle!);
+
+		abilityHandle.IsInhibited.Should().BeFalse();
+		abilityHandle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("TryActivateOnGrant", null)]
+	public void TryActivateOnGrant_does_not_activate_if_CanActivate_fails()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		// Create ability that requires a tag that the entity doesn't have
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			activationRequiredTags: new TagContainer(
+				_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"])));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			tryActivateOnGrant: true);
+
+		abilityHandle.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		// Ability should be granted but not active because CanActivate fails (required tag)
+		abilityHandle!.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("TryActivateOnGrant", null)]
+	public void Both_TryActivateOnGrant_and_TryActivateOnEnable_work_together()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
+
+		// Grant ability without inhibition should activate on grant
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(IgnoreTags: ignoreTags)),
+			tryActivateOnGrant: true,
+			tryActivateOnEnable: true);
+
+		abilityHandle.Should().NotBeNull();
+		abilityHandle!.IsActive.Should().BeTrue();
+
+		// Cancel the ability
+		abilityHandle.Cancel();
+		abilityHandle.IsActive.Should().BeFalse();
+
+		// Inhibit the effect
+		ActiveEffectHandle? tagEffectHandle = CreateAndApplyTagEffect(entity, ignoreTags!);
+		abilityHandle.IsInhibited.Should().BeTrue();
+
+		// Remove inhibition - should activate on enable
+		entity.EffectsManager.UnapplyEffect(tagEffectHandle!);
+		abilityHandle.IsInhibited.Should().BeFalse();
+		abilityHandle.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("TryActivateOnEnable", null)]
+	public void TryActivateOnEnable_does_not_activate_if_CanActivate_fails()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		TagContainer? requiredTag = Tag.RequestTag(_tagsManager, "other.tag").GetSingleTagContainer();
+		requiredTag.Should().NotBeNull();
+
+		// Create ability that requires a tag that the entity doesn't have
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			activationRequiredTags: requiredTag);
+
+		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
+
+		// Apply the inhibiting tag before granting the ability
+		ActiveEffectHandle? tagEffectHandle = CreateAndApplyTagEffect(entity, ignoreTags!);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(IgnoreTags: ignoreTags)),
+			tryActivateOnEnable: true);
+
+		abilityHandle.Should().NotBeNull();
+		abilityHandle!.IsInhibited.Should().BeTrue();
+		abilityHandle.IsActive.Should().BeFalse();
+
+		// Remove the inhibiting tag to enable the effect
+		entity.EffectsManager.UnapplyEffect(tagEffectHandle!);
+
+		// Ability should not activate because CanActivate fails (missing required tag)
+		abilityHandle.IsInhibited.Should().BeFalse();
+		abilityHandle.IsActive.Should().BeFalse();
+	}
+
 	private static AbilityHandle? SetupAbility(
 		TestEntity targetEntity,
 		AbilityData abilityData,
@@ -2552,6 +2834,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		PeriodicData? periodicData = null,
 		IEffectComponent? extraComponent = null,
 		int effectLevel = 1,
+		bool tryActivateOnGrant = false,
+		bool tryActivateOnEnable = false,
 		LevelComparison levelOverridePolicy = LevelComparison.Higher)
 	{
 		GrantAbilityConfig grantAbilityConfig = new(
@@ -2559,6 +2843,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			abilityLevelScaling,
 			grantedAbilityRemovalPolicy,
 			grantedAbilityInhibitionPolicy,
+			tryActivateOnGrant,
+			tryActivateOnEnable,
 			levelOverridePolicy);
 
 		Effect grantAbilityEffect = CreateAbilityApplierEffect(
