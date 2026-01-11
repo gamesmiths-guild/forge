@@ -568,7 +568,7 @@ internal class Ability
 			if (_persistentInstance?.IsActive == true)
 			{
 				Validation.Assert(
-					!AbilityData.RetriggerInstancedAbility, "Should not reach here due to CanActivate check.");
+					AbilityData.RetriggerInstancedAbility, "Should not reach here due to CanActivate check.");
 
 				_persistentInstance.Cancel();
 				_persistentInstance = null;
