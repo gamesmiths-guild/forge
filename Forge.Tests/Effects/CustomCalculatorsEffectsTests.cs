@@ -319,7 +319,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults2);
 
-		effect2Target.EffectsManager.UnapplyEffect(effectHandler!);
+		effect2Target.EffectsManager.RemoveEffect(effectHandler!);
 
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults1);
 	}
@@ -438,12 +438,12 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [29, 1, 28, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [14, 2, 12, 0]);
 
-		owner.EffectsManager.UnapplyEffect(effectHandler2!);
+		owner.EffectsManager.RemoveEffect(effectHandler2!);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [21, 1, 20, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [12, 2, 10, 0]);
 
-		owner.EffectsManager.UnapplyEffect(effectHandler1!);
+		owner.EffectsManager.RemoveEffect(effectHandler1!);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
@@ -953,13 +953,13 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
 
-		owner.EffectsManager.UnapplyEffect(effectHandler2!);
+		owner.EffectsManager.RemoveEffect(effectHandler2!);
 		effect.LevelUp();
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
 
-		owner.EffectsManager.UnapplyEffect(effectHandler1!);
+		owner.EffectsManager.RemoveEffect(effectHandler1!);
 		effect.LevelUp();
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);

@@ -62,7 +62,7 @@ Infinite effects have no built-in expiration time and remain active until manual
 
 - Apply their modifiers continuously.
 - Remain active indefinitely.
-- Must be explicitly removed using `EffectsManager.UnapplyEffect`.
+- Must be explicitly removed using `EffectsManager.RemoveEffect`.
 - Are useful for permanent buffs, persistent status effects, and equipment bonuses.
 
 Equipment-based buffs are a perfect use case for Infinite effects:
@@ -85,7 +85,7 @@ ActiveEffectHandle? equipmentBuffHandle = character.EffectsManager.ApplyEffect(s
 // When unequipping the item
 if (equipmentBuffHandle is not null)
 {
-    character.EffectsManager.UnapplyEffect(equipmentBuffHandle);
+    character.EffectsManager.RemoveEffect(equipmentBuffHandle);
 }
 ```
 
@@ -260,7 +260,7 @@ When working with durations, several constraints apply to ensure effects behave 
 4. **Handle Effect Removal**:
    - Always store `ActiveEffectHandle` for `Infinite` effects.
    - Consider early removal conditions for `HasDuration` effects.
-   - Use `EffectsManager.UnapplyEffect` appropriately.
+   - Use `EffectsManager.RemoveEffect` appropriately.
 
 5. **Consider Performance**:
    - Minimize the number of long-duration effects active simultaneously.

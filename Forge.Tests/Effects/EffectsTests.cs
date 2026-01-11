@@ -418,7 +418,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResult);
 
-		target.EffectsManager.UnapplyEffect(activeEffect2handle!);
+		target.EffectsManager.RemoveEffect(activeEffect2handle!);
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 	}
@@ -529,22 +529,22 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults1); // 1,2,3,4,1
 
-		target.EffectsManager.UnapplyEffect(activeEffect1Handle!);
+		target.EffectsManager.RemoveEffect(activeEffect1Handle!);
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults4); // 1,2,3,4
 
-		target.EffectsManager.UnapplyEffect(activeEffect2Handle1!);
+		target.EffectsManager.RemoveEffect(activeEffect2Handle1!);
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults4); // 1,3,4
 
-		target.EffectsManager.UnapplyEffect(activeEffect4Handle!);
+		target.EffectsManager.RemoveEffect(activeEffect4Handle!);
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults3); // 1,3
 
 		ActiveEffectHandle? activeEffect2Handle2 = target.EffectsManager.ApplyEffect(effect2);
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults2); // 1,3,2
 
-		target.EffectsManager.UnapplyEffect(activeEffect3Handle!);
+		target.EffectsManager.RemoveEffect(activeEffect3Handle!);
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults2); // 1,2
 
-		target.EffectsManager.UnapplyEffect(activeEffect2Handle2!);
+		target.EffectsManager.RemoveEffect(activeEffect2Handle2!);
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults1); // 1
 
 		static EffectData CreateOverrideEffect(
@@ -3029,7 +3029,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		int modifierMagnitude,
 		int stackLimit,
 		int initialStack,
-		bool forceUnapply,
+		bool forceRemoval,
 		StackPolicy stackPolicy,
 		StackLevelPolicy stackLevelPolicy,
 		StackMagnitudePolicy magnitudePolicy,
@@ -3092,7 +3092,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			owner,
 			target);
 
-		target.EffectsManager.UnapplyEffect(effectHandle!, forceUnapply);
+		target.EffectsManager.RemoveEffect(effectHandle!, forceRemoval);
 
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
 
@@ -3103,7 +3103,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			owner,
 			target);
 
-		target.EffectsManager.UnapplyEffect(effectHandle!, forceUnapply);
+		target.EffectsManager.RemoveEffect(effectHandle!, forceRemoval);
 
 		TestUtils.TestAttribute(target, targetAttribute, thirdExpectedResults);
 
@@ -3114,7 +3114,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			owner,
 			target);
 
-		target.EffectsManager.UnapplyEffect(effectHandle!, forceUnapply);
+		target.EffectsManager.RemoveEffect(effectHandle!, forceRemoval);
 
 		TestUtils.TestAttribute(target, targetAttribute, fourthExpectedResults);
 
@@ -3158,7 +3158,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		80f,
 		new int[] { },
 		new int[] { })]
-	public void Unapply_duration_effect_restores_original_attribute_values(
+	public void Remove_duration_effect_restores_original_attribute_values(
 		string targetAttribute,
 		float effectMagnitude,
 		int[] firstExpectedResults,
@@ -3205,11 +3205,11 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
 
-		target.EffectsManager.UnapplyEffect(activeEffectHandle1!);
+		target.EffectsManager.RemoveEffect(activeEffectHandle1!);
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
-		target.EffectsManager.UnapplyEffect(activeEffectHandle2!);
+		target.EffectsManager.RemoveEffect(activeEffectHandle2!);
 
 		TestUtils.TestAttribute(
 			target,

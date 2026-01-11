@@ -60,11 +60,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.
 	/// </summary>
 	/// <param name="activeEffect">The instance of the active effect to be removed.</param>
-	/// <param name="forceUnapply">Forces unapplication even if <see cref="StackExpirationPolicy"/> is set to
+	/// <param name="forceRemoval">Forces removal even if <see cref="StackExpirationPolicy"/> is set to
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.</param>
-	public void UnapplyEffect(ActiveEffectHandle activeEffect, bool forceUnapply = false)
+	public void RemoveEffect(ActiveEffectHandle activeEffect, bool forceRemoval = false)
 	{
-		RemoveStackOrUnapply(activeEffect.ActiveEffect, forceUnapply);
+		RemoveStackOrUnapply(activeEffect.ActiveEffect, forceRemoval);
 	}
 
 	/// <summary>
@@ -72,26 +72,26 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.
 	/// </summary>
 	/// <param name="effect">The instance of the effect to be removed.</param>
-	/// <param name="forceUnapply">Forces unapplication even if <see cref="StackExpirationPolicy"/> is set to
+	/// <param name="forceRemoval">Forces removal even if <see cref="StackExpirationPolicy"/> is set to
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.</param>
-	public void UnapplyEffect(Effect effect, bool forceUnapply = false)
+	public void RemoveEffect(Effect effect, bool forceRemoval = false)
 	{
-		RemoveStackOrUnapply(FilterEffectsByEffect(effect).FirstOrDefault(), forceUnapply);
+		RemoveStackOrUnapply(FilterEffectsByEffect(effect).FirstOrDefault(), forceRemoval);
 	}
 
 	/// <summary>
-	/// Unapply an effect based on an <see cref="EffectData"/> or an stack if it's a stackable effect with
+	/// Removes an effect based on an <see cref="EffectData"/> or an stack if it's a stackable effect with
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.
 	/// </summary>
 	/// <remarks>
 	/// This method searches for the first instance of the given effect data it can find and removes it.
 	/// </remarks>
 	/// <param name="effectData">Which effect data to look for to removal.</param>
-	/// /// <param name="forceUnapply">Forces unapplication even if <see cref="StackExpirationPolicy"/> is set to
+	/// /// <param name="forceRemoval">Forces removal even if <see cref="StackExpirationPolicy"/> is set to
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.</param>
-	public void UnapplyEffectData(EffectData effectData, bool forceUnapply = false)
+	public void RemoveEffectData(EffectData effectData, bool forceRemoval = false)
 	{
-		RemoveStackOrUnapply(FilterEffectsByData(effectData).FirstOrDefault(), forceUnapply);
+		RemoveStackOrUnapply(FilterEffectsByData(effectData).FirstOrDefault(), forceRemoval);
 	}
 
 	/// <summary>
@@ -344,14 +344,14 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return activeEffect;
 	}
 
-	private void RemoveStackOrUnapply(ActiveEffect? effectToRemove, bool forceUnapply)
+	private void RemoveStackOrUnapply(ActiveEffect? effectToRemove, bool forceRemoval)
 	{
 		if (effectToRemove is null)
 		{
 			return;
 		}
 
-		if (!forceUnapply
+		if (!forceRemoval
 			&& effectToRemove.EffectData.StackingData.HasValue
 			&& effectToRemove.EffectData.StackingData.Value.ExpirationPolicy
 			== StackExpirationPolicy.RemoveSingleStackAndRefreshDuration)
@@ -369,11 +369,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		if (effectToRemove.EffectData.DurationData.DurationType == DurationType.HasDuration)
 		{
-			forceUnapply = true;
+			forceRemoval = true;
 		}
 
 		effectToRemove.Unapply();
-		RemoveActiveEffect(effectToRemove, forceUnapply);
+		RemoveActiveEffect(effectToRemove, forceRemoval);
 	}
 
 	private void RemoveActiveEffect(ActiveEffect effectToRemove, bool interrupted)

@@ -308,7 +308,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 			entity,
 			entity);
 
-		entity.EffectsManager.UnapplyEffect(activeModifierEffectHandle!);
+		entity.EffectsManager.RemoveEffect(activeModifierEffectHandle!);
 
 		TestUtils.TestStackData(
 			entity.EffectsManager.GetEffectInfo(effectData),
@@ -437,7 +437,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 			entity,
 			entity);
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandle!);
+		entity.EffectsManager.RemoveEffect(activeEffectHandle!);
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
@@ -481,7 +481,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 			entity,
 			entity);
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandle!);
+		entity.EffectsManager.RemoveEffect(activeEffectHandle!);
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
@@ -530,7 +530,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 
-		entity.EffectsManager.UnapplyEffect(activeModifierEffectHandle!);
+		entity.EffectsManager.RemoveEffect(activeModifierEffectHandle!);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 	}
 
@@ -570,7 +570,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		entity.EffectsManager.ApplyEffect(effect);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 
-		entity.EffectsManager.UnapplyEffect(activeModifierEffectHandle!);
+		entity.EffectsManager.RemoveEffect(activeModifierEffectHandle!);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 	}
 
@@ -612,7 +612,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandle!);
+		entity.EffectsManager.RemoveEffect(activeEffectHandle!);
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
 		TestUtils.TestStackData(
@@ -659,7 +659,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 			entity,
 			entity);
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandle!);
+		entity.EffectsManager.RemoveEffect(activeEffectHandle!);
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
@@ -777,7 +777,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		entity.EffectsManager.UpdateEffects(secondUpdatePeriod);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", thirdExpectedResults);
 
-		entity.EffectsManager.UnapplyEffect(activeModifierEffectHandle!);
+		entity.EffectsManager.RemoveEffect(activeModifierEffectHandle!);
 		entity.EffectsManager.UpdateEffects(thirdUpdatePeriod);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", fourthExpectedResults);
 	}
@@ -886,7 +886,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		entity.EffectsManager.UpdateEffects(firstUpdatePeriod);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", secondExpectedResults);
 
-		entity.EffectsManager.UnapplyEffect(activeModifierEffectHandle!);
+		entity.EffectsManager.RemoveEffect(activeModifierEffectHandle!);
 		entity.EffectsManager.UpdateEffects(secondUpdatePeriod);
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", thirdExpectedResults);
 

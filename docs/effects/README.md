@@ -54,7 +54,7 @@ ActiveEffectHandle? handle = entity.EffectsManager.ApplyEffect(effect);
 // Remove an effect by its handle
 if (handle is not null)
 {
-    bool removed = entity.EffectsManager.UnapplyEffect(handle);
+    bool removed = entity.EffectsManager.RemoveEffect(handle);
 }
 
 // Update all active effects on the entity
@@ -97,17 +97,17 @@ if (buffHandle != null)
     _activeBuffs.Add(buffHandle);
 
     // Remove the effect using the handle
-    target.EffectsManager.UnapplyEffect(buffHandle);
+    target.EffectsManager.RemoveEffect(buffHandle);
 }
 ```
 
 Other removal methods exist but are less precise:
 ```csharp
 // Removes first effect instance matching the Effect
-entity.EffectsManager.UnapplyEffect(effect);
+entity.EffectsManager.RemoveEffect(effect);
 
 // Removes first effect instance matching the EffectData
-entity.EffectsManager.UnapplyEffectData(effectData);
+entity.EffectsManager.RemoveEffectData(effectData);
 ```
 
 ## Effect Lifecycle

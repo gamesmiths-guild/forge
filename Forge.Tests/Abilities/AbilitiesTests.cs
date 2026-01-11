@@ -76,7 +76,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle!);
+		entity.EffectsManager.RemoveEffect(effectHandle!);
 
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
 		abilityHandle.IsActive.Should().BeFalse();
@@ -114,7 +114,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle!);
+		entity.EffectsManager.RemoveEffect(effectHandle!);
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
@@ -163,11 +163,11 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle!);
+		entity.EffectsManager.RemoveEffect(effectHandle!);
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 		abilityHandle.IsActive.Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle2!);
+		entity.EffectsManager.RemoveEffect(effectHandle2!);
 
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
 		abilityHandle.IsActive.Should().BeFalse();
@@ -212,8 +212,8 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle!);
-		entity.EffectsManager.UnapplyEffect(effectHandle2!);
+		entity.EffectsManager.RemoveEffect(effectHandle!);
+		entity.EffectsManager.RemoveEffect(effectHandle2!);
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
 
 		abilityHandle.IsActive.Should().BeFalse();
@@ -260,7 +260,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsActive.Should().BeFalse();
 		abilityHandle.IsInhibited.Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(tagEffectHandle!);
+		entity.EffectsManager.RemoveEffect(tagEffectHandle!);
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
@@ -299,7 +299,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		abilityHandle.IsActive.Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle!);
+		entity.EffectsManager.RemoveEffect(effectHandle!);
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
@@ -341,11 +341,11 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle1.Should().Be(abilityHandle2);
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle1!);
+		entity.EffectsManager.RemoveEffect(effectHandle1!);
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle2!);
+		entity.EffectsManager.RemoveEffect(effectHandle2!);
 
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
 	}
@@ -427,7 +427,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
 		// Remove the temporary effect.
-		entity.EffectsManager.UnapplyEffect(temporaryEffectHandle!);
+		entity.EffectsManager.RemoveEffect(temporaryEffectHandle!);
 
 		// The ability should still be granted because of the initial permanent grant.
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
@@ -468,7 +468,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		permanentAbilityHandle.Should().Be(temporaryAbilityHandle);
 
 		// Remove the temporary effect.
-		entity.EffectsManager.UnapplyEffect(temporaryEffectHandle!);
+		entity.EffectsManager.RemoveEffect(temporaryEffectHandle!);
 
 		// The ability should still be granted because of the initial permanent grant.
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
@@ -2063,7 +2063,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		// Remove grant; ability should not be removed until all instances end.
-		entity.EffectsManager.UnapplyEffect(grantHandle!);
+		entity.EffectsManager.RemoveEffect(grantHandle!);
 
 		// Still present because policy is RemoveOnEnd and still active.
 		entity.Abilities.GrantedAbilities.Should().Contain(handle);
@@ -2373,7 +2373,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		abilityHandle!.IsActive.Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle!);
+		entity.EffectsManager.RemoveEffect(effectHandle!);
 
 		abilityHandle!.IsActive.Should().BeFalse();
 	}
@@ -2534,7 +2534,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 
-		entity.EffectsManager.UnapplyEffect(effectHandle!);
+		entity.EffectsManager.RemoveEffect(effectHandle!);
 
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
 		abilityHandle.IsActive.Should().BeFalse();
@@ -2658,7 +2658,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsActive.Should().BeFalse();
 
 		// Remove the inhibiting tag to enable the effect
-		entity.EffectsManager.UnapplyEffect(tagEffectHandle!);
+		entity.EffectsManager.RemoveEffect(tagEffectHandle!);
 
 		abilityHandle.IsInhibited.Should().BeFalse();
 		abilityHandle.IsActive.Should().BeTrue();
@@ -2697,7 +2697,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsActive.Should().BeFalse();
 
 		// Remove the inhibiting tag to enable the effect
-		entity.EffectsManager.UnapplyEffect(tagEffectHandle!);
+		entity.EffectsManager.RemoveEffect(tagEffectHandle!);
 
 		abilityHandle.IsInhibited.Should().BeFalse();
 		abilityHandle.IsActive.Should().BeFalse();
@@ -2772,7 +2772,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsInhibited.Should().BeTrue();
 
 		// Remove inhibition - should activate on enable
-		entity.EffectsManager.UnapplyEffect(tagEffectHandle!);
+		entity.EffectsManager.RemoveEffect(tagEffectHandle!);
 		abilityHandle.IsInhibited.Should().BeFalse();
 		abilityHandle.IsActive.Should().BeTrue();
 	}
@@ -2815,7 +2815,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.IsActive.Should().BeFalse();
 
 		// Remove the inhibiting tag to enable the effect
-		entity.EffectsManager.UnapplyEffect(tagEffectHandle!);
+		entity.EffectsManager.RemoveEffect(tagEffectHandle!);
 
 		// Ability should not activate because CanActivate fails (missing required tag)
 		abilityHandle.IsInhibited.Should().BeFalse();

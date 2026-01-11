@@ -173,11 +173,11 @@ entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle);
 handle.Activate(out _);
 
 // Removing effect 1 (RemoveOnEnd): ability stays active, waits for end
-entity.EffectsManager.UnapplyEffect(effectHandle1);
+entity.EffectsManager.RemoveEffect(effectHandle1);
 // Ability is still active and granted
 
 // Removing effect 2 (CancelImmediately): cancels immediately and removes
-entity.EffectsManager.UnapplyEffect(effectHandle2);
+entity.EffectsManager.RemoveEffect(effectHandle2);
 // Ability is now canceled and removed (no more grant sources)
 ```
 
@@ -200,11 +200,11 @@ ActiveEffectHandle? effectHandle2 = entity.EffectsManager.ApplyEffect(grantEffec
 entity.Abilities.GrantedAbilities.Count; // 1
 
 // Remove first grant - ability still exists
-entity.EffectsManager.UnapplyEffect(effectHandle1);
+entity.EffectsManager.RemoveEffect(effectHandle1);
 entity.Abilities.GrantedAbilities.Count; // 1
 
 // Remove second grant - now the ability is removed
-entity.EffectsManager.UnapplyEffect(effectHandle2);
+entity.EffectsManager.RemoveEffect(effectHandle2);
 entity.Abilities.GrantedAbilities.Count; // 0
 ```
 

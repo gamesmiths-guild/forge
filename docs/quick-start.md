@@ -251,7 +251,7 @@ var activeEffectHandle = player.EffectsManager.ApplyEffect(equipmentBuffEffect);
 // Remove the effect manually (e.g., when the item is unequipped)
 if (activeEffectHandle != null)
 {
-    player.EffectsManager.UnapplyEffect(activeEffectHandle);
+    player.EffectsManager.RemoveEffect(activeEffectHandle);
 }
 ```
 
@@ -1021,8 +1021,8 @@ var grantEffectHandle = player.EffectsManager.ApplyEffect(
 // This list contains handles for all abilities granted by this specific effect component instance
 AbilityHandle grantedHandle = grantAbilityComponent.GrantedAbilities[0];
 
-// The ability is now granted. To remove it, simply unapply the effect. (e.g., when the wand is unequipped)
-player.EffectsManager.UnapplyEffect(grantEffectHandle);
+// The ability is now granted. To remove it, simply remove the effect. (e.g., when the wand is unequipped)
+player.EffectsManager.RemoveEffect(grantEffectHandle);
 ```
 
 ---

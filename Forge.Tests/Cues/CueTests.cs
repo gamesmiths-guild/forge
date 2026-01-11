@@ -605,7 +605,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		ActiveEffectHandle? activeEffectHandler = entity.EffectsManager.ApplyEffect(effect);
 		TestCueExecutionData(TestCueExecutionType.Application, cueTestData1);
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandler!);
+		entity.EffectsManager.RemoveEffect(activeEffectHandler!);
 		TestCueExecutionData(TestCueExecutionType.Application, cueTestData2);
 	}
 
@@ -1205,7 +1205,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData2);
 		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData2);
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandler!);
+		entity.EffectsManager.RemoveEffect(activeEffectHandler!);
 		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData3);
 		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData3);
 	}
@@ -1565,7 +1565,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData2);
 		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData2);
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandler!);
+		entity.EffectsManager.RemoveEffect(activeEffectHandler!);
 		TestCueExecutionData(TestCueExecutionType.Application, applicationCueTestData3);
 		TestCueExecutionData(TestCueExecutionType.Update, updateCueTestData3);
 	}

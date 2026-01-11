@@ -125,7 +125,7 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandle!);
+		entity.EffectsManager.RemoveEffect(activeEffectHandle!);
 		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
@@ -250,12 +250,12 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		for (var i = 0; i < stacks - 1; i++)
 		{
-			entity.EffectsManager.UnapplyEffect(activeEffectHandle!);
+			entity.EffectsManager.RemoveEffect(activeEffectHandle!);
 			entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 			entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 		}
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandle!);
+		entity.EffectsManager.RemoveEffect(activeEffectHandle!);
 		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
@@ -285,7 +285,7 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandle!, true);
+		entity.EffectsManager.RemoveEffect(activeEffectHandle!, true);
 		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 	}

@@ -63,7 +63,7 @@ public class TargetTagRequirementsEffectComponent(
 				&& !RemovalTagRequirements.Value.IsEmpty
 				&& RemovalTagRequirements.Value.RequirementsMet(tags))
 			{
-				target.EffectsManager.UnapplyEffect(handle, true);
+				target.EffectsManager.RemoveEffect(handle, true);
 				return;
 			}
 

@@ -211,7 +211,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Remove the effect manually (e.g., when the item is unequipped)
 		if (activeEffectHandle is not null)
 		{
-			player.EffectsManager.UnapplyEffect(activeEffectHandle);
+			player.EffectsManager.RemoveEffect(activeEffectHandle);
 		}
 
 		// Assuming base strength was 10
@@ -874,7 +874,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		failures.Should().Be(AbilityActivationFailures.None);
 		fireballAbilityHandle.IsActive.Should().BeFalse();
 
-		player.EffectsManager.UnapplyEffect(grantEffectHandle);
+		player.EffectsManager.RemoveEffect(grantEffectHandle);
 		fireballAbilityHandle.IsValid.Should().BeFalse();
 	}
 
@@ -1053,7 +1053,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		handle.IsActive.Should().BeTrue();
 
 		// Remove effect (removes tag)
-		player.EffectsManager.UnapplyEffect(effectHandle);
+		player.EffectsManager.RemoveEffect(effectHandle);
 
 		// Should deactivate automatically
 		handle.IsActive.Should().BeFalse();
