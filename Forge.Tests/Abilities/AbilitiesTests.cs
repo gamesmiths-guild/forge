@@ -9,6 +9,7 @@ using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
+using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Core;
@@ -2500,6 +2501,45 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			AbilityActivationFailures.Cooldown);
 	}
 
+	[Fact]
+	[Trait("Grant ability", null)]
+	public void Periodic_effects_grants_ability_while_active()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? effectHandle,
+			durationData: new DurationData(DurationType.Infinite),
+			periodicData: new PeriodicData(new ScalableFloat(1f), true, PeriodInhibitionRemovedPolicy.ResetPeriod));
+
+		abilityHandle.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+		abilityHandle.IsActive.Should().BeTrue();
+
+		entity.EffectsManager.UpdateEffects(10f);
+
+		abilityHandle.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		entity.EffectsManager.UnapplyEffect(effectHandle!);
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+		abilityHandle.IsActive.Should().BeFalse();
+	}
+
 	private static AbilityHandle? SetupAbility(
 		TestEntity targetEntity,
 		AbilityData abilityData,
@@ -2509,6 +2549,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		AbilityDeactivationPolicy grantedAbilityInhibitionPolicy = AbilityDeactivationPolicy.CancelImmediately,
 		IForgeEntity? sourceEntity = null,
 		DurationData? durationData = null,
+		PeriodicData? periodicData = null,
 		IEffectComponent? extraComponent = null,
 		int effectLevel = 1,
 		LevelComparison levelOverridePolicy = LevelComparison.Higher)
@@ -2525,6 +2566,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			grantAbilityConfig,
 			sourceEntity,
 			durationData,
+			periodicData,
 			extraComponent,
 			effectLevel);
 
@@ -2539,6 +2581,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		GrantAbilityConfig grantAbilityConfig,
 		IForgeEntity? sourceEntity,
 		DurationData? durationData,
+		PeriodicData? periodicData,
 		IEffectComponent? extraComponent,
 		int effectLevel)
 	{
@@ -2554,6 +2597,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		var grantAbilityEffectData = new EffectData(
 			effectName,
 			durationData.Value,
+			periodicData: periodicData,
 			effectComponents: [.. effectComponents]);
 
 		return new Effect(

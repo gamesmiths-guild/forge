@@ -16,6 +16,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 	private readonly AbilityHandle[] _grantedAbilities = new AbilityHandle[grantAbilityConfigs.Length];
 	private readonly IAbilityGrantSource[] _grantSources = new IAbilityGrantSource[grantAbilityConfigs.Length];
 
+	private bool _hasGrantedAbilities;
 	private bool _isInhibited;
 
 	/// <summary>
@@ -26,6 +27,11 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 	/// <inheritdoc/>
 	public void OnEffectExecuted(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
 	{
+		if (_hasGrantedAbilities)
+		{
+			return;
+		}
+
 		GrantAbilitiesPermanently(target, effectEvaluatedData);
 	}
 
@@ -102,6 +108,8 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 				grantSource,
 				activeEffectEvaluatedData.EffectEvaluatedData.Effect.Ownership.Source);
 		}
+
+		_hasGrantedAbilities = true;
 	}
 
 	private void RemoveGrantedAbilities(IForgeEntity target)
