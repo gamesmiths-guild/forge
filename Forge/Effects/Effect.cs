@@ -115,7 +115,7 @@ public class Effect
 
 	internal static void Execute(
 		in EffectEvaluatedData effectEvaluatedData,
-		IEffectComponent[]? componentInstances = null)
+		IEffectComponent[]? componentInstances)
 	{
 		foreach (ModifierEvaluatedData modifier in effectEvaluatedData.ModifiersEvaluatedData)
 		{

@@ -54,7 +54,7 @@ internal sealed class ActiveEffect
 	/// </remarks>
 	internal IEffectComponent[] ComponentInstances { get; }
 
-	internal ActiveEffect(Effect effect, IForgeEntity target, EffectApplicationContext? applicationContext = null)
+	internal ActiveEffect(Effect effect, IForgeEntity target, EffectApplicationContext? applicationContext)
 	{
 		Handle = new ActiveEffectHandle(this);
 

@@ -128,7 +128,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	internal void OnEffectExecuted_InternalCall(
 		EffectEvaluatedData executedEffectEvaluatedData,
-		IEffectComponent[]? componentInstances = null)
+		IEffectComponent[]? componentInstances)
 	{
 		foreach (IEffectComponent component in componentInstances
 			?? executedEffectEvaluatedData.Effect.EffectData.EffectComponents)
@@ -298,7 +298,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return ApplyNewEffect(effect, applicationContext).Handle;
 	}
 
-	private ActiveEffect ApplyNewEffect(Effect effect, EffectApplicationContext? applicationContext = null)
+	private ActiveEffect ApplyNewEffect(Effect effect, EffectApplicationContext? applicationContext)
 	{
 		var activeEffect = new ActiveEffect(effect, Owner, applicationContext);
 		_activeEffects.Add(activeEffect);
