@@ -8,8 +8,39 @@ namespace Gamesmiths.Forge.Effects.Components;
 /// Interface for implementing custom effect components. Components can be used to extend effects
 /// functionality and implement custom conditions for application.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Components are stored in <see cref="EffectData"/> and should be designed as stateless definitions.
+/// If a component needs to maintain per-effect-instance state (such as tracking granted abilities,
+/// event subscriptions, or other runtime data), it should return a new instance from
+/// <see cref="CreateInstance"/> that implements the stateful behavior.
+/// </para>
+/// <para>
+/// Stateless components can use the default <see cref="CreateInstance"/> implementation which returns
+/// <c>this</c>, allowing the same component instance to be shared across all effect applications.
+/// </para>
+/// </remarks>
 public interface IEffectComponent
 {
+	/// <summary>
+	/// Creates an instance of this component for a specific effect application.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// Override this method to return a new instance when your component needs to maintain
+	/// per-effect-instance state. The returned instance will be used for all lifecycle callbacks
+	/// for that specific effect application.
+	/// </para>
+	/// <para>
+	/// Stateless components can use the default implementation which returns <c>this</c>.
+	/// </para>
+	/// </remarks>
+	/// <returns>An <see cref="IEffectComponent"/> instance to use for this effect application.</returns>
+	IEffectComponent CreateInstance()
+	{
+		return this;
+	}
+
 	/// <summary>
 	/// A custom validation method for validating whether a effect can be applied or not.
 	/// </summary>

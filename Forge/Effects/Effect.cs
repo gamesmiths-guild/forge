@@ -113,7 +113,9 @@ public class Effect
 		OnSetByCallerFloatChanged?.Invoke(identifierTag, magnitude);
 	}
 
-	internal static void Execute(in EffectEvaluatedData effectEvaluatedData)
+	internal static void Execute(
+		in EffectEvaluatedData effectEvaluatedData,
+		IEffectComponent[]? componentInstances = null)
 	{
 		foreach (ModifierEvaluatedData modifier in effectEvaluatedData.ModifiersEvaluatedData)
 		{
@@ -133,7 +135,9 @@ public class Effect
 			}
 		}
 
-		effectEvaluatedData.Target.EffectsManager.OnEffectExecuted_InternalCall(effectEvaluatedData);
+		effectEvaluatedData.Target.EffectsManager.OnEffectExecuted_InternalCall(
+			effectEvaluatedData,
+			componentInstances);
 
 		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 	}

@@ -126,11 +126,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return ConvertToStackInstanceData(filteredEffects);
 	}
 
-	internal void OnEffectExecuted_InternalCall(EffectEvaluatedData executedEffectEvaluatedData)
+	internal void OnEffectExecuted_InternalCall(
+		EffectEvaluatedData executedEffectEvaluatedData,
+		IEffectComponent[]? componentInstances = null)
 	{
-		EffectData effectData = executedEffectEvaluatedData.Effect.EffectData;
-
-		foreach (IEffectComponent component in effectData.EffectComponents)
+		foreach (IEffectComponent component in componentInstances
+			?? executedEffectEvaluatedData.Effect.EffectData.EffectComponents)
 		{
 			component.OnEffectExecuted(Owner, in executedEffectEvaluatedData);
 		}
@@ -140,7 +141,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	internal void OnActiveEffectUnapplied_InternalCall(ActiveEffect removedEffect)
 	{
-		foreach (IEffectComponent component in removedEffect.Effect.EffectData.EffectComponents)
+		foreach (IEffectComponent component in removedEffect.ComponentInstances)
 		{
 			component.OnActiveEffectUnapplied(
 				Owner,
@@ -156,7 +157,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	internal void OnActiveEffectChanged_InternalCall(ActiveEffect removedEffect)
 	{
-		foreach (IEffectComponent component in removedEffect.EffectData.EffectComponents)
+		foreach (IEffectComponent component in removedEffect.ComponentInstances)
 		{
 			component.OnActiveEffectChanged(
 				Owner,
@@ -277,7 +278,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 			if (successfulApplication)
 			{
-				foreach (IEffectComponent component in stackableEffect.EffectData.EffectComponents)
+				foreach (IEffectComponent component in stackableEffect.ComponentInstances)
 				{
 					component.OnEffectApplied(Owner, stackableEffect.EffectEvaluatedData);
 				}
@@ -296,7 +297,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		var remainActive = true;
 
-		foreach (IEffectComponent component in effect.EffectData.EffectComponents)
+		foreach (IEffectComponent component in activeEffect.ComponentInstances)
 		{
 			remainActive &= component.OnActiveEffectAdded(
 				Owner,
@@ -329,7 +330,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 
-		foreach (IEffectComponent component in effect.EffectData.EffectComponents)
+		foreach (IEffectComponent component in activeEffect.ComponentInstances)
 		{
 			component.OnPostActiveEffectAdded(
 				Owner,
@@ -387,7 +388,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		EffectEvaluatedData effectEvaluatedData = effectToRemove.EffectEvaluatedData;
 
-		foreach (IEffectComponent component in effectToRemove.EffectData.EffectComponents)
+		foreach (IEffectComponent component in effectToRemove.ComponentInstances)
 		{
 			component.OnActiveEffectUnapplied(
 				Owner,

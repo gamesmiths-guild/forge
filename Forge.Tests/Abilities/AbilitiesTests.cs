@@ -2845,16 +2845,15 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			AbilityDeactivationPolicy.CancelImmediately,
 			AbilityDeactivationPolicy.CancelImmediately);
 
-		var grantComponent = new GrantAbilityEffectComponent([grantConfig]);
 		var grantEffectData = new EffectData(
 			"Grant Ability",
 			new DurationData(DurationType.Infinite),
-			effectComponents: [grantComponent]);
+			effectComponents: [new GrantAbilityEffectComponent([grantConfig])]);
 
 		var effect = new Effect(grantEffectData, new EffectOwnership(entity, entity));
 		ActiveEffectHandle? effectHandle = entity.EffectsManager.ApplyEffect(effect);
 
-		AbilityHandle abilityHandle = grantComponent.GrantedAbilities[0];
+		AbilityHandle abilityHandle = effectHandle!.GetComponent<GrantAbilityEffectComponent>()!.GrantedAbilities[0];
 		abilityHandle.IsValid.Should().BeTrue();
 
 		// Create an effect that adds the trigger tag
@@ -2905,16 +2904,15 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			AbilityDeactivationPolicy.CancelImmediately,
 			AbilityDeactivationPolicy.CancelImmediately);
 
-		var grantComponent = new GrantAbilityEffectComponent([grantConfig]);
 		var grantEffectData = new EffectData(
 			"Grant Ability",
 			new DurationData(DurationType.Infinite),
-			effectComponents: [grantComponent]);
+			effectComponents: [new GrantAbilityEffectComponent([grantConfig])]);
 
 		var effect = new Effect(grantEffectData, new EffectOwnership(entity, entity));
 		ActiveEffectHandle? effectHandle = entity.EffectsManager.ApplyEffect(effect);
 
-		AbilityHandle abilityHandle = grantComponent.GrantedAbilities[0];
+		AbilityHandle abilityHandle = effectHandle!.GetComponent<GrantAbilityEffectComponent>()!.GrantedAbilities[0];
 		abilityHandle.IsValid.Should().BeTrue();
 
 		// Create an effect that adds the trigger tag
@@ -2965,16 +2963,15 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			AbilityDeactivationPolicy.CancelImmediately,
 			AbilityDeactivationPolicy.CancelImmediately);
 
-		var grantComponent = new GrantAbilityEffectComponent([grantConfig]);
 		var grantEffectData = new EffectData(
 			"Grant Ability",
 			new DurationData(DurationType.Infinite),
-			effectComponents: [grantComponent]);
+			effectComponents: [new GrantAbilityEffectComponent([grantConfig])]);
 
 		var effect = new Effect(grantEffectData, new EffectOwnership(entity, entity));
 		ActiveEffectHandle? effectHandle = entity.EffectsManager.ApplyEffect(effect);
 
-		AbilityHandle abilityHandle = grantComponent.GrantedAbilities[0];
+		AbilityHandle abilityHandle = effectHandle!.GetComponent<GrantAbilityEffectComponent>()!.GrantedAbilities[0];
 		abilityHandle.IsValid.Should().BeTrue();
 
 		// Raise event to trigger the ability
@@ -3024,16 +3021,15 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			AbilityDeactivationPolicy.CancelImmediately,
 			AbilityDeactivationPolicy.CancelImmediately);
 
-		var grantComponent = new GrantAbilityEffectComponent([grantConfig]);
 		var grantEffectData = new EffectData(
 			"Grant Ability",
 			new DurationData(DurationType.Infinite),
-			effectComponents: [grantComponent]);
+			effectComponents: [new GrantAbilityEffectComponent([grantConfig])]);
 
 		var effect = new Effect(grantEffectData, new EffectOwnership(entity, entity));
 		ActiveEffectHandle? effectHandle = entity.EffectsManager.ApplyEffect(effect);
 
-		AbilityHandle abilityHandle = grantComponent.GrantedAbilities[0];
+		AbilityHandle abilityHandle = effectHandle!.GetComponent<GrantAbilityEffectComponent>()!.GrantedAbilities[0];
 		abilityHandle.IsValid.Should().BeTrue();
 
 		// Raise typed event to trigger the ability

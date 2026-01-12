@@ -8,6 +8,11 @@ namespace Gamesmiths.Forge.Effects.Components;
 /// <summary>
 /// Grant an ability to the target when the effect is applied.
 /// </summary>
+/// <remarks>
+/// This component maintains per-effect-instance state (granted abilities, inhibition state).
+/// When used in <see cref="EffectData"/>, each effect application will create its own instance
+/// via <see cref="CreateInstance"/> to isolate state between different effect applications.
+/// </remarks>
 /// <param name="grantAbilityConfigs">Configurations for the abilities to be granted.</param>
 public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfigs) : IEffectComponent
 {
@@ -23,6 +28,13 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 	/// Gets a read-only list of the granted abilities.
 	/// </summary>
 	public IReadOnlyList<AbilityHandle> GrantedAbilities => _grantedAbilities;
+
+	/// <inheritdoc/>
+	public IEffectComponent CreateInstance()
+	{
+		// Create a new instance for each effect application to isolate state
+		return new GrantAbilityEffectComponent(_grantAbilityConfigs);
+	}
 
 	/// <inheritdoc/>
 	public void OnEffectExecuted(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)

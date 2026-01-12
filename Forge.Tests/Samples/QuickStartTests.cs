@@ -854,19 +854,17 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			InhibitionPolicy = AbilityDeactivationPolicy.CancelImmediately,
 		};
 
-		var grantAbilityComponent = new GrantAbilityEffectComponent([grantConfig]);
-
 		var grantFireballEffect = new EffectData(
 			"Grant Fireball Effect",
 			new DurationData(DurationType.Infinite),
-			effectComponents: [grantAbilityComponent]
+			effectComponents: [new GrantAbilityEffectComponent([grantConfig])]
 			);
 
 		var grantEffectHandle = player.EffectsManager.ApplyEffect(
 			new Effect(grantFireballEffect, new EffectOwnership(player, player)));
 
 		// Retrieve handle directly from component as shown in docs
-		var fireballAbilityHandle = grantAbilityComponent.GrantedAbilities[0];
+		var fireballAbilityHandle = grantEffectHandle.GetComponent<GrantAbilityEffectComponent>().GrantedAbilities[0];
 
 		bool successfulActivation = fireballAbilityHandle.Activate(out AbilityActivationFailures failures);
 

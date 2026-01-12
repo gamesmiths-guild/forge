@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
@@ -44,9 +45,26 @@ internal sealed class ActiveEffect
 
 	internal Effect Effect => EffectEvaluatedData.Effect;
 
+	/// <summary>
+	/// Gets the component instances for this active effect.
+	/// </summary>
+	/// <remarks>
+	/// These are created via <see cref="IEffectComponent.CreateInstance"/> when the effect is applied,
+	/// allowing stateful components to maintain per-effect-instance state.
+	/// </remarks>
+	internal IEffectComponent[] ComponentInstances { get; }
+
 	internal ActiveEffect(Effect effect, IForgeEntity target, EffectApplicationContext? applicationContext = null)
 	{
 		Handle = new ActiveEffectHandle(this);
+
+		// Create component instances for this specific effect application
+		IEffectComponent[] definitions = effect.EffectData.EffectComponents;
+		ComponentInstances = new IEffectComponent[definitions.Length];
+		for (var i = 0; i < definitions.Length; i++)
+		{
+			ComponentInstances[i] = definitions[i].CreateInstance();
+		}
 
 		if (effect.EffectData.StackingData.HasValue)
 		{
@@ -464,7 +482,7 @@ internal sealed class ActiveEffect
 	private void Execute()
 	{
 		EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
-		Effect.Execute(in effectEvaluatedData);
+		Effect.Execute(in effectEvaluatedData, ComponentInstances);
 		ExecutionCount++;
 	}
 
