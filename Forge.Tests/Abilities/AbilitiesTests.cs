@@ -435,6 +435,55 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 	[Fact]
 	[Trait("Grant ability", null)]
+	public void Ability_granted_by_same_EffectData_to_two_entities_are_different_instances()
+	{
+		TestEntity entity1 = new(_tagsManager, _cuesManager);
+		TestEntity entity2 = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		GrantAbilityConfig grantAbilityConfig = new(
+			abilityData,
+			new ScalableInt(1),
+			AbilityDeactivationPolicy.CancelImmediately,
+			AbilityDeactivationPolicy.CancelImmediately,
+			false,
+			false,
+			LevelComparison.None);
+
+		var grantAbilityEffectData = new EffectData(
+			"GrantFireball",
+			new DurationData(DurationType.Instant),
+			effectComponents: [new GrantAbilityEffectComponent([grantAbilityConfig])]);
+
+		var effect1 = new Effect(
+			grantAbilityEffectData,
+			new EffectOwnership(null, entity1));
+
+		var effect2 = new Effect(
+			grantAbilityEffectData,
+			new EffectOwnership(null, entity2));
+
+		entity1.EffectsManager.ApplyEffect(effect1);
+		entity2.EffectsManager.ApplyEffect(effect2);
+
+		entity1.Abilities.TryGetAbility(abilityData, out AbilityHandle? abilityHandle1, entity1);
+		entity2.Abilities.TryGetAbility(abilityData, out AbilityHandle? abilityHandle2, entity2);
+
+		abilityHandle1.Should().NotBeNull();
+		abilityHandle2.Should().NotBeNull();
+		abilityHandle1.Should().NotBe(abilityHandle2);
+		entity1.Abilities.GrantedAbilities.Should().ContainSingle();
+		entity2.Abilities.GrantedAbilities.Should().ContainSingle();
+	}
+
+	[Fact]
+	[Trait("Grant ability", null)]
 	public void Ability_granted_by_late_instant_effect_is_permanent()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);

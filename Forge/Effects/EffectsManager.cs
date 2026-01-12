@@ -256,12 +256,20 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		{
 			var evaluatedData = new EffectEvaluatedData(effect, Owner, applicationContext: applicationContext);
 
+			// Create component instances for instant effects to ensure stateful components
+			IEffectComponent[] definitions = effect.EffectData.EffectComponents;
+			var componentInstances = new IEffectComponent[definitions.Length];
+			for (var i = 0; i < definitions.Length; i++)
+			{
+				componentInstances[i] = definitions[i].CreateInstance();
+			}
+
 			foreach (IEffectComponent component in effect.EffectData.EffectComponents)
 			{
 				component.OnEffectApplied(Owner, in evaluatedData);
 			}
 
-			Effect.Execute(in evaluatedData);
+			Effect.Execute(in evaluatedData, componentInstances);
 			return null;
 		}
 
