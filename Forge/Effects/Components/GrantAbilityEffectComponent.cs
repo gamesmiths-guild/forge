@@ -162,6 +162,8 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 			AbilityHandle ability = _grantedAbilities[i];
 			target.Abilities.RemoveGrantedAbility(ability, _grantSources[i]);
 		}
+
+		_hasGrantedAbilities = false;
 	}
 
 	private void InhibitGrantedAbilities(IForgeEntity target)
