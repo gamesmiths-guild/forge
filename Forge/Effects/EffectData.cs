@@ -64,9 +64,10 @@ public readonly record struct EffectData
 	public IEffectComponent[] EffectComponents { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether this effect requires the modifier to be successful to trigger cues.
+	/// Gets a value indicating whether this effect requires the modifier to be successful to trigger cues for each
+	/// types of cues.
 	/// </summary>
-	public bool RequireModifierSuccessToTriggerCue { get; }
+	public CueTriggerRequirement RequireModifierSuccessToTriggerCue { get; }
 
 	/// <summary>
 	/// Gets a value indicating whether this effect suppresses stacking cues.
@@ -89,8 +90,8 @@ public readonly record struct EffectData
 	/// <param name="snapshotLevel">Whether or not this effect snapshots the level at the moment of creation.
 	/// </param>
 	/// <param name="effectComponents">The list of effects components for this effect.</param>
-	/// <param name="requireModifierSuccessToTriggerCue">Whether or not trigger cues only when modifiers are successfully
-	/// applied.</param>
+	/// <param name="requireModifierSuccessToTriggerCue">Flags indicating whether or not, and which types of cues are
+	/// are triggered when modifiers are successfully applied.</param>
 	/// <param name="suppressStackingCues">Whether or not to trigger cues when applying stacks.</param>
 	/// <param name="customExecutions">The list of custom executions for this effect.</param>
 	/// <param name="cues">The cues associated with this effect.</param>
@@ -102,7 +103,7 @@ public readonly record struct EffectData
 		PeriodicData? periodicData = null,
 		bool snapshotLevel = true,
 		IEffectComponent[]? effectComponents = null,
-		bool requireModifierSuccessToTriggerCue = false,
+		CueTriggerRequirement requireModifierSuccessToTriggerCue = CueTriggerRequirement.None,
 		bool suppressStackingCues = false,
 		CustomExecution[]? customExecutions = null,
 		CueData[]? cues = null)

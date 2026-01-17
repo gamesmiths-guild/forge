@@ -40,7 +40,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute1", 3f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -61,7 +61,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute1", 3f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -86,7 +86,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 3f },
 			new object[] { "TestAttributeSet.Attribute1", 2f },
 		},
-		true,
+		CueTriggerRequirement.OnExecute,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -110,7 +110,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute1", 99f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -134,7 +134,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute1", 99f },
 		},
-		true,
+		CueTriggerRequirement.OnExecute,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -159,7 +159,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 1f },
 			new object[] { "TestAttributeSet.Attribute2", 2f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -178,7 +178,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		})]
 	[InlineData(
 		new object[] { },
-		true,
+		CueTriggerRequirement.OnExecute,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -202,7 +202,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute1", 3f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute" },
@@ -224,7 +224,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 3f },
 			new object[] { "TestAttributeSet.Attribute1", 2f },
 		},
-		true,
+		CueTriggerRequirement.OnExecute,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute1" },
@@ -245,7 +245,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		})]
 	[InlineData(
 		new object[] { },
-		true,
+		CueTriggerRequirement.OnExecute,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute1" },
@@ -270,7 +270,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 1f },
 			new object[] { "Invalid.Attribute", 2f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -292,7 +292,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "Invalid.Attribute", 3f },
 		},
-		true,
+		CueTriggerRequirement.OnExecute,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -313,7 +313,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute1", 3f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeBaseValue, "TestAttributeSet.Attribute1" },
@@ -328,7 +328,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		})]
 	public void Instant_effect_triggers_execute_cues_with_expected_results(
 		object[] modifiersData,
-		bool requireModifierSuccessToTriggerCue,
+		CueTriggerRequirement requireModifierSuccessToTriggerCue,
 		object[] cueData,
 		object[] cueTestData1,
 		object[] cueTestData2)
@@ -356,7 +356,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute1", 5f },
 		},
-		true,
+		CueTriggerRequirement.OnApply,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -377,7 +377,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute1", 5f },
 		},
-		true,
+		CueTriggerRequirement.OnApply,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute2" },
@@ -395,7 +395,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		})]
 	[InlineData(
 		new object[] { },
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -413,7 +413,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		})]
 	[InlineData(
 		new object[] { },
-		true,
+		CueTriggerRequirement.OnApply,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -434,7 +434,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute1", 5f },
 		},
-		true,
+		CueTriggerRequirement.OnApply,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute" },
@@ -455,7 +455,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "Invalid.Attribute", 5f },
 		},
-		true,
+		CueTriggerRequirement.OnApply,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -476,7 +476,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute90", 20f },
 		},
-		true,
+		CueTriggerRequirement.OnApply,
 		new object[]
 		{
 			new object[] { 0, 0, 100, CueMagnitudeType.AttributeModifier, "TestAttributeSet.Attribute90" },
@@ -494,7 +494,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute90", 20f },
 		},
-		true,
+		CueTriggerRequirement.OnApply,
 		new object[]
 		{
 			new object[] { 0, 0, 100, CueMagnitudeType.AttributeOverflow, "TestAttributeSet.Attribute90" },
@@ -512,7 +512,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute90", 20f },
 		},
-		true,
+		CueTriggerRequirement.OnApply,
 		new object[]
 		{
 			new object[] { 0, 0, 100, CueMagnitudeType.AttributeValidModifier, "TestAttributeSet.Attribute90" },
@@ -530,7 +530,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute5", 20f },
 		},
-		true,
+		CueTriggerRequirement.OnApply,
 		new object[]
 		{
 			new object[] { 0, 0, 100, CueMagnitudeType.AttributeMin, "TestAttributeSet.Attribute90" },
@@ -548,7 +548,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute5", 20f },
 		},
-		true,
+		CueTriggerRequirement.OnApply,
 		new object[]
 		{
 			new object[] { 0, 0, 100, CueMagnitudeType.AttributeMax, "TestAttributeSet.Attribute90" },
@@ -566,7 +566,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute5", 20f },
 		},
-		true,
+		CueTriggerRequirement.OnApply,
 		new object[]
 		{
 			new object[]
@@ -588,7 +588,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		})]
 	public void Infinite_effect_triggers_apply_and_remove_cues_with_expected_results(
 		object[] modifiersData,
-		bool requireModifierSuccessToTriggerCue,
+		CueTriggerRequirement requireModifierSuccessToTriggerCue,
 		object[] cueData,
 		object[] cueTestData1,
 		object[] cueTestData2)
@@ -619,7 +619,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute1", 1f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		5f,
 		5f,
 		new object[]
@@ -669,7 +669,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 1f },
 			new object[] { "TestAttributeSet.Attribute2", 2f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		5f,
 		6f,
 		new object[]
@@ -719,7 +719,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 1f },
 			new object[] { "TestAttributeSet.Attribute2", 2f },
 		},
-		true,
+		CueTriggerRequirement.OnApply | CueTriggerRequirement.OnExecute,
 		5f,
 		6f,
 		new object[]
@@ -769,7 +769,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 1f },
 			new object[] { "TestAttributeSet.Attribute2", 2f },
 		},
-		true,
+		CueTriggerRequirement.OnApply | CueTriggerRequirement.OnExecute,
 		5f,
 		6f,
 		new object[]
@@ -818,7 +818,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute1", 1f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		5f,
 		5f,
 		new object[]
@@ -859,12 +859,90 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		true,
 		true,
 		true)]
+	[InlineData(
+		10f,
+		1f,
+		true,
+		new object[] { },
+		CueTriggerRequirement.OnExecute,
+		5f,
+		5f,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, true },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, false },
+		},
+		true,
+		false,
+		true)]
+	[InlineData(
+		10f,
+		1f,
+		true,
+		new object[] { },
+		CueTriggerRequirement.OnApply,
+		5f,
+		5f,
+		new object[]
+		{
+			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 1, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 6, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 0, 0, 0f, false },
+		},
+		new object[]
+		{
+			new object[] { 0, 11, 0, 0f, false },
+		},
+		false,
+		true,
+		false)]
 	public void Periodic_effect_triggers_apply_remove_and_execute_cues_with_expected_results(
 		float duration,
 		float period,
 		bool executeOnApplication,
 		object[] modifiersData,
-		bool requireModifierSuccessToTriggerCue,
+		CueTriggerRequirement requireModifierSuccessToTriggerCue,
 		float firstDeltaUpdate,
 		float secondDeltaUpdate,
 		object[] cueData,
@@ -930,7 +1008,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 1f },
 		},
 		false,
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -972,7 +1050,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 1f },
 		},
 		false,
-		true,
+		CueTriggerRequirement.OnApply | CueTriggerRequirement.OnUpdate,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -1014,7 +1092,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 1f },
 		},
 		true,
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -1056,7 +1134,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 99f },
 		},
 		false,
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -1098,7 +1176,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 99f },
 		},
 		false,
-		true,
+		CueTriggerRequirement.OnApply | CueTriggerRequirement.OnUpdate,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -1140,7 +1218,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute1", 1f },
 		},
 		false,
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "Invalid.Attribute" },
@@ -1179,7 +1257,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	public void Infinite_effect_triggers_update_cues_when_level_up_with_expected_results(
 		object[] modifiersData,
 		bool snapshotLevel,
-		bool requireModifierSuccessToTriggerCue,
+		CueTriggerRequirement requireModifierSuccessToTriggerCue,
 		object[] cueData,
 		object[] applicationCueTestData1,
 		object[] updateCueTestData1,
@@ -1222,7 +1300,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 			new object[] { "TestAttributeSet.Attribute2", 1f },
 			new object[] { "TestAttributeSet.Attribute2", 1f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -1267,7 +1345,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute2", 1f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -1312,7 +1390,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute2", 1f },
 		},
-		true,
+		CueTriggerRequirement.OnApply | CueTriggerRequirement.OnUpdate,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -1357,7 +1435,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute90", 2f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -1402,7 +1480,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute90", 2f },
 		},
-		false,
+		CueTriggerRequirement.None,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -1447,7 +1525,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute90", 2f },
 		},
-		true,
+		CueTriggerRequirement.OnApply | CueTriggerRequirement.OnUpdate,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -1492,7 +1570,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		{
 			new object[] { "TestAttributeSet.Attribute90", 2f },
 		},
-		true,
+		CueTriggerRequirement.OnApply | CueTriggerRequirement.OnUpdate,
 		new object[]
 		{
 			new object[] { 0, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1" },
@@ -1531,7 +1609,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	public void Attribute_based_modifiers_triggers_update_cues_when_attribute_changes_with_expected_results(
 		object[] attributeBasedModifiersData,
 		object[] modifiersData,
-		bool requireModifierSuccessToTriggerCue,
+		CueTriggerRequirement requireModifierSuccessToTriggerCue,
 		object[] cueData,
 		object[] applicationCueTestData1,
 		object[] updateCueTestData1,
@@ -1580,7 +1658,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		10f,
 		1,
 		3,
-		false,
+		CueTriggerRequirement.None,
 		false,
 		new object[]
 		{
@@ -1658,7 +1736,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		10f,
 		2,
 		3,
-		false,
+		CueTriggerRequirement.None,
 		false,
 		new object[]
 		{
@@ -1736,7 +1814,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		10f,
 		2,
 		3,
-		false,
+		CueTriggerRequirement.None,
 		false,
 		new object[]
 		{
@@ -1814,7 +1892,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		10f,
 		1,
 		3,
-		false,
+		CueTriggerRequirement.None,
 		false,
 		new object[]
 		{
@@ -1892,7 +1970,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		10f,
 		3,
 		3,
-		false,
+		CueTriggerRequirement.None,
 		false,
 		new object[]
 		{
@@ -1970,7 +2048,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		10f,
 		3,
 		3,
-		true,
+		CueTriggerRequirement.OnApply | CueTriggerRequirement.OnUpdate,
 		false,
 		new object[]
 		{
@@ -2048,7 +2126,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		10f,
 		3,
 		3,
-		false,
+		CueTriggerRequirement.None,
 		true,
 		new object[]
 		{
@@ -2115,7 +2193,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		10f,
 		3,
 		3,
-		false,
+		CueTriggerRequirement.None,
 		true,
 		new object[]
 		{
@@ -2179,7 +2257,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		float duration,
 		int initialStack,
 		int stackLimit,
-		bool requireModifierSuccessToTriggerCue,
+		CueTriggerRequirement requireModifierSuccessToTriggerCue,
 		bool suppressStackingCues,
 		object[] cueData,
 		float deltaUpdate1,
@@ -2237,7 +2315,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		EffectData effectData = CreateInstantEffectData(
 			CreateModifiers([new object[] { "TestAttributeSet.Attribute1", 3f }]),
-			false,
+			CueTriggerRequirement.OnExecute,
 			[new CueData(
 				Tag.RequestTag(_tagsManager, "invalid.tag", false).GetSingleTagContainer(),
 				0,
@@ -2373,7 +2451,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		EffectData effectData = CreateInstantEffectData(
 			CreateModifiers([new object[] { "TestAttributeSet.Attribute1", 3f }]),
-			true,
+			CueTriggerRequirement.OnExecute,
 			[new CueData(tagContainer, 0, 10, CueMagnitudeType.AttributeValueChange, "TestAttributeSet.Attribute1")]);
 		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
 
@@ -2497,7 +2575,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 
 	private static EffectData CreateInstantEffectData(
 		Modifier[] modifiers,
-		bool requireModifierSuccessToTriggerCue,
+		CueTriggerRequirement requireModifierSuccessToTriggerCue,
 		CueData[] cues)
 	{
 		return new EffectData(
@@ -2511,7 +2589,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	private static EffectData CreateInfiniteEffectData(
 		Modifier[] modifiers,
 		bool snapshotLevel,
-		bool requireModifierSuccessToTriggerCue,
+		CueTriggerRequirement requireModifierSuccessToTriggerCue,
 		CueData[] cues)
 	{
 		return new EffectData(
@@ -2528,7 +2606,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		float period,
 		bool executeOnApplication,
 		Modifier[] modifiers,
-		bool requireModifierSuccessToTriggerCue,
+		CueTriggerRequirement requireModifierSuccessToTriggerCue,
 		CueData[] cues)
 	{
 		return new EffectData(
@@ -2550,7 +2628,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 		int initialStack,
 		int stackLimit,
 		Modifier[] modifiers,
-		bool requireModifierSuccessToTriggerCue,
+		CueTriggerRequirement requireModifierSuccessToTriggerCue,
 		bool suppressStackingCues,
 		CueData[] cues)
 	{

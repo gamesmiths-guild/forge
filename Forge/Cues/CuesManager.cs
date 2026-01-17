@@ -130,7 +130,7 @@ public sealed class CuesManager
 		EffectData effectData = effectEvaluatedData.Effect.EffectData;
 
 		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
-		if (!ShouldTriggerCue(in effectData, in targetAttributes))
+		if (!ShouldTriggerCue(in effectData, in targetAttributes, CueTriggerRequirement.OnApply))
 		{
 			return;
 		}
@@ -181,7 +181,7 @@ public sealed class CuesManager
 		EffectData effectData = effectEvaluatedData.Effect.EffectData;
 
 		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
-		if (!ShouldTriggerCue(in effectData, in targetAttributes))
+		if (!ShouldTriggerCue(in effectData, in targetAttributes, CueTriggerRequirement.OnExecute))
 		{
 			return;
 		}
@@ -214,7 +214,7 @@ public sealed class CuesManager
 		EffectData effectData = effectEvaluatedData.Effect.EffectData;
 
 		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
-		if (!ShouldTriggerCue(in effectData, in targetAttributes))
+		if (!ShouldTriggerCue(in effectData, in targetAttributes, CueTriggerRequirement.OnUpdate))
 		{
 			return;
 		}
@@ -244,9 +244,15 @@ public sealed class CuesManager
 
 	private static bool ShouldTriggerCue(
 		in EffectData effectData,
-		in EntityAttributes attributes)
+		in EntityAttributes attributes,
+		CueTriggerRequirement triggerRequirements)
 	{
-		return !effectData.RequireModifierSuccessToTriggerCue || attributes.Any(x => x.PendingValueChange != 0);
+		if (!effectData.RequireModifierSuccessToTriggerCue.HasFlag(triggerRequirements))
+		{
+			return true;
+		}
+
+		return attributes.Any(x => x.PendingValueChange != 0);
 	}
 
 	private static int CalculateMagnitude(
