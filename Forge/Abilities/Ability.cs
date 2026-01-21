@@ -14,7 +14,7 @@ namespace Gamesmiths.Forge.Abilities;
 /// <summary>
 /// Instance of an ability that has been granted to an entity.
 /// </summary>
-internal class Ability
+internal sealed class Ability
 {
 	private record struct BehaviorBinding(IAbilityBehavior Behavior, AbilityBehaviorContext Context);
 

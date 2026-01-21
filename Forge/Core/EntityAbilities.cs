@@ -358,7 +358,6 @@ public class EntityAbilities(IForgeEntity owner)
 		}
 	}
 
-
 	private void RemoveAbility(Ability abilityToRemove)
 	{
 		if (_removeAbility is not null)
@@ -385,7 +384,7 @@ public class EntityAbilities(IForgeEntity owner)
 			abilityToInhibit.OnAbilityDeactivated -= _inhibitAbility;
 			_inhibitAbility = null;
 		}
-		
+
 		abilityToInhibit.IsInhibited = CheckIsInhibited();
 	}
 

@@ -674,8 +674,6 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		activationCount.Should().Be(3);
 	}
 
-	#region Magnitude Tests
-
 	[Fact]
 	[Trait("Magnitude", null)]
 	public void Context_contains_magnitude_when_activated_with_magnitude()
@@ -723,7 +721,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	public void Event_triggered_ability_receives_magnitude_from_event()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		float capturedMagnitude = 0f;
+		var capturedMagnitude = 0f;
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
 
 		AbilityData data = CreateAbilityData(
@@ -752,7 +750,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	public void Typed_event_triggered_ability_receives_both_magnitude_and_data()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		float capturedMagnitude = 0f;
+		var capturedMagnitude = 0f;
 		TestEventPayload? capturedData = null;
 		var eventTag = Tag.RequestTag(_tagsManager, "tag");
 
@@ -828,9 +826,9 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		handle.Activate(out _, magnitude: 30f).Should().BeTrue();
 
 		capturedMagnitudes.Should().HaveCount(3);
-		capturedMagnitudes[0].Should().Be(10f);
-		capturedMagnitudes[1].Should().Be(20f);
-		capturedMagnitudes[2].Should().Be(30f);
+		capturedMagnitudes.Should().HaveElementAt(0, 10f);
+		capturedMagnitudes.Should().HaveElementAt(1, 20f);
+		capturedMagnitudes.Should().HaveElementAt(2, 30f);
 	}
 
 	[Fact]
@@ -852,11 +850,9 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		handle.Activate(out _, magnitude: 75f).Should().BeTrue();
 
 		capturedMagnitudes.Should().HaveCount(2);
-		capturedMagnitudes[0].Should().Be(50f);
-		capturedMagnitudes[1].Should().Be(75f);
+		capturedMagnitudes.Should().HaveElementAt(0, 50f);
+		capturedMagnitudes.Should().HaveElementAt(1, 75f);
 	}
-
-	#endregion
 
 	private static AbilityHandle? Grant(
 		TestEntity target,
@@ -991,9 +987,9 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	private sealed class TypedPayloadBehavior<TPayload>(
 		Action<AbilityBehaviorContext, TPayload> callback) : IAbilityBehavior<TPayload>
 	{
-		public void OnStarted(AbilityBehaviorContext context, TPayload payload)
+		public void OnStarted(AbilityBehaviorContext context, TPayload data)
 		{
-			callback(context, payload);
+			callback(context, data);
 			context.InstanceHandle.End();
 		}
 

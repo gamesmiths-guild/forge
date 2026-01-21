@@ -205,7 +205,6 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1000", [20, 0, 20, 0]);
 	}
 
-
 	[Theory]
 	[Trait("Instant", null)]
 	[InlineData("TestAttributeSet.Attribute1", 4, 5, 4, 25, -0.66f, 8, 42, 42)]
