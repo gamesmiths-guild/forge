@@ -19,14 +19,7 @@ public readonly record struct Modifier(
 	ModifierMagnitude Magnitude,
 	int Channel = 0)
 {
-	/// <summary>
-	/// Checks whether this modifier can be applied to the given target entity at the specified level.
-	/// </summary>
-	/// <param name="effect">The source effect of this modifier.</param>
-	/// <param name="target">The target entity to check against.</param>
-	/// <param name="level">The level to be used for magnitude calculation.</param>
-	/// <returns><see langword="true"/> if the modifier can be applied; otherwise, <see langword="false"/>.</returns>
-	public bool CanApply(Effect effect, IForgeEntity target, int level)
+	internal bool CanApply(Effect effect, IForgeEntity target, int level)
 	{
 		if (!target.Attributes.ContainsAttribute(Attribute))
 		{
