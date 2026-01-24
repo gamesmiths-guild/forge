@@ -18,12 +18,12 @@ namespace Gamesmiths.Forge.Effects.Stacking;
 /// <param name="OwnerDenialPolicy">How to handle applications from different owner.</param>
 /// <param name="OwnerOverridePolicy">How to handle the effect's instance owner when accepting application
 /// from different owner.</param>
-/// <param name="OwnerOverrideStackCountPolicy">How to handle the stack count when the owner is overriden.
+/// <param name="OwnerOverrideStackCountPolicy">How to handle the stack count when the owner is overridden.
 /// </param>
 /// <param name="LevelDenialPolicy">How to handle stack applications of different levels.</param>
 /// <param name="LevelOverridePolicy">How to handle the effect's instance level when accepting applications of different
 /// levels.</param>
-/// <param name="LevelOverrideStackCountPolicy">How to handle the stack count when the level is overriden.</param>
+/// <param name="LevelOverrideStackCountPolicy">How to handle the stack count when the level is overridden.</param>
 /// <param name="ApplicationRefreshPolicy">What happens with the stack duration when a new stack is applied.</param>
 /// <param name="ApplicationResetPeriodPolicy">What happens with periodic durations when a new stack is applied.</param>
 /// <param name="ExecuteOnSuccessfulApplication">Whether the effect executes when a new stack is applied.</param>
