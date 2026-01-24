@@ -36,16 +36,7 @@ public readonly record struct AttributeBasedFloat(
 	int FinalChannel = 0,
 	ICurve? LookupCurve = null)
 {
-	/// <summary>
-	/// Calculates the final magnitude based on the AttributeBasedFloat configurations.
-	/// </summary>
-	/// <param name="effect">The source effect that will be used to capture source attributes from.</param>
-	/// <param name="target">The target entity that will be used to capture source attributes from.</param>
-	/// <param name="level">Level to use in the magnitude calculation.</param>
-	/// <param name="snapshotAttributes">The dictionary containing already captured snapshot attributes for this effect.
-	/// </param>
-	/// <returns>The calculated magnitude for this <see cref="AttributeBasedFloat"/>.</returns>
-	public readonly float CalculateMagnitude(
+	internal readonly float CalculateMagnitude(
 		Effect effect,
 		IForgeEntity target,
 		int level,

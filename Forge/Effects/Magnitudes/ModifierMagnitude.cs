@@ -90,16 +90,7 @@ public readonly record struct ModifierMagnitude
 		SetByCallerFloat = setByCallerFloat;
 	}
 
-	/// <summary>
-	/// Gets the calculated magnitude for a given <see cref="Effect"/> and this <see cref="ModifierMagnitude"/>
-	/// configurations.
-	/// </summary>
-	/// <param name="effect">The effect to calculate the magnitude for.</param>
-	/// <param name="target">The target which might be used for the magnitude calculation.</param>
-	/// <param name="level">The level to use in the magnitude calculation.</param>
-	/// <param name="effectEvaluatedData">The evaluated data for the effect.</param>
-	/// <returns>The evaluated magnitude.</returns>
-	public readonly float GetMagnitude(
+	internal readonly float GetMagnitude(
 		Effect effect,
 		IForgeEntity target,
 		int level,
