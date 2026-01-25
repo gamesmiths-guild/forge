@@ -363,7 +363,7 @@ if (entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle))
 - **IsValid**: Whether the handle still references a valid granted ability.
 - **Level**: The current level of the ability.
 - **Activate(out failureFlags, target?, magnitude?)**: Attempt to activate the ability with optional target and magnitude.
-- **Activate<TData>(data, out failureFlags, target?, magnitude?)**: Attempt to activate the ability passing additional typed activation data.
+- **Activate\<TData\>(data, out failureFlags, target?, magnitude?)**: Attempt to activate the ability passing additional typed activation data.
 - **Cancel()**: Cancel all active instances.
 - **CommitAbility()**: Helper that calls both `CommitCooldown()` and `CommitCost()`.
 - **CommitCooldown()**: Apply the cooldown effects.
@@ -573,7 +573,7 @@ public class FireballBehavior : IAbilityBehavior
 - **InstanceHandle**: Handle to this specific instance for ending it.
 - **Magnitude**: A numeric value associated with the activation attempt.
 
-### Behavior Context `<TData>`
+### Behavior Context \<TData\>
 
 In addition to the core fields, the generic behavior context also carries:
 

@@ -175,10 +175,10 @@ When working with durations, several constraints apply to ensure effects behave 
    ```csharp
    // INVALID - Instant effects can't apply modifier tags
    new EffectData(
-        "Invalid Effect",
-        new DurationData(DurationType.Instant),
-        [/*...*/],
-        effectComponents: new[] { new ModifierTagsEffectComponent(new TagContainer()) } // Error
+       "Invalid Effect",
+       new DurationData(DurationType.Instant),
+       [/*...*/],
+       effectComponents: new[] { new ModifierTagsEffectComponent(new TagContainer()) } // Error
    );
    ```
 

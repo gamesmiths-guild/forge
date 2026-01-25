@@ -24,7 +24,7 @@ public readonly record struct EventData
 }
 ```
 
-### EventData<TPayload>
+### EventData\<TPayload\>
 
 ```csharp
 public readonly record struct EventData<TPayload>

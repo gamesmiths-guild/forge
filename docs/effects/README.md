@@ -110,7 +110,7 @@ if (buffHandle is not null)
 #### Public Methods
 
 - **SetInhibit(bool value)**: Sets the inhibition status of the effect (e.g., to temporarily pause its action without removing it).
-- **GetComponent<T>()**: Returns the first component instance of type `T` attached to this effect, or `null` if not found.
+- **GetComponent\<T\>()**: Returns the first component instance of type `T` attached to this effect, or `null` if not found.
 
     Useful for retrieving a specific effect component's runtime state.
 
