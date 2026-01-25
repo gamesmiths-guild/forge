@@ -778,27 +778,30 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		var player = new Player(tagsManager, cuesManager);
 		var damageTag = Tag.RequestTag(tagsManager, "events.combat.damage");
 
-		string logMessage = string.Empty;
-		int logValue = 0;
+		int value = 0;
+		DamageType damageType = DamageType.Magical;
+		bool isCritical = false;
 
 		// Subscribe with generic type
-		player.Events.Subscribe<CombatLogPayload>(damageTag, eventData =>
+		player.Events.Subscribe<DamageInfo>(damageTag, eventData =>
 		{
-			logMessage = eventData.Payload.Message;
-			logValue = eventData.Payload.Value;
+			value = eventData.Payload.Value;
+			damageType = eventData.Payload.DamageType;
+			isCritical = eventData.Payload.IsCritical;
 		});
 
 		// Raise with generic type
-		player.Events.Raise(new EventData<CombatLogPayload>
+		player.Events.Raise(new EventData<DamageInfo>
 		{
 			EventTags = damageTag.GetSingleTagContainer(),
 			Source = null,
 			Target = player,
-			Payload = new CombatLogPayload("Critical Hit", 9999)
+			Payload = new DamageInfo(120, DamageType.Physical, true)
 		});
 
-		logMessage.Should().Be("Critical Hit");
-		logValue.Should().Be(9999);
+		value.Should().Be(120);
+		damageType.Should().Be(DamageType.Physical);
+		isCritical.Should().Be(true);
 	}
 
 	[Fact]
@@ -1309,5 +1312,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		}
 	}
 
-	public record struct CombatLogPayload(string Message, int Value);
+	public enum DamageType
+	{
+		Physical,
+		Magical,
+	}
+
+	public record struct DamageInfo(int Value, DamageType DamageType, bool IsCritical);
 }

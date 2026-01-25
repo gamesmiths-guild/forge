@@ -18,7 +18,7 @@ For other installation methods, see the [main README](../README.md).
 
 ## Creating a Basic Entity
 
-Let's create a simple player entity with three attributes: health, mana, strength, and speed.
+Let's create a simple player entity with three attributes: health, mana, strength and speed.
 
 For that we need to first define an `AttributeSet` that will hold those attributes.
 
@@ -901,23 +901,27 @@ You can optimize events to avoid boxing by using generic `EventData`.
 
 ```csharp
 // Define a strongly typed payload
-public record struct CombatLogPayload(string Message, int Value);
+public record struct DamageInfo(int Value, DamageType DamageType, bool IsCritical);
 
 var damageTag = Tag.RequestTag(tagsManager, "events.combat.damage");
 
 // Subscribe using the specific payload type
 player.Events.Subscribe<CombatLogPayload>(damageTag, eventData =>
 {
-    Console.WriteLine($"[Combat Log] {eventData.Payload.Message}: {eventData.Payload.Value}");
+    Console.WriteLine(
+        $"[Combat Log] Damage: {eventData.Payload.Value}, " +
+        $"Type: {eventData.Payload.DamageType}, " +
+        $"Critical: {eventData.Payload.IsCritical}"
+    );
 });
 
 // Raise the event with the typed payload
-player.Events.Raise(new EventData<CombatLogPayload>
+player.Events.Raise(new EventData<DamageInfo>
 {
 	EventTags = damageTag.GetSingleTagContainer(),
 	Source = null,
 	Target = player,
-	Payload = new CombatLogPayload("Critical Hit", 9999)
+	Payload = new DamageInfo(120, DamageType.Physical, true)
 });
 ```
 

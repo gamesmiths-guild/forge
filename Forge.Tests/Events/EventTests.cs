@@ -57,27 +57,30 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 		var entity = new TestEntity(tagsManager, cuesManager);
 		var damageTag = Tag.RequestTag(tagsManager, "simple.tag");
 
-		var logMessage = string.Empty;
-		var logValue = 0;
+		var value = 0;
+		DamageType damageType = DamageType.Physical;
+		var isCritical = false;
 
 		// Subscribe with generic type
-		entity.Events.Subscribe<CombatLogPayload>(damageTag, x =>
+		entity.Events.Subscribe<DamageInfo>(damageTag, x =>
 		{
-			logMessage = x.Payload.Message;
-			logValue = x.Payload.Value;
+			value = x.Payload.Value;
+			damageType = x.Payload.DamageType;
+			isCritical = x.Payload.IsCritical;
 		});
 
 		// Raise with generic type
-		entity.Events.Raise(new EventData<CombatLogPayload>
+		entity.Events.Raise(new EventData<DamageInfo>
 		{
 			EventTags = damageTag.GetSingleTagContainer()!,
 			Source = null,
 			Target = entity,
-			Payload = new CombatLogPayload("Critical Hit", 9999),
+			Payload = new DamageInfo(500, DamageType.Magical, true),
 		});
 
-		logMessage.Should().Be("Critical Hit");
-		logValue.Should().Be(9999);
+		value.Should().Be(500);
+		damageType.Should().Be(DamageType.Magical);
+		isCritical.Should().Be(true);
 	}
 
 	[Fact]
