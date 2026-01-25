@@ -44,10 +44,7 @@ public class Effect
 	/// </summary>
 	public Dictionary<Tag, float> DataTag { get; } = [];
 
-	/// <summary>
-	/// Gets the cached granted tags from this effect, if any.
-	/// </summary>
-	public TagContainer? CachedGrantedTags { get; }
+	internal TagContainer? CachedGrantedTags { get; }
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Effect"/> class.
