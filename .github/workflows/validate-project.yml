@@ -1,4 +1,4 @@
-name: Validate Project
+name: CI
 
 on:
   push:

@@ -65,7 +65,13 @@ To create a periodic effect, specify a period duration, whether it executes on a
 // Create a poison effect that deals damage every 2 seconds
 var poisonEffectData = new EffectData(
     "Poison",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)), // 10 second duration
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f) // 10 second duration
+        )
+    ),
     new[] {
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
     },
@@ -85,7 +91,13 @@ The `Period` property uses `ScalableFloat`, allowing periods to change based on 
 // Create a healing effect with frequency that scales with level
 var healingEffectData = new EffectData(
     "Healing Aura",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(30.0f)), // 30 second duration
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(30.0f) // 30 second duration
+        )
+    ),
     new[] {
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
     },
@@ -112,21 +124,21 @@ var neverResetPolicy = new PeriodicData(
     period: new ScalableFloat(5.0f),
     executeOnApplication: false,
     periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.NeverReset
-    // When uninhibited, continues with original timing - might execute immediately if period elapsed
+    // When re-enabled, continues with original timing - might execute immediately if period elapsed
 );
 
 var resetPolicy = new PeriodicData(
     period: new ScalableFloat(5.0f),
     executeOnApplication: false,
     periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
-    // When uninhibited, restarts the period counter
+    // When re-enabled, restarts the period counter
 );
 
 var executeAndResetPolicy = new PeriodicData(
     period: new ScalableFloat(5.0f),
     executeOnApplication: false,
     periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ExecuteAndResetPeriod
-    // When uninhibited, executes immediately and restarts the period counter
+    // When re-enabled, executes immediately and restarts the period counter
 );
 ```
 
@@ -152,7 +164,12 @@ Periodic effects have specific constraints and interactions with other systems:
    // VALID - HasDuration periodic effect
    new EffectData(
        "Valid Effect",
-       new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
+       new DurationData(
+           DurationType.HasDuration,
+           new ModifierMagnitude(
+               MagnitudeCalculationType.ScalableFloat,
+               new ScalableFloat(10.0f))
+       ),
        [/*...*/],
        periodicData: new PeriodicData(new ScalableFloat(1.0f))
    );
@@ -179,7 +196,12 @@ When combining periodic effects with [stacking](stacking.md):
 // VALID - Stacking periodic effect
 var stackingPeriodicEffect = new EffectData(
     "Bleeding",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(8.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(8.0f))
+    ),
     [/*...*/],
     stackingData: new StackingData(
         stackLimit: new ScalableInt(3),
@@ -206,7 +228,12 @@ var stackingPeriodicEffect = new EffectData(
 // Burning effect that deals damage every second for 5 seconds
 var burningEffectData = new EffectData(
     "Burning",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(5.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(5.0f))
+    ),
     new[] {
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-8)))
     },
@@ -224,7 +251,12 @@ var burningEffectData = new EffectData(
 // Regeneration effect that heals every 2 seconds for 10 seconds
 var regenerationEffectData = new EffectData(
     "Regeneration",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f))
+    ),
     new[] {
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(15)))
     },
@@ -260,7 +292,12 @@ var manaRegenEffectData = new EffectData(
 // Bleeding effect that stacks up to 3 times, each stack does damage every second
 var bleedingEffectData = new EffectData(
     "Bleeding",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(6.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(6.0f))
+    ),
     new[] {
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-3)))
     },

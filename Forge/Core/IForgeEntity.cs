@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Events;
 
 namespace Gamesmiths.Forge.Core;
 
@@ -23,4 +24,14 @@ public interface IForgeEntity
 	/// Gets the effects manager for this entity.
 	/// </summary>
 	EffectsManager EffectsManager { get; }
+
+	/// <summary>
+	/// Gets the abilities manager for this entity.
+	/// </summary>
+	EntityAbilities Abilities { get; }
+
+	/// <summary>
+	/// Gets the event bus for this entity.
+	/// </summary>
+	EventManager Events { get; }
 }

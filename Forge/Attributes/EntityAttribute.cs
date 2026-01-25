@@ -27,6 +27,11 @@ public sealed class EntityAttribute
 	public event Action<EntityAttribute, int>? OnValueChanged;
 
 	/// <summary>
+	/// Gets the unique key identifying this attribute.
+	/// </summary>
+	public StringKey Key { get; internal set; }
+
+	/// <summary>
 	/// Gets the base value for this attribute.
 	/// </summary>
 	public int BaseValue { get; private set; }
@@ -73,11 +78,14 @@ public sealed class EntityAttribute
 	internal int PendingValueChange { get; private set; }
 
 	internal EntityAttribute(
+		StringKey key,
 		int defaultValue,
 		int minValue,
 		int maxValue,
 		int channels)
 	{
+		Key = key;
+
 		PendingValueChange = 0;
 
 		Min = minValue;
@@ -169,7 +177,7 @@ public sealed class EntityAttribute
 	{
 		var oldValue = CurrentValue;
 
-		BaseValue = Math.Clamp((int)(BaseValue * (1 + value)), Min, Max);
+		BaseValue = Math.Clamp((int)(BaseValue * Math.Round(1 + value, 6)), Min, Max);
 
 		UpdateCachedValues();
 
@@ -241,7 +249,7 @@ public sealed class EntityAttribute
 		var oldValue = CurrentValue;
 
 		ref ChannelData channelData = ref _channels[channel];
-		channelData.PercentModifier += value;
+		channelData.PercentModifier += Math.Round(value, 6);
 
 		UpdateCachedValues();
 
@@ -265,7 +273,50 @@ public sealed class EntityAttribute
 				continue;
 			}
 
-			evaluatedValue = (evaluatedValue + _channels[i].FlatModifier) * _channels[i].PercentModifier;
+			evaluatedValue = (float)((evaluatedValue + _channels[i].FlatModifier) * _channels[i].PercentModifier);
+		}
+
+		return Math.Clamp((int)evaluatedValue, Min, Max);
+	}
+
+	internal float CalculateValueWithPendingModifiers(
+		Dictionary<int, float>? pendingFlatBonusByChannel,
+		Dictionary<int, float>? pendingPercentBonusByChannel,
+		Dictionary<int, float>? pendingOverrideByChannel)
+	{
+		var evaluatedValue = (float)BaseValue;
+
+		for (var i = 0; i < _channels.Length; i++)
+		{
+			if (pendingOverrideByChannel is not null &&
+				pendingOverrideByChannel.TryGetValue(i, out var pendingOverride))
+			{
+				evaluatedValue = pendingOverride;
+				continue;
+			}
+
+			var channelOverride = _channels[i].Override;
+			if (channelOverride.HasValue)
+			{
+				evaluatedValue = channelOverride.Value;
+				continue;
+			}
+
+			var flatBonus = _channels[i].FlatModifier;
+			if (pendingFlatBonusByChannel is not null &&
+				pendingFlatBonusByChannel.TryGetValue(i, out var pendingFlat))
+			{
+				flatBonus += (int)pendingFlat;
+			}
+
+			var percentMultiplier = _channels[i].PercentModifier;
+			if (pendingPercentBonusByChannel is not null &&
+				pendingPercentBonusByChannel.TryGetValue(i, out var pendingPercent))
+			{
+				percentMultiplier += pendingPercent;
+			}
+
+			evaluatedValue = (float)((evaluatedValue + flatBonus) * percentMultiplier);
 		}
 
 		return Math.Clamp((int)evaluatedValue, Min, Max);
@@ -293,7 +344,7 @@ public sealed class EntityAttribute
 				continue;
 			}
 
-			evaluatedValue = (evaluatedValue + channel.FlatModifier) * channel.PercentModifier;
+			evaluatedValue = (float)((evaluatedValue + channel.FlatModifier) * channel.PercentModifier);
 		}
 
 		CurrentValue = Math.Clamp((int)evaluatedValue, Min, Max);

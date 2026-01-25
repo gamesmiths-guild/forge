@@ -23,16 +23,16 @@ public class CustomTestExecutionClass : CustomExecution
 
 	public AttributeCaptureDefinition TargetAttribute2 { get; }
 
-	public CustomTestExecutionClass()
+	public CustomTestExecutionClass(bool snapshot)
 	{
 		SourceAttribute1 = new AttributeCaptureDefinition(
 			"TestAttributeSet.Attribute3",
 			AttributeCaptureSource.Source,
-			false);
+			snapshot);
 		SourceAttribute2 = new AttributeCaptureDefinition(
 			"TestAttributeSet.Attribute5",
 			AttributeCaptureSource.Source,
-			false);
+			snapshot);
 		SourceAttribute3 = new AttributeCaptureDefinition(
 			"TestAttributeSet.Attribute90",
 			AttributeCaptureSource.Source,
@@ -40,11 +40,11 @@ public class CustomTestExecutionClass : CustomExecution
 		TargetAttribute1 = new AttributeCaptureDefinition(
 			"TestAttributeSet.Attribute1",
 			AttributeCaptureSource.Target,
-			false);
+			true);
 		TargetAttribute2 = new AttributeCaptureDefinition(
 			"TestAttributeSet.Attribute2",
 			AttributeCaptureSource.Target,
-			false);
+			true);
 
 		AttributesToCapture.Add(SourceAttribute1);
 		AttributesToCapture.Add(SourceAttribute2);
@@ -55,12 +55,30 @@ public class CustomTestExecutionClass : CustomExecution
 		CustomCueParameters.Add("custom.parameter", 0);
 	}
 
-	public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target)
+	public override ModifierEvaluatedData[] EvaluateExecution(
+		Effect effect,
+		IForgeEntity target,
+		EffectEvaluatedData? effectEvaluatedData)
 	{
 		var result = new List<ModifierEvaluatedData>();
 
-		var sourceAttribute1value = CaptureAttributeMagnitude(SourceAttribute1, effect, effect.Ownership.Source);
-		var sourceAttribute2value = CaptureAttributeMagnitude(SourceAttribute2, effect, effect.Ownership.Source);
+		var sourceAttribute1value = CaptureAttributeMagnitude(
+			SourceAttribute1,
+			effect,
+			target,
+			effectEvaluatedData);
+
+		var sourceAttribute2value = CaptureAttributeMagnitude(
+			SourceAttribute2,
+			effect,
+			target,
+			effectEvaluatedData);
+
+		var targetAttribute1value = CaptureAttributeMagnitude(
+			TargetAttribute1,
+			effect,
+			target,
+			effectEvaluatedData);
 
 		if (TargetAttribute1.TryGetAttribute(target, out EntityAttribute? targetAttribute1))
 		{
@@ -75,7 +93,7 @@ public class CustomTestExecutionClass : CustomExecution
 			result.Add(new ModifierEvaluatedData(
 				targetAttribute2,
 				ModifierOperation.FlatBonus,
-				sourceAttribute1value + sourceAttribute2value));
+				sourceAttribute1value + sourceAttribute2value + targetAttribute1value));
 		}
 
 		if (SourceAttribute3.TryGetAttribute(effect.Ownership.Source, out EntityAttribute? sourceAttribute3))

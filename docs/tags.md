@@ -444,7 +444,13 @@ Tag modification typically happens in specific ways:
    // Create effect that applies a tag
    var stunEffectData = new EffectData(
        "Stun Effect",
-       new DurationData(DurationType.HasDuration, new ScalableFloat(3.0f)),
+       new DurationData(
+           DurationType.HasDuration,
+           new ModifierMagnitude(
+               MagnitudeCalculationType.ScalableFloat,
+               new ScalableFloat(3.0f)
+           )
+       ),
        effectComponents: [
            new ModifierTagsEffectComponent(
                tagsManager.RequestTagContainer(["status.stunned"])

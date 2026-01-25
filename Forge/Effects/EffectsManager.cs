@@ -4,6 +4,7 @@ using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
+using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Stacking;
 
 namespace Gamesmiths.Forge.Effects;
@@ -32,47 +33,26 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// </returns>
 	public ActiveEffectHandle? ApplyEffect(Effect effect)
 	{
-		if (!effect.CanApply(Owner))
-		{
-			return null;
-		}
+		return ApplyEffectInternal(effect, applicationContext: null);
+	}
 
-		if (effect.EffectData.DurationData.DurationType == DurationType.Instant)
-		{
-			var evaluatedData = new EffectEvaluatedData(effect, Owner);
-
-			foreach (IEffectComponent component in effect.EffectData.EffectComponents)
-			{
-				component.OnEffectApplied(Owner, in evaluatedData);
-			}
-
-			Effect.Execute(in evaluatedData);
-			return null;
-		}
-
-		if (!effect.EffectData.StackingData.HasValue)
-		{
-			return ApplyNewEffect(effect).Handle;
-		}
-
-		ActiveEffect? stackableEffect = FindStackableEffect(effect);
-
-		if (stackableEffect is not null)
-		{
-			var successfulApplication = stackableEffect.AddStack(effect);
-
-			if (successfulApplication)
-			{
-				foreach (IEffectComponent component in stackableEffect.EffectData.EffectComponents)
-				{
-					component.OnEffectApplied(Owner, stackableEffect.EffectEvaluatedData);
-				}
-			}
-
-			return stackableEffect.Handle;
-		}
-
-		return ApplyNewEffect(effect).Handle;
+	/// <summary>
+	/// Applies an effect to the owner of this manager with custom context data.
+	/// </summary>
+	/// <typeparam name="TData">The type of custom data to pass through the effect pipeline.</typeparam>
+	/// <param name="effect">The instance of the effect to be applied.</param>
+	/// <param name="contextData">Custom data to pass through the effect pipeline to CustomCalculators and
+	/// CustomExecutions.</param>
+	/// <returns>A handle to the applied effect if it was successfully applied as an <see cref="ActiveEffect"/>.
+	/// </returns>
+	/// <remarks>
+	/// The context data can be accessed in <see cref="Calculator.CustomExecution"/> or
+	/// <see cref="Calculator.CustomModifierMagnitudeCalculator"/> via
+	/// <see cref="EffectEvaluatedData.TryGetContextData{TData}(out TData)"/>.
+	/// </remarks>
+	public ActiveEffectHandle? ApplyEffect<TData>(Effect effect, TData contextData)
+	{
+		return ApplyEffectInternal(effect, new EffectApplicationContext<TData>(contextData));
 	}
 
 	/// <summary>
@@ -80,11 +60,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.
 	/// </summary>
 	/// <param name="activeEffect">The instance of the active effect to be removed.</param>
-	/// <param name="forceUnapply">Forces unapplication even if <see cref="StackExpirationPolicy"/> is set to
+	/// <param name="forceRemoval">Forces removal even if <see cref="StackExpirationPolicy"/> is set to
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.</param>
-	public void UnapplyEffect(ActiveEffectHandle activeEffect, bool forceUnapply = false)
+	public void RemoveEffect(ActiveEffectHandle activeEffect, bool forceRemoval = false)
 	{
-		RemoveStackOrUnapply(activeEffect.ActiveEffect, forceUnapply);
+		RemoveStackOrUnapply(activeEffect.ActiveEffect, forceRemoval);
 	}
 
 	/// <summary>
@@ -92,26 +72,26 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.
 	/// </summary>
 	/// <param name="effect">The instance of the effect to be removed.</param>
-	/// <param name="forceUnapply">Forces unapplication even if <see cref="StackExpirationPolicy"/> is set to
+	/// <param name="forceRemoval">Forces removal even if <see cref="StackExpirationPolicy"/> is set to
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.</param>
-	public void UnapplyEffect(Effect effect, bool forceUnapply = false)
+	public void RemoveEffect(Effect effect, bool forceRemoval = false)
 	{
-		RemoveStackOrUnapply(FilterEffectsByEffect(effect).FirstOrDefault(), forceUnapply);
+		RemoveStackOrUnapply(FilterEffectsByEffect(effect).FirstOrDefault(), forceRemoval);
 	}
 
 	/// <summary>
-	/// Unapply an effect based on an <see cref="EffectData"/> or an stack if it's a stackable effect with
+	/// Removes an effect based on an <see cref="EffectData"/> or an stack if it's a stackable effect with
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.
 	/// </summary>
 	/// <remarks>
 	/// This method searches for the first instance of the given effect data it can find and removes it.
 	/// </remarks>
 	/// <param name="effectData">Which effect data to look for to removal.</param>
-	/// /// <param name="forceUnapply">Forces unapplication even if <see cref="StackExpirationPolicy"/> is set to
+	/// /// <param name="forceRemoval">Forces removal even if <see cref="StackExpirationPolicy"/> is set to
 	/// <see cref="StackExpirationPolicy.RemoveSingleStackAndRefreshDuration"/>.</param>
-	public void UnapplyEffectData(EffectData effectData, bool forceUnapply = false)
+	public void RemoveEffectData(EffectData effectData, bool forceRemoval = false)
 	{
-		RemoveStackOrUnapply(FilterEffectsByData(effectData).FirstOrDefault(), forceUnapply);
+		RemoveStackOrUnapply(FilterEffectsByData(effectData).FirstOrDefault(), forceRemoval);
 	}
 
 	/// <summary>
@@ -123,12 +103,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <param name="deltaTime">Time passed since the last update call.</param>
 	public void UpdateEffects(double deltaTime)
 	{
-		foreach (ActiveEffect effect in _activeEffects)
+		ActiveEffect[] effectsToUpdate = [.. _activeEffects];
+		foreach (ActiveEffect effect in effectsToUpdate)
 		{
 			effect.Update(deltaTime);
 		}
 
-		foreach (ActiveEffect expiredEffect in _activeEffects.Where(x => x.IsExpired).ToArray())
+		foreach (ActiveEffect expiredEffect in effectsToUpdate.Where(x => x.IsExpired).ToArray())
 		{
 			RemoveActiveEffect(expiredEffect, false);
 		}
@@ -145,11 +126,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return ConvertToStackInstanceData(filteredEffects);
 	}
 
-	internal void OnEffectExecuted_InternalCall(EffectEvaluatedData executedEffectEvaluatedData)
+	internal void OnEffectExecuted_InternalCall(
+		EffectEvaluatedData executedEffectEvaluatedData,
+		IEffectComponent[]? componentInstances)
 	{
-		EffectData effectData = executedEffectEvaluatedData.Effect.EffectData;
-
-		foreach (IEffectComponent component in effectData.EffectComponents)
+		foreach (IEffectComponent component in componentInstances
+			?? executedEffectEvaluatedData.Effect.EffectData.EffectComponents)
 		{
 			component.OnEffectExecuted(Owner, in executedEffectEvaluatedData);
 		}
@@ -159,7 +141,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	internal void OnActiveEffectUnapplied_InternalCall(ActiveEffect removedEffect)
 	{
-		foreach (IEffectComponent component in removedEffect.Effect.EffectData.EffectComponents)
+		foreach (IEffectComponent component in removedEffect.ComponentInstances)
 		{
 			component.OnActiveEffectUnapplied(
 				Owner,
@@ -175,7 +157,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	internal void OnActiveEffectChanged_InternalCall(ActiveEffect removedEffect)
 	{
-		foreach (IEffectComponent component in removedEffect.EffectData.EffectComponents)
+		foreach (IEffectComponent component in removedEffect.ComponentInstances)
 		{
 			component.OnActiveEffectChanged(
 				Owner,
@@ -191,6 +173,24 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	internal void TriggerCuesUpdate_InternalCall(in EffectEvaluatedData effectEvaluatedData)
 	{
 		_cuesManager.UpdateCues(in effectEvaluatedData);
+	}
+
+	internal void RemoveActiveEffect_InternalCall(ActiveEffect effect)
+	{
+		RemoveActiveEffect(effect, false);
+	}
+
+	internal bool CanApplyEffect(Effect costEffect, int level)
+	{
+		foreach (Modifier modifier in costEffect.EffectData.Modifiers)
+		{
+			if (!modifier.CanApply(costEffect, Owner, level))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	private static bool MatchesStackPolicy(ActiveEffect existingEffect, Effect newEffect)
@@ -245,14 +245,67 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			MatchesStackLevelPolicy(x, effect));
 	}
 
-	private ActiveEffect ApplyNewEffect(Effect effect)
+	private ActiveEffectHandle? ApplyEffectInternal(Effect effect, EffectApplicationContext? applicationContext)
 	{
-		var activeEffect = new ActiveEffect(effect, Owner);
+		if (!effect.CanApply(Owner))
+		{
+			return null;
+		}
+
+		if (effect.EffectData.DurationData.DurationType == DurationType.Instant)
+		{
+			var evaluatedData = new EffectEvaluatedData(effect, Owner, applicationContext: applicationContext);
+
+			// Create component instances for instant effects to ensure stateful components
+			IEffectComponent[] definitions = effect.EffectData.EffectComponents;
+			var componentInstances = new IEffectComponent[definitions.Length];
+			for (var i = 0; i < definitions.Length; i++)
+			{
+				componentInstances[i] = definitions[i].CreateInstance();
+			}
+
+			foreach (IEffectComponent component in effect.EffectData.EffectComponents)
+			{
+				component.OnEffectApplied(Owner, in evaluatedData);
+			}
+
+			Effect.Execute(in evaluatedData, componentInstances);
+			return null;
+		}
+
+		if (!effect.EffectData.StackingData.HasValue)
+		{
+			return ApplyNewEffect(effect, applicationContext).Handle;
+		}
+
+		ActiveEffect? stackableEffect = FindStackableEffect(effect);
+
+		if (stackableEffect is not null)
+		{
+			var successfulApplication = stackableEffect.AddStack(effect);
+
+			if (successfulApplication)
+			{
+				foreach (IEffectComponent component in stackableEffect.ComponentInstances)
+				{
+					component.OnEffectApplied(Owner, stackableEffect.EffectEvaluatedData);
+				}
+			}
+
+			return stackableEffect.Handle;
+		}
+
+		return ApplyNewEffect(effect, applicationContext).Handle;
+	}
+
+	private ActiveEffect ApplyNewEffect(Effect effect, EffectApplicationContext? applicationContext)
+	{
+		var activeEffect = new ActiveEffect(effect, Owner, applicationContext);
 		_activeEffects.Add(activeEffect);
 
 		var remainActive = true;
 
-		foreach (IEffectComponent component in effect.EffectData.EffectComponents)
+		foreach (IEffectComponent component in activeEffect.ComponentInstances)
 		{
 			remainActive &= component.OnActiveEffectAdded(
 				Owner,
@@ -285,17 +338,29 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 
+		foreach (IEffectComponent component in activeEffect.ComponentInstances)
+		{
+			component.OnPostActiveEffectAdded(
+				Owner,
+				new ActiveEffectEvaluatedData(
+					activeEffect.Handle,
+					activeEffect.EffectEvaluatedData,
+					activeEffect.RemainingDuration,
+					activeEffect.NextPeriodicTick,
+					activeEffect.ExecutionCount));
+		}
+
 		return activeEffect;
 	}
 
-	private void RemoveStackOrUnapply(ActiveEffect? effectToRemove, bool forceUnapply)
+	private void RemoveStackOrUnapply(ActiveEffect? effectToRemove, bool forceRemoval)
 	{
 		if (effectToRemove is null)
 		{
 			return;
 		}
 
-		if (!forceUnapply
+		if (!forceRemoval
 			&& effectToRemove.EffectData.StackingData.HasValue
 			&& effectToRemove.EffectData.StackingData.Value.ExpirationPolicy
 			== StackExpirationPolicy.RemoveSingleStackAndRefreshDuration)
@@ -313,11 +378,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		if (effectToRemove.EffectData.DurationData.DurationType == DurationType.HasDuration)
 		{
-			forceUnapply = true;
+			forceRemoval = true;
 		}
 
 		effectToRemove.Unapply();
-		RemoveActiveEffect(effectToRemove, forceUnapply);
+		RemoveActiveEffect(effectToRemove, forceRemoval);
 	}
 
 	private void RemoveActiveEffect(ActiveEffect effectToRemove, bool interrupted)
@@ -331,7 +396,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		EffectEvaluatedData effectEvaluatedData = effectToRemove.EffectEvaluatedData;
 
-		foreach (IEffectComponent component in effectToRemove.EffectData.EffectComponents)
+		foreach (IEffectComponent component in effectToRemove.ComponentInstances)
 		{
 			component.OnActiveEffectUnapplied(
 				Owner,

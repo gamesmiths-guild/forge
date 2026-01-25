@@ -90,16 +90,11 @@ public readonly record struct ModifierMagnitude
 		SetByCallerFloat = setByCallerFloat;
 	}
 
-	/// <summary>
-	/// Gets the calculated magnitude for a given <see cref="Effect"/> and this <see cref="ModifierMagnitude"/>
-	/// configurations.
-	/// </summary>
-	/// <param name="effect">The effect to calculate the magnitude for.</param>
-	/// <param name="target">The target which might be used for the magnitude calculation.</param>
-	/// <param name="level">An optional custom level used for magnitude calculation. Will use the effect's level if not
-	/// provided.</param>
-	/// <returns>The evaluated magnitude.</returns>
-	public readonly float GetMagnitude(Effect effect, IForgeEntity target, int? level = null)
+	internal readonly float GetMagnitude(
+		Effect effect,
+		IForgeEntity target,
+		int level,
+		EffectEvaluatedData? effectEvaluatedData = null)
 	{
 		switch (MagnitudeCalculationType)
 		{
@@ -107,24 +102,38 @@ public readonly record struct ModifierMagnitude
 				Validation.Assert(
 					ScalableFloatMagnitude.HasValue,
 					$"{nameof(ScalableFloatMagnitude)} should always have a value at this point.");
-				return ScalableFloatMagnitude.Value.GetValue(level ?? effect.Level);
+				return ScalableFloatMagnitude.Value.GetValue(level);
 
 			case MagnitudeCalculationType.AttributeBased:
 				Validation.Assert(
 					AttributeBasedFloat.HasValue,
 					$"{nameof(AttributeBasedFloat)} should always have a value at this point.");
-				return AttributeBasedFloat.Value.CalculateMagnitude(effect, target, level ?? effect.Level);
+				return AttributeBasedFloat.Value.CalculateMagnitude(
+					effect, target, level, effectEvaluatedData?.SnapshotAttributes);
 
 			case MagnitudeCalculationType.CustomCalculatorClass:
 				Validation.Assert(
 					CustomCalculationBasedFloat.HasValue,
 					$"{nameof(CustomCalculationBasedFloat)} should always have a value at this point.");
-				return CustomCalculationBasedFloat.Value.CalculateMagnitude(effect, target, level ?? effect.Level);
+				return CustomCalculationBasedFloat.Value.CalculateMagnitude(effect, target, level, effectEvaluatedData);
 
 			case MagnitudeCalculationType.SetByCaller:
 				Validation.Assert(
 					SetByCallerFloat.HasValue,
 					$"{nameof(SetByCallerFloat)} should always have a value at this point.");
+
+				if (SetByCallerFloat.Value.Snapshot && effectEvaluatedData is not null)
+				{
+					if (effectEvaluatedData.SnapshotSetByCallers.TryGetValue(
+						SetByCallerFloat.Value.Tag, out var snapshotValue))
+					{
+						return snapshotValue;
+					}
+
+					effectEvaluatedData.SnapshotSetByCallers.Add(
+						SetByCallerFloat.Value.Tag, effect.DataTag[SetByCallerFloat.Value.Tag]);
+				}
+
 				return effect.DataTag[SetByCallerFloat.Value.Tag];
 
 			default:

@@ -1,14 +1,16 @@
 # Forge Gameplay System
 
+[![CI](https://github.com/gamesmiths-guild/forge/actions/workflows/validate-project.yml/badge.svg)](https://github.com/gamesmiths-guild/forge/actions/workflows/validate-project.yml)
 [![NuGet](https://img.shields.io/nuget/v/Gamesmiths.Forge.svg)](https://www.nuget.org/packages/Gamesmiths.Forge)
+[![License](https://img.shields.io/github/license/gamesmiths-guild/forge)](LICENSE)
 
 A gameplay framework for developing games using C#.
 
-Forge is an engine-agnostic gameplay framework designed for building robust game systems in C#. Inspired by Unreal Engine's Gameplay Ability System (GAS), Forge provides a centralized and controlled approach to managing attributes, effects, tags, and cues in your games.
+Forge is an engine-agnostic gameplay framework designed for building robust game systems in C#. Inspired by Unreal Engine's Gameplay Ability System (GAS), Forge provides a centralized and controlled approach to managing attributes, effects, tags, abilities, events, and cues in your games.
 
 The framework eliminates the need to rebuild status systems for every game project by offering a flexible, data-driven architecture that works seamlessly with Unity, Godot, and other C#-compatible engines. With Forge, all attribute changes are handled through effects, ensuring organized and maintainable code even in complex gameplay scenarios.
 
-**Keywords:** gameplay system, C# game development, Unity, Godot, attribute system, status effects, gameplay abilities, data-driven
+**Keywords:** gameplay framework, C#, engine-agnostic, data-driven, attributes, gameplay effects, abilities, gameplay tags
 
 ## Quick Start
 
@@ -16,13 +18,15 @@ New to Forge? Check out the [Quick Start Guide](docs/quick-start.md) to build yo
 
 ## Architecture Overview
 
-Forge is built around four core systems that work together to provide comprehensive gameplay functionality:
+Forge is built around core systems that work together to provide comprehensive gameplay functionality:
 
 ### Core Systems
 
 - **[Attributes](docs/attributes.md)**: Centralized attribute management with min/max values, channels, and controlled modifications.
 - **[Effects](docs/effects/README.md)**: Data-driven system for applying temporary or permanent changes to entities.
 - **[Tags](docs/tags.md)**: Hierarchical tagging system for entity classification and effect targeting.
+- **[Abilities](docs/abilities.md)**: Creation, granting, activation, cooldowns, costs, and instancing rules for gameplay abilities.
+- **[Events](docs/events.md)**: Gameplay event handling and propagation used for ability triggers and game logic reactions.
 - **[Cues](docs/cues.md)**: Visual and audio feedback system that bridges gameplay with presentation.
 
 ### Entity Integration
@@ -32,6 +36,8 @@ Every game object that uses Forge implements the `IForgeEntity` interface, provi
 - `EntityAttributes` - Manages all attributes and attribute sets.
 - `EntityTags` - Handles base and modifier tags with automatic inheritance.
 - `EffectsManager` - Controls effect application, stacking, and lifecycle.
+- `EntityAbilities` - Grants and activates abilities, handles cooldowns/costs, and manages instancing.
+- `EventManager` - Dispatches and listens to gameplay events for triggers and reactions.
 
 ### Advanced Features
 
@@ -55,12 +61,13 @@ Forge supports a variety of gameplay mechanics through specialized subsystems:
 - **Effects System**: Comprehensive effect application with stacking support.
 - **Cues System**: Visual feedback system for effect application/removal.
 - **Custom Calculators**: Flexible logic execution for effects.
+- **Abilities System**: Ability granting, activation, instancing, costs, cooldowns, and tag-based requirements.
+- **Events System**: Gameplay event handling, tagging, and trigger support.
 
 ### Planned Features 🚧
 
-- **Abilities System**: Complete ability system similar to GAS abilities.
 - **Multiplayer Support**: Network replication for all systems.
-- **Events System**: Gameplay event handling and propagation.
+- **Statescript**: Backend support for state-based scripting of Ability behaviors.
 
 ## Installation
 
@@ -78,7 +85,7 @@ Install via NuGet, reference the Forge project directly, or download the precomp
 Install the package via .NET CLI:
 
 ```shell
-dotnet add package Gamesmiths.Forge --version 0.1.2
+dotnet add package Gamesmiths.Forge
 ```
 
 Or search for `Gamesmiths.Forge` in the NuGet Package Manager UI in Visual Studio.

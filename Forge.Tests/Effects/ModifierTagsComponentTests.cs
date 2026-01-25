@@ -1,7 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
-using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Components;
@@ -118,7 +117,6 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		var validationContainer = new TagContainer(_tagsManager, validationTags);
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		Validation.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
@@ -127,7 +125,7 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandle);
+		entity.EffectsManager.RemoveEffect(activeEffectHandle!);
 		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
@@ -246,19 +244,18 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		var validationContainer = new TagContainer(_tagsManager, validationTags);
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		Validation.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		for (var i = 0; i < stacks - 1; i++)
 		{
-			entity.EffectsManager.UnapplyEffect(activeEffectHandle);
+			entity.EffectsManager.RemoveEffect(activeEffectHandle!);
 			entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 			entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 		}
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandle);
+		entity.EffectsManager.RemoveEffect(activeEffectHandle!);
 		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
@@ -284,12 +281,11 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		var validationContainer = new TagContainer(_tagsManager, validationTags);
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
-		Validation.Assert(activeEffectHandle is not null, "Effect handle should have a value.");
 
 		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
-		entity.EffectsManager.UnapplyEffect(activeEffectHandle, true);
+		entity.EffectsManager.RemoveEffect(activeEffectHandle!, true);
 		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
@@ -300,7 +296,9 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		return new EffectData(
 			"Test Effect",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(duration)),
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(duration))),
 			effectComponents:
 			[
 				new ModifierTagsEffectComponent(new TagContainer(_tagsManager, tags))

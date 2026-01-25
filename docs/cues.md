@@ -307,6 +307,29 @@ cuesManager.UpdateCue(burningTag, targetEntity, updatedParameters);
 cuesManager.RemoveCue(burningTag, targetEntity, interrupted: false);
 ```
 
+## Cues vs Events
+
+Cues are designed for the presentation layer:  visual effects, audio, and player feedback. For gameplay logic that affects simulation state, use the [Events system](events.md) instead.
+
+- **Cues** handle presentation: particle effects, sounds, UI animations. In a networked context, they can use unreliable replication. 
+- **Events** handle simulation: damage calculations, ability triggers, state changes. In a networked context, they require reliable replication. 
+
+A common pattern is to raise an Event for gameplay logic, then trigger the corresponding Cue for feedback:
+
+```csharp
+// Event for gameplay (reliable, affects game state)
+entity.Events. Raise(new EventData
+{
+    EventTags = damageEventTag.GetSingleTagContainer(),
+    Source = attacker,
+    Target = victim,
+    EventMagnitude = damage
+});
+
+// Cue for presentation (can be unreliable)
+cuesManager.ExecuteCue(damageCueTag, victim, cueParameters);
+```
+
 ## Best Practices
 
 1. **Separate Concerns**: Keep gameplay logic in effects and executions, and visual feedback in cues.

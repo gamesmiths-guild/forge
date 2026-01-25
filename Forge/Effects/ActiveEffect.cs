@@ -2,10 +2,13 @@
 
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
+using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Effects.Stacking;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Effects;
 
@@ -16,13 +19,15 @@ internal sealed class ActiveEffect
 {
 	private const double Epsilon = 0.00001;
 
-	private double _internalTime;
+	private readonly HashSet<Tag> _nonSnapshotSetByCallerTags;
 
-	private bool _isInhibited;
+	private double _internalTime;
 
 	internal ActiveEffectHandle Handle { get; }
 
-	internal EffectEvaluatedData EffectEvaluatedData { get; private set; }
+	internal EffectEvaluatedData EffectEvaluatedData { get; }
+
+	internal bool IsInhibited { get; private set; }
 
 	internal double RemainingDuration { get; set; }
 
@@ -40,20 +45,58 @@ internal sealed class ActiveEffect
 
 	internal Effect Effect => EffectEvaluatedData.Effect;
 
-	internal ActiveEffect(Effect effect, IForgeEntity target)
+	/// <summary>
+	/// Gets the component instances for this active effect.
+	/// </summary>
+	/// <remarks>
+	/// These are created via <see cref="IEffectComponent.CreateInstance"/> when the effect is applied,
+	/// allowing stateful components to maintain per-effect-instance state.
+	/// </remarks>
+	internal IEffectComponent[] ComponentInstances { get; }
+
+	internal ActiveEffect(Effect effect, IForgeEntity target, EffectApplicationContext? applicationContext)
 	{
 		Handle = new ActiveEffectHandle(this);
 
+		// Create component instances for this specific effect application
+		IEffectComponent[] definitions = effect.EffectData.EffectComponents;
+		ComponentInstances = new IEffectComponent[definitions.Length];
+		for (var i = 0; i < definitions.Length; i++)
+		{
+			ComponentInstances[i] = definitions[i].CreateInstance();
+		}
+
 		if (effect.EffectData.StackingData.HasValue)
 		{
-			StackCount = effect.EffectData.StackingData.Value.InitialStack.GetValue(EffectEvaluatedData.Level);
+			StackCount = effect.EffectData.StackingData.Value.InitialStack.GetValue(effect.Level);
 		}
 		else
 		{
 			StackCount = 1;
 		}
 
-		EffectEvaluatedData = new EffectEvaluatedData(effect, target, StackCount);
+		EffectEvaluatedData = new EffectEvaluatedData(effect, target, StackCount, applicationContext: applicationContext);
+
+		_nonSnapshotSetByCallerTags = [];
+
+		ModifierMagnitude? durationMagnitude = effect.EffectData.DurationData.DurationMagnitude;
+		if (durationMagnitude.HasValue
+			&& durationMagnitude.Value.MagnitudeCalculationType == MagnitudeCalculationType.SetByCaller
+			&& !durationMagnitude.Value.SetByCallerFloat!.Value.Snapshot)
+		{
+			_nonSnapshotSetByCallerTags.Add(
+				effect.EffectData.DurationData.DurationMagnitude!.Value.SetByCallerFloat!.Value.Tag);
+		}
+
+		for (var i = 0; i < EffectEvaluatedData.Effect.EffectData.Modifiers.Length; i++)
+		{
+			SetByCallerFloat? setByCallerFloat =
+				EffectEvaluatedData.Effect.EffectData.Modifiers[i].Magnitude.SetByCallerFloat;
+			if (setByCallerFloat.HasValue && !setByCallerFloat.Value.Snapshot)
+			{
+				_nonSnapshotSetByCallerTags.Add(setByCallerFloat.Value.Tag);
+			}
+		}
 	}
 
 	internal void Apply(bool reApplication = false, bool inhibited = false)
@@ -62,10 +105,10 @@ internal sealed class ActiveEffect
 		{
 			ExecutionCount = 0;
 			_internalTime = 0;
-			_isInhibited = inhibited;
+			IsInhibited = inhibited;
 			RemainingDuration = EffectEvaluatedData.Duration;
 
-			if (!EffectData.SnapshopLevel)
+			if (!EffectData.SnapshotLevel)
 			{
 				Effect.OnLevelChanged += Effect_OnLevelChanged;
 			}
@@ -74,12 +117,14 @@ internal sealed class ActiveEffect
 			{
 				attribute.OnValueChanged += Attribute_OnValueChanged;
 			}
+
+			Effect.OnSetByCallerFloatChanged += Effect_OnSetByCallerFloatChanged;
 		}
 
 		if (EffectData.PeriodicData.HasValue)
 		{
 			if (EffectData.PeriodicData.Value.ExecuteOnApplication &&
-				!reApplication && !_isInhibited)
+				!reApplication && !IsInhibited)
 			{
 				Execute();
 			}
@@ -89,7 +134,7 @@ internal sealed class ActiveEffect
 				NextPeriodicTick = EffectEvaluatedData.Period;
 			}
 		}
-		else if (!_isInhibited)
+		else if (!IsInhibited)
 		{
 			ApplyModifiers();
 		}
@@ -97,7 +142,7 @@ internal sealed class ActiveEffect
 
 	internal void Unapply(bool reApplication = false)
 	{
-		if (!EffectData.PeriodicData.HasValue && !_isInhibited)
+		if (!EffectData.PeriodicData.HasValue && !IsInhibited)
 		{
 			ApplyModifiers(true);
 		}
@@ -111,10 +156,12 @@ internal sealed class ActiveEffect
 				attribute.OnValueChanged -= Attribute_OnValueChanged;
 			}
 
-			if (!EffectData.SnapshopLevel)
+			if (!EffectData.SnapshotLevel)
 			{
 				Effect.OnLevelChanged -= Effect_OnLevelChanged;
 			}
+
+			Effect.OnSetByCallerFloatChanged -= Effect_OnSetByCallerFloatChanged;
 		}
 	}
 
@@ -184,18 +231,18 @@ internal sealed class ActiveEffect
 			return false;
 		}
 
-		Effect evaluatedEffect = EffectEvaluatedData.Effect;
+		Effect evaluatedEffect = Effect;
 
 		if (stackingData.OwnerDenialPolicy.HasValue)
 		{
 			if (stackingData.OwnerDenialPolicy.Value == StackOwnerDenialPolicy.DenyIfDifferent &&
-				EffectEvaluatedData.Effect.Ownership.Owner != effect.Ownership.Owner)
+				Effect.Ownership.Owner != effect.Ownership.Owner)
 			{
 				return false;
 			}
 
 			if (stackingData.OwnerOverridePolicy == StackOwnerOverridePolicy.Override &&
-				EffectEvaluatedData.Effect.Ownership.Owner != effect.Ownership.Owner)
+				Effect.Ownership.Owner != effect.Ownership.Owner)
 			{
 				evaluatedEffect = effect;
 				hasChanges = true;
@@ -216,7 +263,7 @@ internal sealed class ActiveEffect
 			}
 		}
 
-		// It can be a successfull application and still not increase stack count.
+		// It can be a successful application and still not increase stack count.
 		// In some cases we can even skip re-application.
 		if (resetStacks)
 		{
@@ -255,7 +302,7 @@ internal sealed class ActiveEffect
 			NextPeriodicTick = EffectEvaluatedData.Period;
 		}
 
-		if (stackingData.ExecuteOnSuccessfulApplication == true && !_isInhibited)
+		if (stackingData.ExecuteOnSuccessfulApplication == true && !IsInhibited)
 		{
 			Execute();
 		}
@@ -276,7 +323,7 @@ internal sealed class ActiveEffect
 		EffectEvaluatedData.Target.EffectsManager.OnActiveEffectUnapplied_InternalCall(this);
 
 		StackCount--;
-		ReapplyEffect(EffectEvaluatedData.Effect, isStackingCall: true);
+		ReapplyEffect(Effect, isStackingCall: true);
 	}
 
 	internal void Update(double deltaTime)
@@ -327,16 +374,16 @@ internal sealed class ActiveEffect
 
 	internal void SetInhibit(bool value)
 	{
-		if (_isInhibited == value)
+		if (IsInhibited == value)
 		{
 			return;
 		}
 
-		_isInhibited = value;
+		IsInhibited = value;
 
 		if (EffectData.PeriodicData.HasValue)
 		{
-			if (_isInhibited)
+			if (IsInhibited)
 			{
 				return;
 			}
@@ -356,7 +403,9 @@ internal sealed class ActiveEffect
 			return;
 		}
 
-		ApplyModifiers(_isInhibited);
+		ApplyModifiers(IsInhibited);
+
+		EffectEvaluatedData.Target.EffectsManager.OnActiveEffectChanged_InternalCall(this);
 	}
 
 	private void ExecutePeriodicEffects(double deltaTime)
@@ -367,7 +416,7 @@ internal sealed class ActiveEffect
 		{
 			while (_internalTime >= NextPeriodicTick - Epsilon)
 			{
-				if (!_isInhibited)
+				if (!IsInhibited)
 				{
 					Execute();
 				}
@@ -381,12 +430,7 @@ internal sealed class ActiveEffect
 	{
 		Unapply(true);
 
-		EffectEvaluatedData =
-			new EffectEvaluatedData(
-				effect,
-				EffectEvaluatedData.Target,
-				StackCount,
-				level);
+		EffectEvaluatedData.ReEvaluate(effect, StackCount, level);
 
 		Apply(reApplication: true);
 
@@ -394,7 +438,7 @@ internal sealed class ActiveEffect
 
 		EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
 
-		if (!EffectEvaluatedData.Effect.EffectData.SuppressStackingCues || !isStackingCall)
+		if (!Effect.EffectData.SuppressStackingCues || !isStackingCall)
 		{
 			EffectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData);
 		}
@@ -404,18 +448,18 @@ internal sealed class ActiveEffect
 
 	private void ApplyModifiers(bool unapply = false)
 	{
-		var multiplier = unapply ? -1 : 1;
-
 		foreach (ModifierEvaluatedData modifier in EffectEvaluatedData.ModifiersEvaluatedData)
 		{
 			switch (modifier.ModifierOperation)
 			{
 				case ModifierOperation.FlatBonus:
-					modifier.Attribute.AddFlatModifier(multiplier * (int)modifier.Magnitude, modifier.Channel);
+					var flatMagnitude = unapply ? -(int)modifier.Magnitude : (int)modifier.Magnitude;
+					modifier.Attribute.AddFlatModifier(flatMagnitude, modifier.Channel);
 					break;
 
 				case ModifierOperation.PercentBonus:
-					modifier.Attribute.AddPercentModifier(multiplier * modifier.Magnitude, modifier.Channel);
+					var percentMagnitude = unapply ? -modifier.Magnitude : modifier.Magnitude;
+					modifier.Attribute.AddPercentModifier(percentMagnitude, modifier.Channel);
 					break;
 
 				case ModifierOperation.Override:
@@ -423,13 +467,13 @@ internal sealed class ActiveEffect
 						modifier.AttributeOverride is not null,
 						"AttributeOverrideData should never be null at this point.");
 
-					if (multiplier == 1)
+					if (unapply)
 					{
-						modifier.Attribute.AddOverride(modifier.AttributeOverride.Value);
+						modifier.Attribute.ClearOverride(modifier.AttributeOverride.Value);
 						break;
 					}
 
-					modifier.Attribute.ClearOverride(modifier.AttributeOverride.Value);
+					modifier.Attribute.AddOverride(modifier.AttributeOverride.Value);
 					break;
 			}
 		}
@@ -438,19 +482,65 @@ internal sealed class ActiveEffect
 	private void Execute()
 	{
 		EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
-		Effect.Execute(in effectEvaluatedData);
+		Effect.Execute(in effectEvaluatedData, ComponentInstances);
 		ExecutionCount++;
+	}
+
+	private void UpdateEffectEvaluation()
+	{
+		if (!EffectData.DurationData.DurationMagnitude.HasValue)
+		{
+			ReapplyEffect(Effect);
+			return;
+		}
+
+		var updatedDuration = EffectEvaluatedData.EvaluateDuration(EffectData.DurationData);
+
+		if (EffectEvaluatedData.Duration > updatedDuration + Epsilon
+			|| EffectEvaluatedData.Duration < updatedDuration - Epsilon)
+		{
+			RemainingDuration += updatedDuration - EffectEvaluatedData.Duration;
+		}
+
+		if (RemainingDuration <= 0
+			&& EffectData.DurationData.DurationType == DurationType.HasDuration
+			&& StackCount == 1)
+		{
+			Unapply();
+			EffectEvaluatedData.Target.EffectsManager.RemoveActiveEffect_InternalCall(this);
+			return;
+		}
+
+		ReapplyEffect(Effect);
 	}
 
 	private void Attribute_OnValueChanged(EntityAttribute attribute, int change)
 	{
-		// This could be optimized by re-evaluating only the modifiers with the attribute that changed.
-		ReapplyEffect(EffectEvaluatedData.Effect);
+		if (!EffectEvaluatedData.AttributesToCapture.Contains(attribute))
+		{
+			return;
+		}
+
+		UpdateEffectEvaluation();
 	}
 
-	private void Effect_OnLevelChanged(int obj)
+	private void Effect_OnLevelChanged(int newLevel)
 	{
-		// This one has to re-calculate everything that uses ScalableFloats.
-		ReapplyEffect(EffectEvaluatedData.Effect);
+		if (EffectData.SnapshotLevel)
+		{
+			return;
+		}
+
+		UpdateEffectEvaluation();
+	}
+
+	private void Effect_OnSetByCallerFloatChanged(Tag identifierTag, float magnitude)
+	{
+		if (!_nonSnapshotSetByCallerTags.Contains(identifierTag))
+		{
+			return;
+		}
+
+		UpdateEffectEvaluation();
 	}
 }

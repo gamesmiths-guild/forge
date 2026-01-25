@@ -223,7 +223,11 @@ public enum StackLevelOverrideStackCountPolicy : byte
 // Simple poison effect that stacks up to 5 times, each stack adds to the damage
 var poisonEffectData = new EffectData(
     "Poison",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            scalableFloatMagnitude: new ScalableFloat(10.0f))),
     new[] {
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
     },
@@ -246,7 +250,11 @@ var poisonEffectData = new EffectData(
 // Buff that allows higher level applications to override lower ones
 var hierarchicalBuffEffect = new EffectData(
     "Strength Buff",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(30.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            scalableFloatMagnitude: new ScalableFloat(30.0f))),
     new[] {
         new Modifier("CombatAttributeSet.AttackPower", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
     },
@@ -277,7 +285,11 @@ var hierarchicalBuffEffect = new EffectData(
 // Bleeding effect that ticks every 2 seconds and stacks up to 3 times
 var bleedingEffectData = new EffectData(
     "Bleeding",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(8.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            scalableFloatMagnitude: new ScalableFloat(8.0f))),
     new[] {
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-3)))
     },
@@ -387,3 +399,8 @@ Stacking effects have several constraints and required relationships:
 8. **Document Your Stacking Rules**:
    - Clearly explain to players how stacks work for key abilities.
    - Use UI to communicate current stack counts.
+   
+9. **Duration Magnitude**:
+   - `DurationData` uses `ModifierMagnitude` (ScalableFloat, AttributeBased, CustomCalculatorClass, SetByCaller).
+   - For non-snapshot attribute captures or `SetByCaller` values, durations are re-evaluated at runtime.
+   - Stack refresh/reset behaviors (e.g., `ApplicationRefreshPolicy` or `RemoveSingleStackAndRefreshDuration`) use the current evaluated duration when they apply.

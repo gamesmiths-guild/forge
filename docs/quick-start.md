@@ -9,7 +9,7 @@ This guide will help you quickly get started with the Forge framework, showing y
 Install Forge via NuGet (recommended):
 
 ```shell
-dotnet add package Gamesmiths.Forge --version 0.1.2
+dotnet add package Gamesmiths.Forge
 ```
 
 For other installation methods, see the [main README](../README.md).
@@ -18,7 +18,7 @@ For other installation methods, see the [main README](../README.md).
 
 ## Creating a Basic Entity
 
-Let's create a simple player entity with three attributes: health, strength and speed.
+Let's create a simple player entity with three attributes: health, mana, strength and speed.
 
 For that we need to first define an `AttributeSet` that will hold those attributes.
 
@@ -27,13 +27,15 @@ For that we need to first define an `AttributeSet` that will hold those attribut
 public class PlayerAttributeSet : AttributeSet
 {
     public EntityAttribute Health { get; }
+    public EntityAttribute Mana { get; }
     public EntityAttribute Strength { get; }
     public EntityAttribute Speed { get; }
 
     public PlayerAttributeSet()
     {
         // Initialize the attributes with the current, min and max values.
-        Health = InitializeAttribute(nameof(Health), 100, 0, 100);
+        Health = InitializeAttribute(nameof(Health), 100, 0, 150);
+        Mana = InitializeAttribute(nameof(Mana), 100, 0, 100);
         Strength = InitializeAttribute(nameof(Strength), 10, 0, 99);
         Speed = InitializeAttribute(nameof(Speed), 5, 0, 10);
     }
@@ -45,6 +47,8 @@ public class Player : IForgeEntity
     public EntityAttributes Attributes { get; }
     public EntityTags Tags { get; }
     public EffectsManager EffectsManager { get; }
+    public EntityAbilities Abilities { get; }
+    public EventManager Events { get; }
 
     public Player(TagsManager tagsManager, CuesManager cuesManager)
     {
@@ -60,6 +64,8 @@ public class Player : IForgeEntity
         Attributes = new EntityAttributes(new PlayerAttributeSet());
         Tags = new EntityTags(baseTags);
         EffectsManager = new EffectsManager(this, cuesManager);
+        Abilities = new(this);
+        Events = new();
     }
 }
 
@@ -71,8 +77,12 @@ var tagsManager = new TagsManager(new string[]
     "class.warrior",
     "status.stunned",
     "status.burning",
+    "status.enraged",
     "status.immune.fire",
-    "cues.damage.fire"
+    "cues.damage.fire",
+    "events.combat.damage",
+    "events.combat.hit",
+    "cooldown.fireball"
 });
 
 // Create player instance
@@ -80,6 +90,7 @@ var player = new Player(tagsManager, cuesManager);
 
 // Access the player's attribute values
 var health = player.Attributes["PlayerAttributeSet.Health"].CurrentValue; // 100
+var mana = player.Attributes["PlayerAttributeSet.Mana"].CurrentValue; // 100
 var strength = player.Attributes["PlayerAttributeSet.Strength"].CurrentValue; // 10
 var speed = player.Attributes["PlayerAttributeSet.Speed"].CurrentValue; // 5
 ```
@@ -154,7 +165,13 @@ The following effect increases the player's strength by +5 for 10 seconds:
 // Create a strength buff effect that lasts for 10 seconds
 var strengthBuffEffectData = new EffectData(
     "Strength Potion",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)), // 10 seconds duration
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f) // 10 seconds duration
+        )
+    ),
     new[] {
         new Modifier(
             "PlayerAttributeSet.Strength",
@@ -234,7 +251,7 @@ var activeEffectHandle = player.EffectsManager.ApplyEffect(equipmentBuffEffect);
 // Remove the effect manually (e.g., when the item is unequipped)
 if (activeEffectHandle != null)
 {
-    player.EffectsManager.UnapplyEffect(activeEffectHandle);
+    player.EffectsManager.RemoveEffect(activeEffectHandle);
 }
 ```
 
@@ -250,7 +267,13 @@ This poison effect ticks every 2 seconds for 10 seconds, causing -5 damage per t
 // Create a poison effect that ticks every 2 seconds for 10 seconds
 var poisonEffectData = new EffectData(
     "Poison",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f)
+        )
+    ),
     new[] {
         new Modifier(
             "PlayerAttributeSet.Health",
@@ -271,6 +294,13 @@ var poisonEffectData = new EffectData(
 // Apply the poison effect
 var poisonEffect = new Effect(poisonEffectData, new EffectOwnership(player, player));
 player.EffectsManager.ApplyEffect(poisonEffect);
+
+// Simulate 10 seconds of game time
+player.EffectsManager.UpdateEffects(10f);
+
+// After 6 ticks total (including the initial execute), health should be 70 if it started at 100
+int currentHealthAfterPoison = player.Attributes["PlayerAttributeSet.Health"].CurrentValue; // 70
+int baseHealthAfterPoison = player.Attributes["PlayerAttributeSet.Health"].BaseValue; // 70
 ```
 
 ---
@@ -283,7 +313,13 @@ This example shows a poison effect that ticks every 2 seconds for -3 damage per 
 // Create a poison effect that stacks up to 3 times
 var stackingPoisonEffectData = new EffectData(
     "Stacking Poison",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(6.0f)), // Each stack lasts 6 seconds
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(6.0f) // Each stack lasts 6 seconds
+        )
+    ),
     new[] {
         new Modifier(
             "PlayerAttributeSet.Health",
@@ -305,7 +341,7 @@ var stackingPoisonEffectData = new EffectData(
         overflowPolicy: StackOverflowPolicy.DenyApplication, // Deny if max stacks reached
         magnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
         expirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
-        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication, // Refresh duration on new stack
+        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
         stackPolicy: StackPolicy.AggregateBySource, // Aggregate stacks from the same source
         stackLevelPolicy: StackLevelPolicy.SegregateLevels, // Each stack can have its own level
 
@@ -322,6 +358,12 @@ var stackingPoisonEffect = new Effect(stackingPoisonEffectData, new EffectOwners
 player.EffectsManager.ApplyEffect(stackingPoisonEffect);
 player.EffectsManager.ApplyEffect(stackingPoisonEffect);
 player.EffectsManager.ApplyEffect(stackingPoisonEffect);
+
+// Simulate 6 seconds of game time
+player.EffectsManager.UpdateEffects(6f);
+
+// After three ticks at -9 per tick, total damage is -27
+var healthAfterStacks = player.Attributes["PlayerAttributeSet.Health"].CurrentValue; // 73 if starting at 100
 ```
 
 ---
@@ -334,7 +376,13 @@ This example shows an effect that is unique to a target and can be overridden on
 // Define the unique effect data
 var uniqueEffectData = new EffectData(
     "Unique Buff",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)), // Lasts 10 seconds
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f) // Lasts 10 seconds
+        )
+    ),
     new[] {
         new Modifier(
             "PlayerAttributeSet.Strength",
@@ -355,7 +403,7 @@ var uniqueEffectData = new EffectData(
         overflowPolicy: StackOverflowPolicy.AllowApplication, // Allow application even if max stacks reached
         magnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
         expirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
-        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication, // Refresh duration on new stack
+        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
         stackPolicy: StackPolicy.AggregateByTarget, // Only one effect per target
         ownerDenialPolicy: StackOwnerDenialPolicy.AlwaysAllow, // Always allow application regardless of owner
         ownerOverridePolicy: StackOwnerOverridePolicy.Override, // Override existing effect if applied again
@@ -388,7 +436,13 @@ This example shows how to add a temporary "status.stunned" tag to the target whi
 // Create a "Stunned" effect that adds a tag and reduces speed to 0
 var stunEffectData = new EffectData(
     "Stunned",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(3.0f)), // 3 seconds duration
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(3.0f) // 3 seconds duration
+        )
+    ),
     new[] {
         new Modifier(
             "PlayerAttributeSet.Speed",
@@ -459,7 +513,7 @@ player.EffectsManager.ApplyEffect(fireAttack);
 
 You can extend effects with custom logic using components.
 
-This component applies an additional effect when the target's Health attribute falls below a specified threshold:
+This component applies an additional effect when the target's Health attribute falls below a specified threshold at the time of application:
 
 ```csharp
 // Custom component that applies extra effect when Health is below threshold
@@ -504,8 +558,9 @@ var thresholdAttackData = new EffectData(
     ]
 );
 
-// Apply the effect
+// Apply the effect twice (second application should trigger the stun)
 var thresholdAttack = new Effect(thresholdAttackData, new EffectOwnership(player, player));
+player.EffectsManager.ApplyEffect(thresholdAttack);
 player.EffectsManager.ApplyEffect(thresholdAttack);
 
 // Check if the stun was applied (will be true if health was 90 or less after damage)
@@ -543,10 +598,10 @@ public class StrengthDamageCalculator : CustomModifierMagnitudeCalculator
         AttributesToCapture.Add(SpeedAttribute);
     }
 
-    public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
+    public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
     {
-        int strength = CaptureAttributeMagnitude(StrengthAttribute, effect, target);
-        int speed = CaptureAttributeMagnitude(SpeedAttribute, effect, target);
+        int strength = CaptureAttributeMagnitude(StrengthAttribute, effect, target, effectEvaluatedData);
+        int speed = CaptureAttributeMagnitude(SpeedAttribute, effect, target, effectEvaluatedData);
 
         // Calculate damage based on strength and speed
         float damage = (speed * 2) + (strength * 0.5f);
@@ -621,14 +676,14 @@ public class HealthDrainExecution : CustomExecution
         AttributesToCapture.Add(SourceStrength);
     }
 
-    public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target)
+    public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
     {
         var results = new List<ModifierEvaluatedData>();
 
         // Get attribute values
-        int targetHealth = CaptureAttributeMagnitude(TargetHealth, effect, target);
-        int sourceHealth = CaptureAttributeMagnitude(SourceHealth, effect, effect.Ownership.Owner);
-        int sourceStrength = CaptureAttributeMagnitude(SourceStrength, effect, effect.Ownership.Owner);
+        int targetHealth = CaptureAttributeMagnitude(TargetHealth, effect, target, effectEvaluatedData);
+        int sourceHealth = CaptureAttributeMagnitude(SourceHealth, effect, effect.Ownership.Owner, effectEvaluatedData);
+        int sourceStrength = CaptureAttributeMagnitude(SourceStrength, effect, effect.Ownership.Owner, effectEvaluatedData);
 
         // Calculate health drain amount based on source strength
         float drainAmount = sourceStrength * 0.5f;
@@ -678,7 +733,7 @@ player2.EffectsManager.ApplyEffect(drainEffect);
 
 ---
 
-### Cue Examples
+## Cue Examples
 
 Cues bridge gameplay mechanics with visual and audio feedback. Here's how to define, trigger, and implement them.
 
@@ -704,7 +759,13 @@ This example shows how to trigger cues as part of an effect:
 // Define a burning effect that includes the fire damage cue
 var burningEffectData = new EffectData(
     "Burning",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(5.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(5.0f)
+        )
+    ),
     new[] {
         new Modifier(
             "PlayerAttributeSet.Health",
@@ -734,6 +795,7 @@ var burningEffectData = new EffectData(
 // Apply the burning effect
 var burningEffect = new Effect(burningEffectData, new EffectOwnership(player, player));
 player.EffectsManager.ApplyEffect(burningEffect);
+player.EffectsManager.UpdateEffects(5f);
 ```
 
 ---
@@ -807,6 +869,319 @@ public class FireDamageCueHandler : ICueHandler
 
 ---
 
+## Events
+
+The Events system allows entities to communicate and trigger reactions through tagged events.
+
+### Subscribing and Raising an Event
+
+```csharp
+// Subscribe to the damage event
+var damageTag = Tag.RequestTag(tagsManager, "events.combat.damage");
+player.Events.Subscribe(damageTag, eventData =>
+{
+    Console.WriteLine($"Player took {eventData.EventMagnitude} damage!");
+});
+
+// Raise the event
+player.Events.Raise(new EventData
+{
+    EventTags = damageTag.GetSingleTagContainer(),
+    Source = null,
+    Target = player,
+    EventMagnitude = 50f
+});
+```
+
+You can also instantiate your own `EventManager` and use it in any part of your code, providing a way to handle global or system-specific events independently of entities.
+
+### Strongly Typed Events
+
+You can optimize events to avoid boxing by using generic `EventData`.
+
+```csharp
+// Define a strongly typed payload
+public record struct DamageInfo(int Value, DamageType DamageType, bool IsCritical);
+
+var damageTag = Tag.RequestTag(tagsManager, "events.combat.damage");
+
+// Subscribe using the specific payload type
+player.Events.Subscribe<CombatLogPayload>(damageTag, eventData =>
+{
+    Console.WriteLine(
+        $"[Combat Log] Damage: {eventData.Payload.Value}, " +
+        $"Type: {eventData.Payload.DamageType}, " +
+        $"Critical: {eventData.Payload.IsCritical}"
+    );
+});
+
+// Raise the event with the typed payload
+player.Events.Raise(new EventData<DamageInfo>
+{
+	EventTags = damageTag.GetSingleTagContainer(),
+	Source = null,
+	Target = player,
+	Payload = new DamageInfo(120, DamageType.Physical, true)
+});
+```
+
+---
+
+## Abilities
+
+Abilities are discrete actions that can have costs, cooldowns, and custom behaviors. They can be triggered manually, by events, or in reaction to tag application.
+
+### Defining an Ability
+
+When defining an ability, you typically configure effects for costs and cooldowns, implement a behavior, and then tie it all together in the `AbilityData`.
+
+```csharp
+// Define cost: 20 Mana
+var fireballCostEffect = new EffectData(
+    "Fireball Mana Cost",
+    new DurationData(DurationType.Instant),
+    new[] {
+        new Modifier(
+            "PlayerAttributeSet.Mana",
+            ModifierOperation.FlatBonus,
+            new ModifierMagnitude(
+                MagnitudeCalculationType.ScalableFloat,
+                new ScalableFloat(-20)
+            )
+        )
+    });
+
+// Define cooldown: 10 seconds
+var fireballCooldownEffect = new EffectData(
+    "Fireball Cooldown",
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f))),
+    effectComponents: new[] {
+        new ModifierTagsEffectComponent(
+            tagsManager.RequestTagContainer(new[] { "cooldown.fireball" })
+        )
+    });
+
+// Define behavior
+public class FireballBehavior : IAbilityBehavior
+{
+    public void OnStarted(AbilityBehaviorContext context)
+    {
+        // Apply costs and cooldowns
+        context.AbilityHandle.CommitAbility();
+        Console.WriteLine("Fireball cast!");
+        context.InstanceHandle.End();
+    }
+
+    public void OnEnded(AbilityBehaviorContext context)
+    {
+        // Do any necessary cleanups
+    }
+}
+
+// Define Ability Data
+var fireballData = new AbilityData(
+    name: "Fireball",
+    costEffect: fireballCostEffect,
+    cooldownEffects: [fireballCooldownEffect],
+    instancingPolicy: AbilityInstancingPolicy.PerEntity,
+    behaviorFactory: () => new FireballBehavior());
+```
+
+---
+
+### Granting and Removing an Ability
+
+Abilities can be granted through effects and will be tied to the effect's lifetime. If the effect has a duration, the ability will be granted only while the effect is active.
+
+```csharp
+// Grant an ability via a GrantAbilityEffectComponent
+var grantConfig = new GrantAbilityConfig
+{
+    AbilityData = fireballData,
+    ScalableLevel = new ScalableInt(1),
+    LevelOverridePolicy = LevelComparison.None,
+    RemovalPolicy = AbilityDeactivationPolicy.CancelImmediately,
+    InhibitionPolicy = AbilityDeactivationPolicy.CancelImmediately,
+};
+
+var grantAbilityComponent = new GrantAbilityEffectComponent([grantConfig]);
+
+// Wrap the component in an infinite effect
+var grantFireballEffect = new EffectData(
+    "Grant Fireball Effect",
+    new DurationData(DurationType.Infinite),
+    effectComponents: [grantAbilityComponent]
+);
+
+// Apply the effect to grant the ability (e.g., when Wand of Fireball is equipped)
+var grantEffectHandle = player.EffectsManager.ApplyEffect(
+    new Effect(grantFireballEffect, new EffectOwnership(player, player)));
+
+// You can access the granted ability handle directly from the component
+// This list contains handles for all abilities granted by this specific effect component instance
+AbilityHandle grantedHandle = grantAbilityComponent.GrantedAbilities[0];
+
+// The ability is now granted. To remove it, simply remove the effect. (e.g., when the wand is unequipped)
+player.EffectsManager.RemoveEffect(grantEffectHandle);
+```
+
+---
+
+### Activating an Ability
+
+Abilities can be activated directly through their handle. You can also use the handle to find out what's the required cost and cooldown of the ability, useful for updating the UI. The activation returns flags indicating failure reasons, which is useful for player feedback.
+
+```csharp
+// Retrieve the handle from the granted ability component or via TryGetAbility
+if (player.Abilities.TryGetAbility(fireballData, out AbilityHandle? handle))
+{
+    // Check cooldown state before activation (useful for UI)
+    var cooldowns = handle.GetCooldownData();
+    foreach (var cd in cooldowns)
+    {
+        Console.WriteLine($"Cooldown remaining: {cd.RemainingTime}");
+    }
+
+    // Check cost state before activation (useful for UI)
+    var costs = handle.GetCostData();
+    foreach (var cost in costs)
+    {
+         // Assuming you want to check Mana costs
+        if (cost.AttributeName == "PlayerAttributeSet.Mana")
+        {
+             Console.WriteLine($"Mana Cost: {cost.Value}");
+        }
+    }
+
+    // Try to activate
+    if (handle.Activate(out AbilityActivationFailures failures))
+    {
+        Console.WriteLine("Activation successful");
+    }
+    else
+    {
+        Console.WriteLine($"Activation failed: {failures}");
+        
+        if (failures.HasFlag(AbilityActivationFailures.InsufficientResources))
+        {
+            Console.WriteLine("Not enough mana!");
+        }
+    }
+}
+```
+
+---
+
+### Granting an Ability Permanently
+
+One other way to grant an ability permanently is directly through the entity's `EntityAbilities` component.
+
+```csharp
+// Grant permanently
+AbilityHandle handle = player.Abilities.GrantAbilityPermanently(
+    fireballData,
+    abilityLevel: 1,
+    levelOverridePolicy: LevelComparison.None,
+    sourceEntity: player);
+```
+
+---
+
+### Granting an Ability and Activating Once
+
+In some cases you just want a quick way to activate an ability on a target without creating a persistent effect or granting it permanently.
+
+The example below shows the use of a "Scroll of Fireball" that grants the fireball ability transiently, attempts to activate it immediately, and then removes the grant once the ability concludes or fails.
+
+```csharp
+AbilityHandle? handle = player.Abilities.GrantAbilityAndActivateOnce(
+    abilityData: fireballData,
+    abilityLevel: 1,
+    levelOverridePolicy: LevelComparison.None,
+    out AbilityActivationFailures failureFlags,
+    targetEntity: enemy,  // The target of the fireball
+    sourceEntity: scrollItem // The source (e.g., the scroll item)
+);
+
+if (handle is not null)
+{
+    Console.WriteLine("Scroll used successfully! Fireball cast.");
+}
+else 
+{
+    Console.WriteLine($"Failed to use scroll: {failureFlags}");
+}
+```
+
+---
+
+### Triggering an Ability via Events
+
+You can configure abilities to trigger automatically when specific events occur.
+
+```csharp
+var hitTag = Tag.RequestTag(tagsManager, "events.combat.hit");
+
+var autoShieldData = new AbilityData(
+    name: "Auto Shield",
+    // Configure the trigger
+    abilityTriggerData: new AbilityTriggerData(
+        TriggerTag: hitTag,
+        TriggerSource: AbilityTriggerSource.Event
+    ),
+    instancingPolicy: AbilityInstancingPolicy.PerEntity,
+    behaviorFactory: () => new ShieldBehavior()); // Assumes ShieldBehavior exists
+
+// Grant the ability
+player.Abilities.GrantAbilityPermanently(autoShieldData, 1, LevelComparison.None, player);
+
+// Raising the event will automatically trigger the ability
+player.Events.Raise(new EventData
+{
+    EventTags = hitTag.GetSingleTagContainer(),
+    Target = player
+});
+```
+
+---
+
+### Triggering an Ability through Tags
+
+In this example, a granted ability (like a passive aura) is activated automatically while the character has a specific tag (e.g., "status.enraged").
+
+```csharp
+// Define an ability that triggers when the "status.enraged" tag is present
+var rageAbilityData = new AbilityData(
+    "Rage Aura",
+    abilityTriggerData: new AbilityTriggerData(
+        TriggerTag: Tag.RequestTag(tagsManager, "status.enraged"),
+        TriggerSource: AbilityTriggerSource.TagPresent),
+    instancingPolicy: AbilityInstancingPolicy.PerEntity,
+    behaviorFactory: () => new RageBehavior());
+
+// Grant the ability permanently so it monitors tags
+player.Abilities.GrantAbilityPermanently(rageAbilityData, 1, LevelComparison.None, player);
+
+// Apply an effect that grants the "status.enraged" tag
+// The Rage Aura ability will automatically activate when this tag is added
+var enrageEffect = new EffectData(
+    "Enrage",
+    new DurationData(
+        DurationType.HasDuration,
+	    new ModifierMagnitude(
+			MagnitudeCalculationType.ScalableFloat,
+			new ScalableFloat(10f))),
+    effectComponents: [
+        new ModifierTagsEffectComponent(tagsManager.RequestTagContainer(["status.enraged"]))
+    ]);
+
+player.EffectsManager.ApplyEffect(new Effect(enrageEffect, new EffectOwnership(player, player)));
+```
+
 ## Next Steps
 
 Now that you've seen the basics of Forge, you can:
@@ -818,6 +1193,8 @@ Now that you've seen the basics of Forge, you can:
 5. Use [Periodic Effects](effects/periodic.md) for recurring gameplay mechanics.
 6. Extend effects with [Components](effects/components.md) for custom behaviors.
 7. Integrate [Cues](cues.md) for visual and audio feedback.
-8. For catching configuration errors during development, see [Validation and Debugging](README.md#validation-and-debugging).
+8. Orchestrate gameplay reactions with [Events](events.md).
+9. Define discrete actions and skills using [Abilities](abilities.md).
+10. For catching configuration errors during development, see [Validation and Debugging](README.md#validation-and-debugging).
 
 For more detailed documentation, refer to the [Forge Documentation Index](README.md).

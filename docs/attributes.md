@@ -10,6 +10,7 @@ For a practical guide on using attributes, see the [Quick Start Guide](quick-sta
 
 An `EntityAttribute` represents a single numeric property with constraints and modification tracking:
 
+- **Key**: Identifier in the format `<AttributeSet>.<AttributeName>` (e.g. `CombatAttributeSet.MaxHealth`).
 - **BaseValue**: The fundamental value before modifications.
 - **CurrentValue**: The actual value after all modifications, constrained by Min/Max.
 - **Min/Max**: The lower and upper bounds for the attribute.

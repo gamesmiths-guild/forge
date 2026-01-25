@@ -11,6 +11,11 @@ namespace Gamesmiths.Forge.Effects.Components;
 /// <paramref name="removalTagRequirements"/> define the conditions under which the effect should be removed, while the
 /// <paramref name="ongoingTagRequirements"/> specify conditions for toggling effect inhibition.
 /// </summary>
+/// <remarks>
+/// This component maintains per-effect-instance state (event subscriptions).
+/// When used in <see cref="EffectData"/>, each effect application will create its own instance
+/// via <see cref="CreateInstance"/> to isolate state between different effect applications.
+/// </remarks>
 /// <param name="applicationTagRequirements">Tags required for the effect to be applied.</param>
 /// <param name="removalTagRequirements">Tags that, if met, trigger effect removal.</param>
 /// <param name="ongoingTagRequirements">Tags that, if met, toggle the inhibition state of the effect.</param>
@@ -19,13 +24,23 @@ public class TargetTagRequirementsEffectComponent(
 	TagRequirements? removalTagRequirements = null,
 	TagRequirements? ongoingTagRequirements = null) : IEffectComponent
 {
-	private readonly Dictionary<ActiveEffectHandle, Action<TagContainer>> _subscriptionMap = [];
+	private Action<TagContainer>? _handler;
 
 	private TagRequirements? ApplicationTagRequirements { get; } = applicationTagRequirements;
 
 	private TagRequirements? RemovalTagRequirements { get; } = removalTagRequirements;
 
 	private TagRequirements? OngoingTagRequirements { get; } = ongoingTagRequirements;
+
+	/// <inheritdoc/>
+	public IEffectComponent CreateInstance()
+	{
+		// Create a new instance for each effect application to isolate event subscription state
+		return new TargetTagRequirementsEffectComponent(
+			ApplicationTagRequirements,
+			RemovalTagRequirements,
+			OngoingTagRequirements);
+	}
 
 	/// <inheritdoc/>
 	public bool CanApplyEffect(in IForgeEntity target, in Effect effect)
@@ -56,14 +71,14 @@ public class TargetTagRequirementsEffectComponent(
 	{
 		ActiveEffectHandle handle = activeEffectEvaluatedData.ActiveEffectHandle;
 
-		// Create a distinct handler that captures this 'target' and 'handle'
+		// Create a handler that captures this 'target' and 'handle'
 		void Handler(TagContainer tags)
 		{
 			if (RemovalTagRequirements.HasValue
 				&& !RemovalTagRequirements.Value.IsEmpty
 				&& RemovalTagRequirements.Value.RequirementsMet(tags))
 			{
-				target.EffectsManager.UnapplyEffect(handle, true);
+				target.EffectsManager.RemoveEffect(handle, true);
 				return;
 			}
 
@@ -74,10 +89,11 @@ public class TargetTagRequirementsEffectComponent(
 		}
 
 		// Store it so we can unsubscribe later
-		_subscriptionMap[handle] = Handler;
-		target.Tags.OnTagsChanged += Handler;
+		_handler = Handler;
+		target.Tags.OnTagsChanged += _handler;
 
-		return OngoingTagRequirements?.IsEmpty != false || OngoingTagRequirements.Value.RequirementsMet(target.Tags.CombinedTags);
+		return OngoingTagRequirements?.IsEmpty != false
+			|| OngoingTagRequirements.Value.RequirementsMet(target.Tags.CombinedTags);
 	}
 
 	/// <inheritdoc/>
@@ -86,12 +102,10 @@ public class TargetTagRequirementsEffectComponent(
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData,
 		bool removed)
 	{
-		ActiveEffectHandle handle = activeEffectEvaluatedData.ActiveEffectHandle;
-
-		if (removed && _subscriptionMap.TryGetValue(handle, out Action<TagContainer>? handler))
+		if (removed && _handler is not null)
 		{
-			target.Tags.OnTagsChanged -= handler;
-			_subscriptionMap.Remove(handle);
+			target.Tags.OnTagsChanged -= _handler;
+			_handler = null;
 		}
 	}
 }

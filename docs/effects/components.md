@@ -27,8 +27,10 @@ To create a custom component, implement the `IEffectComponent` interface:
 ```csharp
 public interface IEffectComponent
 {
+    IEffectComponent CreateInstance();
     bool CanApplyEffect(in IForgeEntity target, in Effect effect);
     bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData);
+    void OnPostActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData);
     void OnActiveEffectUnapplied(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData, bool removed);
     void OnActiveEffectChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData);
     void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData);
@@ -39,6 +41,31 @@ public interface IEffectComponent
 The interface provides default implementations for all methods, so you only need to override the ones relevant to your component's functionality.
 
 ### Component Lifecycle Methods
+
+#### CreateInstance
+
+`CreateInstance` is called when the effect is applied and allows the component to provide either a shared (stateless) instance or return a new instance for per-application (stateful) data.
+
+Override this method when your component holds data that must be isolated per-effect application, such as event subscriptions or runtime counters.
+
+```csharp
+public class ExampleComponent : IEffectComponent
+{
+    private int _someState;
+
+    public IEffectComponent CreateInstance()
+    {
+        // Return a new instance so each effect application has its own state
+        return new ExampleComponent();
+    }
+}
+```
+
+Use cases:
+
+- Tracking data or resources that must not be shared across multiple effect instances.
+- Managing event subscriptions or references tied to a specific application of an effect.
+- Ensuring thread safety or isolation when effects are applied to different targets simultaneously.
 
 #### CanApplyEffect
 
@@ -75,6 +102,30 @@ Use cases:
 - Adding temporary tags or flags.
 - Setting up event subscriptions.
 - Initializing effect-specific game state.
+
+#### OnPostActiveEffectAdded
+
+`OnPostActiveEffectAdded` is called after all components’ `OnActiveEffectAdded` callbacks have completed, and the effect has finished its initial application logic. At this point, the effect is fully initialized.
+
+Override this method to perform actions that rely on other components being initialized, or when you need to trigger behaviors that should occur after the effect is completely active.
+
+```csharp
+public void OnPostActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+{
+    // Logic here runs after all initialization and validation is complete
+    // For example, attempt activation if not inhibited
+    if (!activeEffectEvaluatedData.ActiveEffectHandle.IsInhibited)
+    {
+        // Custom post-activation logic
+    }
+}
+```
+
+Use cases:
+
+- Conditionally activating abilities granted by earlier components.
+- Synchronizing with other components after full effect application.
+- Triggering animations, particles, or gameplay effects that should be delayed until the effect is stable.
 
 #### OnActiveEffectUnapplied
 
@@ -160,9 +211,10 @@ Example custom component:
 // Component that tracks damage thresholds and applies additional effects
 public class DamageThresholdComponent : IEffectComponent
 {
-    private readonly Dictionary<ActiveEffectHandle, float> _accumulatedDamage = new();
     private readonly float _threshold;
     private readonly Effect _thresholdEffect;
+    private float _accumulatedDamage;
+    private EventSubscriptionToken? _damageEventToken;
 
     public DamageThresholdComponent(float threshold, Effect thresholdEffect)
     {
@@ -170,12 +222,26 @@ public class DamageThresholdComponent : IEffectComponent
         _thresholdEffect = thresholdEffect;
     }
 
+    // Guarantees each effect application has its own unique instance and state
+    public IEffectComponent CreateInstance()
+    {
+        return new DamageThresholdComponent(_threshold, _thresholdEffect);
+    }
+
     public bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
     {
-        _accumulatedDamage[activeEffectEvaluatedData.ActiveEffectHandle] = 0;
-        // Note: This is a simplified example. A real implementation would need a more robust way to subscribe/unsubscribe.
-        target.Attributes.GetAttribute("CombatAttributeSet.CurrentHealth").OnValueChanged +=
-            (attribute, change) => TrackDamage(target, activeEffectEvaluatedData.ActiveEffectHandle, change);
+        _accumulatedDamage = 0f;
+        // Subscribe to an "events.combat.damage_taken" event using Forge's Events system
+        var damageTakenTag = Tag.RequestTag(target.TagsManager, "events.combat.damage_taken");
+        _damageEventToken = target.Events.Subscribe(damageTakenTag, data =>
+        {
+            _accumulatedDamage += data.EventMagnitude;
+            if (_accumulatedDamage >= _threshold)
+            {
+                _accumulatedDamage = 0;
+                target.EffectsManager.ApplyEffect(_thresholdEffect);
+            }
+        });
         return true;
     }
 
@@ -184,31 +250,57 @@ public class DamageThresholdComponent : IEffectComponent
         in ActiveEffectEvaluatedData activeEffectEvaluatedData,
         bool removed)
     {
-        if (removed)
+        if (removed && _damageEventToken is not null)
         {
-            _accumulatedDamage.Remove(activeEffectEvaluatedData.ActiveEffectHandle);
-            // Note: This is a simplified example. A real implementation would need a more robust way to subscribe/unsubscribe.
-            target.Attributes.GetAttribute("CombatAttributeSet.CurrentHealth").OnValueChanged -=
-                (attribute, change) => TrackDamage(target, activeEffectEvaluatedData.ActiveEffectHandle, change);
-        }
-    }
-
-    private void TrackDamage(IForgeEntity target, ActiveEffectHandle handle, int change)
-    {
-        if (change < 0 && _accumulatedDamage.ContainsKey(handle))
-        {
-            _accumulatedDamage[handle] += Math.Abs(change);
-
-            if (_accumulatedDamage[handle] >= _threshold)
-            {
-                // Reset accumulation and apply threshold effect
-                _accumulatedDamage[handle] = 0;
-                target.EffectsManager.ApplyEffect(_thresholdEffect);
-            }
+            target.Events.Unsubscribe(_damageEventToken.Value);
+            _damageEventToken = null;
         }
     }
 }
 ```
+
+### Accessing Component Instances at Runtime
+
+When you apply a duration (non-instant) effect, you receive an `ActiveEffectHandle` from the `EffectsManager`. This handle provides access to the specific component instances that were created for this effect application.
+
+This is useful if you need to check runtime state, interact with a component that manages resources, or access data (such as granted abilities or custom counters) unique to this particular effect instance.
+
+#### Retrieving a Component Instance
+
+You can retrieve a component instance of a given type using the handle's generic `GetComponent<T>()` method:
+
+```csharp
+// Apply an effect and get the handle.
+ActiveEffectHandle? handle = entity.EffectsManager.ApplyEffect(new Effect(effectData, ownership));
+
+if (handle is not null)
+{
+    // Retrieve a specific component instance used by this effect.
+    var grantAbilityComponent = handle.GetComponent<GrantAbilityEffectComponent>();
+    if (grantAbilityComponent is not null)
+    {
+        // Access runtime data exposed by the component
+        IReadOnlyList<AbilityHandle> grantedAbilities = grantAbilityComponent.GrantedAbilities;
+        // ... use grantedAbilities as needed
+    }
+
+    // You can also enumerate all component instances for additional logic
+    foreach (var component in handle.ComponentInstances)
+    {
+        // Inspect or interact with component instances
+    }
+}
+```
+
+- `GetComponent<T>()` returns the first component instance of type `T` (or `null` if none exists).
+- `ComponentInstances` exposes all component instances for this effect (may hold per-instance state).
+
+**Typical use cases:**
+- Accessing granted ability handles from a `GrantAbilityEffectComponent`.
+- Inspecting or updating internal state on a custom component.
+- Coordinating follow-up logic or queries in gameplay systems.
+
+For more details on the structure of `ActiveEffectHandle`, see the [ActiveEffectHandle documentation](README.md#activeeffecthandle).
 
 ### Advanced Component Integration
 
@@ -223,6 +315,55 @@ Components can be used to implement complex systems that integrate with your gam
 ## Built-in Components
 
 Forge includes several built-in components that demonstrate the component system's capabilities and provide ready-to-use functionality.
+
+### GrantAbilityEffectComponent
+
+Grants one or more abilities to the target entity. This is the primary bridge between the Effects system and the Abilities system.
+
+```csharp
+public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfigs) : IEffectComponent
+{
+    public IReadOnlyList<AbilityHandle> GrantedAbilities { get; }
+    // Implementation...
+}
+```
+
+#### Usage Example
+
+```csharp
+var grantConfig = new GrantAbilityConfig(
+    AbilityData: fireballData,
+    ScalableLevel: new ScalableInt(1), // Scales with effect level if a curve is defined
+    RemovalPolicy: AbilityDeactivationPolicy.CancelImmediately, // Cancels running instances immediately when effect ends
+    InhibitionPolicy: AbilityDeactivationPolicy.CancelImmediately, // Cancels running instances immediately if effect is inhibited
+    TryActivateOnGrant: false, // Do not try to activate automatically when granted
+    TryActivateOnEnable: false, // Do not try to activate automatically when enabled back from inhibition
+    LevelOverridePolicy: LevelComparison.Higher // Update level if higher than existing grant
+);
+
+// Keep a reference to the component if you need to access the granted ability handles later
+var grantComponent = new GrantAbilityEffectComponent([grantConfig]);
+
+var grantEffect = new EffectData(
+    "Grant Fireball",
+    new DurationData(DurationType.Infinite),
+    effectComponents: [grantComponent]
+);
+
+// Apply the effect
+entity.EffectsManager.ApplyEffect(new Effect(grantEffect, ownership));
+
+// Access the handle directly from the component instance
+AbilityHandle fireballHandle = grantComponent.GrantedAbilities[0];
+```
+
+Key points:
+
+- **Direct Handle Access**: You can keep a reference to the component instance to access its `GrantedAbilities`, which contains the `AbilityHandle`s created by this specific effect application. Alternatively, use the effect handle's `GetComponent<GrantAbilityEffectComponent>()` method to retrieve the runtime component instance when needed.
+- **Lifecycle Management**: Automatically handles granting, removing, and inhibiting abilities based on the effect's lifecycle and the configured policies.
+- **Permanent vs. Temporary**: 
+  - If used in an **Instant** effect, the ability is granted permanently.
+  - If used in a **Duration** effect, the ability exists only while the effect is active (unless removal policy is set to `Ignore`).
 
 ### ChanceToApplyEffectComponent
 
@@ -263,7 +404,13 @@ The component specifically uses the `NextSingle()` method, which returns a rando
 // Create a "Stun" effect with a 25% chance to apply
 var stunEffectData = new EffectData(
     "Stun",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(3.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(3.0f)
+        )
+    ),
     effectComponents: new[] {
         new ChanceToApplyEffectComponent(
             randomProvider,  // Your game's random number generator
@@ -320,7 +467,13 @@ Usage example:
 // Create a "Burning" effect that adds the "Status.Burning" tag to the target
 var burningEffectData = new EffectData(
     "Burning",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f)
+        )
+    ),
     new[] {
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
     },
@@ -426,7 +579,13 @@ query.Build(new TagQueryExpression(tagsManager)
 // is removed if target gains the "Fire" tag, and is inhibited if target has the "Cold.Immune" tag
 var frostEffectData = new EffectData(
     "Frost",
-    new DurationData(DurationType.HasDuration, new ScalableFloat(8.0f)),
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(8.0f)
+        )
+    ),
     [/*...*/],
     effectComponents: new[] {
         new TargetTagRequirementsEffectComponent(

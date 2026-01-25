@@ -54,7 +54,7 @@ ActiveEffectHandle? handle = entity.EffectsManager.ApplyEffect(effect);
 // Remove an effect by its handle
 if (handle is not null)
 {
-    bool removed = entity.EffectsManager.UnapplyEffect(handle);
+    bool removed = entity.EffectsManager.RemoveEffect(handle);
 }
 
 // Update all active effects on the entity
@@ -84,30 +84,54 @@ The `UpdateEffects` method must be called regularly to process all active effect
 
 ### ActiveEffectHandle
 
-When a non-instant effect is applied, the `EffectsManager` returns an `ActiveEffectHandle` that provides control over the effect's lifecycle.
+When a non-instant effect is applied, the `EffectsManager` returns an `ActiveEffectHandle` that provides control and runtime access to the applied effect instance.
 
 ```csharp
 // Apply a buff and get its handle
 ActiveEffectHandle? buffHandle = target.EffectsManager.ApplyEffect(buffEffect);
 
 // Check if application was successful
-if (buffHandle != null)
+if (buffHandle is not null)
 {
     // Store the handle for later control
     _activeBuffs.Add(buffHandle);
 
     // Remove the effect using the handle
-    target.EffectsManager.UnapplyEffect(buffHandle);
+    target.EffectsManager.RemoveEffect(buffHandle);
 }
 ```
 
+#### Public Properties
+
+- **IsInhibited**: Indicates whether the effect is currently inhibited (e.g. due to tag changes or other logic).
+- **IsValid**: Indicates whether the handle is valid (the effect is still active).
+- **ComponentInstances**: The actual per-application component instances for this effect. These may hold state unique to this particular effect instance (such as granted abilities or subscriptions).
+
+#### Public Methods
+
+- **SetInhibit(bool value)**: Sets the inhibition status of the effect (e.g., to temporarily pause its action without removing it).
+- **GetComponent\<T\>()**: Returns the first component instance of type `T` attached to this effect, or `null` if not found.
+
+    Useful for retrieving a specific effect component's runtime state.
+
+    ```csharp
+    // Retrieve a component instance by type
+    var grantComponent = handle.GetComponent<GrantAbilityEffectComponent>();
+    if (grantComponent is not null)
+    {
+        var abilities = grantComponent.GrantedAbilities;
+        // Use abilities granted by this effect instance
+    }
+    ```
+
 Other removal methods exist but are less precise:
+
 ```csharp
 // Removes first effect instance matching the Effect
-entity.EffectsManager.UnapplyEffect(effect);
+entity.EffectsManager.RemoveEffect(effect);
 
 // Removes first effect instance matching the EffectData
-entity.EffectsManager.UnapplyEffectData(effectData);
+entity.EffectsManager.RemoveEffectData(effectData);
 ```
 
 ## Effect Lifecycle
@@ -260,12 +284,12 @@ var effectData = new EffectData(
     name: "Fireball",          // Human-readable name for debugging and UI
     modifiers: [/*...*/],
     durationData: new DurationData(DurationType.Instant),
-    snapshopLevel: true        // Whether to lock the effect's level when applied
+    snapshotLevel: true        // Whether to lock the effect's level when applied
 );
 ```
 
 - **Name**: Identifies the effect for debugging, UI display, and designer reference.
-- **SnapshopLevel**: Controls how the effect responds to level changes after application.
+- **SnapshotLevel**: Controls how the effect responds to level changes after application.
   - `true`: Effect uses the level it had when initially applied (default).
   - `false`: Effect dynamically updates when the effect's level changes—all modifiers, durations, periods, and other scalable values will automatically adjust if they use curves.
 
@@ -282,7 +306,7 @@ var effectData = new EffectData(
 // Instant effect (execute once and end)
 var healData = new EffectData(
     "Instant Heal",
-    durationData: new DurationData(DurationType.Instant)
+    durationData: new DurationData(DurationType.Instant),
     modifiers: [/*...*/],
 );
 
@@ -291,7 +315,10 @@ var buffData = new EffectData(
     "Temporary Buff",
     durationData: new DurationData(
         DurationType.HasDuration,
-        new ScalableFloat(10.0f)    // 10 second duration
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f)    // 10 second duration
+        )
     ),
     modifiers: [/*...*/]
 );
@@ -317,7 +344,13 @@ var curseData = new EffectData(
 ```csharp
 var effectData = new EffectData(
     "Strength Potion",
-    durationData: new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
+    durationData: new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(10.0f)
+        )
+    ),
     modifiers: [
         // First modifier - flat strength bonus
         new Modifier(
@@ -369,7 +402,10 @@ var stackingEffectData = new EffectData(
     "Bleed",
     durationData: new DurationData(
         DurationType.HasDuration,
-        new ScalableFloat(5.0f)
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(5.0f)
+        )
     ),
     modifiers: [/*...*/],
     stackingData: new StackingData(
@@ -407,7 +443,10 @@ var dotEffectData = new EffectData(
     "Poison",
     durationData: new DurationData(
         DurationType.HasDuration,
-        new ScalableFloat(8.0f),     // 8 second total duration
+        new ModifierMagnitude(
+            MagnitudeCalculationType.ScalableFloat,
+            new ScalableFloat(8.0f)     // 8 second total duration
+        )
     ),
     modifiers: [/*...*/],
     periodicData: new PeriodicData(
@@ -508,7 +547,7 @@ var cueEnabledEffectData = new EffectData(
     "Fire Strike",
     durationData: new DurationData(DurationType.Instant),
     modifiers: [/*...*/],
-    requireModifierSuccessToTriggerCue: true,  // Only trigger if damage was dealt
+    requireModifierSuccessToTriggerCue: CueTriggerRequirement.OnExecute,  // Only trigger if damage was dealt
     suppressStackingCues: false,               // Always trigger cues on stack changes
     cues: [
         new CueData(
@@ -523,8 +562,14 @@ var cueEnabledEffectData = new EffectData(
 
 **Cue-related properties:**
 
-- **RequireModifierSuccessToTriggerCue**: When true, cues only trigger if at least one attribute was successfully modified.
+- **RequireModifierSuccessToTriggerCue**: Specifies for which effect lifecycle events a cue should only trigger if at least one attribute was successfully modified.
+    - `None`: No modifier success required; cues may trigger regardless of success.
+    - `OnApply`: Only trigger cues on application if at least one attribute is modified.
+    - `OnUpdate`: Only trigger cues on update if at least one attribute is modified.
+    - `OnExecute`: Only trigger cues on execution if at least one attribute is modified.
 - **SuppressStackingCues**: When true, cues don't trigger when stacks are applied (only on initial application).
+
+`RequireModifierSuccessToTriggerCue` uses the flags enum `CueTriggerRequirement`, allowing you to define for which lifecycle events modifier success should be required before cues trigger. This provides granular control over visual, audio, and UI feedback.
 
 **Example use cases:**
 
@@ -532,6 +577,32 @@ var cueEnabledEffectData = new EffectData(
 - Sound effects for status changes.
 - Camera effects for important gameplay moments.
 - UI indicators for effect application/removal.
+
+## Effect Activation Context
+
+Effects can be applied with custom activation context data using the generic `ApplyEffect<TData>` method on `EffectsManager`. This allows you to pass arbitrary, strongly-typed context through the effect pipeline to custom calculators and custom executions.
+
+### Applying Effects With Context Data
+
+Use `ApplyEffect<TData>(Effect effect, TData contextData)` to apply an effect and provide custom runtime data for advanced logic:
+
+```csharp
+var contextData = new DamageContext(damage: 50, isCritical: true);
+entity.EffectsManager.ApplyEffect(effect, contextData);
+```
+
+### Accessing Activation Context in Custom Calculators
+
+Custom context data provided at activation is accessible from `EffectEvaluatedData` by using the `TryGetContextData<TData>(out TData? data)` method. This method is designed for use within custom calculators and custom executions.
+
+```csharp
+if (effectEvaluatedData.TryGetContextData(out DamageContext? data))
+{
+    // Use data.Damage, data.IsCritical, etc.
+}
+```
+
+Custom context data is most commonly consumed by [custom calculators and custom executions](calculators.md) for advanced behaviors. For thorough documentation and best practices on using effect activation context data, see the [Custom Calculators documentation](calculators.md#effect-activation-context).
 
 ## Best Practices
 

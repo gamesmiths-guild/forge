@@ -6,6 +6,7 @@ using System.Buffers.Text;
 using FluentAssertions;
 using Gamesmiths;
 using Gamesmiths.Forge;
+using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
@@ -17,6 +18,7 @@ using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Effects.Stacking;
+using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests;
 using Gamesmiths.Forge.Tests.Core;
@@ -41,6 +43,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		var player = new Player(tagsManager, cuesManager);
 
 		player.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(100);
+		player.Attributes["PlayerAttributeSet.Mana"].CurrentValue.Should().Be(100);
 		player.Attributes["PlayerAttributeSet.Strength"].CurrentValue.Should().Be(10);
 		player.Attributes["PlayerAttributeSet.Speed"].CurrentValue.Should().Be(5);
 	}
@@ -121,7 +124,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Create a strength buff effect that lasts for 10 seconds
 		var strengthBuffEffectData = new EffectData(
 			"Strength Potion",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)), // 10 seconds duration
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(10.0f))), // 10 seconds duration
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Strength",
@@ -204,7 +211,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Remove the effect manually (e.g., when the item is unequipped)
 		if (activeEffectHandle is not null)
 		{
-			player.EffectsManager.UnapplyEffect(activeEffectHandle);
+			player.EffectsManager.RemoveEffect(activeEffectHandle);
 		}
 
 		// Assuming base strength was 10
@@ -227,7 +234,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Create a poison effect that ticks every 2 seconds for 10 seconds
 		var poisonEffectData = new EffectData(
 			"Poison",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)),
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(10.0f))),
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Health",
@@ -270,7 +281,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Create a poison effect that stacks up to 3 times
 		var stackingPoisonEffectData = new EffectData(
 			"Stacking Poison",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(6.0f)), // Each stack lasts 6 seconds
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(6.0f))), // Each stack lasts 6 seconds
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Health",
@@ -335,7 +350,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Define the unique effect data
 		var uniqueEffectData = new EffectData(
 			"Unique Buff",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(10.0f)), // Lasts 10 seconds
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(10.0f))), // Lasts 10 seconds
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Strength",
@@ -395,7 +414,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Create a "Stunned" effect that adds a tag and reduces speed to 0
 		var stunEffectData = new EffectData(
 			"Stunned",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(3.0f)), // 3 seconds duration
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(3.0f))), // 3 seconds duration
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Speed",
@@ -484,7 +507,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Create a "Stunned" effect that adds a tag and reduces speed to 0
 		var stunEffectData = new EffectData(
 			"Stunned",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(3.0f)), // 3 seconds duration
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(3.0f))), // 3 seconds duration
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Speed",
@@ -612,9 +639,8 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	public void Triggering_a_cue_through_effects()
 	{
 		// Arrange
-		var stringWriter = new StringWriter();
-		var originalOut = Console.Out;
-		Console.SetOut(stringWriter);
+		var mockCueHandler = tagsAndCueFixture.MockCueHandler;
+		mockCueHandler.Reset();
 
 		// Initialize managers
 		var tagsManager = _tagsManager;
@@ -626,7 +652,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Define a burning effect that includes the fire damage cue
 		var burningEffectData = new EffectData(
 			"Burning",
-			new DurationData(DurationType.HasDuration, new ScalableFloat(5.0f)),
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(5.0f))),
 			new[] {
 				new Modifier(
 					"PlayerAttributeSet.Health",
@@ -655,31 +685,15 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 
 		var burningEffect = new Effect(burningEffectData, new EffectOwnership(player, player));
 
-		try
-		{
-			// Apply the burning effect
-			player.EffectsManager.ApplyEffect(burningEffect);
-			player.EffectsManager.UpdateEffects(5f); // Simulate 5 seconds of game time
+		// Act
+		player.EffectsManager.ApplyEffect(burningEffect);
+		player.EffectsManager.UpdateEffects(5f); // Simulate 5 seconds of game time
 
-			var output = "Fire damage cue applied to target.\n" +
-				"Fire damage executed: -5\n" +
-				"Fire damage executed: -5\n" +
-				"Fire damage executed: -5\n" +
-				"Fire damage executed: -5\n" +
-				"Fire damage executed: -5\n" +
-				"Fire damage executed: -5\n" +
-				"Fire damage cue removed.";
-
-			// Normalize line endings to be consistent across environments
-			var normalizedOutput = output.Replace("\n", Environment.NewLine);
-
-			stringWriter.ToString().Should().Contain(normalizedOutput);
-		}
-		finally
-		{
-			// Cleanup
-			Console.SetOut(originalOut);
-		}
+		// Assert
+		mockCueHandler.ApplyCount.Should().Be(1);
+		mockCueHandler.ExecuteCount.Should().Be(6); // 1 on application + 5 from periodic ticks
+		mockCueHandler.Magnitudes.Should().OnlyContain(x => x == -5);
+		mockCueHandler.RemoveCount.Should().Be(1);
 	}
 
 	[Fact]
@@ -687,9 +701,8 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	public void Manually_triggering_a_cue()
 	{
 		// Arrange
-		var stringWriter = new StringWriter();
-		var originalOut = Console.Out;
-		Console.SetOut(stringWriter);
+		var mockCueHandler = tagsAndCueFixture.MockCueHandler;
+		mockCueHandler.Reset();
 
 		// Initialize managers
 		var tagsManager = _tagsManager;
@@ -710,33 +723,354 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			}
 		);
 
-		try
+		// Act
+		cuesManager.ExecuteCue(
+			cueTag: Tag.RequestTag(tagsManager, "cues.damage.fire"),
+			target: player,
+			parameters: parameters
+		);
+
+		// Assert
+		mockCueHandler.ExecuteCount.Should().Be(1);
+		mockCueHandler.Magnitudes.Should().Contain(25);
+	}
+
+	[Fact]
+	[Trait("Quick Start", null)]
+	public void Subscribing_and_raising_an_event()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+		var damageTag = Tag.RequestTag(tagsManager, "events.combat.damage");
+
+		float receivedDamage = 0f;
+		bool eventFired = false;
+
+		player.Events.Subscribe(damageTag, eventData =>
 		{
-			cuesManager.ExecuteCue(
-				cueTag: Tag.RequestTag(tagsManager, "cues.damage.fire"),
-				target: player,
-				parameters: parameters
+			eventFired = true;
+			receivedDamage = eventData.EventMagnitude;
+		});
+
+		player.Events.Raise(new EventData
+		{
+			EventTags = damageTag.GetSingleTagContainer(),
+			Source = null,
+			Target = player,
+			EventMagnitude = 50f
+		});
+
+		eventFired.Should().BeTrue();
+		receivedDamage.Should().Be(50f);
+	}
+
+	[Fact]
+	[Trait("Quick Start", null)]
+	public void Strongly_typed_events()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+		var damageTag = Tag.RequestTag(tagsManager, "events.combat.damage");
+
+		int value = 0;
+		DamageType damageType = DamageType.Magical;
+		bool isCritical = false;
+
+		// Subscribe with generic type
+		player.Events.Subscribe<DamageInfo>(damageTag, eventData =>
+		{
+			value = eventData.Payload.Value;
+			damageType = eventData.Payload.DamageType;
+			isCritical = eventData.Payload.IsCritical;
+		});
+
+		// Raise with generic type
+		player.Events.Raise(new EventData<DamageInfo>
+		{
+			EventTags = damageTag.GetSingleTagContainer(),
+			Source = null,
+			Target = player,
+			Payload = new DamageInfo(120, DamageType.Physical, true)
+		});
+
+		value.Should().Be(120);
+		damageType.Should().Be(DamageType.Physical);
+		isCritical.Should().Be(true);
+	}
+
+	[Fact]
+	[Trait("Quick Start", null)]
+	public void Granting_activating_and_removing_an_ability()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+
+		var fireballCostEffect = new EffectData(
+			"Fireball Mana Cost",
+			new DurationData(DurationType.Instant),
+			new[] {
+				new Modifier(
+					"PlayerAttributeSet.Mana",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(-20) // -20 mana cost
+					)
+				)
+			});
+
+		var fireballCooldownEffect = new EffectData(
+			"Fireball Cooldown",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(10.0f))), // 10 seconds cooldown
+			effectComponents: new[] {
+				new ModifierTagsEffectComponent(
+					tagsManager.RequestTagContainer(new[] { "cooldown.fireball" })
+				)
+			});
+
+		var fireballData = new AbilityData(
+			name: "Fireball",
+			costEffect: fireballCostEffect,
+			cooldownEffects: [fireballCooldownEffect],
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			behaviorFactory: () => new CustomAbilityBehavior("Fireball"));
+
+		var grantConfig = new GrantAbilityConfig
+		{
+			AbilityData = fireballData,
+			ScalableLevel = new ScalableInt(1),
+			LevelOverridePolicy = LevelComparison.None,
+			RemovalPolicy = AbilityDeactivationPolicy.CancelImmediately,
+			InhibitionPolicy = AbilityDeactivationPolicy.CancelImmediately,
+		};
+
+		var grantFireballEffect = new EffectData(
+			"Grant Fireball Effect",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [new GrantAbilityEffectComponent([grantConfig])]
 			);
 
-			stringWriter.ToString().Should().Contain("Fire damage executed: 25");
-		}
-		finally
-		{
-			// Cleanup
-			Console.SetOut(originalOut);
-		}
+		var grantEffectHandle = player.EffectsManager.ApplyEffect(
+			new Effect(grantFireballEffect, new EffectOwnership(player, player)));
 
+		// Retrieve handle directly from component as shown in docs
+		var fireballAbilityHandle = grantEffectHandle.GetComponent<GrantAbilityEffectComponent>().GrantedAbilities[0];
+
+		bool successfulActivation = fireballAbilityHandle.Activate(out AbilityActivationFailures failures);
+
+		successfulActivation.Should().BeTrue();
+		failures.Should().Be(AbilityActivationFailures.None);
+		fireballAbilityHandle.IsActive.Should().BeFalse();
+
+		player.EffectsManager.RemoveEffect(grantEffectHandle);
+		fireballAbilityHandle.IsValid.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Quick Start", null)]
+	public void Activating_an_ability_with_checks()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+
+		// Setup ability with cost and cooldown
+		var fireballCostEffect = new EffectData(
+			"Fireball Mana Cost",
+			new DurationData(DurationType.Instant),
+			new[] {
+				new Modifier(
+					"PlayerAttributeSet.Mana",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(-20)
+					)
+				)
+			});
+
+		var fireballCooldownEffect = new EffectData(
+			"Fireball Cooldown",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(10.0f))),
+			effectComponents: new[] {
+				new ModifierTagsEffectComponent(
+					tagsManager.RequestTagContainer(new[] { "cooldown.fireball" })
+				)
+			});
+
+		var fireballData = new AbilityData(
+			name: "Fireball",
+			costEffect: fireballCostEffect,
+			cooldownEffects: [fireballCooldownEffect],
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			behaviorFactory: () => new CustomAbilityBehavior("Fireball"));
+
+		// Grant permanently
+		AbilityHandle handle = player.Abilities.GrantAbilityPermanently(
+			fireballData,
+			abilityLevel: 1,
+			levelOverridePolicy: LevelComparison.None,
+			sourceEntity: player);
+
+		// Check Cooldown
+		var cooldowns = handle.GetCooldownData();
+		cooldowns.Should().NotBeEmpty();
+		cooldowns[0].RemainingTime.Should().Be(0);
+
+		// Check Cost
+		var costs = handle.GetCostData();
+		costs.Should().Contain(c => c.Attribute == "PlayerAttributeSet.Mana" && c.Cost == -20);
+
+		// Activate
+		bool success = handle.Activate(out AbilityActivationFailures failures);
+		success.Should().BeTrue();
+
+		// Verify resources consumed and cooldown started
+		player.Attributes["PlayerAttributeSet.Mana"].CurrentValue.Should().Be(80);
+		handle.GetCooldownData()[0].RemainingTime.Should().BeGreaterThan(0);
+	}
+
+	[Fact]
+	[Trait("Quick Start", null)]
+	public void Granting_an_ability_and_activating_once()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+
+		// Simple fireball data
+		var fireballData = new AbilityData(
+			name: "Fireball",
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			behaviorFactory: () => new CustomAbilityBehavior("Fireball"));
+
+		// Simulate using a scroll
+		AbilityHandle? handle = player.Abilities.GrantAbilityAndActivateOnce(
+			abilityData: fireballData,
+			abilityLevel: 1,
+			levelOverridePolicy: LevelComparison.None,
+			out AbilityActivationFailures failureFlags,
+			targetEntity: player, // Target of the fireball
+			sourceEntity: player  // Source (e.g., the scroll item)
+		);
+
+		// Fireball ends instantly so handle is null
+		handle.Should().BeNull();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+	}
+
+	[Fact]
+	[Trait("Quick Start", null)]
+	public void Triggering_an_ability_through_an_event()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+		var hitTag = Tag.RequestTag(tagsManager, "events.combat.hit");
+
+		var autoShieldData = new AbilityData(
+			name: "Auto Shield",
+			// Configure the trigger
+			abilityTriggerData: AbilityTriggerData.ForEvent(hitTag),
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			behaviorFactory: () => new CustomAbilityBehavior("Auto Shield"));
+
+		var handle = player.Abilities.GrantAbilityPermanently(autoShieldData, 1, LevelComparison.None, player);
+
+		handle!.IsActive.Should().BeFalse();
+
+		player.Events.Raise(new EventData
+		{
+			EventTags = hitTag.GetSingleTagContainer(),
+		});
+
+		// Ability ends itself instantly so it should be false here
+		handle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Quick Start", null)]
+	public void Triggering_an_ability_through_tags()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var player = new Player(tagsManager, cuesManager);
+		var rageTag = Tag.RequestTag(tagsManager, "status.enraged");
+
+		// Ability configuration
+		var rageAbilityData = new AbilityData(
+			"Rage Aura",
+			abilityTriggerData: AbilityTriggerData.ForTagPresent(rageTag),
+			instancingPolicy: AbilityInstancingPolicy.PerEntity,
+			// Using a persistent behavior to verify active state
+			behaviorFactory: () => new PersistentAbilityBehavior());
+
+		// Grant permanently
+		var handle = player.Abilities.GrantAbilityPermanently(rageAbilityData, 1, LevelComparison.None, player);
+
+		handle.IsActive.Should().BeFalse();
+
+		// Apply effect that adds the tag
+		var enrageEffect = new EffectData(
+			"Enrage",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(10f))),
+			effectComponents: [
+				new ModifierTagsEffectComponent(tagsManager.RequestTagContainer(["status.enraged"]))
+			]);
+
+		var effectHandle = player.EffectsManager.ApplyEffect(
+			new Effect(enrageEffect, new EffectOwnership(player, player)));
+
+		// Should activate automatically
+		handle.IsActive.Should().BeTrue();
+
+		// Remove effect (removes tag)
+		player.EffectsManager.RemoveEffect(effectHandle);
+
+		// Should deactivate automatically
+		handle.IsActive.Should().BeFalse();
 	}
 
 	public class PlayerAttributeSet : AttributeSet
 	{
 		public EntityAttribute Health { get; }
+		public EntityAttribute Mana { get; }
 		public EntityAttribute Strength { get; }
 		public EntityAttribute Speed { get; }
 
 		public PlayerAttributeSet()
 		{
 			Health = InitializeAttribute(nameof(Health), 100, 0, 150);
+			Mana = InitializeAttribute(nameof(Mana), 100, 0, 100);
 			Strength = InitializeAttribute(nameof(Strength), 10, 0, 99);
 			Speed = InitializeAttribute(nameof(Speed), 5, 0, 10);
 		}
@@ -747,6 +1081,9 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		public EntityAttributes Attributes { get; }
 		public EntityTags Tags { get; }
 		public EffectsManager EffectsManager { get; }
+		public EntityAbilities Abilities { get; }
+
+		public EventManager Events { get; }
 
 		public Player(TagsManager tagsManager, CuesManager cuesManager)
 		{
@@ -761,6 +1098,8 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			Attributes = new EntityAttributes(new PlayerAttributeSet());
 			Tags = new EntityTags(baseTags);
 			EffectsManager = new EffectsManager(this, cuesManager);
+			Abilities = new(this);
+			Events = new();
 		}
 	}
 
@@ -808,10 +1147,13 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			AttributesToCapture.Add(SpeedAttribute);
 		}
 
-		public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
+		public override float CalculateBaseMagnitude(
+				Effect effect,
+				IForgeEntity target,
+				EffectEvaluatedData? effectEvaluatedData)
 		{
-			int strength = CaptureAttributeMagnitude(StrengthAttribute, effect, target);
-			int speed = CaptureAttributeMagnitude(SpeedAttribute, effect, target);
+			int strength = CaptureAttributeMagnitude(StrengthAttribute, effect, target, effectEvaluatedData);
+			int speed = CaptureAttributeMagnitude(SpeedAttribute, effect, target, effectEvaluatedData);
 
 			// Base damage plus 50% of strength
 			float damage = (speed * 2) + (strength * 0.5f);
@@ -851,14 +1193,29 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			AttributesToCapture.Add(SourceStrength);
 		}
 
-		public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target)
+		public override ModifierEvaluatedData[] EvaluateExecution(
+			Effect effect,
+			IForgeEntity target,
+			EffectEvaluatedData effectEvaluatedData)
 		{
 			var results = new List<ModifierEvaluatedData>();
 
 			// Get attribute values
-			int targetHealth = CaptureAttributeMagnitude(TargetHealth, effect, target);
-			int sourceHealth = CaptureAttributeMagnitude(SourceHealth, effect, effect.Ownership.Owner);
-			int sourceStrength = CaptureAttributeMagnitude(SourceStrength, effect, effect.Ownership.Owner);
+			int targetHealth = CaptureAttributeMagnitude(
+				TargetHealth,
+				effect,
+				target,
+				effectEvaluatedData);
+			int sourceHealth = CaptureAttributeMagnitude(
+				SourceHealth,
+				effect,
+				effect.Ownership.Owner,
+				effectEvaluatedData);
+			int sourceStrength = CaptureAttributeMagnitude(
+				SourceStrength,
+				effect,
+				effect.Ownership.Owner,
+				effectEvaluatedData);
 
 			// Calculate health drain amount based on source strength
 			float drainAmount = sourceStrength * 0.5f;
@@ -892,38 +1249,74 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		}
 	}
 
-	public class FireDamageCueHandler : ICueHandler
+	public class MockCueHandler : ICueHandler
 	{
+		public int ApplyCount { get; private set; }
+		public int ExecuteCount { get; private set; }
+		public int RemoveCount { get; private set; }
+		public List<float> Magnitudes { get; } = new();
+
+		public void OnApply(IForgeEntity? target, CueParameters? parameters) => ApplyCount++;
+
 		public void OnExecute(IForgeEntity? target, CueParameters? parameters)
 		{
+			ExecuteCount++;
 			if (parameters.HasValue)
 			{
-				Console.WriteLine($"Fire damage executed: {parameters.Value.Magnitude}");
+				Magnitudes.Add(parameters.Value.Magnitude);
 			}
 		}
 
-		public void OnApply(IForgeEntity? target, CueParameters? parameters)
-		{
-			// Logic for when a persistent cue starts (e.g., play fire animation)
-			if (target != null)
-			{
-				Console.WriteLine("Fire damage cue applied to target.");
-			}
-		}
+		public void OnRemove(IForgeEntity? target, bool interrupted) => RemoveCount++;
 
-		public void OnRemove(IForgeEntity? target, bool interrupted)
-		{
-			// Logic for when a cue ends (e.g., stop fire animation)
-			Console.WriteLine("Fire damage cue removed.");
-		}
+		public void OnUpdate(IForgeEntity? target, CueParameters? parameters) { }
 
-		public void OnUpdate(IForgeEntity? target, CueParameters? parameters)
+		public void Reset()
 		{
-			// Logic for updating persistent cues (e.g., adjust fire intensity)
-			if (parameters.HasValue)
-			{
-				Console.WriteLine($"Fire damage cue updated with Magnitude: {parameters.Value.Magnitude}");
-			}
+			ApplyCount = 0;
+			ExecuteCount = 0;
+			RemoveCount = 0;
+			Magnitudes.Clear();
 		}
 	}
+
+	private class CustomAbilityBehavior(string parameter) : IAbilityBehavior
+	{
+		public void OnStarted(AbilityBehaviorContext context)
+		{
+			context.AbilityHandle.CommitAbility();
+
+			// Instantiate a projectile here (omitted for brevity)
+			Console.WriteLine($"{context.Owner} used ability ({parameter}) on target {context.Target}");
+
+			context.InstanceHandle.End();
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
+			// Cleanup if necessary
+		}
+	}
+
+	private class PersistentAbilityBehavior : IAbilityBehavior
+	{
+		public void OnStarted(AbilityBehaviorContext context)
+		{
+			context.AbilityHandle.CommitAbility();
+			// Does NOT call End() to simulate a persistent effect/aura
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
+			// Cleanup
+		}
+	}
+
+	public enum DamageType
+	{
+		Physical,
+		Magical,
+	}
+
+	public record struct DamageInfo(int Value, DamageType DamageType, bool IsCritical);
 }

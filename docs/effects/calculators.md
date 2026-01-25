@@ -1,6 +1,6 @@
 # Custom Calculators
 
-Custom Calculators in Forge enables developers to implement complex, dynamic calculations for effect modifiers. These calculators provide a powerful way to create game-specific logic that goes beyond the built-in [modifier types](modifiers.md#magnitude-calculation-types).
+Custom Calculators in Forge enable developers to implement complex, dynamic calculations for effect modifiers. These calculators provide a powerful way to create game-specific logic that goes beyond the built-in [modifier types](modifiers.md#magnitude-calculation-types).
 
 ## Core Concepts
 
@@ -16,6 +16,7 @@ public abstract class CustomCalculator
         AttributeCaptureDefinition capturedAttribute,
         Effect effect,
         IForgeEntity? target,
+        EffectEvaluatedData? effectEvaluatedData,
         AttributeCalculationType calculationType = AttributeCalculationType.CurrentValue,
         int finalChannel = 0);
 
@@ -35,6 +36,18 @@ Forge offers two primary calculator types that inherit from `CustomCalculator`:
 2. **CustomExecution**: For modifying multiple attributes in a coordinated way. Returns an array of `ModifierEvaluatedData`.
 
 ## Key Components
+
+### EffectEvaluatedData
+
+Most custom calculator methods, such as `CalculateBaseMagnitude` and `EvaluateExecution`, take an `EffectEvaluatedData? effectEvaluatedData` parameter. This object encapsulates all the computed and contextual data for an effect application at that moment.
+
+**Why is EffectEvaluatedData important?**
+
+- It caches and provides all the results and inputs computed for the current effect application, including attribute values, modifiers, levels, stacks, durations, and more.
+- It is the central place for storing and re-accessing the current state of the applied effect, which is crucial for accurate and consistent logic when recalculating due to non-snapshot attribute dependencies or stack/level changes.
+- When any non-snapshot property (like a non-snapshotted AttributeCaptureDefinition) changes in the game, Forge will re-evaluate the effect and update its `EffectEvaluatedData` accordingly.
+
+Pass `effectEvaluatedData` to all helper and custom methods that need contextual evaluation data, so they always use the freshest relevant information and respect the proper state and dependencies of the effect system. This ensures correct operation and optimal performance in both realtime and turn-based games.
 
 ### Attribute Capture
 
@@ -92,11 +105,11 @@ public class MyCalculator : CustomModifierMagnitudeCalculator
         AttributesToCapture.Add(TargetArmor);
     }
 
-    public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
+    public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
     {
         // 4. Use CaptureAttributeMagnitude to safely get values
-        int health = CaptureAttributeMagnitude(SourceHealth, effect, target);
-        int armor = CaptureAttributeMagnitude(TargetArmor, effect, target);
+        int health = CaptureAttributeMagnitude(SourceHealth, effect, target, effectEvaluatedData);
+        int armor = CaptureAttributeMagnitude(TargetArmor, effect, target, effectEvaluatedData);
 
         // Your calculation logic...
         return health * (1.0f - (armor / 200.0f));
@@ -120,11 +133,14 @@ The `CaptureAttributeMagnitude` method:
   - `AttributeCalculationType.MagnitudeEvaluatedUpToChannel`: Gets the value calculated up to a specific channel (requires finalChannel parameter).
 
 Example with a specific calculation type:
+
+```csharp
 // Get the valid modifier value (total modifier without overflow)
 int validModifier = CaptureAttributeMagnitude(
     StrengthAttribute,
     effect,
     target,
+    effectEvaluatedData,
     AttributeCalculationType.ValidModifier);
 
 // Get magnitude calculated up to a specific channel
@@ -132,9 +148,12 @@ int channelMagnitude = CaptureAttributeMagnitude(
     StrengthAttribute,
     effect,
     target,
+    effectEvaluatedData,
     AttributeCalculationType.MagnitudeEvaluatedUpToChannel,
     finalChannel: 2);
-Even when not using non-snapshot functionality, it's recommended to follow this pattern to ensure consistent and safe attribute access.
+```
+
+Even when capturing with snapshot, it's recommended to follow this pattern to ensure consistent and safe attribute access.
 
 ### ModifierEvaluatedData
 
@@ -222,9 +241,9 @@ public class DamageCalculator : CustomModifierMagnitudeCalculator
         CustomCueParameters.Add("cues.damage.amount", 0);
     }
 
-    public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
+    public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
     {
-        int strength = CaptureAttributeMagnitude(AttackerStrength, effect, target);
+        int strength = CaptureAttributeMagnitude(AttackerStrength, effect, target, effectEvaluatedData);
 
         // Check for critical hit
         bool isCritical = new Random().NextDouble() < 0.2;
@@ -283,11 +302,11 @@ public class MyDamageCalculator : CustomModifierMagnitudeCalculator
         CustomCueParameters.Add("cues.damage.type", "physical");
     }
 
-    public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
+    public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
     {
         // Get attribute values
-        int strength = CaptureAttributeMagnitude(StrengthAttribute, effect, target);
-        int agility = CaptureAttributeMagnitude(AgilityAttribute, effect, target);
+        int strength = CaptureAttributeMagnitude(StrengthAttribute, effect, target, effectEvaluatedData);
+        int agility = CaptureAttributeMagnitude(AgilityAttribute, effect, target, effectEvaluatedData);
 
         // Custom calculation logic
         float baseDamage = strength * 0.7f + agility * 0.3f;
@@ -401,14 +420,14 @@ public class ManaDrainExecution : CustomExecution
         CustomCueParameters.Add("cues.spell.transfer_amount", 0f);
     }
 
-    public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target)
+    public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
     {
         var results = new List<ModifierEvaluatedData>();
 
         // Get attribute values
-        int targetMana = CaptureAttributeMagnitude(TargetCurrentMana, effect, target);
-        int magicResist = CaptureAttributeMagnitude(TargetMagicResist, effect, target);
-        int intelligence = CaptureAttributeMagnitude(SourceIntelligence, effect, target);
+        int targetMana = CaptureAttributeMagnitude(TargetCurrentMana, effect, target, effectEvaluatedData);
+        int magicResist = CaptureAttributeMagnitude(TargetMagicResist, effect, target, effectEvaluatedData);
+        int intelligence = CaptureAttributeMagnitude(SourceIntelligence, effect, target, effectEvaluatedData);
 
         // Calculate mana drain amount (reduced by magic resistance)
         float resistFactor = 1.0f - (magicResist / 200.0f); // 200 resist = 100% reduction
@@ -499,9 +518,9 @@ public class QuestDamageCalculator : CustomModifierMagnitudeCalculator
         CustomCueParameters.Add("cues.quest.target_bonus", false);
     }
 
-    public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target)
+    public override float CalculateBaseMagnitude(Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
     {
-        float baseDamage = CaptureAttributeMagnitude(BaseDamage, effect, target);
+        float baseDamage = CaptureAttributeMagnitude(BaseDamage, effect, target, effectEvaluatedData);
 
         // Check if target is related to an active quest
         if (target is IQuestTarget questTarget && _questManager.IsTargetForActiveQuest(questTarget.QuestTargetId))
@@ -548,11 +567,11 @@ public class ComboAttackExecution : CustomExecution
         CustomCueParameters.Add("cues.combat.combo_damage", 0f);
     }
 
-    public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target)
+    public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
     {
         var results = new List<ModifierEvaluatedData>();
 
-        int strength = CaptureAttributeMagnitude(AttackerStrength, effect, target);
+        int strength = CaptureAttributeMagnitude(AttackerStrength, effect, target, effectEvaluatedData);
         int comboCount = _comboSystem.GetCurrentComboCount(effect.Ownership.Owner);
 
         // Calculate combo damage
@@ -581,6 +600,79 @@ public class ComboAttackExecution : CustomExecution
     }
 }
 ```
+
+## Effect Activation Context
+
+Custom activation context enables you to pass dynamic, strongly-typed data to your custom calculator or execution logic when applying an effect. This is especially useful for effects that depend on user input, situational gameplay, or real-time information beyond static effect definition.
+
+To provide context data, use the generic `ApplyEffect<TData>` method from the `EffectsManager`:
+
+```csharp
+var hitLocationData = new HitLocationData(HitZone.Head);
+entity.EffectsManager.ApplyEffect(effect, hitLocationData);
+```
+
+Inside your `CustomModifierMagnitudeCalculator` or `CustomExecution`, retrieve the context data using `effectEvaluatedData.TryGetContextData<T>(out T? data)`:
+
+### Practical Example: Bonus Damage on Headshot
+
+Suppose you want a damage effect that doubles its damage when applied as a headshot. You could define the following context struct:
+
+```csharp
+public readonly record struct HitLocationData(HitZone Zone);
+
+public enum HitZone { Head, Torso, Arm, Leg }
+```
+
+And a custom calculator like this:
+
+```csharp
+public class HeadshotDamageCalculator : CustomModifierMagnitudeCalculator
+{
+    public AttributeCaptureDefinition SourceWeaponDamage { get; }
+
+    public HeadshotDamageCalculator()
+    {
+        SourceWeaponDamage = new AttributeCaptureDefinition(
+            "WeaponAttributeSet.Damage", AttributeCaptureSource.Source, snapshot: true);
+        AttributesToCapture.Add(SourceWeaponDamage);
+    }
+
+    public override float CalculateBaseMagnitude(
+        Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
+    {
+        int damage = CaptureAttributeMagnitude(SourceWeaponDamage, effect, target, effectEvaluatedData);
+
+        // Default is single damage
+        float finalDamage = damage;
+
+        // Check activation context for hit location
+        if (effectEvaluatedData?.TryGetContextData(out HitLocationData? hitLocation)
+            && hitLocation.Zone == HitZone.Head)
+        {
+            finalDamage *= 2.0f; // Double damage for headshots
+            CustomCueParameters["cues.damage.headshot"] = true;
+        }
+        else
+        {
+            CustomCueParameters["cues.damage.headshot"] = false;
+        }
+
+        return -finalDamage; // Negative for damage
+    }
+}
+```
+
+When applying the effect, specify the hit location:
+
+```csharp
+// Apply the effect as a headshot
+entity.EffectsManager.ApplyEffect(effect, new HitLocationData(HitZone.Head));
+// Apply the effect as a torso shot
+entity.EffectsManager.ApplyEffect(effect, new HitLocationData(HitZone.Torso));
+```
+
+This pattern ensures that your custom logic can access dynamic activation information whenever the effect is applied, enabling rich scenario-driven gameplay without muddying your effect definitions.
 
 ## Debugging Custom Calculators
 

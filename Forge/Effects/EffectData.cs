@@ -54,19 +54,20 @@ public readonly record struct EffectData
 	public PeriodicData? PeriodicData { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether this effect snapshots the level at the momment of creation.
+	/// Gets a value indicating whether this effect snapshots the level at the moment of creation.
 	/// </summary>
-	public bool SnapshopLevel { get; }
+	public bool SnapshotLevel { get; }
 
 	/// <summary>
-	/// Gets the list of effect components that further customize this effect behaviour.
+	/// Gets the list of effect components that further customize this effect behavior.
 	/// </summary>
 	public IEffectComponent[] EffectComponents { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether this effect requires the modifier to be successful to trigger cues.
+	/// Gets a value indicating whether this effect requires the modifier to be successful to trigger cues for each
+	/// types of cues.
 	/// </summary>
-	public bool RequireModifierSuccessToTriggerCue { get; }
+	public CueTriggerRequirement RequireModifierSuccessToTriggerCue { get; }
 
 	/// <summary>
 	/// Gets a value indicating whether this effect suppresses stacking cues.
@@ -86,11 +87,11 @@ public readonly record struct EffectData
 	/// <param name="modifiers">The list of modifiers for this effect.</param>
 	/// <param name="stackingData">The stacking data for this effect, if it's stackable.</param>
 	/// <param name="periodicData">The periodic data for this effect, if it's periodic.</param>
-	/// <param name="snapshopLevel">Whether or not this effect snapshots the level at the momment of creation.
+	/// <param name="snapshotLevel">Whether or not this effect snapshots the level at the moment of creation.
 	/// </param>
 	/// <param name="effectComponents">The list of effects components for this effect.</param>
-	/// <param name="requireModifierSuccessToTriggerCue">Wheter or not trigger cues only when modifiers are successfully
-	/// applied.</param>
+	/// <param name="requireModifierSuccessToTriggerCue">Flags indicating whether or not, and which types of cues are
+	/// are triggered when modifiers are successfully applied.</param>
 	/// <param name="suppressStackingCues">Whether or not to trigger cues when applying stacks.</param>
 	/// <param name="customExecutions">The list of custom executions for this effect.</param>
 	/// <param name="cues">The cues associated with this effect.</param>
@@ -100,9 +101,9 @@ public readonly record struct EffectData
 		Modifier[]? modifiers = null,
 		StackingData? stackingData = null,
 		PeriodicData? periodicData = null,
-		bool snapshopLevel = true,
+		bool snapshotLevel = true,
 		IEffectComponent[]? effectComponents = null,
-		bool requireModifierSuccessToTriggerCue = false,
+		CueTriggerRequirement requireModifierSuccessToTriggerCue = CueTriggerRequirement.None,
 		bool suppressStackingCues = false,
 		CustomExecution[]? customExecutions = null,
 		CueData[]? cues = null)
@@ -112,7 +113,7 @@ public readonly record struct EffectData
 		Modifiers = modifiers ?? [];
 		StackingData = stackingData;
 		PeriodicData = periodicData;
-		SnapshopLevel = snapshopLevel;
+		SnapshotLevel = snapshotLevel;
 		EffectComponents = effectComponents ?? [];
 		RequireModifierSuccessToTriggerCue = requireModifierSuccessToTriggerCue;
 		SuppressStackingCues = suppressStackingCues;
@@ -132,7 +133,7 @@ public readonly record struct EffectData
 			"Periodic effects can't be set as instant.");
 
 		Validation.Assert(
-			!(DurationData.DurationType != DurationType.HasDuration && DurationData.Duration.HasValue),
+			!(DurationData.DurationType != DurationType.HasDuration && DurationData.DurationMagnitude.HasValue),
 			$"Can't set duration if {nameof(DurationType)} is set to {DurationData.DurationType}.");
 
 		Validation.Assert(
@@ -219,7 +220,7 @@ public readonly record struct EffectData
 			$"Effects set as {DurationType.Instant} and {MagnitudeCalculationType.AttributeBased} cannot be set as non Snapshot.");
 
 		Validation.Assert(
-			!(DurationData.DurationType == DurationType.Instant && !SnapshopLevel),
+			!(DurationData.DurationType == DurationType.Instant && !SnapshotLevel),
 			$"Effects set as {DurationType.Instant} cannot be set as non Snapshot for Level.");
 
 		Validation.Assert(

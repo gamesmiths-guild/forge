@@ -9,7 +9,7 @@ namespace Gamesmiths.Forge.Attributes;
 /// Attributes have channels for calculating its modifiers. Multiple channels can be used to calculate in sequence,
 /// granting it's possible to have various kinds of formulas combining flat and percentage modifiers.
 /// </remarks>
-public struct ChannelData
+internal struct ChannelData
 {
 	/// <summary>
 	/// Gets or sets an override value at this channel.
@@ -27,5 +27,5 @@ public struct ChannelData
 	/// <summary>
 	/// Gets or sets a percent modifier for this channel.
 	/// </summary>
-	public float PercentModifier { get; set; }
+	public double PercentModifier { get; set; }
 }

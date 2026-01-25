@@ -15,14 +15,14 @@ namespace Gamesmiths.Forge.Effects.Components;
 /// <param name="tagsToAdd">Which tags to be added as modifier tags.</param>
 public class ModifierTagsEffectComponent(TagContainer tagsToAdd) : IEffectComponent
 {
-	private readonly TagContainer _tagsToAdd = tagsToAdd;
+	internal TagContainer TagsToAdd { get; } = tagsToAdd;
 
 	/// <inheritdoc/>
 	public bool OnActiveEffectAdded(
 		IForgeEntity target,
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
-		target.Tags.AddModifierTags(_tagsToAdd);
+		target.Tags.AddModifierTags(TagsToAdd);
 		return true;
 	}
 
@@ -37,6 +37,6 @@ public class ModifierTagsEffectComponent(TagContainer tagsToAdd) : IEffectCompon
 			return;
 		}
 
-		target.Tags.RemoveModifierTags(_tagsToAdd);
+		target.Tags.RemoveModifierTags(TagsToAdd);
 	}
 }
