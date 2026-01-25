@@ -167,7 +167,7 @@ When working with durations, several constraints apply to ensure effects behave 
        "Invalid Effect",
        new DurationData(DurationType.Instant),
        [/*...*/],
-       snapshopLevel: false // Error
+       snapshotLevel: false // Error
    );
    ```
 

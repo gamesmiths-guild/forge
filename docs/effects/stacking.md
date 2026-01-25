@@ -363,4 +363,44 @@ Stacking effects have several constraints and required relationships:
    - If `LevelOverridePolicy` is not `None`, must define `LevelOverrideStackCountPolicy`.
    - `LevelDenialPolicy` and `LevelOverridePolicy` cannot have overlapping flags.
 
-7. **Duration Magnitude**: `DurationData` uses `ModifierMagnitude` (ScalableFloat, AttributeBased, CustomCalculatorClass, SetByCaller). For non-snapshot attribute captures or `SetByCaller` values, durations are re-evaluated at runtime. Stack refresh/reset behaviors (e.g., `ApplicationRefreshPolicy` or `RemoveSingleStackAndRefreshDuration`) use the current evaluated duration when they apply.
+## Best Practices
+
+1. **Use Clear Stack Limits**:
+   - Choose appropriate stack limits based on your game's balance.
+   - Consider using `ScalableInt` for level-based stack limits.
+
+2. **Choose Magnitude Policy Carefully**:
+   - `Sum`: Good for additive effects (damage, stat bonuses).
+   - `DontStack`: Good for status effects where you want duration benefits of stacking but not increased magnitude.
+
+3. **Consider Stack Expiration**:
+   - `ClearEntireStack`: Simple but can feel abrupt to players.
+   - `RemoveSingleStackAndRefreshDuration`: More gradual, better player experience.
+
+4. **Level Control Strategies**:
+   - Use `SegregateLevels` for simpler systems.
+   - Use `AggregateLevels` with careful level policies for more complex behaviors.
+
+5. **Owner Control**:
+   - `AggregateBySource`: Simpler, each source gets its own stack.
+   - `AggregateByTarget`: More complex, but prevents stacking abuse.
+
+6. **Create Unique Effects**:
+   - Use `StackPolicy.AggregateByTarget` with `StackLimit` of 1 to ensure only one instance of an effect exists on a target.
+   - Control replacement behavior with `OwnerDenialPolicy` and `LevelDenialPolicy`.
+   - Use `LevelOverridePolicy` to allow higher-level versions to replace lower ones.
+
+7. **Test Edge Cases**:
+   - Stack limit behavior.
+   - Stack expiration and duration refresh.
+   - Interactions with inhibitions.
+   - Effects from multiple owners and levels.
+
+8. **Document Your Stacking Rules**:
+   - Clearly explain to players how stacks work for key abilities.
+   - Use UI to communicate current stack counts.
+   
+9. **Duration Magnitude**:
+   - `DurationData` uses `ModifierMagnitude` (ScalableFloat, AttributeBased, CustomCalculatorClass, SetByCaller).
+   - For non-snapshot attribute captures or `SetByCaller` values, durations are re-evaluated at runtime.
+   - Stack refresh/reset behaviors (e.g., `ApplicationRefreshPolicy` or `RemoveSingleStackAndRefreshDuration`) use the current evaluated duration when they apply.

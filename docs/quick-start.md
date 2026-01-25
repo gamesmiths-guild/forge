@@ -9,7 +9,7 @@ This guide will help you quickly get started with the Forge framework, showing y
 Install Forge via NuGet (recommended):
 
 ```shell
-dotnet add package Gamesmiths.Forge --version 0.2.0
+dotnet add package Gamesmiths.Forge
 ```
 
 For other installation methods, see the [main README](../README.md).
@@ -676,7 +676,7 @@ public class HealthDrainExecution : CustomExecution
         AttributesToCapture.Add(SourceStrength);
     }
 
-    public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target, EffectEvaluatedData effectEvaluatedData)
+    public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
     {
         var results = new List<ModifierEvaluatedData>();
 

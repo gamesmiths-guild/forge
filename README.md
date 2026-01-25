@@ -1,6 +1,8 @@
 # Forge Gameplay System
 
+[![CI](https://github.com/gamesmiths-guild/forge/actions/workflows/validate-project.yml/badge.svg)](https://github.com/gamesmiths-guild/forge/actions/workflows/validate-project.yml)
 [![NuGet](https://img.shields.io/nuget/v/Gamesmiths.Forge.svg)](https://www.nuget.org/packages/Gamesmiths.Forge)
+[![License](https://img.shields.io/github/license/gamesmiths-guild/forge)](LICENSE)
 
 A gameplay framework for developing games using C#.
 
@@ -8,7 +10,7 @@ Forge is an engine-agnostic gameplay framework designed for building robust game
 
 The framework eliminates the need to rebuild status systems for every game project by offering a flexible, data-driven architecture that works seamlessly with Unity, Godot, and other C#-compatible engines. With Forge, all attribute changes are handled through effects, ensuring organized and maintainable code even in complex gameplay scenarios.
 
-**Keywords:** gameplay system, C# game development, Unity, Godot, attribute system, status effects, gameplay abilities, data-driven
+**Keywords:** gameplay framework, C#, engine-agnostic, data-driven, attributes, gameplay effects, abilities, gameplay tags
 
 ## Quick Start
 
@@ -65,6 +67,7 @@ Forge supports a variety of gameplay mechanics through specialized subsystems:
 ### Planned Features 🚧
 
 - **Multiplayer Support**: Network replication for all systems.
+- **Statescript**: Backend support for state-based scripting of Ability behaviors.
 
 ## Installation
 
@@ -82,7 +85,7 @@ Install via NuGet, reference the Forge project directly, or download the precomp
 Install the package via .NET CLI:
 
 ```shell
-dotnet add package Gamesmiths.Forge --version 0.2.0
+dotnet add package Gamesmiths.Forge
 ```
 
 Or search for `Gamesmiths.Forge` in the NuGet Package Manager UI in Visual Studio.

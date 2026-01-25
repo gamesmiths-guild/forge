@@ -9,6 +9,7 @@ The Abilities system in Forge provides a framework for defining, granting, activ
 - **Activation**: Each ability has configurable activation requirements, costs, and cooldowns.
 - **Instancing**: Policies control how multiple concurrent activations are handled.
 - **Triggers**: Activation can be triggered manually, by events, or by tag changes.
+- **Interruption**: Abilities can be canceled or interrupted, with configurable behavior.
 - **Behaviors**: Custom logic is implemented through the `IAbilityBehavior` interface.
 
 ## Ability Data
@@ -40,7 +41,7 @@ var abilityData = new AbilityData(
 
 - **Name**: Identifier for the ability.
 - **CostEffect**: An instant effect defining resource costs.
-- **CooldownEffects**: Duration effects preventing reactivation.
+- **CooldownEffects**: Duration effects with tags preventing reactivation.
 - **AbilityTags**: Tags identifying this ability for blocking/cancellation.
 - **InstancingPolicy**: Controls concurrent activation handling.
 - **RetriggerInstancedAbility**: Restarts persistent instances on re-activation.
@@ -67,10 +68,12 @@ Use `GrantAbilityEffectComponent` to grant abilities that are tied to an effect'
 ```csharp
 var grantAbilityConfig = new GrantAbilityConfig(
     abilityData,
-    abilityLevel: new ScalableInt(1, curve: myLevelCurve),
-    grantedAbilityRemovalPolicy: AbilityDeactivationPolicy.CancelImmediately,
-    grantedAbilityInhibitionPolicy: AbilityDeactivationPolicy.CancelImmediately,
-    levelOverridePolicy: LevelComparison.Higher);
+    ScalableLevel: new ScalableInt(1, ScalingCurve: myLevelCurve),
+    RemovalPolicy: AbilityDeactivationPolicy.CancelImmediately,
+    InhibitionPolicy: AbilityDeactivationPolicy.CancelImmediately,
+    TryActivateOnGrant = false,
+    TryActivateOnEnable = false,
+    LevelOverridePolicy: LevelComparison.Higher);
 
 var grantComponent = new GrantAbilityEffectComponent([grantAbilityConfig]);
 
@@ -86,6 +89,8 @@ entity.EffectsManager.ApplyEffect(new Effect(grantEffect, ownership, level: 5));
 **Tip:** By holding a reference to the `GrantAbilityEffectComponent` used in your `EffectData`, you can access the `grantComponent.GrantedAbilities` list. This provides a direct reference to the `AbilityHandle`s created by the effect, which can be more reliable than searching via `TryGetAbility` if you need to manipulate that specific instance immediately.
 
 Abilities granted by **instant effects** become permanent, while abilities granted by **duration or infinite effects** are temporary and tied to the effect's lifecycle.
+
+`TryActivateOnGrant` attempts to activate the ability immediately when it is granted, while `TryActivateOnEnable` attempts activation when the granting effect is re-enabled after inhibition.
 
 ### Granting Permanently
 
@@ -136,6 +141,54 @@ The ability grant is automatically removed when the ability ends. If activation 
 
 Each time an ability is granted, a **grant source** is created that tracks how that specific grant should behave. An ability can have multiple grant sources if it's granted multiple times (e.g., by different effects or methods).
 
+### Multiple Grant Sources
+
+If an ability is granted by multiple sources, it remains granted until all sources are removed:
+
+```csharp
+// Apply two effects that grant the same ability
+ActiveEffectHandle? effectHandle0 = entity.EffectsManager.ApplyEffect(grantEffect1);
+ActiveEffectHandle? effectHandle1 = entity.EffectsManager.ApplyEffect(grantEffect2);
+
+// Only one ability instance exists
+entity.Abilities.GrantedAbilities.Count; // 0
+
+// Remove first grant - ability still exists
+entity.EffectsManager.RemoveEffect(effectHandle0);
+entity.Abilities.GrantedAbilities.Count; // 0
+
+// Remove second grant - now the ability is removed
+entity.EffectsManager.RemoveEffect(effectHandle1);
+entity.Abilities.GrantedAbilities.Count; // -1
+```
+
+### Level Override Policy
+
+When an ability is granted multiple times, the `LevelOverridePolicy` determines whether the level should be updated:
+
+```csharp
+// First grant at level 2
+var config1 = new GrantAbilityConfig(abilityData, new ScalableInt(2), ...);
+entity.EffectsManager.ApplyEffect(grantEffect1);
+// handle.Level == 2
+
+// Second grant at level 3 with Higher policy: level updates
+var config2 = new GrantAbilityConfig(
+    abilityData,
+    new ScalableInt(3),
+    levelOverridePolicy: LevelComparison.Higher, ...);
+entity.EffectsManager.ApplyEffect(grantEffect2);
+// handle.Level == 3
+
+// Third grant at level 1 with Higher policy: level stays at 3
+var config3 = new GrantAbilityConfig(
+    abilityData,
+    new ScalableInt(1),
+    levelOverridePolicy: LevelComparison.Higher, ...);
+entity.EffectsManager.ApplyEffect(grantEffect3);
+// handle.Level == 3
+```
+
 ### Deactivation Policies
 
 `AbilityDeactivationPolicy` controls behavior when a grant source is removed or inhibited:
@@ -185,55 +238,7 @@ entity.EffectsManager.RemoveEffect(effectHandle2);
 
 1. **Multiple sources, one removed**: The ability remains granted as long as at least one grant source exists.
 2. **CancelImmediately takes precedence**: If any remaining grant source has `CancelImmediately` policy when removed, it will cancel the ability immediately regardless of other sources' policies.
-3. **Inhibition is cumulative**: The ability is only inhibited when ALL non-ignored grant sources are inhibited. 
-
-### Multiple Grant Sources
-
-If an ability is granted by multiple sources, it remains granted until all sources are removed:
-
-```csharp
-// Apply two effects that grant the same ability
-ActiveEffectHandle? effectHandle1 = entity.EffectsManager.ApplyEffect(grantEffect1);
-ActiveEffectHandle? effectHandle2 = entity.EffectsManager.ApplyEffect(grantEffect2);
-
-// Only one ability instance exists
-entity.Abilities.GrantedAbilities.Count; // 1
-
-// Remove first grant - ability still exists
-entity.EffectsManager.RemoveEffect(effectHandle1);
-entity.Abilities.GrantedAbilities.Count; // 1
-
-// Remove second grant - now the ability is removed
-entity.EffectsManager.RemoveEffect(effectHandle2);
-entity.Abilities.GrantedAbilities.Count; // 0
-```
-
-### Level Override Policy
-
-When an ability is granted multiple times, the `LevelOverridePolicy` determines whether the level should be updated:
-
-```csharp
-// First grant at level 2
-var config1 = new GrantAbilityConfig(abilityData, new ScalableInt(2), ...);
-entity.EffectsManager.ApplyEffect(grantEffect1);
-// handle.Level == 2
-
-// Second grant at level 3 with Higher policy: level updates
-var config2 = new GrantAbilityConfig(
-    abilityData,
-    new ScalableInt(3),
-    levelOverridePolicy: LevelComparison.Higher, ... );
-entity.EffectsManager.ApplyEffect(grantEffect2);
-// handle.Level == 3
-
-// Third grant at level 1 with Higher policy: level stays at 3
-var config3 = new GrantAbilityConfig(
-    abilityData,
-    new ScalableInt(1),
-    levelOverridePolicy: LevelComparison.Higher, ...);
-entity.EffectsManager.ApplyEffect(grantEffect3);
-// handle.Level == 3
-```
+3. **Inhibition is cumulative**: The ability is only inhibited when ALL non-ignored grant sources are inhibited.
 
 ## Entity Abilities Manager
 
@@ -252,7 +257,7 @@ EntityTags blockedTags = abilities.BlockedAbilityTags;
 
 ### Finding Abilities
 
-Use `TryGetAbility` to find a granted ability by its data. 
+Use `TryGetAbility` to find a granted ability by its data.
 
 **Note on Identity:** An ability is uniquely identified by its `AbilityData` **and** its `SourceEntity`. You can have the same ability granted multiple times if the sources differ (e.g., one from an Item, one from a Class).
 
@@ -353,20 +358,20 @@ if (entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle))
 
 ### Handle Properties and Methods
 
-- **IsActive**: Whether any instance of the ability is currently active. 
+- **IsActive**: Whether any instance of the ability is currently active.
 - **IsInhibited**: Whether the ability is inhibited by its granting effect.
 - **IsValid**: Whether the handle still references a valid granted ability.
-- **Level**: The current level of the ability. 
-- **Activate(out failureFlags)**: Attempt to activate the ability. Returns true if successful.
-- **Activate(out failureFlags, target)**: Attempt to activate with a specific target. 
-- **Cancel()**: Cancel all active instances. 
+- **Level**: The current level of the ability.
+- **Activate(out failureFlags, target?, magnitude?)**: Attempt to activate the ability with optional target and magnitude.
+- **Activate<TData>(data, out failureFlags, target?, magnitude?)**: Attempt to activate the ability passing additional typed activation data.
+- **Cancel()**: Cancel all active instances.
 - **CommitAbility()**: Helper that calls both `CommitCooldown()` and `CommitCost()`.
 - **CommitCooldown()**: Apply the cooldown effects.
-- **CommitCost()**: Apply the cost effect. 
+- **CommitCost()**: Apply the cost effect.
 - **GetCooldownData()**: Get information about all cooldowns.
 - **GetRemainingCooldownTime(tag)**: Get remaining time for a specific cooldown.
 - **GetCostData()**: Get information about all costs.
-- **GetCostForAttribute(attribute)**: Get cost for a specific attribute. 
+- **GetCostForAttribute(attribute)**: Get cost for a specific attribute.
 
 ### Activation Failures
 
@@ -374,16 +379,16 @@ if (entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle))
 
 - **None**: Successfully activated.
 - **InvalidHandler**: The ability handle is invalid.
-- **Inhibited**: Ability is inhibited by its granting effect. 
-- **PersistentInstanceActive**: A non-retriggerable persistent instance is already active. 
+- **Inhibited**: Ability is inhibited by its granting effect.
+- **PersistentInstanceActive**: A non-retriggerable persistent instance is already active.
 - **Cooldown**: Ability is on cooldown.
 - **InsufficientResources**: Cannot afford the cost.
 - **OwnerTagRequirements**: Owner doesn't meet tag requirements.
 - **SourceTagRequirements**: Source doesn't meet tag requirements.
 - **TargetTagRequirements**: Target doesn't meet tag requirements.
-- **BlockedByTags**: Another active ability is blocking this one. 
+- **BlockedByTags**: Another active ability is blocking this one.
 - **TargetTagNotPresent**: No abilities matched the requested tags (when using `TryActivateAbilitiesByTag`).
-- **InvalidTagConfiguration**: Invalid tag configuration provided. 
+- **InvalidTagConfiguration**: Invalid tag configuration provided.
 
 ## Instancing Policies
 
@@ -404,14 +409,14 @@ var abilityData = new AbilityData(
 
 With `retriggerInstancedAbility: false`, attempting to activate while active fails with `AbilityActivationFailures.PersistentInstanceActive`.
 
-With `retriggerInstancedAbility: true`, the active instance is canceled and a new one starts: 
-
 ```csharp
 var abilityData = new AbilityData(
     "Channeled Beam",
     instancingPolicy: AbilityInstancingPolicy.PerEntity,
     retriggerInstancedAbility: true);
 ```
+
+With `retriggerInstancedAbility: true`, the active instance is canceled and a new one starts: 
 
 ### PerExecution
 
@@ -439,7 +444,7 @@ Cooldowns prevent ability reactivation for a duration. They are implemented as d
 - Cooldown effects **must** have a Duration (not Instant, not Infinite).
 - Cooldown effects **must** have a `ModifierTagsEffectComponent`.
 
-The system receives an array of cooldown effects, allowing you to trigger multiple independent cooldowns at once (e.g., a short "Skill Cooldown" and a longer "Global Cooldown").
+The system receives an array of cooldown effects, allowing you to trigger multiple independent cooldowns at once (e.g., a long "Skill Cooldown" and a shorter "Global Cooldown").
 
 ```csharp
 var cooldownEffect = new EffectData(
@@ -457,7 +462,7 @@ var abilityData = new AbilityData(
 Multiple cooldown effects can be used for abilities with multiple cooldown conditions: 
 
 ```csharp
-// Ability has both a short cooldown and a charge system
+// Ability has both a long cooldown and a global cooldown
 var abilityData = new AbilityData(
     "Dash",
     cooldownEffects: [dashCooldownEffect, globalCooldownEffect]);
@@ -492,7 +497,7 @@ Costs are instant effects that modify attributes when committed.
 **Validation Logic**:
 
 Cost modifiers are validated against the attribute's configured min/max bounds:
-- If the modifier is **negative** (consumption), it tests against the attribute's **Minimum Value** (e.g., Do I have enough Mana to pay -30 without going below 0?)
+- If the modifier is **negative** (consumption), it tests against the attribute's **Minimum Value**. (e.g., Do I have enough Mana to pay -30 without going below 0?)
 - If the modifier is **positive** (restoration), it tests against the attribute's **Maximum Value**. (e.g., Is my Health low enough to receive +50 healing without exceeding Max Health?)
 
 You can add multiple modifiers to the single `CostEffect`, allowing an ability to consume multiple different attributes (e.g., Mana and Health).
@@ -519,11 +524,11 @@ Cost is checked during activation but only applied when `CommitCost()` or `Commi
 
 ### Developer Responsibilities
 
-1.  **Ending Instances**: It is up to the developer to call `context.InstanceHandle.End()` when the ability logic is complete. If you fail to do this, the system will consider the ability "Active" indefinitely.
-2.  **Committing**: Resources and Cooldowns are not applied automatically. You must call `context.AbilityHandle.CommitAbility()` (or `CommitCost` / `CommitCooldown` separately).
-    *   `CommitAbility()` calls both `CommitCost()` and `CommitCooldown()`.
-    *   Do **not** call all three; it is redundant.
-    *   Deferring commits allows for mechanics like "free cast if cancelled early."
+1. **Ending Instances**: It is up to the developer to call `context.InstanceHandle.End()` when the ability logic is complete. If you fail to do this, the system will consider the ability "Active" indefinitely.
+2. **Committing**: Resources and Cooldowns are not applied automatically. You must call `context.AbilityHandle.CommitAbility()` (or `CommitCost` / `CommitCooldown` separately).
+   - `CommitAbility()` calls both `CommitCost()` and `CommitCooldown()`.
+   - Do **not** call all three; it is redundant.
+   - Deferring commits allows for mechanics like "free cast if cancelled early."
 
 **Note**: It is entirely possible to **not end** an ability. This is useful for passive abilities or toggles that should run continuously until cancelled externally or by tag triggers.
 
@@ -544,14 +549,14 @@ public class FireballBehavior : IAbilityBehavior
         // This calls both CommitCooldown() and CommitCost()
         abilityHandle.CommitAbility();
 
-        // Spawn projectile, start animation, etc. 
+        // Spawn projectile, start animation, etc.
         SpawnFireball(owner, target, level);
     }
 
     public void OnEnded(AbilityBehaviorContext context)
     {
         // Called when the ability instance ends
-        // Clean up effects, stop animations, etc. 
+        // Clean up effects, stop animations, etc.
     }
 }
 ```
@@ -564,8 +569,17 @@ public class FireballBehavior : IAbilityBehavior
 - **Source**: The entity that granted this ability (may be null).
 - **Target**: The target passed during activation (may be null).
 - **Level**: The ability's current level.
-- **AbilityHandle**: Handle to the ability for committing cost/cooldown. 
+- **AbilityHandle**: Handle to the ability for committing cost/cooldown.
 - **InstanceHandle**: Handle to this specific instance for ending it.
+- **Magnitude**: A numeric value associated with the activation attempt.
+
+### Behavior Context `<TData>`
+
+In addition to the core fields, the generic behavior context also carries:
+
+- **Data**: Optional strongly-typed activation data when using generic activation or event triggers.
+
+This context is primarily consumed by behaviors implementing `IAbilityBehavior<TData>`, allowing abilities to react to activation-specific data.
 
 ### Ending Instances
 
@@ -721,9 +735,110 @@ var grantEffect = new EffectData(
 // Activation fails with AbilityActivationFailures.Inhibited
 ```
 
-With `GrantedAbilityInhibitionPolicy.RemoveOnEnd`, an active ability continues running but becomes inhibited after it ends. 
+With `GrantedAbilityInhibitionPolicy.RemoveOnEnd`, an active ability continues running but becomes inhibited after it ends.
 
-Abilities granted permanently via `GrantAbilityPermanently` cannot be inhibited. 
+Abilities granted permanently via `GrantAbilityPermanently` cannot be inhibited.
+
+## Ability Activation Context
+
+Ability activation supports passing additional contextual information at runtime. This context represents **dynamic execution data**, not static ability configuration.
+
+Forge exposes this data through the ability behavior context during activation.
+
+### Magnitude
+
+`Magnitude` is a numeric value associated with an activation attempt.
+
+- It can be passed explicitly when calling `AbilityHandle.Activate(...)`.
+- It is automatically populated when abilities are triggered by **Event Triggers**.
+- It is accessible via `context.Magnitude` inside the behavior.
+
+Typical use cases include damage scaling, impulse strength, or contextual intensity values.
+
+### Strongly-Typed Activation Data
+
+For cases where a numeric magnitude is not sufficient, abilities can receive strongly-typed activation data.
+
+This is done using the generic activation method:
+
+```csharp
+handle.Activate<HitLocationData>(
+    new HitLocationData(HitZone.Head),
+    out AbilityActivationFailures failures,
+    target: enemy);
+```
+
+When using this overload, Forge automatically creates an `AbilityBehaviorContext<TData>` instance.
+
+### AbilityBehaviorContext<TData>
+
+When activated with typed data, the behavior receives an `AbilityBehaviorContext<TData>`, which provides:
+
+- All standard ability context fields.
+- Strongly-typed activation data via `context.Data`.
+
+```csharp
+public sealed class HitReactionBehavior : IAbilityBehavior<HitLocationData>
+{
+    public void OnStarted(AbilityBehaviorContext context, HitLocationData data)
+    {
+        context.AbilityHandle.CommitAbility();
+
+        switch (data.Zone)
+        {
+            case HitZone.Head:
+                ApplyCriticalDamage(context.Target);
+                break;
+
+            case HitZone.Arm:
+                ApplyDisarm(context.Target);
+                break;
+
+            case HitZone.Leg:
+                ApplySlow(context.Target);
+                break;
+
+            default:
+                ApplyBaseDamage(context.Target);
+                break;
+        }
+
+        context.InstanceHandle.End();
+    }
+
+    public void OnEnded(AbilityBehaviorContext context)
+    {
+        // Cleanup if needed
+    }
+}
+
+```
+
+### Event Triggers and Context Propagation
+
+Abilities triggered by Event Triggers are the only automatic source of activation context.
+
+- `EventMagnitude` is mapped to `context.Magnitude`.
+- `EventData<TPayload>.Payload` is mapped to `context.Data`.
+
+This allows external systems to inject runtime context into abilities without direct activation calls.
+
+```csharp
+entity.Events.Raise(new EventData<HitLocationData>
+{
+    EventTags = hitEventTags,
+    Target = enemy,
+    EventMagnitude = 1.0f,
+    Payload = new HitLocationData(HitZone.Arm)
+});
+```
+
+### Context Design Guidelines
+
+- Context data should represent execution-specific state.
+- Do not use activation data for static ability configuration.
+- Prefer typed data over loosely structured objects.
+- Event Triggers are ideal for world-driven context injection.
 
 ## Best Practices
 
@@ -734,8 +849,9 @@ Abilities granted permanently via `GrantAbilityPermanently` cannot be inhibited.
 5. **Handle Failure Flags**: Use the `AbilityActivationFailures` flags to provide specific feedback to the player (e.g. check for `Cooldown` and `InsufficientResources`).
 6. **Clean Up in OnEnded**: Always clean up spawned objects, effects, and state in `OnEnded`.
 7. **Use Tag Requirements**: Leverage tag-based requirements for complex activation conditions.
-8. **Consider Policy Interactions**: When granting abilities from multiple sources, be aware that `CancelImmediately` policies take precedence. 
-9. **Query Before Activation**: Use `GetCooldownData()` and `GetCostData()` to show UI state before attempting activation. 
+8. **Consider Policy Interactions**: When granting abilities from multiple sources, be aware that `CancelImmediately` policies take precedence.
+9. **Query Before Activation**: Use `GetCooldownData()` and `GetCostData()` to show UI state before attempting activation.
 10. **Use Permanent Grants for Innate Abilities**: Use `GrantAbilityPermanently` for abilities that should always be available.
 11. **Use Tag-Based Activation**: Use `TryActivateAbilitiesByTag` for flexible input handling where multiple abilities share activation contexts.
 12. **Check Validation Rules**: Ensure cooldowns have durations/tags and costs are instant.
+13. **Use Activation Context for Runtime Data**: Pass external execution data via activation context, preferring typed data.

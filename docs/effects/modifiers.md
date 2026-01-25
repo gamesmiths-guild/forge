@@ -1,6 +1,6 @@
 # Effect Modifiers
 
-Effect Modifiers in Forge provides a flexible way to modify entity [attributes](../attributes.md) through [effects](README.md). Modifiers define how an effect changes attribute values, with support for different operation types and magnitude calculations.
+Effect Modifiers in Forge provide a flexible way to modify entity [attributes](../attributes.md) through [effects](README.md). Modifiers define how an effect changes attribute values, with support for different operation types and magnitude calculations.
 
 For a practical guide on using modifiers, see the [Quick Start Guide](../quick-start.md).
 
@@ -10,10 +10,10 @@ At its core, a modifier represents a mathematical operation that changes the val
 
 ```csharp
 public readonly struct Modifier(
-    StringKey attribute,
-    ModifierOperation operation,
-    ModifierMagnitude magnitude,
-    int channel = 0)
+    StringKey Attribute,
+    ModifierOperation Operation,
+    ModifierMagnitude Magnitude,
+    int Channel = 0)
 {
     // Implementation...
 }
@@ -136,17 +136,17 @@ When evaluated, the formula is: `BaseValue * ScalingCurve.Evaluate(level)`, or j
 
 ### AttributeBasedFloat
 
-Calculates magnitude based on another attribute's value using a powerful formula:
+`AttributeBasedFloat` computes its magnitude from another attribute (including snapshot logic for effect context).
 
 ```csharp
 public readonly struct AttributeBasedFloat(
-    AttributeCaptureDefinition backingAttribute,
-    AttributeCalculationType attributeCalculationType,
-    ScalableFloat coefficient,
-    ScalableFloat preMultiplyAdditiveValue,
-    ScalableFloat postMultiplyAdditiveValue,
-    int? finalChannel = null,
-    ICurve? lookupCurve = null)
+    AttributeCaptureDefinition BackingAttribute,
+    AttributeCalculationType AttributeCalculationType,
+    ScalableFloat Coefficient,
+    ScalableFloat PreMultiplyAdditiveValue,
+    ScalableFloat PostMultiplyAdditiveValue,
+    int? FinalChannel = null,
+    ICurve? LookupCurve = null)
 {
     // Implementation...
 }
@@ -245,11 +245,11 @@ For complex calculations requiring custom logic, see the [Custom Calculators doc
 
 ```csharp
 public readonly struct CustomCalculationBasedFloat(
-    CustomModifierMagnitudeCalculator magnitudeCalculatorClass,
-    ScalableFloat coefficient,
-    ScalableFloat preMultiplyAdditiveValue,
-    ScalableFloat postMultiplyAdditiveValue,
-    ICurve? lookupCurve = null)
+    CustomModifierMagnitudeCalculator MagnitudeCalculatorClass,
+    ScalableFloat Coefficient,
+    ScalableFloat PreMultiplyAdditiveValue,
+    ScalableFloat PostMultiplyAdditiveValue,
+    ICurve? LookupCurve = null)
 {
     // Implementation...
 }
@@ -258,7 +258,7 @@ public readonly struct CustomCalculationBasedFloat(
 The magnitude is calculated using the same formula as `AttributeBasedFloat`, but with a custom calculator providing the base magnitude:
 
 ```
-baseMagnitude = magnitudeCalculatorClass.CalculateBaseMagnitude()
+baseMagnitude = magnitudeCalculatorClass.CalculateBaseMagnitude(effect, target, effectEvaluatedData)
 finalValue = (coefficient * (baseMagnitude + preMultiply)) + postMultiply
 ```
 
@@ -311,16 +311,25 @@ var missingHealthDamage = new Modifier(
 
 ### SetByCallerFloat
 
-Allows the effect's magnitude to be set externally before it's applied:
+`SetByCallerFloat` is a magnitude type that allows the caller to provide a custom value when applying an effect.
 
 ```csharp
-public readonly struct SetByCallerFloat(Tag tag)
+public readonly struct SetByCallerFloat(Tag tag, bool Snapshot = true)
 {
     // Implementation...
 }
 ```
 
-The `Tag` property is used as a key to look up the magnitude value that must be set before applying the effect:
+#### Tag
+
+The `Tag` property is used as a key to look up the magnitude value that must be set before applying the effect.
+
+#### Snapshot
+
+The `Snapshot` parameter controls whether the provided value is captured at application time or evaluated dynamically for non-instant effects.
+
+- When `Snapshot` is set to `true`, the value associated with the tag is captured when the effect is applied and remains fixed for the lifetime of the effect.
+- When `Snapshot` is set to `false`, the effect always uses the latest value associated with the tag, allowing the magnitude to change if the caller updates the value after the effect has already been applied.
 
 ```csharp
 // Magnitude will be set before the effect is applied
@@ -330,7 +339,8 @@ var variableDamageModifier = new Modifier(
     new ModifierMagnitude(
         MagnitudeCalculationType.SetByCaller,
         setByCallerFloat: new SetByCallerFloat(
-            Tag.RequestTag(tagsManager, "damage.amount")
+            Tag.RequestTag(tagsManager, "damage.amount"),
+            Snapshot: true 
         )
     )
 );
@@ -338,7 +348,7 @@ var variableDamageModifier = new Modifier(
 var effectData = new EffectData("Variable Damage", new DurationData(DurationType.Instant), [variableDamageModifier]);
 var effect = new Effect(effectData, new EffectOwnership(caster, caster));
 
-// Before applying the effect:
+// Set the caller-provided magnitude before applying the effect:
 effect.SetSetByCallerMagnitude(Tag.RequestTag(tagsManager, "damage.amount"), 25.5f);
 target.EffectsManager.ApplyEffect(effect);
 ```
