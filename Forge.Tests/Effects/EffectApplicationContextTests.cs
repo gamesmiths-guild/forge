@@ -301,7 +301,7 @@ public class EffectApplicationContextTests(TagsAndCuesFixture tagsAndCuesFixture
 	/// </summary>
 	private sealed class ContextAwareExecution : CustomExecution
 	{
-		public EffectApplicationContext? ReceivedContext { get; private set; }
+		public DamageContext? ReceivedContext { get; private set; }
 
 		public float ReceivedDamage { get; private set; }
 
@@ -317,10 +317,10 @@ public class EffectApplicationContextTests(TagsAndCuesFixture tagsAndCuesFixture
 			EffectEvaluatedData? effectEvaluatedData)
 		{
 			WasExecuted = true;
-			ReceivedContext = effectEvaluatedData?.ApplicationContext;
 
 			if (effectEvaluatedData?.TryGetContextData(out DamageContext? damageContext) == true)
 			{
+				ReceivedContext = damageContext;
 				ReceivedDamage = damageContext.Damage;
 				ReceivedIsCritical = damageContext.IsCritical;
 				ReceivedHitLocations = damageContext.HitLocations;

@@ -71,14 +71,7 @@ public sealed class EffectEvaluatedData
 	/// </summary>
 	public Dictionary<StringKey, object>? CustomCueParameters { get; private set; }
 
-	/// <summary>
-	/// Gets the optional application context for this effect evaluation.
-	/// </summary>
-	/// <remarks>
-	/// Contains custom data passed during effect application via
-	/// <see cref="EffectsManager.ApplyEffect{TData}(Effect, TData)"/>.
-	/// </remarks>
-	public EffectApplicationContext? ApplicationContext { get; }
+	internal EffectApplicationContext? ApplicationContext { get; }
 
 	internal Dictionary<AttributeSnapshotKey, float> SnapshotAttributes { get; } = [];
 
