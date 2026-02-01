@@ -1,0 +1,10 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Discussions
+    url: https://github.com/gamesmiths-guild/forge/discussions
+    about: Use GitHub Discussions for questions, feedback, and design discussions.
+
+  - name: Documentation
+    url: https://github.com/gamesmiths-guild/forge/tree/main/docs
+    about: Please check the README and documentation before opening an issue.

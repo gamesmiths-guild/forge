@@ -4,9 +4,10 @@
 [![NuGet](https://img.shields.io/nuget/v/Gamesmiths.Forge.svg)](https://www.nuget.org/packages/Gamesmiths.Forge)
 [![License](https://img.shields.io/github/license/gamesmiths-guild/forge)](LICENSE)
 
-A gameplay framework for developing games using C#.
+An Unreal GAS-like gameplay framework for developing games in C#.
 
 Forge is an engine-agnostic gameplay framework designed for building robust game systems in C#. Inspired by Unreal Engine's Gameplay Ability System (GAS), Forge provides a centralized and controlled approach to managing attributes, effects, tags, abilities, events, and cues in your games.
+Forge is an engine-agnostic, data-driven system inspired by Unreal Engine’s Gameplay Ability System (GAS), designed to manage attributes, effects, abilities, tags, events, and cues in a structured way.
 
 The framework eliminates the need to rebuild status systems for every game project by offering a flexible, data-driven architecture that works seamlessly with Unity, Godot, and other C#-compatible engines. With Forge, all attribute changes are handled through effects, ensuring organized and maintainable code even in complex gameplay scenarios.
 
