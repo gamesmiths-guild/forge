@@ -73,7 +73,7 @@ public readonly struct Tag : IEquatable<Tag>
 		// Tags at this point should always have a designated manager.
 		Validation.Assert(
 			tag.TagsManager is not null,
-			$"Tag \"{tag.TagKey}\" isn't properly registred in a {typeof(TagsManager)}.");
+			$"Tag \"{tag.TagKey}\" isn't properly registered in a {typeof(TagsManager)}.");
 
 		if (tagsManager != tag.TagsManager)
 		{
