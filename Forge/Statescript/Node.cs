@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript.Ports;
 
 namespace Gamesmiths.Forge.Statescript;
@@ -10,8 +9,15 @@ namespace Gamesmiths.Forge.Statescript;
 /// </summary>
 public abstract class Node
 {
-	private readonly List<InputPort> _inputPorts;
-	private readonly List<OutputPort> _outputPorts;
+	/// <summary>
+	/// Defines the input and output ports for this node by adding them to the provided lists.
+	/// </summary>
+	/// <remarks>
+	/// Subclasses must override this method to declare their ports. The base class handles finalization.
+	/// </remarks>
+	/// <param name="inputPorts">The list to add input ports to.</param>
+	/// <param name="outputPorts">The list to add output ports to.</param>
+	protected abstract void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts);
 
 	/// <summary>
 	/// Gets or sets the unique identifier for this node.
@@ -21,12 +27,12 @@ public abstract class Node
 	/// <summary>
 	/// Gets the input ports of this node.
 	/// </summary>
-	public InputPort[]? InputPorts { get; private set; }
+	public InputPort[] InputPorts { get; }
 
 	/// <summary>
 	/// Gets the output ports of this node.
 	/// </summary>
-	public OutputPort[]? OutputPorts { get; private set; }
+	public OutputPort[] OutputPorts { get; }
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Node"/> class.
@@ -34,39 +40,21 @@ public abstract class Node
 	protected Node()
 	{
 		NodeID = Guid.NewGuid();
-		_inputPorts = [];
-		_outputPorts = [];
-	}
 
-	/// <summary>
-	/// Adds an input port to this node.
-	/// </summary>
-	/// <param name="inputPort">The input port to add.</param>
-	public void AddPort(InputPort inputPort)
-	{
-		_inputPorts.Add(inputPort);
-		inputPort.SetOwnerNode(this);
-	}
+		var inputPorts = new List<InputPort>();
+		var outputPorts = new List<OutputPort>();
 
-	/// <summary>
-	/// Adds an output port to this node.
-	/// </summary>
-	/// <param name="outputPort">The output port to add.</param>
-	public void AddPort(OutputPort outputPort)
-	{
-		_outputPorts.Add(outputPort);
-	}
+#pragma warning disable S1699 // Constructors should only call non-overridable methods
+		DefinePorts(inputPorts, outputPorts);
+#pragma warning restore S1699 // Constructors should only call non-overridable methods
 
-	/// <summary>
-	/// Finalizes the initialization of ports for this node.
-	/// </summary>
-	/// <remarks>
-	/// No more ports can be added after calling this method.
-	/// </remarks>
-	public void FinalizePortsInitialization()
-	{
-		InputPorts = [.. _inputPorts];
-		OutputPorts = [.. _outputPorts];
+		foreach (InputPort inputPort in inputPorts)
+		{
+			inputPort.SetOwnerNode(this);
+		}
+
+		InputPorts = [.. inputPorts];
+		OutputPorts = [.. outputPorts];
 	}
 
 	internal void OnMessageReceived(
@@ -81,8 +69,6 @@ public abstract class Node
 
 	internal void OnSubgraphDisabledMessageReceived(Variables graphVariables, IGraphContext graphContext)
 	{
-		Validation.Assert(OutputPorts is not null, "Output ports should have been initialized.");
-
 		if (!graphContext.InternalNodeActivationStatus.TryAdd(NodeID, false))
 		{
 			if (!graphContext.InternalNodeActivationStatus[NodeID])
@@ -126,8 +112,6 @@ public abstract class Node
 	/// <param name="portIds">The IDs of the output ports to emit the message from.</param>
 	protected virtual void EmitMessage(Variables graphVariables, IGraphContext graphContext, params int[] portIds)
 	{
-		Validation.Assert(OutputPorts is not null, "Output ports should have been initialized.");
-
 		foreach (var portId in portIds)
 		{
 			OutputPorts[portId].EmitMessage(graphVariables, graphContext);
