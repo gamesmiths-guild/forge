@@ -5,7 +5,6 @@ namespace Gamesmiths.Forge.Statescript.Ports;
 /// <summary>
 /// Defines a subgraph output port that can emit disable subgraph messages to connected input ports.
 /// </summary>
-[Serializable]
 public class SubgraphPort : OutputPort
 {
 	/// <summary>

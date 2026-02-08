@@ -8,7 +8,6 @@ namespace Gamesmiths.Forge.Statescript;
 /// <summary>
 /// Represents a collection of variables used within a Statescript graph.
 /// </summary>
-[Serializable]
 public class Variables : ICloneable
 {
 	private Dictionary<StringKey, Variant128>? _savedVariables;

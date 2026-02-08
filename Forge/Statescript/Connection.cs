@@ -9,5 +9,4 @@ namespace Gamesmiths.Forge.Statescript;
 /// </summary>
 /// <param name="OutputPort">The output port.</param>
 /// <param name="InputPort">The input port.</param>
-[Serializable]
 public record struct Connection(OutputPort OutputPort, InputPort InputPort);

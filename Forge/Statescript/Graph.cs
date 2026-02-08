@@ -7,7 +7,6 @@ namespace Gamesmiths.Forge.Statescript;
 /// <summary>
 /// Represents a Statescript graph consisting of nodes and connections.
 /// </summary>
-[Serializable]
 public class Graph
 {
 	/// <summary>

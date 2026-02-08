@@ -5,7 +5,6 @@ namespace Gamesmiths.Forge.Statescript.Ports;
 /// <summary>
 /// Defines an input port that can receive messages in the Statescript system.
 /// </summary>
-[Serializable]
 public class InputPort : Port
 {
 	private Node? _ownerNode;
