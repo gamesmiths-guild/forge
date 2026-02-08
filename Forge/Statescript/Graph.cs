@@ -5,7 +5,9 @@ using Gamesmiths.Forge.Statescript.Nodes;
 namespace Gamesmiths.Forge.Statescript;
 
 /// <summary>
-/// Represents a Statescript graph consisting of nodes and connections.
+/// Represents a Statescript graph definition consisting of nodes and connections. This class is immutable after
+/// construction and can be shared across multiple <see cref="GraphRunner"/> instances (Flyweight pattern).
+/// All mutable runtime state lives in <see cref="IGraphContext"/>.
 /// </summary>
 public class Graph
 {
@@ -25,7 +27,8 @@ public class Graph
 	public List<Connection> Connections { get; }
 
 	/// <summary>
-	/// Gets the variables associated with the graph.
+	/// Gets the default variable definitions for the graph. These are cloned into each <see cref="IGraphContext"/>
+	/// when a graph execution starts, providing each runner with independent variable state.
 	/// </summary>
 	public Variables GraphVariables { get; }
 

@@ -19,7 +19,7 @@ public class ExitNode : Node
 	}
 
 	/// <inheritdoc/>
-	protected override void HandleMessage(InputPort receiverPort, Variables graphVariables, IGraphContext graphContext)
+	protected override void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
 	{
 		// TODO: Implement the logic to stop the graph execution when a message is received on the input port.
 		throw new NotImplementedException();

@@ -3,8 +3,9 @@
 namespace Gamesmiths.Forge.Statescript.Nodes;
 
 /// <summary>
-/// The context for a <see cref="StateNode"/>. This class holds the state of the node, such as whether it is active or
-/// in the process of activating, as well as any deferred messages that need to be emitted after activation is complete.
+/// The context for a <see cref="StateNode{T}"/>. This class holds the state of the node, such as whether it is active
+/// or in the process of activating, as well as any deferred messages that need to be emitted after activation is
+/// complete.
 /// </summary>
 public class StateNodeContext : INodeContext
 {
@@ -17,7 +18,5 @@ public class StateNodeContext : INodeContext
 
 	internal int[]? DeferredDeactivationEventPortIds { get; set; }
 
-	internal List<PortVariable> DeferredEmitMessageData { get; set; } = [];
+	internal List<int> DeferredEmitMessageData { get; set; } = [];
 }
-
-internal record struct PortVariable(int PortId, Variables Variables);

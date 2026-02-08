@@ -59,15 +59,14 @@ public abstract class Node
 
 	internal void OnMessageReceived(
 		InputPort receiverPort,
-		Variables graphVariables,
 		IGraphContext graphContext)
 	{
 		graphContext.InternalNodeActivationStatus[NodeID] = true;
 
-		HandleMessage(receiverPort, graphVariables, graphContext);
+		HandleMessage(receiverPort, graphContext);
 	}
 
-	internal void OnSubgraphDisabledMessageReceived(Variables graphVariables, IGraphContext graphContext)
+	internal void OnSubgraphDisabledMessageReceived(IGraphContext graphContext)
 	{
 		if (!graphContext.InternalNodeActivationStatus.TryAdd(NodeID, false))
 		{
@@ -79,14 +78,24 @@ public abstract class Node
 			graphContext.InternalNodeActivationStatus[NodeID] = false;
 		}
 
-		BeforeDisable(graphVariables, graphContext);
+		BeforeDisable(graphContext);
 
 		foreach (OutputPort outputPort in OutputPorts)
 		{
-			outputPort.InternalEmitDisableSubgraphMessage(graphVariables, graphContext);
+			outputPort.InternalEmitDisableSubgraphMessage(graphContext);
 		}
 
-		AfterDisable(graphVariables, graphContext);
+		AfterDisable(graphContext);
+	}
+
+	/// <summary>
+	/// Updates this node with the given delta time. The default implementation does nothing.
+	/// Override in subclasses that need per-frame or per-tick logic (e.g., <see cref="Nodes.StateNode{T}"/>).
+	/// </summary>
+	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
+	/// <param name="graphContext">The graph context.</param>
+	internal virtual void Update(double deltaTime, IGraphContext graphContext)
+	{
 	}
 
 	/// <summary>
@@ -107,14 +116,13 @@ public abstract class Node
 	/// <summary>
 	/// Emits a message from the specified output ports.
 	/// </summary>
-	/// <param name="graphVariables">The graph variables.</param>
 	/// <param name="graphContext">The graph context.</param>
 	/// <param name="portIds">The IDs of the output ports to emit the message from.</param>
-	protected virtual void EmitMessage(Variables graphVariables, IGraphContext graphContext, params int[] portIds)
+	protected virtual void EmitMessage(IGraphContext graphContext, params int[] portIds)
 	{
 		foreach (var portId in portIds)
 		{
-			OutputPorts[portId].EmitMessage(graphVariables, graphContext);
+			OutputPorts[portId].EmitMessage(graphContext);
 		}
 	}
 
@@ -122,27 +130,24 @@ public abstract class Node
 	/// Handles an incoming message on the specified input port.
 	/// </summary>
 	/// <param name="receiverPort">The input port that received the message.</param>
-	/// <param name="graphVariables">The graph variables.</param>
 	/// <param name="graphContext">The graph context.</param>
-	protected virtual void HandleMessage(InputPort receiverPort, Variables graphVariables, IGraphContext graphContext)
+	protected virtual void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
 	{
 	}
 
 	/// <summary>
 	/// Called before the node is disabled.
 	/// </summary>
-	/// <param name="graphVariables">The graph variables.</param>
 	/// <param name="graphContext">The graph context.</param>
-	protected virtual void BeforeDisable(Variables graphVariables, IGraphContext graphContext)
+	protected virtual void BeforeDisable(IGraphContext graphContext)
 	{
 	}
 
 	/// <summary>
 	/// Called after the node is disabled.
 	/// </summary>
-	/// <param name="graphVariables">The graph variables.</param>
 	/// <param name="graphContext">The graph context.</param>
-	protected virtual void AfterDisable(Variables graphVariables, IGraphContext graphContext)
+	protected virtual void AfterDisable(IGraphContext graphContext)
 	{
 	}
 }

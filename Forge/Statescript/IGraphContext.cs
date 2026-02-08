@@ -5,6 +5,7 @@ namespace Gamesmiths.Forge.Statescript;
 /// <summary>
 /// Interface representing the context of a graph during execution, providing access to necessary information and
 /// services for graph processing.
+/// </summary>
 public interface IGraphContext
 {
 	/// <summary>
@@ -18,6 +19,12 @@ public interface IGraphContext
 	/// one active state node.
 	/// </summary>
 	bool IsActive { get; }
+
+	/// <summary>
+	/// Gets the runtime variables for this graph execution instance. These are cloned from the graph's default
+	/// variable definitions when the graph starts, ensuring each execution has independent state.
+	/// </summary>
+	Variables GraphVariables { get; }
 
 	/// <summary>
 	/// Gets a dictionary mapping node IDs to their activation status. This allows tracking which nodes in the graph are

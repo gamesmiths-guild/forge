@@ -29,20 +29,18 @@ public class InputPort : Port
 	/// <summary>
 	/// Receives a message and notifies the owner node.
 	/// </summary>
-	/// <param name="graphVariables">The graph variables to include in the message.</param>
 	/// <param name="graphContext">The graph context for the message.</param>
-	public void ReceiveMessage(Variables graphVariables, IGraphContext graphContext)
+	public void ReceiveMessage(IGraphContext graphContext)
 	{
-		_ownerNode?.OnMessageReceived(this, graphVariables, graphContext);
+		_ownerNode?.OnMessageReceived(this, graphContext);
 	}
 
 	/// <summary>
 	/// Receives a disable subgraph message and notifies the owner node.
 	/// </summary>
-	/// <param name="graphVariables">The graph variables to include in the message.</param>
 	/// <param name="graphContext">The graph context for the message.</param>
-	public void ReceiveDisableSubgraphMessage(Variables graphVariables, IGraphContext graphContext)
+	public void ReceiveDisableSubgraphMessage(IGraphContext graphContext)
 	{
-		_ownerNode?.OnSubgraphDisabledMessageReceived(graphVariables, graphContext);
+		_ownerNode?.OnSubgraphDisabledMessageReceived(graphContext);
 	}
 }

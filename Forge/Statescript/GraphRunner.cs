@@ -5,15 +5,18 @@ namespace Gamesmiths.Forge.Statescript;
 /// <summary>
 /// Provides functionality to execute and manage the lifecycle of a graph within a specified context.
 /// </summary>
-/// <remarks>The <see cref="GraphRunner"/> class encapsulates a graph and its associated execution context, allowing for
-/// starting and stopping the graph's execution. It maintains the graph's variables and ensures proper initialization
-/// and cleanup when running or halting the graph.</remarks>
 /// <remarks>
-/// Initializes a new instance of the <see cref="GraphRunner"/> class with the specified graph and graph context.
+/// <para>The <see cref="GraphRunner"/> class encapsulates a graph and its associated execution context, allowing for
+/// starting, updating, and stopping the graph's execution. It ensures proper initialization and cleanup when running
+/// or halting the graph.</para>
+/// <para>The graph definition (nodes, connections, default variables) is immutable and shared. All mutable runtime
+/// state — including variable values, node contexts, and activation status — lives in the <see cref="IGraphContext"/>.
+/// This allows a single <see cref="Graph"/> to be executed concurrently by multiple runners, each with its own
+/// context (Flyweight pattern).</para>
 /// </remarks>
 /// <param name="graph">The graph to be executed by this runner.</param>
-/// <param name="graphContext">The context in which the graph will be executed, providing necessary information and
-/// services for graph processing.</param>
+/// <param name="graphContext">The context in which the graph will be executed, providing runtime state for this
+/// execution instance.</param>
 public class GraphRunner(Graph graph, IGraphContext graphContext)
 {
 	/// <summary>
@@ -22,41 +25,43 @@ public class GraphRunner(Graph graph, IGraphContext graphContext)
 	public Graph Graph { get; } = graph;
 
 	/// <summary>
-	/// Gets the variables associated with the graph during execution. These variables are cloned from the graph's
-	/// original variables to ensure that each execution instance has its own set of variables, allowing for independent
-	/// graph runs without interference.
-	/// </summary>
-	public Variables? GraphVariables { get; private set; }
-
-	/// <summary>
-	/// Gets the context in which the graph is executed. The context provides necessary information and services for
-	/// graph processing.
+	/// Gets the context in which the graph is executed. The context holds all mutable runtime state including
+	/// variable values, node contexts, and activation status.
 	/// </summary>
 	public IGraphContext GraphContext { get; } = graphContext;
 
 	/// <summary>
-	/// Starts the execution of the graph. This method clones the graph's variables to ensure that each execution
-	/// instance has its own set of variables, and then initiates the graph's entry node to begin processing the graph.
-	/// The entry node will use the cloned variables and the provided graph context to execute the graph's logic.
+	/// Starts the execution of the graph. This method clones the graph's default variables into the context
+	/// to ensure that each execution instance has independent state, and then initiates the graph's entry node
+	/// to begin processing.
 	/// </summary>
 	public void StartGraph()
 	{
-		GraphVariables = (Variables)Graph.GraphVariables.Clone();
-		Graph.EntryNode.StartGraph(GraphVariables, GraphContext);
+		GraphContext.GraphVariables.LoadFrom(Graph.GraphVariables);
+		Graph.EntryNode.StartGraph(GraphContext);
+	}
+
+	/// <summary>
+	/// Updates all active state nodes in the graph with the given delta time. Call this method in your game loop
+	/// to drive time-dependent state node logic such as timers, animations, or continuous evaluation.
+	/// </summary>
+	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
+	public void UpdateGraph(double deltaTime)
+	{
+		foreach (Node node in Graph.Nodes)
+		{
+			node.Update(deltaTime, GraphContext);
+		}
 	}
 
 	/// <summary>
 	/// Stops the execution of the graph. This method calls the entry node's stop method to halt the graph's processing
 	/// and then removes all node contexts from the graph context to clean up any state associated with the graph's
-	/// execution. This ensures that the graph is properly reset and ready for future executions without any lingering
-	/// state from previous runs.
+	/// execution.
 	/// </summary>
 	public void StopGraph()
 	{
-		if (GraphVariables is not null)
-		{
-			Graph.EntryNode.StopGraph(GraphVariables, GraphContext);
-			GraphContext.RemoveAllNodeContext();
-		}
+		Graph.EntryNode.StopGraph(GraphContext);
+		GraphContext.RemoveAllNodeContext();
 	}
 }

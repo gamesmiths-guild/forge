@@ -13,34 +13,25 @@ public class EntryNode : Node
 	private const byte InputPort = 0;
 
 	/// <summary>
-	/// 2 ideas:
-	/// 1. We can move GraphVariables for inside the EntryNode, and now we don't need
-	/// to send it as a parameter every time we fire a node
-	/// or
-	/// 2. We can create a simplified version of graph instances that only contains graphVariables
-	/// and we use the same Graph to execute based on the graphVariables passed. (I like this idea, it's
-	/// kind of like the "Flyweight" pattern that we thought at the beginning)
-	/// possible problems with this approach would be with the internal timer variable for the WaitNode for
-	/// example, but if we move that to the GraphVariables then I think it would work fine.
+	/// Starts the graph execution by saving the current variable values and emitting a message through the output
+	/// port.
 	/// </summary>
-	/// <param name="graphVariables">The graph variables to be used when starting the graph.</param>
-	/// <param name="graphContext">The graph context providing information about the graph's execution state.</param>
-	public void StartGraph(Variables graphVariables, IGraphContext graphContext)
+	/// <param name="graphContext">The graph context providing the runtime variables and execution state.</param>
+	public void StartGraph(IGraphContext graphContext)
 	{
-		graphVariables.SaveVariableValues();
-		OutputPorts[InputPort].EmitMessage(graphVariables, graphContext);
+		graphContext.GraphVariables.SaveVariableValues();
+		OutputPorts[InputPort].EmitMessage(graphContext);
 	}
 
 	/// <summary>
 	/// Stops the graph execution by emitting a disable message through the output port and loading the previous
 	/// variable values.
 	/// </summary>
-	/// <param name="graphVariables">The graph variables to be used when stopping the graph.</param>
-	/// <param name="graphContext">The graph context providing information about the graph's execution state.</param>
-	public void StopGraph(Variables graphVariables, IGraphContext graphContext)
+	/// <param name="graphContext">The graph context providing the runtime variables and execution state.</param>
+	public void StopGraph(IGraphContext graphContext)
 	{
-		((SubgraphPort)OutputPorts[InputPort]).EmitDisableSubgraphMessage(graphVariables, graphContext);
-		graphVariables.LoadVariableValues();
+		((SubgraphPort)OutputPorts[InputPort]).EmitDisableSubgraphMessage(graphContext);
+		graphContext.GraphVariables.LoadVariableValues();
 	}
 
 	/// <inheritdoc/>
@@ -50,7 +41,7 @@ public class EntryNode : Node
 	}
 
 	/// <inheritdoc/>
-	protected override void HandleMessage(InputPort receiverPort, Variables graphVariables, IGraphContext graphContext)
+	protected override void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
 	{
 		throw new NotImplementedException();
 	}

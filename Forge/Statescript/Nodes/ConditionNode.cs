@@ -17,10 +17,9 @@ public abstract class ConditionNode : Node
 	/// <summary>
 	/// Tests the condition and returns true or false. The result determines which output port will emit a message.
 	/// </summary>
-	/// <param name="graphVariables">The current graph variables.</param>
 	/// <param name="graphContext">The current graph context.</param>
 	/// <returns><see langword="true"/> if the condition is met; otherwise, <see langword="false"/>.</returns>
-	protected abstract bool Test(Variables graphVariables, IGraphContext graphContext);
+	protected abstract bool Test(IGraphContext graphContext);
 
 	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
@@ -31,15 +30,15 @@ public abstract class ConditionNode : Node
 	}
 
 	/// <inheritdoc/>
-	protected sealed override void HandleMessage(InputPort receiverPort, Variables graphVariables, IGraphContext graphContext)
+	protected sealed override void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
 	{
-		if (Test(graphVariables, graphContext))
+		if (Test(graphContext))
 		{
-			OutputPorts[TruePort].EmitMessage(graphVariables, graphContext);
+			OutputPorts[TruePort].EmitMessage(graphContext);
 		}
 		else
 		{
-			OutputPorts[FalsePort].EmitMessage(graphVariables, graphContext);
+			OutputPorts[FalsePort].EmitMessage(graphContext);
 		}
 	}
 }

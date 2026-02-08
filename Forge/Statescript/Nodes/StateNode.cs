@@ -23,16 +23,43 @@ public abstract class StateNode<T> : Node
 	/// <summary>
 	/// Called when the node is activated.
 	/// </summary>
-	/// <param name="graphVariables">The graph's variables.</param>
 	/// <param name="graphContext">The graph's context.</param>
-	protected abstract void OnActivate(Variables graphVariables, IGraphContext graphContext);
+	protected abstract void OnActivate(IGraphContext graphContext);
 
 	/// <summary>
 	/// Called when the node is deactivated.
 	/// </summary>
-	/// <param name="graphVariables">The graph's variables.</param>
 	/// <param name="graphContext">The graph's context.</param>
-	protected abstract void OnDeactivate(Variables graphVariables, IGraphContext graphContext);
+	protected abstract void OnDeactivate(IGraphContext graphContext);
+
+	/// <summary>
+	/// Updates this state node with the given delta time. Only processes the update if the node is currently active.
+	/// </summary>
+	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
+	/// <param name="graphContext">The graph's context.</param>
+#pragma warning disable SA1202 // Elements should be ordered by access
+	internal override void Update(double deltaTime, IGraphContext graphContext)
+#pragma warning restore SA1202 // Elements should be ordered by access
+	{
+		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
+
+		if (nodeContext?.Active != true)
+		{
+			return;
+		}
+
+		OnUpdate(deltaTime, graphContext);
+	}
+
+	/// <summary>
+	/// Called every update tick while the node is active. Override this method to implement per-frame or per-tick
+	/// logic such as timers, animations, or continuous state evaluation.
+	/// </summary>
+	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
+	/// <param name="graphContext">The graph's context.</param>
+	protected virtual void OnUpdate(double deltaTime, IGraphContext graphContext)
+	{
+	}
 
 	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
@@ -46,59 +73,56 @@ public abstract class StateNode<T> : Node
 	}
 
 	/// <inheritdoc/>
-	protected sealed override void HandleMessage(InputPort receiverPort, Variables graphVariables, IGraphContext graphContext)
+	protected sealed override void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
 	{
 		if (receiverPort.Index == InputPort)
 		{
 			var nodeContext = (StateNodeContext)graphContext.GetOrCreateNodeContext<T>(NodeID);
 
 			nodeContext.Activating = true;
-			ActivateNode(graphVariables, graphContext);
-			OutputPorts[OnActivatePort].EmitMessage(graphVariables, graphContext);
-			OutputPorts[SubgraphPort].EmitMessage(graphVariables, graphContext);
+			ActivateNode(graphContext);
+			OutputPorts[OnActivatePort].EmitMessage(graphContext);
+			OutputPorts[SubgraphPort].EmitMessage(graphContext);
 			nodeContext.Activating = false;
 
 			HandleDeferredEmitMessages(graphContext, nodeContext);
-			HandleDeferredDeactivationMessages(graphVariables, graphContext, nodeContext);
+			HandleDeferredDeactivationMessages(graphContext, nodeContext);
 		}
 		else if (receiverPort.Index == AbortPort)
 		{
-			OutputPorts[OnAbortPort].EmitMessage(graphVariables, graphContext);
-			DeactivateNode(graphVariables, graphContext);
+			OutputPorts[OnAbortPort].EmitMessage(graphContext);
+			DeactivateNode(graphContext);
 		}
 	}
 
 	/// <inheritdoc/>
-	protected override void EmitMessage(Variables graphVariables, IGraphContext graphContext, params int[] portIds)
+	protected override void EmitMessage(IGraphContext graphContext, params int[] portIds)
 	{
 		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 
 		if (nodeContext.Activating)
 		{
-			foreach (var portId in portIds)
-			{
-				nodeContext.DeferredEmitMessageData.Add(new PortVariable(portId, (Variables)graphVariables.Clone()));
-			}
+			nodeContext.DeferredEmitMessageData.AddRange(portIds);
 
 			return;
 		}
 
-		base.EmitMessage(graphVariables, graphContext, portIds);
+		base.EmitMessage(graphContext, portIds);
 	}
 
 	/// <summary>
-	/// <para>
-	/// This method should be used when you want to deactivate the node and Emit a message on custom event ports in
-	/// case of success of failure. It's important to use this method because it grantees that the messages are fired
-	/// in the right order.
-	/// </para>
+	/// Deactivates the node and emits messages through the specified event ports.
+	/// </summary>
+	/// <remarks>
+	/// <para>If the node is currently in the process of activating, the deactivation and message emissions will be
+	/// deferred until activation is complete. This prevents race conditions during the activation process.</para>
+	/// <para>Use this method because it guarantees that the messages are fired in the right order.</para>
 	/// <para>OutputPort[OutputOnDeactivatePortID] (OnDeactivate) will always be called upon node deactivation and
 	/// should not be used here.</para>
-	/// </summary>
-	/// <param name="graphVariables">The graph's variables.</param>
+	/// </remarks>
 	/// <param name="graphContext">The graph's context.</param>
 	/// <param name="eventPortIds">ID of ports you want to Emit a message to.</param>
-	protected void DeactivateNodeAndEmitMessage(Variables graphVariables, IGraphContext graphContext, params int[] eventPortIds)
+	protected void DeactivateNodeAndEmitMessage(IGraphContext graphContext, params int[] eventPortIds)
 	{
 		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 
@@ -108,38 +132,37 @@ public abstract class StateNode<T> : Node
 			return;
 		}
 
-		DeactivateNode(graphVariables, graphContext);
+		DeactivateNode(graphContext);
 
 		for (var i = 0; i < eventPortIds.Length; i++)
 		{
 			Debug.Assert(eventPortIds[i] > OnAbortPort, "DeactivateNodeAndEmitMessage should be used only with custom ports.");
 			Debug.Assert(OutputPorts[eventPortIds[i]] is EventPort, "Only EventPorts can be used for deactivation events.");
-			OutputPorts[eventPortIds[i]].EmitMessage(graphVariables, graphContext);
+			OutputPorts[eventPortIds[i]].EmitMessage(graphContext);
 		}
 	}
 
 	/// <summary>
 	/// Deactivates the node without emitting any custom messages.
 	/// </summary>
-	/// <param name="graphVariables">The graph's variables.</param>
 	/// <param name="graphContext">The graph's context.</param>
-	protected void DeactivateNode(Variables graphVariables, IGraphContext graphContext)
+	protected void DeactivateNode(IGraphContext graphContext)
 	{
-		BeforeDisable(graphVariables, graphContext);
+		BeforeDisable(graphContext);
 
 		foreach (OutputPort outputPort in OutputPorts)
 		{
 			if (outputPort is SubgraphPort subgraphPort)
 			{
-				subgraphPort.EmitDisableSubgraphMessage(graphVariables, graphContext);
+				subgraphPort.EmitDisableSubgraphMessage(graphContext);
 			}
 		}
 
-		AfterDisable(graphVariables, graphContext);
+		AfterDisable(graphContext);
 	}
 
 	/// <inheritdoc/>
-	protected sealed override void BeforeDisable(Variables graphVariables, IGraphContext graphContext)
+	protected sealed override void BeforeDisable(IGraphContext graphContext)
 	{
 		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 		if (nodeContext is null)
@@ -152,14 +175,14 @@ public abstract class StateNode<T> : Node
 			return;
 		}
 
-		base.BeforeDisable(graphVariables, graphContext);
+		base.BeforeDisable(graphContext);
 
-		OutputPorts[OnDeactivatePort].EmitMessage(graphVariables, graphContext);
-		((SubgraphPort)OutputPorts[SubgraphPort]).EmitDisableSubgraphMessage(graphVariables, graphContext);
+		OutputPorts[OnDeactivatePort].EmitMessage(graphContext);
+		((SubgraphPort)OutputPorts[SubgraphPort]).EmitDisableSubgraphMessage(graphContext);
 	}
 
 	/// <inheritdoc/>
-	protected sealed override void AfterDisable(Variables graphVariables, IGraphContext graphContext)
+	protected sealed override void AfterDisable(IGraphContext graphContext)
 	{
 		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 		if (nodeContext is null)
@@ -172,39 +195,39 @@ public abstract class StateNode<T> : Node
 			return;
 		}
 
-		base.AfterDisable(graphVariables, graphContext);
+		base.AfterDisable(graphContext);
 
 		nodeContext.Active = false;
 		graphContext.ActiveStateNodeCount--;
-		OnDeactivate(graphVariables, graphContext);
+		OnDeactivate(graphContext);
 	}
 
-	private void ActivateNode(Variables graphVariables, IGraphContext graphContext)
+	private void ActivateNode(IGraphContext graphContext)
 	{
 		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 		nodeContext.Active = true;
 		graphContext.ActiveStateNodeCount++;
-		OnActivate(graphVariables, graphContext);
+		OnActivate(graphContext);
 	}
 
 	private void HandleDeferredEmitMessages(IGraphContext graphContext, StateNodeContext nodeContext)
 	{
 		if (nodeContext.DeferredEmitMessageData.Count > 0)
 		{
-			foreach (PortVariable emitEvent in nodeContext.DeferredEmitMessageData)
+			foreach (var emitEvent in nodeContext.DeferredEmitMessageData)
 			{
-				OutputPorts[emitEvent.PortId].EmitMessage(emitEvent.Variables, graphContext);
+				OutputPorts[emitEvent].EmitMessage(graphContext);
 			}
 
 			nodeContext.DeferredEmitMessageData.Clear();
 		}
 	}
 
-	private void HandleDeferredDeactivationMessages(Variables graphVariables, IGraphContext graphContext, StateNodeContext nodeContext)
+	private void HandleDeferredDeactivationMessages(IGraphContext graphContext, StateNodeContext nodeContext)
 	{
 		if (nodeContext.DeferredDeactivationEventPortIds is not null)
 		{
-			DeactivateNodeAndEmitMessage(graphVariables, graphContext, nodeContext.DeferredDeactivationEventPortIds);
+			DeactivateNodeAndEmitMessage(graphContext, nodeContext.DeferredDeactivationEventPortIds);
 			nodeContext.DeferredDeactivationEventPortIds = null;
 		}
 	}

@@ -40,21 +40,21 @@ public class OutputPort : Port
 		ConnectedPorts.Add(inputPort);
 	}
 
-	internal void EmitMessage(Variables graphVariables, IGraphContext graphContext)
+	internal void EmitMessage(IGraphContext graphContext)
 	{
 		foreach (InputPort inputPort in ConnectedPorts)
 		{
-			inputPort.ReceiveMessage(graphVariables, graphContext);
+			inputPort.ReceiveMessage(graphContext);
 		}
 
 		OnEmitMessage?.Invoke(PortID);
 	}
 
-	internal void InternalEmitDisableSubgraphMessage(Variables graphVariables, IGraphContext graphContext)
+	internal void InternalEmitDisableSubgraphMessage(IGraphContext graphContext)
 	{
 		foreach (InputPort inputPort in ConnectedPorts)
 		{
-			inputPort.ReceiveDisableSubgraphMessage(graphVariables, graphContext);
+			inputPort.ReceiveDisableSubgraphMessage(graphContext);
 		}
 
 		OnEmitMessageDisableSubgraphMessage?.Invoke(PortID);

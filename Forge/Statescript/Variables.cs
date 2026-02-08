@@ -113,6 +113,18 @@ public class Variables : ICloneable
 		return true;
 	}
 
+	/// <summary>
+	/// Loads variable definitions and values from another <see cref="Variables"/> instance, replacing the current
+	/// variable set. This is typically used to initialize runtime variables from a graph's default variable
+	/// definitions.
+	/// </summary>
+	/// <param name="source">The source variables to copy from.</param>
+	public void LoadFrom(Variables source)
+	{
+		_variables = new Dictionary<StringKey, Variant128>(source._variables);
+		_savedVariables = null;
+	}
+
 	/// <inheritdoc/>
 	public object Clone()
 	{

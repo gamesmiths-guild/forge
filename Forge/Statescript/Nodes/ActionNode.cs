@@ -16,9 +16,8 @@ public abstract class ActionNode : Node
 	/// <summary>
 	/// Executes the action associated with this node. This method is called when the input port receives a message.
 	/// </summary>
-	/// <param name="graphVariables">The current graph variables.</param>
 	/// <param name="graphContext">The current graph context.</param>
-	protected abstract void Execute(Variables graphVariables, IGraphContext graphContext);
+	protected abstract void Execute(IGraphContext graphContext);
 
 	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
@@ -28,9 +27,9 @@ public abstract class ActionNode : Node
 	}
 
 	/// <inheritdoc/>
-	protected override void HandleMessage(InputPort receiverPort, Variables graphVariables, IGraphContext graphContext)
+	protected override void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
 	{
-		Execute(graphVariables, graphContext);
-		OutputPorts[OutputPort].EmitMessage(graphVariables, graphContext);
+		Execute(graphContext);
+		OutputPorts[OutputPort].EmitMessage(graphContext);
 	}
 }
