@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Core;
+
 namespace Gamesmiths.Forge.Statescript;
 
 /// <summary>
@@ -21,8 +23,15 @@ public interface IGraphContext
 	bool IsActive { get; }
 
 	/// <summary>
-	/// Gets the runtime variables for this graph execution instance. These are cloned from the graph's default
-	/// variable definitions when the graph starts, ensuring each execution has independent state.
+	/// Gets the optional owner entity for this graph execution. The owner provides access to entity attributes, tags,
+	/// and other systems that property resolvers can use to compute derived values. May be <see langword="null"/> if
+	/// the graph does not require an owner entity.
+	/// </summary>
+	IForgeEntity? Owner { get; }
+
+	/// <summary>
+	/// Gets the runtime variables for this graph execution instance. These are initialized from the graph's variable
+	/// definitions when the graph starts, providing each execution with independent state.
 	/// </summary>
 	Variables GraphVariables { get; }
 

@@ -10,34 +10,33 @@ namespace Gamesmiths.Forge.Statescript.Nodes;
 /// </summary>
 public class EntryNode : Node
 {
-	private const byte InputPort = 0;
+	/// <summary>
+	/// Port index for the output port.
+	/// </summary>
+	public const byte OutputPort = 0;
 
 	/// <summary>
-	/// Starts the graph execution by saving the current variable values and emitting a message through the output
-	/// port.
+	/// Starts the graph execution by emitting a message through the output port.
 	/// </summary>
 	/// <param name="graphContext">The graph context providing the runtime variables and execution state.</param>
 	public void StartGraph(IGraphContext graphContext)
 	{
-		graphContext.GraphVariables.SaveVariableValues();
-		OutputPorts[InputPort].EmitMessage(graphContext);
+		OutputPorts[OutputPort].EmitMessage(graphContext);
 	}
 
 	/// <summary>
-	/// Stops the graph execution by emitting a disable message through the output port and loading the previous
-	/// variable values.
+	/// Stops the graph execution by emitting a disable message through the output port.
 	/// </summary>
 	/// <param name="graphContext">The graph context providing the runtime variables and execution state.</param>
 	public void StopGraph(IGraphContext graphContext)
 	{
-		((SubgraphPort)OutputPorts[InputPort]).EmitDisableSubgraphMessage(graphContext);
-		graphContext.GraphVariables.LoadVariableValues();
+		((SubgraphPort)OutputPorts[OutputPort]).EmitDisableSubgraphMessage(graphContext);
 	}
 
 	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
-		outputPorts.Add(CreatePort<SubgraphPort>(InputPort));
+		outputPorts.Add(CreatePort<SubgraphPort>(OutputPort));
 	}
 
 	/// <inheritdoc/>

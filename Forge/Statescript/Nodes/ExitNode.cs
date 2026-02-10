@@ -10,12 +10,15 @@ namespace Gamesmiths.Forge.Statescript.Nodes;
 /// </summary>
 public class ExitNode : Node
 {
-	private const byte InputPortIndex = 0;
+	/// <summary>
+	/// Port index for the input port.
+	/// </summary>
+	public const byte InputPort = 0;
 
 	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
-		inputPorts.Add(CreatePort<InputPort>(InputPortIndex));
+		inputPorts.Add(CreatePort<InputPort>(InputPort));
 	}
 
 	/// <inheritdoc/>

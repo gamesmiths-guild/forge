@@ -10,9 +10,20 @@ namespace Gamesmiths.Forge.Statescript.Nodes;
 /// </summary>
 public abstract class ConditionNode : Node
 {
-	private const byte InputPort = 0;
-	private const byte TruePort = 0;
-	private const byte FalsePort = 1;
+	/// <summary>
+	/// Port index for the input port.
+	/// </summary>
+	public const byte InputPort = 0;
+
+	/// <summary>
+	/// Port index for the true output port.
+	/// </summary>
+	public const byte TruePort = 1;
+
+	/// <summary>
+	/// Port index for the false output port.
+	/// </summary>
+	public const byte FalsePort = 2;
 
 	/// <summary>
 	/// Tests the condition and returns true or false. The result determines which output port will emit a message.

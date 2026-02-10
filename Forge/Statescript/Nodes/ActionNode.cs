@@ -10,8 +10,15 @@ namespace Gamesmiths.Forge.Statescript.Nodes;
 /// </summary>
 public abstract class ActionNode : Node
 {
-	private const byte InputPort = 0;
-	private const byte OutputPort = 0;
+	/// <summary>
+	/// Port index for the input port.
+	/// </summary>
+	public const byte InputPort = 0;
+
+	/// <summary>
+	/// Port index for the output port.
+	/// </summary>
+	public const byte OutputPort = 0;
 
 	/// <summary>
 	/// Executes the action associated with this node. This method is called when the input port receives a message.

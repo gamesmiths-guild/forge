@@ -1,8 +1,11 @@
 // Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
+using Gamesmiths.Forge.Statescript.Nodes.Action;
+using Gamesmiths.Forge.Statescript.Nodes.State;
 
 namespace Gamesmiths.Forge.Tests.Statescript;
 
@@ -24,7 +27,7 @@ public class StatescriptTests
 	public void Graph_runner_clones_variables_on_start()
 	{
 		var graph = new Graph();
-		graph.GraphVariables.SetVar("health", 100);
+		graph.VariableDefinitions.DefineVariable("health", 100);
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
@@ -43,7 +46,7 @@ public class StatescriptTests
 		var actionNode = new TrackingActionNode();
 
 		graph.AddNode(actionNode);
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], actionNode.InputPorts[0]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], actionNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
@@ -67,9 +70,9 @@ public class StatescriptTests
 		graph.AddNode(action2);
 		graph.AddNode(action3);
 
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], action1.InputPorts[0]));
-		graph.AddConnection(new Connection(action1.OutputPorts[0], action2.InputPorts[0]));
-		graph.AddConnection(new Connection(action2.OutputPorts[0], action3.InputPorts[0]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], action1.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(action1.OutputPorts[ActionNode.OutputPort], action2.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(action2.OutputPorts[ActionNode.OutputPort], action3.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
@@ -91,9 +94,9 @@ public class StatescriptTests
 		graph.AddNode(trueAction);
 		graph.AddNode(falseAction);
 
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], condition.InputPorts[0]));
-		graph.AddConnection(new Connection(condition.OutputPorts[0], trueAction.InputPorts[0]));
-		graph.AddConnection(new Connection(condition.OutputPorts[1], falseAction.InputPorts[0]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], condition.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(condition.OutputPorts[ConditionNode.TruePort], trueAction.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(condition.OutputPorts[ConditionNode.FalsePort], falseAction.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
@@ -116,9 +119,9 @@ public class StatescriptTests
 		graph.AddNode(trueAction);
 		graph.AddNode(falseAction);
 
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], condition.InputPorts[0]));
-		graph.AddConnection(new Connection(condition.OutputPorts[0], trueAction.InputPorts[0]));
-		graph.AddConnection(new Connection(condition.OutputPorts[1], falseAction.InputPorts[0]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], condition.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(condition.OutputPorts[ConditionNode.TruePort], trueAction.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(condition.OutputPorts[ConditionNode.FalsePort], falseAction.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
@@ -133,7 +136,7 @@ public class StatescriptTests
 	public void Action_node_can_read_and_write_graph_variables()
 	{
 		var graph = new Graph();
-		graph.GraphVariables.SetVar("counter", 0);
+		graph.VariableDefinitions.DefineVariable("counter", 0);
 
 		var incrementNode = new IncrementCounterNode("counter");
 		var readNode = new ReadVariableNode<int>("counter");
@@ -141,8 +144,8 @@ public class StatescriptTests
 		graph.AddNode(incrementNode);
 		graph.AddNode(readNode);
 
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], incrementNode.InputPorts[0]));
-		graph.AddConnection(new Connection(incrementNode.OutputPorts[0], readNode.InputPorts[0]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], incrementNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(incrementNode.OutputPorts[ActionNode.OutputPort], readNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
@@ -156,8 +159,8 @@ public class StatescriptTests
 	public void Condition_node_can_branch_based_on_graph_variables()
 	{
 		var graph = new Graph();
-		graph.GraphVariables.SetVar("threshold", 10);
-		graph.GraphVariables.SetVar("value", 15);
+		graph.VariableDefinitions.DefineVariable("threshold", 10);
+		graph.VariableDefinitions.DefineVariable("value", 15);
 
 		var condition = new ThresholdConditionNode("value", "threshold");
 		var aboveAction = new TrackingActionNode();
@@ -167,9 +170,9 @@ public class StatescriptTests
 		graph.AddNode(aboveAction);
 		graph.AddNode(belowAction);
 
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], condition.InputPorts[0]));
-		graph.AddConnection(new Connection(condition.OutputPorts[0], aboveAction.InputPorts[0]));
-		graph.AddConnection(new Connection(condition.OutputPorts[1], belowAction.InputPorts[0]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], condition.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(condition.OutputPorts[ConditionNode.TruePort], aboveAction.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(condition.OutputPorts[ConditionNode.FalsePort], belowAction.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
@@ -190,8 +193,8 @@ public class StatescriptTests
 		graph.AddNode(action1);
 		graph.AddNode(action2);
 
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], action1.InputPorts[0]));
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], action2.InputPorts[0]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], action1.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], action2.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
@@ -206,12 +209,12 @@ public class StatescriptTests
 	public void Stopping_graph_resets_variables_to_saved_state()
 	{
 		var graph = new Graph();
-		graph.GraphVariables.SetVar("counter", 0);
+		graph.VariableDefinitions.DefineVariable("counter", 0);
 
 		var incrementNode = new IncrementCounterNode("counter");
 
 		graph.AddNode(incrementNode);
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], incrementNode.InputPorts[0]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], incrementNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
@@ -220,12 +223,8 @@ public class StatescriptTests
 		context.GraphVariables.TryGetVar("counter", out int valueAfterStart).Should().BeTrue();
 		valueAfterStart.Should().Be(1);
 
-		// StopGraph calls LoadVariableValues and cleans up - verify it doesn't throw.
+		// StopGraph cleans up node contexts - verify it doesn't throw.
 		runner.StopGraph();
-
-		// Original graph variables should remain at 0 (they were cloned).
-		graph.GraphVariables.TryGetVar("counter", out int originalValue).Should().BeTrue();
-		originalValue.Should().Be(0);
 	}
 
 	[Fact]
@@ -236,7 +235,7 @@ public class StatescriptTests
 		var actionNode = new TrackingActionNode();
 
 		graph.AddNode(actionNode);
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], actionNode.InputPorts[0]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], actionNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
@@ -257,7 +256,7 @@ public class StatescriptTests
 		var executionOrder = new List<string>();
 
 		var graph = new Graph();
-		graph.GraphVariables.SetVar("counter", 0);
+		graph.VariableDefinitions.DefineVariable("counter", 0);
 
 		var incrementNode = new IncrementCounterNode("counter");
 		var condition = new ThresholdConditionNode("counter", threshold: 0);
@@ -269,10 +268,10 @@ public class StatescriptTests
 		graph.AddNode(trackA);
 		graph.AddNode(trackB);
 
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], incrementNode.InputPorts[0]));
-		graph.AddConnection(new Connection(incrementNode.OutputPorts[0], condition.InputPorts[0]));
-		graph.AddConnection(new Connection(condition.OutputPorts[0], trackA.InputPorts[0]));
-		graph.AddConnection(new Connection(condition.OutputPorts[1], trackB.InputPorts[0]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], incrementNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(incrementNode.OutputPorts[ActionNode.OutputPort], condition.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(condition.OutputPorts[ConditionNode.TruePort], trackA.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(condition.OutputPorts[ConditionNode.FalsePort], trackB.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
@@ -294,7 +293,7 @@ public class StatescriptTests
 		graph.AddNode(connectedAction);
 		graph.AddNode(disconnectedAction);
 
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], connectedAction.InputPorts[0]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], connectedAction.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
@@ -309,11 +308,11 @@ public class StatescriptTests
 	public void Each_graph_runner_has_independent_variable_state()
 	{
 		var graph = new Graph();
-		graph.GraphVariables.SetVar("counter", 0);
+		graph.VariableDefinitions.DefineVariable("counter", 0);
 
 		var incrementNode = new IncrementCounterNode("counter");
 		graph.AddNode(incrementNode);
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[0], incrementNode.InputPorts[0]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], incrementNode.InputPorts[ActionNode.InputPort]));
 
 		var context1 = new TestGraphContext();
 		var runner1 = new GraphRunner(graph, context1);
@@ -329,10 +328,339 @@ public class StatescriptTests
 
 		value1.Should().Be(1);
 		value2.Should().Be(1);
+	}
 
-		// Original graph variables should remain unchanged.
-		graph.GraphVariables.TryGetVar("counter", out int originalValue);
-		originalValue.Should().Be(0);
+	[Fact]
+	[Trait("Graph", "Timer")]
+	public void Timer_node_stays_active_until_duration_elapses()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 2.0);
+
+		var timer = new TimerStateNode("duration");
+
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[ActionNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		context.IsActive.Should().BeTrue();
+
+		// Not enough time has passed.
+		runner.UpdateGraph(1.0);
+		context.IsActive.Should().BeTrue();
+
+		// Still not enough.
+		runner.UpdateGraph(0.5);
+		context.IsActive.Should().BeTrue();
+
+		// Now it should deactivate (total: 1.0 + 0.5 + 0.5 = 2.0).
+		runner.UpdateGraph(0.5);
+		context.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Timer")]
+	public void Timer_node_fires_on_deactivate_event_when_completed()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		var timer = new TimerStateNode("duration");
+		var onDeactivateAction = new TrackingActionNode();
+
+		graph.AddNode(timer);
+		graph.AddNode(onDeactivateAction);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[ActionNode.InputPort]));
+
+		// OutputPorts[1] is the OnDeactivate event port on StateNode.
+		graph.AddConnection(new Connection(timer.OutputPorts[TimerStateNode.OnDeactivatePort], onDeactivateAction.InputPorts[ActionNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		onDeactivateAction.ExecutionCount.Should().Be(0);
+
+		runner.UpdateGraph(1.0);
+
+		onDeactivateAction.ExecutionCount.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Graph", "Timer")]
+	public void Timer_node_fires_on_activate_event_on_start()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 5.0);
+
+		var timer = new TimerStateNode("duration");
+		var onActivateAction = new TrackingActionNode();
+
+		graph.AddNode(timer);
+		graph.AddNode(onActivateAction);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[ActionNode.InputPort]));
+
+		// OutputPorts[0] is the OnActivate event port on StateNode.
+		graph.AddConnection(new Connection(timer.OutputPorts[TimerStateNode.OnActivatePort], onActivateAction.InputPorts[ActionNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		onActivateAction.ExecutionCount.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Graph", "Timer")]
+	public void Two_runners_with_same_timer_graph_have_independent_elapsed_time()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 2.0);
+
+		var timer = new TimerStateNode("duration");
+
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[ActionNode.InputPort]));
+
+		var context1 = new TestGraphContext();
+		var runner1 = new GraphRunner(graph, context1);
+
+		var context2 = new TestGraphContext();
+		var runner2 = new GraphRunner(graph, context2);
+
+		runner1.StartGraph();
+		runner2.StartGraph();
+
+		// Advance runner1 past duration, but not runner2.
+		runner1.UpdateGraph(2.0);
+		runner2.UpdateGraph(1.0);
+
+		context1.IsActive.Should().BeFalse();
+		context2.IsActive.Should().BeTrue();
+
+		// Now advance runner2 past duration.
+		runner2.UpdateGraph(1.0);
+		context2.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Validation")]
+	public void Validate_property_type_returns_true_for_matching_type()
+	{
+		var definitions = new GraphVariableDefinitions();
+		definitions.DefineVariable("duration", 2.0);
+
+		definitions.ValidatePropertyType("duration", typeof(double)).Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Validation")]
+	public void Validate_property_type_returns_false_for_mismatched_type()
+	{
+		var definitions = new GraphVariableDefinitions();
+		definitions.DefineVariable("flag", true);
+
+		definitions.ValidatePropertyType("flag", typeof(double)).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Validation")]
+	public void Validate_property_type_returns_false_for_nonexistent_property()
+	{
+		var definitions = new GraphVariableDefinitions();
+
+		definitions.ValidatePropertyType("missing", typeof(double)).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "SetVariable")]
+	public void Set_variable_node_copies_value_from_source_to_target()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("source", 42);
+		graph.VariableDefinitions.DefineVariable("target", 0);
+
+		var setNode = new SetVariableNode("source", "target");
+		var readNode = new ReadVariableNode<int>("target");
+
+		graph.AddNode(setNode);
+		graph.AddNode(readNode);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], setNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(setNode.OutputPorts[ActionNode.OutputPort], readNode.InputPorts[ActionNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		readNode.LastReadValue.Should().Be(42);
+	}
+
+	[Fact]
+	[Trait("Graph", "SetVariable")]
+	public void Set_variable_node_copies_value_between_different_variables()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("counter", 0);
+		graph.VariableDefinitions.DefineVariable("result", 0);
+
+		var incrementNode = new IncrementCounterNode("counter");
+		var setNode = new SetVariableNode("counter", "result");
+		var readNode = new ReadVariableNode<int>("result");
+
+		graph.AddNode(incrementNode);
+		graph.AddNode(setNode);
+		graph.AddNode(readNode);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], incrementNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(incrementNode.OutputPorts[ActionNode.OutputPort], setNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(setNode.OutputPorts[ActionNode.OutputPort], readNode.InputPorts[ActionNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		// counter was incremented to 1, then copied to result
+		readNode.LastReadValue.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Graph", "SetVariable")]
+	public void Set_variable_node_does_not_modify_source()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("source", 99);
+		graph.VariableDefinitions.DefineVariable("target", 0);
+
+		var setNode = new SetVariableNode("source", "target");
+		var readSource = new ReadVariableNode<int>("source");
+		var readTarget = new ReadVariableNode<int>("target");
+
+		graph.AddNode(setNode);
+		graph.AddNode(readTarget);
+		graph.AddNode(readSource);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], setNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(setNode.OutputPorts[ActionNode.OutputPort], readTarget.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(readTarget.OutputPorts[ActionNode.OutputPort], readSource.InputPorts[ActionNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		readTarget.LastReadValue.Should().Be(99);
+		readSource.LastReadValue.Should().Be(99);
+	}
+
+	[Fact]
+	[Trait("Graph", "SetVariable")]
+	public void Set_variable_node_with_nonexistent_source_does_not_modify_target()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("target", 77);
+
+		var setNode = new SetVariableNode("nonexistent", "target");
+		var readNode = new ReadVariableNode<int>("target");
+
+		graph.AddNode(setNode);
+		graph.AddNode(readNode);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], setNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(setNode.OutputPorts[ActionNode.OutputPort], readNode.InputPorts[ActionNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		// Target should remain unchanged because source doesn't exist
+		readNode.LastReadValue.Should().Be(77);
+	}
+
+	[Fact]
+	[Trait("Graph", "SetVariable")]
+	public void Set_variable_node_works_with_double_values()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 3.5);
+		graph.VariableDefinitions.DefineVariable("cachedDuration", 0.0);
+
+		var setNode = new SetVariableNode("duration", "cachedDuration");
+		var readNode = new ReadVariableNode<double>("cachedDuration");
+
+		graph.AddNode(setNode);
+		graph.AddNode(readNode);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], setNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(setNode.OutputPorts[ActionNode.OutputPort], readNode.InputPorts[ActionNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		readNode.LastReadValue.Should().Be(3.5);
+	}
+
+	[Fact]
+	[Trait("Graph", "SetVariable")]
+	public void Set_variable_node_works_with_bool_values()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("flag", true);
+		graph.VariableDefinitions.DefineVariable("copy", false);
+
+		var setNode = new SetVariableNode("flag", "copy");
+		var readNode = new ReadVariableNode<bool>("copy");
+
+		graph.AddNode(setNode);
+		graph.AddNode(readNode);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], setNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(setNode.OutputPorts[ActionNode.OutputPort], readNode.InputPorts[ActionNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		readNode.LastReadValue.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "SetVariable")]
+	public void Two_runners_using_set_variable_have_independent_state()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("source", 10);
+		graph.VariableDefinitions.DefineVariable("target", 0);
+
+		var incrementNode = new IncrementCounterNode("source");
+		var setNode = new SetVariableNode("source", "target");
+
+		graph.AddNode(incrementNode);
+		graph.AddNode(setNode);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], incrementNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(incrementNode.OutputPorts[ActionNode.OutputPort], setNode.InputPorts[ActionNode.InputPort]));
+
+		var context1 = new TestGraphContext();
+		var runner1 = new GraphRunner(graph, context1);
+
+		var context2 = new TestGraphContext();
+		var runner2 = new GraphRunner(graph, context2);
+
+		runner1.StartGraph();
+		runner2.StartGraph();
+
+		context1.GraphVariables.TryGetVar("target", out int value1);
+		context2.GraphVariables.TryGetVar("target", out int value2);
+
+		// Both should have source incremented from 10 to 11, then copied to target
+		value1.Should().Be(11);
+		value2.Should().Be(11);
 	}
 
 	private sealed class TestGraphContext : IGraphContext
@@ -342,6 +670,8 @@ public class StatescriptTests
 		public int ActiveStateNodeCount { get; set; }
 
 		public bool IsActive => ActiveStateNodeCount > 0;
+
+		public IForgeEntity? Owner { get; set; }
 
 		public Variables GraphVariables { get; } = new Variables();
 
@@ -429,7 +759,7 @@ public class StatescriptTests
 		{
 			graphContext.GraphVariables.TryGetVar(_variableName, out int value);
 
-			int threshold = _fixedThreshold;
+			var threshold = _fixedThreshold;
 			if (_thresholdVariableName is not null)
 			{
 				graphContext.GraphVariables.TryGetVar(_thresholdVariableName, out threshold);

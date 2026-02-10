@@ -1,99 +1,98 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Numerics;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Statescript.Properties;
 
 namespace Gamesmiths.Forge.Statescript;
 
 /// <summary>
-/// Represents a collection of variables used within a Statescript graph.
+/// Represents the runtime state of variables and properties during a graph execution.
 /// </summary>
-public class Variables : ICloneable
+public class Variables
 {
-	private Dictionary<StringKey, Variant128>? _savedVariables;
-
-	private Dictionary<StringKey, Variant128> _variables;
+	private readonly Dictionary<StringKey, IPropertyResolver> _propertyResolvers = [];
 
 	/// <summary>
-	/// Gets or sets the variable with the specified key.
+	/// Initializes the runtime resolvers from a <see cref="GraphVariableDefinitions"/> instance. For each variable
+	/// definition (backed by a <see cref="VariantResolver"/>), a fresh resolver is created with the initial value so
+	/// that each graph execution has independent mutable state. Read-only property resolvers are shared directly since
+	/// they carry no mutable state.
 	/// </summary>
-	/// <param name="key">The key of the variable.</param>
-	/// <returns>The variable associated with the specified key.</returns>
-	public Variant128 this[StringKey key]
+	/// <param name="definitions">The graph variable definitions to initialize from.</param>
+	public void InitializeFrom(GraphVariableDefinitions definitions)
 	{
-		get => _variables[key];
-		set => _variables[key] = value;
-	}
+		_propertyResolvers.Clear();
 
-	/// <summary>
-	/// Initializes a new instance of the <see cref="Variables"/> class.
-	/// </summary>
-	public Variables()
-	{
-		_variables = [];
-	}
-
-	/// <summary>
-	/// Saves the current variable values.
-	/// </summary>
-	public void SaveVariableValues()
-	{
-		_savedVariables = _variables;
-	}
-
-	/// <summary>
-	/// Loads the saved variable values.
-	/// </summary>
-	public void LoadVariableValues()
-	{
-		if (_savedVariables is null)
+		foreach (PropertyDefinition definition in definitions.Definitions)
 		{
-			return;
+			if (definition.Resolver is VariantResolver variantResolver)
+			{
+				_propertyResolvers[definition.Name] =
+					new VariantResolver(variantResolver.Value, variantResolver.ValueType);
+			}
+			else
+			{
+				_propertyResolvers[definition.Name] = definition.Resolver;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Tries to get the resolved value of a variable or property with the given name. Variables return their stored
+	/// value; properties are resolved on demand from external sources.
+	/// </summary>
+	/// <typeparam name="T">The type to interpret the value as. Must be supported by <see cref="Variant128"/>.
+	/// </typeparam>
+	/// <param name="name">The name of the variable or property to get.</param>
+	/// <param name="graphContext">The graph context used by resolvers to access external state.</param>
+	/// <param name="value">The resolved value if the entry was found.</param>
+	/// <returns><see langword="true"/> if the entry was found and resolved successfully, <see langword="false"/>
+	/// otherwise.</returns>
+	public bool TryGet<T>(StringKey name, IGraphContext graphContext, out T value)
+		where T : unmanaged
+	{
+		value = default;
+
+		if (!_propertyResolvers.TryGetValue(name, out IPropertyResolver? resolver))
+		{
+			return false;
 		}
 
-		_variables = _savedVariables;
-	}
+		Variant128 resolved = resolver.Resolve(graphContext);
+		value = resolved.Get<T>();
 
-	/// <summary>
-	/// Sets the variable with the given name to the given value.
-	/// </summary>
-	/// <typeparam name="T">The type of the value to set. Must be supported by Variant128.</typeparam>
-	/// <param name="name">The name of the variable to set.</param>
-	/// <param name="value">The value to set the variable to.</param>
-	/// <returns><see langword="true"/> if the variable was set successfully, <see langword="false"/> otherwise.
-	/// </returns>
-	/// <exception cref="ArgumentException">Thrown if the type T is not supported by Variant128.</exception>
-	public bool SetVar<T>(StringKey name, T value)
-	{
-		_variables[name] = value switch
-		{
-			bool @bool => new Variant128(@bool),
-			byte @byte => new Variant128(@byte),
-			sbyte @sbyte => new Variant128(@sbyte),
-			char @char => new Variant128(@char),
-			decimal @decimal => new Variant128(@decimal),
-			double @double => new Variant128(@double),
-			float @float => new Variant128(@float),
-			int @int => new Variant128(@int),
-			uint @uint => new Variant128(@uint),
-			long @long => new Variant128(@long),
-			ulong @ulong => new Variant128(@ulong),
-			short @short => new Variant128(@short),
-			ushort @ushort => new Variant128(@ushort),
-			Vector2 vector2 => new Variant128(vector2),
-			Vector3 vector3 => new Variant128(vector3),
-			Vector4 vector4 => new Variant128(vector4),
-			Plane plane => new Variant128(plane),
-			Quaternion quaternion => new Variant128(quaternion),
-			_ => throw new ArgumentException($"{typeof(T)} is not supported by Variant128"),
-		};
 		return true;
 	}
 
 	/// <summary>
-	/// Tries to get the variable with the given name.
+	/// Tries to get the resolved value of a variable or property as a raw <see cref="Variant128"/>.
 	/// </summary>
-	/// <typeparam name="T">The type of the variable to get. Must be supported by Variant128.</typeparam>
+	/// <param name="name">The name of the variable or property to get.</param>
+	/// <param name="graphContext">The graph context used by resolvers to access external state.</param>
+	/// <param name="value">The resolved value if the entry was found.</param>
+	/// <returns><see langword="true"/> if the entry was found and resolved successfully, <see langword="false"/>
+	/// otherwise.</returns>
+	public bool TryGetVariant(StringKey name, IGraphContext graphContext, out Variant128 value)
+	{
+		value = default;
+
+		if (!_propertyResolvers.TryGetValue(name, out IPropertyResolver? resolver))
+		{
+			return false;
+		}
+
+		value = resolver.Resolve(graphContext);
+		return true;
+	}
+
+	/// <summary>
+	/// Tries to get the value of a mutable variable with the given name.
+	/// </summary>
+	/// <remarks>
+	/// This is a convenience overload for variables
+	/// (backed by <see cref="VariantResolver"/>) that don't need the graph context for resolution.
+	/// </remarks>
+	/// <typeparam name="T">The type of the variable to get. Must be supported by <see cref="Variant128"/>.</typeparam>
 	/// <param name="name">The name of the variable to get.</param>
 	/// <param name="value">The value of the variable if it was found.</param>
 	/// <returns><see langword="true"/> if the variable was found and retrieved successfully, <see langword="false"/>
@@ -103,44 +102,67 @@ public class Variables : ICloneable
 	{
 		value = default;
 
-		if (!_variables.TryGetValue(name, out Variant128 variant))
+		if (!_propertyResolvers.TryGetValue(name, out IPropertyResolver? resolver))
 		{
 			return false;
 		}
 
-		value = variant.Get<T>();
+		Variant128 resolved = resolver.Resolve(null!);
+		value = resolved.Get<T>();
 
 		return true;
 	}
 
 	/// <summary>
-	/// Loads variable definitions and values from another <see cref="Variables"/> instance, replacing the current
-	/// variable set. This is typically used to initialize runtime variables from a graph's default variable
-	/// definitions.
+	/// Sets the value of a mutable variable with the given name. Only entries backed by a <see cref="VariantResolver"/>
+	/// can be set; attempting to set a read-only property will throw.
 	/// </summary>
-	/// <param name="source">The source variables to copy from.</param>
-	public void LoadFrom(Variables source)
+	/// <typeparam name="T">The type of the value to set. Must be supported by <see cref="Variant128"/>.</typeparam>
+	/// <param name="name">The name of the variable to set.</param>
+	/// <param name="value">The value to set the variable to.</param>
+	/// <returns><see langword="true"/> if the variable was set successfully.</returns>
+	/// <exception cref="ArgumentException">Thrown if the type T is not supported by <see cref="Variant128"/>.
+	/// </exception>
+	/// <exception cref="InvalidOperationException">Thrown if the name refers to a read-only property.</exception>
+	public bool SetVar<T>(StringKey name, T value)
 	{
-		_variables = new Dictionary<StringKey, Variant128>(source._variables);
-		_savedVariables = null;
+		if (!_propertyResolvers.TryGetValue(name, out IPropertyResolver? resolver))
+		{
+			throw new InvalidOperationException(
+				$"Cannot set '{name}': no variable or property with this name exists.");
+		}
+
+		if (resolver is not VariantResolver variableResolver)
+		{
+			throw new InvalidOperationException(
+				$"Cannot set '{name}': it is a read-only property. Only variables can be set at runtime.");
+		}
+
+		variableResolver.Set(value);
+		return true;
 	}
 
-	/// <inheritdoc/>
-	public object Clone()
+	/// <summary>
+	/// Sets the raw <see cref="Variant128"/> value of a mutable variable with the given name.
+	/// </summary>
+	/// <param name="name">The name of the variable to set.</param>
+	/// <param name="value">The raw variant value to set.</param>
+	/// <exception cref="InvalidOperationException">Thrown if the name does not exist or refers to a read-only property.
+	/// </exception>
+	public void SetVariant(StringKey name, Variant128 value)
 	{
-		var copy = new Variables();
-
-		if (_savedVariables is not null)
+		if (!_propertyResolvers.TryGetValue(name, out IPropertyResolver? resolver))
 		{
-			copy._savedVariables = new Dictionary<StringKey, Variant128>(_savedVariables);
-		}
-		else
-		{
-			copy._savedVariables = null;
+			throw new InvalidOperationException(
+				$"Cannot set '{name}': no variable or property with this name exists.");
 		}
 
-		copy._variables = new Dictionary<StringKey, Variant128>(_variables);
+		if (resolver is not VariantResolver variableResolver)
+		{
+			throw new InvalidOperationException(
+				$"Cannot set '{name}': it is a read-only property. Only variables can be set at runtime.");
+		}
 
-		return copy;
+		variableResolver.Value = value;
 	}
 }

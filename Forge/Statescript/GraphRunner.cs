@@ -25,25 +25,25 @@ public class GraphRunner(Graph graph, IGraphContext graphContext)
 	public Graph Graph { get; } = graph;
 
 	/// <summary>
-	/// Gets the context in which the graph is executed. The context holds all mutable runtime state including
-	/// variable values, node contexts, and activation status.
+	/// Gets the context in which the graph is executed. The context holds all mutable runtime state including variable
+	/// values, node contexts, and activation status.
 	/// </summary>
 	public IGraphContext GraphContext { get; } = graphContext;
 
 	/// <summary>
-	/// Starts the execution of the graph. This method clones the graph's default variables into the context
-	/// to ensure that each execution instance has independent state, and then initiates the graph's entry node
-	/// to begin processing.
+	/// Starts the execution of the graph. This method initializes the context's runtime variables from the graph's
+	/// variable definitions, ensuring that each execution instance has independent state, and then initiates the
+	/// graph's entry node to begin processing.
 	/// </summary>
 	public void StartGraph()
 	{
-		GraphContext.GraphVariables.LoadFrom(Graph.GraphVariables);
+		GraphContext.GraphVariables.InitializeFrom(Graph.VariableDefinitions);
 		Graph.EntryNode.StartGraph(GraphContext);
 	}
 
 	/// <summary>
-	/// Updates all active state nodes in the graph with the given delta time. Call this method in your game loop
-	/// to drive time-dependent state node logic such as timers, animations, or continuous evaluation.
+	/// Updates all active state nodes in the graph with the given delta time. Call this method in your game loop to
+	/// drive time-dependent state node logic such as timers, animations, or continuous evaluation.
 	/// </summary>
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
 	public void UpdateGraph(double deltaTime)

@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using System.Diagnostics;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript.Ports;
 
 namespace Gamesmiths.Forge.Statescript.Nodes;
@@ -13,12 +14,35 @@ namespace Gamesmiths.Forge.Statescript.Nodes;
 public abstract class StateNode<T> : Node
 	where T : StateNodeContext, new()
 {
-	private const byte InputPort = 0;
-	private const byte AbortPort = 1;
-	private const byte OnActivatePort = 0;
-	private const byte OnDeactivatePort = 1;
-	private const byte OnAbortPort = 2;
-	private const byte SubgraphPort = 3;
+	/// <summary>
+	/// Port index for the input port.
+	/// </summary>
+	public const byte InputPort = 0;
+
+	/// <summary>
+	/// Port index for the abort port.
+	/// </summary>
+	public const byte AbortPort = 1;
+
+	/// <summary>
+	/// Port index for the on activate port.
+	/// </summary>
+	public const byte OnActivatePort = 0;
+
+	/// <summary>
+	/// Port index for the on deactivate port.
+	/// </summary>
+	public const byte OnDeactivatePort = 1;
+
+	/// <summary>
+	/// Port index for the on abort port.
+	/// </summary>
+	public const byte OnAbortPort = 2;
+
+	/// <summary>
+	/// Port index for the subgraph port.
+	/// </summary>
+	public const byte SubgraphPort = 3;
 
 	/// <summary>
 	/// Called when the node is activated.
@@ -52,8 +76,8 @@ public abstract class StateNode<T> : Node
 	}
 
 	/// <summary>
-	/// Called every update tick while the node is active. Override this method to implement per-frame or per-tick
-	/// logic such as timers, animations, or continuous state evaluation.
+	/// Called every update tick while the node is active. Override this method to implement per-frame or per-tick logic
+	/// such as timers, animations, or continuous state evaluation.
 	/// </summary>
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
 	/// <param name="graphContext">The graph's context.</param>
@@ -117,8 +141,8 @@ public abstract class StateNode<T> : Node
 	/// <para>If the node is currently in the process of activating, the deactivation and message emissions will be
 	/// deferred until activation is complete. This prevents race conditions during the activation process.</para>
 	/// <para>Use this method because it guarantees that the messages are fired in the right order.</para>
-	/// <para>OutputPort[OutputOnDeactivatePortID] (OnDeactivate) will always be called upon node deactivation and
-	/// should not be used here.</para>
+	/// <para>OutputPort[OnDeactivatePort] (OnDeactivate) will always be called upon node deactivation and should not be
+	/// used here.</para>
 	/// </remarks>
 	/// <param name="graphContext">The graph's context.</param>
 	/// <param name="eventPortIds">ID of ports you want to Emit a message to.</param>
@@ -136,8 +160,12 @@ public abstract class StateNode<T> : Node
 
 		for (var i = 0; i < eventPortIds.Length; i++)
 		{
-			Debug.Assert(eventPortIds[i] > OnAbortPort, "DeactivateNodeAndEmitMessage should be used only with custom ports.");
-			Debug.Assert(OutputPorts[eventPortIds[i]] is EventPort, "Only EventPorts can be used for deactivation events.");
+			Validation.Assert(
+				eventPortIds[i] > OnAbortPort,
+				"DeactivateNodeAndEmitMessage should be used only with custom ports.");
+			Validation.Assert(
+				OutputPorts[eventPortIds[i]] is EventPort,
+				"Only EventPorts can be used for deactivation events.");
 			OutputPorts[eventPortIds[i]].EmitMessage(graphContext);
 		}
 	}

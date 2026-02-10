@@ -7,8 +7,10 @@ namespace Gamesmiths.Forge.Statescript;
 /// <summary>
 /// Represents a Statescript graph definition consisting of nodes and connections. This class is immutable after
 /// construction and can be shared across multiple <see cref="GraphRunner"/> instances (Flyweight pattern).
-/// All mutable runtime state lives in <see cref="IGraphContext"/>.
 /// </summary>
+/// <remarks>
+/// All mutable runtime state lives in <see cref="IGraphContext"/>.
+/// </remarks>
 public class Graph
 {
 	/// <summary>
@@ -27,10 +29,11 @@ public class Graph
 	public List<Connection> Connections { get; }
 
 	/// <summary>
-	/// Gets the default variable definitions for the graph. These are cloned into each <see cref="IGraphContext"/>
-	/// when a graph execution starts, providing each runner with independent variable state.
+	/// Gets the variable and property definitions for the graph. These define the schema (names, initial values, and
+	/// property resolvers) that will be used to initialize runtime <see cref="Variables"/> instances when a graph
+	/// execution starts.
 	/// </summary>
-	public Variables GraphVariables { get; }
+	public GraphVariableDefinitions VariableDefinitions { get; }
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Graph"/> class.
@@ -40,7 +43,7 @@ public class Graph
 		EntryNode = new EntryNode();
 		Nodes = [];
 		Connections = [];
-		GraphVariables = new Variables();
+		VariableDefinitions = new GraphVariableDefinitions();
 	}
 
 	/// <summary>
