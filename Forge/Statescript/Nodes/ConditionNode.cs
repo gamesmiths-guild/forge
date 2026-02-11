@@ -18,12 +18,12 @@ public abstract class ConditionNode : Node
 	/// <summary>
 	/// Port index for the true output port.
 	/// </summary>
-	public const byte TruePort = 1;
+	public const byte TruePort = 0;
 
 	/// <summary>
 	/// Port index for the false output port.
 	/// </summary>
-	public const byte FalsePort = 2;
+	public const byte FalsePort = 1;
 
 	/// <summary>
 	/// Tests the condition and returns true or false. The result determines which output port will emit a message.
