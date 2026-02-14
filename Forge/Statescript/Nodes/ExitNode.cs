@@ -10,7 +10,7 @@ namespace Gamesmiths.Forge.Statescript.Nodes;
 /// </summary>
 /// <remarks>
 /// <para>Place an <see cref="ExitNode"/> at any point in the graph where you want to force the execution to end. This
-/// has the same effect as calling <see cref="GraphRunner.StopGraph"/> externally.</para>
+/// has the same effect as calling <see cref="GraphProcessor.StopGraph"/> externally.</para>
 /// </remarks>
 public class ExitNode : Node
 {
@@ -28,6 +28,6 @@ public class ExitNode : Node
 	/// <inheritdoc/>
 	protected override void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
 	{
-		graphContext.Runner?.StopGraph();
+		graphContext.Processor?.StopGraph();
 	}
 }

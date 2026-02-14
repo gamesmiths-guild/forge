@@ -6,20 +6,22 @@ namespace Gamesmiths.Forge.Statescript;
 /// Provides functionality to execute and manage the lifecycle of a graph within a specified context.
 /// </summary>
 /// <remarks>
-/// <para>The <see cref="GraphRunner"/> class pairs a shared, immutable <see cref="Graph"/> definition with a
+/// <para>The <see cref="GraphProcessor"/> class pairs a shared, immutable <see cref="Graph"/> definition with a
 /// per-execution <see cref="IGraphContext"/> that holds all mutable runtime state (variable values, node contexts,
-/// activation flags). Multiple runners can share the same <see cref="Graph"/> instance, each with its own context
+/// activation flags). Multiple processors can share the same <see cref="Graph"/> instance, each with its own context
 /// (Flyweight pattern).</para>
+/// <para>A <see cref="GraphProcessor"/> is reusable: after a graph completes naturally or is explicitly stopped,
+/// it can be started again with a fresh execution cycle.</para>
 /// </remarks>
-/// <param name="graph">The graph to be executed by this runner.</param>
+/// <param name="graph">The graph to be executed by this processor.</param>
 /// <param name="graphContext">The context in which the graph will be executed, providing runtime state for this
 /// execution instance.</param>
-public class GraphRunner(Graph graph, IGraphContext graphContext)
+public class GraphProcessor(Graph graph, IGraphContext graphContext)
 {
 	private readonly List<Node> _updateBuffer = [];
 
 	/// <summary>
-	/// Gets the graph that this runner is responsible for executing.
+	/// Gets the graph that this processor is responsible for executing.
 	/// </summary>
 	public Graph Graph { get; } = graph;
 
@@ -30,13 +32,20 @@ public class GraphRunner(Graph graph, IGraphContext graphContext)
 	public IGraphContext GraphContext { get; } = graphContext;
 
 	/// <summary>
+	/// Gets or sets an optional callback that is invoked when the graph completes naturally (i.e., all state nodes
+	/// have deactivated) or when the graph is explicitly stopped. This allows external systems to react to graph
+	/// completion without polling.
+	/// </summary>
+	public Action? OnGraphCompleted { get; set; }
+
+	/// <summary>
 	/// Starts the execution of the graph. This method initializes the context's runtime variables from the graph's
 	/// variable definitions, ensuring that each execution instance has independent state, and then initiates the
 	/// graph's entry node to begin processing.
 	/// </summary>
 	public void StartGraph()
 	{
-		GraphContext.Runner = this;
+		GraphContext.Processor = this;
 		GraphContext.HasStarted = true;
 		GraphContext.GraphVariables.InitializeFrom(Graph.VariableDefinitions);
 		Graph.EntryNode.StartGraph(GraphContext);
@@ -79,17 +88,18 @@ public class GraphRunner(Graph graph, IGraphContext graphContext)
 	/// </summary>
 	public void StopGraph()
 	{
-		if (GraphContext.Runner != this)
+		if (GraphContext.Processor != this)
 		{
 			return;
 		}
 
-		GraphContext.Runner = null;
+		GraphContext.Processor = null;
 		GraphContext.HasStarted = false;
 		Graph.EntryNode.StopGraph(GraphContext);
 		GraphContext.ActiveStateNodes.Clear();
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();
+		OnGraphCompleted?.Invoke();
 	}
 
 	/// <summary>
@@ -106,8 +116,9 @@ public class GraphRunner(Graph graph, IGraphContext graphContext)
 		}
 
 		GraphContext.HasStarted = false;
-		GraphContext.Runner = null;
+		GraphContext.Processor = null;
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();
+		OnGraphCompleted?.Invoke();
 	}
 }

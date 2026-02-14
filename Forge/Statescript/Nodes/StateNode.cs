@@ -232,7 +232,7 @@ public abstract class StateNode<T> : Node
 
 		if (graphContext.ActiveStateNodes.Count == 0)
 		{
-			graphContext.Runner?.FinalizeGraph();
+			graphContext.Processor?.FinalizeGraph();
 		}
 	}
 

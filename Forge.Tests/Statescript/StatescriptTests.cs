@@ -30,9 +30,9 @@ public class StatescriptTests
 		graph.VariableDefinitions.DefineVariable("health", 100);
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
+		var processor = new GraphProcessor(graph, context);
 
-		runner.StartGraph();
+		processor.StartGraph();
 
 		context.GraphVariables.TryGetVar("health", out int value).Should().BeTrue();
 		value.Should().Be(100);
@@ -49,8 +49,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], actionNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		actionNode.ExecutionCount.Should().Be(1);
 	}
@@ -75,8 +75,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(action2.OutputPorts[ActionNode.OutputPort], action3.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		executionOrder.Should().ContainInOrder("A", "B", "C");
 	}
@@ -99,8 +99,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(condition.OutputPorts[ConditionNode.FalsePort], falseAction.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(1);
 		falseAction.ExecutionCount.Should().Be(0);
@@ -124,8 +124,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(condition.OutputPorts[ConditionNode.FalsePort], falseAction.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(0);
 		falseAction.ExecutionCount.Should().Be(1);
@@ -148,8 +148,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(incrementNode.OutputPorts[ActionNode.OutputPort], readNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		readNode.LastReadValue.Should().Be(1);
 	}
@@ -175,8 +175,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(condition.OutputPorts[ConditionNode.FalsePort], belowAction.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		aboveAction.ExecutionCount.Should().Be(1, "value (15) is above threshold (10)");
 		belowAction.ExecutionCount.Should().Be(0);
@@ -197,8 +197,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], action2.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		action1.ExecutionCount.Should().Be(1);
 		action2.ExecutionCount.Should().Be(1);
@@ -217,14 +217,14 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], incrementNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		context.GraphVariables.TryGetVar("counter", out int valueAfterStart).Should().BeTrue();
 		valueAfterStart.Should().Be(1);
 
 		// StopGraph cleans up node contexts - verify it doesn't throw.
-		runner.StopGraph();
+		processor.StopGraph();
 	}
 
 	[Fact]
@@ -239,13 +239,13 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		context.InternalNodeActivationStatus.Should().NotBeEmpty();
 		context.NodeContextCount.Should().BePositive();
 
-		runner.StopGraph();
+		processor.StopGraph();
 
 		context.NodeContextCount.Should().Be(0);
 		context.InternalNodeActivationStatus.Should().BeEmpty();
@@ -276,8 +276,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(condition.OutputPorts[ConditionNode.FalsePort], trackB.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		trackA.ExecutionCount.Should().Be(1);
 		trackB.ExecutionCount.Should().Be(0);
@@ -298,8 +298,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], connectedAction.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		connectedAction.ExecutionCount.Should().Be(1);
 		disconnectedAction.ExecutionCount.Should().Be(0);
@@ -317,13 +317,13 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], incrementNode.InputPorts[ActionNode.InputPort]));
 
 		var context1 = new TestGraphContext();
-		var runner1 = new GraphRunner(graph, context1);
+		var processor1 = new GraphProcessor(graph, context1);
 
 		var context2 = new TestGraphContext();
-		var runner2 = new GraphRunner(graph, context2);
+		var processor2 = new GraphProcessor(graph, context2);
 
-		runner1.StartGraph();
-		runner2.StartGraph();
+		processor1.StartGraph();
+		processor2.StartGraph();
 
 		context1.GraphVariables.TryGetVar("counter", out int value1);
 		context2.GraphVariables.TryGetVar("counter", out int value2);
@@ -345,21 +345,21 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		context.IsActive.Should().BeTrue();
 
 		// Not enough time has passed.
-		runner.UpdateGraph(1.0);
+		processor.UpdateGraph(1.0);
 		context.IsActive.Should().BeTrue();
 
 		// Still not enough.
-		runner.UpdateGraph(0.5);
+		processor.UpdateGraph(0.5);
 		context.IsActive.Should().BeTrue();
 
 		// Now it should deactivate (total: 1.0 + 0.5 + 0.5 = 2.0).
-		runner.UpdateGraph(0.5);
+		processor.UpdateGraph(0.5);
 		context.IsActive.Should().BeFalse();
 	}
 
@@ -382,12 +382,12 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(timer.OutputPorts[TimerStateNode.OnDeactivatePort], onDeactivateAction.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		onDeactivateAction.ExecutionCount.Should().Be(0);
 
-		runner.UpdateGraph(1.0);
+		processor.UpdateGraph(1.0);
 
 		onDeactivateAction.ExecutionCount.Should().Be(1);
 	}
@@ -411,8 +411,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(timer.OutputPorts[TimerStateNode.OnActivatePort], onActivateAction.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		onActivateAction.ExecutionCount.Should().Be(1);
 	}
@@ -430,23 +430,23 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[ActionNode.InputPort]));
 
 		var context1 = new TestGraphContext();
-		var runner1 = new GraphRunner(graph, context1);
+		var processor1 = new GraphProcessor(graph, context1);
 
 		var context2 = new TestGraphContext();
-		var runner2 = new GraphRunner(graph, context2);
+		var processor2 = new GraphProcessor(graph, context2);
 
-		runner1.StartGraph();
-		runner2.StartGraph();
+		processor1.StartGraph();
+		processor2.StartGraph();
 
-		// Advance runner1 past duration, but not runner2.
-		runner1.UpdateGraph(2.0);
-		runner2.UpdateGraph(1.0);
+		// Advance processor1 past duration, but not processor2.
+		processor1.UpdateGraph(2.0);
+		processor2.UpdateGraph(1.0);
 
 		context1.IsActive.Should().BeFalse();
 		context2.IsActive.Should().BeTrue();
 
-		// Now advance runner2 past duration.
-		runner2.UpdateGraph(1.0);
+		// Now advance processor2 past duration.
+		processor2.UpdateGraph(1.0);
 		context2.IsActive.Should().BeFalse();
 	}
 
@@ -497,8 +497,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(setNode.OutputPorts[ActionNode.OutputPort], readNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		readNode.LastReadValue.Should().Be(42);
 	}
@@ -524,8 +524,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(setNode.OutputPorts[ActionNode.OutputPort], readNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		// counter was incremented to 1, then copied to result
 		readNode.LastReadValue.Should().Be(1);
@@ -552,8 +552,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(readTarget.OutputPorts[ActionNode.OutputPort], readSource.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		readTarget.LastReadValue.Should().Be(99);
 		readSource.LastReadValue.Should().Be(99);
@@ -576,8 +576,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(setNode.OutputPorts[ActionNode.OutputPort], readNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		// Target should remain unchanged because source doesn't exist
 		readNode.LastReadValue.Should().Be(77);
@@ -601,8 +601,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(setNode.OutputPorts[ActionNode.OutputPort], readNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		readNode.LastReadValue.Should().Be(3.5);
 	}
@@ -625,8 +625,8 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(setNode.OutputPorts[ActionNode.OutputPort], readNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		readNode.LastReadValue.Should().BeTrue();
 	}
@@ -649,13 +649,13 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(incrementNode.OutputPorts[ActionNode.OutputPort], setNode.InputPorts[ActionNode.InputPort]));
 
 		var context1 = new TestGraphContext();
-		var runner1 = new GraphRunner(graph, context1);
+		var processor1 = new GraphProcessor(graph, context1);
 
 		var context2 = new TestGraphContext();
-		var runner2 = new GraphRunner(graph, context2);
+		var processor2 = new GraphProcessor(graph, context2);
 
-		runner1.StartGraph();
-		runner2.StartGraph();
+		processor1.StartGraph();
+		processor2.StartGraph();
 
 		context1.GraphVariables.TryGetVar("target", out int value1);
 		context2.GraphVariables.TryGetVar("target", out int value2);
@@ -682,17 +682,17 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(timer.OutputPorts[StateNode<TimerNodeContext>.OnDeactivatePort], exitNode.InputPorts[ExitNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		context.IsActive.Should().BeTrue();
 
 		// Timer deactivates after 5 seconds, which triggers ExitNode.
-		runner.UpdateGraph(5.0);
+		processor.UpdateGraph(5.0);
 
 		context.IsActive.Should().BeFalse();
 		context.NodeContextCount.Should().Be(0);
-		context.Runner.Should().BeNull();
+		context.Processor.Should().BeNull();
 	}
 
 	[Fact]
@@ -710,12 +710,12 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(actionNode.OutputPorts[ActionNode.OutputPort], exitNode.InputPorts[ExitNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		actionNode.ExecutionCount.Should().Be(1);
 		context.NodeContextCount.Should().Be(0);
-		context.Runner.Should().BeNull();
+		context.Processor.Should().BeNull();
 	}
 
 	[Fact]
@@ -741,13 +741,13 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(shortTimer.OutputPorts[StateNode<TimerNodeContext>.OnDeactivatePort], exitNode.InputPorts[ExitNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		context.ActiveStateNodes.Should().HaveCount(2);
 
 		// Short timer elapses, triggering ExitNode which stops everything.
-		runner.UpdateGraph(1.0);
+		processor.UpdateGraph(1.0);
 
 		context.IsActive.Should().BeFalse();
 		context.ActiveStateNodes.Should().BeEmpty();
@@ -766,15 +766,15 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
+		var processor = new GraphProcessor(graph, context);
 
-		context.Runner.Should().BeNull();
+		context.Processor.Should().BeNull();
 
-		runner.StartGraph();
-		context.Runner.Should().Be(runner);
+		processor.StartGraph();
+		context.Processor.Should().Be(processor);
 
-		runner.StopGraph();
-		context.Runner.Should().BeNull();
+		processor.StopGraph();
+		context.Processor.Should().BeNull();
 	}
 
 	[Fact]
@@ -789,12 +789,12 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		context.ActiveStateNodes.Should().ContainSingle().Which.Should().Be(timer);
 
-		runner.UpdateGraph(2.0);
+		processor.UpdateGraph(2.0);
 
 		context.ActiveStateNodes.Should().BeEmpty();
 	}
@@ -810,11 +810,11 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], actionNode.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		actionNode.ExecutionCount.Should().Be(1);
-		context.Runner.Should().BeNull();
+		context.Processor.Should().BeNull();
 		context.HasStarted.Should().BeFalse();
 		context.NodeContextCount.Should().Be(0);
 		context.InternalNodeActivationStatus.Should().BeEmpty();
@@ -832,17 +832,17 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		context.HasStarted.Should().BeTrue();
-		context.Runner.Should().Be(runner);
+		context.Processor.Should().Be(processor);
 
-		runner.UpdateGraph(2.0);
+		processor.UpdateGraph(2.0);
 
 		context.IsActive.Should().BeFalse();
 		context.HasStarted.Should().BeFalse();
-		context.Runner.Should().BeNull();
+		context.Processor.Should().BeNull();
 		context.NodeContextCount.Should().Be(0);
 		context.InternalNodeActivationStatus.Should().BeEmpty();
 	}
@@ -865,23 +865,23 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], longTimer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
 		context.ActiveStateNodes.Should().HaveCount(2);
 		context.HasStarted.Should().BeTrue();
 
 		// Short timer elapses, but long timer still active — graph should NOT finalize.
-		runner.UpdateGraph(1.0);
+		processor.UpdateGraph(1.0);
 		context.ActiveStateNodes.Should().ContainSingle();
 		context.HasStarted.Should().BeTrue();
-		context.Runner.Should().Be(runner);
+		context.Processor.Should().Be(processor);
 
 		// Long timer elapses — now the graph should finalize.
-		runner.UpdateGraph(2.0);
+		processor.UpdateGraph(2.0);
 		context.IsActive.Should().BeFalse();
 		context.HasStarted.Should().BeFalse();
-		context.Runner.Should().BeNull();
+		context.Processor.Should().BeNull();
 		context.NodeContextCount.Should().Be(0);
 		context.InternalNodeActivationStatus.Should().BeEmpty();
 	}
@@ -898,17 +898,17 @@ public class StatescriptTests
 		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
-		runner.StartGraph();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
 
-		runner.UpdateGraph(1.0);
+		processor.UpdateGraph(1.0);
 		context.HasStarted.Should().BeFalse();
 
 		// Subsequent updates should be no-ops and not throw.
-		runner.UpdateGraph(1.0);
-		runner.UpdateGraph(1.0);
+		processor.UpdateGraph(1.0);
+		processor.UpdateGraph(1.0);
 		context.HasStarted.Should().BeFalse();
-		context.Runner.Should().BeNull();
+		context.Processor.Should().BeNull();
 	}
 
 	[Fact]
@@ -917,12 +917,12 @@ public class StatescriptTests
 	{
 		var graph = new Graph();
 		var context = new TestGraphContext();
-		var runner = new GraphRunner(graph, context);
+		var processor = new GraphProcessor(graph, context);
 
-		runner.StartGraph();
+		processor.StartGraph();
 
 		context.HasStarted.Should().BeFalse();
-		context.Runner.Should().BeNull();
+		context.Processor.Should().BeNull();
 	}
 
 	private sealed class TestGraphContext : IGraphContext
@@ -939,7 +939,7 @@ public class StatescriptTests
 
 		public HashSet<Node> ActiveStateNodes { get; } = [];
 
-		public GraphRunner? Runner { get; set; }
+		public GraphProcessor? Processor { get; set; }
 
 		public bool HasStarted { get; set; }
 

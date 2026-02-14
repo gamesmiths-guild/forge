@@ -42,11 +42,12 @@ public interface IGraphContext
 	HashSet<Node> ActiveStateNodes { get; }
 
 	/// <summary>
-	/// Gets or sets the <see cref="GraphRunner"/> currently executing this context. This reference allows nodes
+	/// Gets or sets the <see cref="GraphProcessor"/> currently executing this context. This reference allows nodes
 	/// (such as <see cref="Nodes.ExitNode"/>) to trigger graph-level operations like stopping execution. Set
-	/// automatically by <see cref="GraphRunner.StartGraph"/> and cleared by <see cref="GraphRunner.StopGraph"/>.
+	/// automatically by <see cref="GraphProcessor.StartGraph"/> and cleared by
+	/// <see cref="GraphProcessor.StopGraph"/>.
 	/// </summary>
-	GraphRunner? Runner { get; set; }
+	GraphProcessor? Processor { get; set; }
 
 	/// <summary>
 	/// Gets or sets a value indicating whether the graph has been started and is awaiting completion. This flag is
