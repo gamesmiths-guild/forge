@@ -5,9 +5,13 @@ using Gamesmiths.Forge.Statescript.Ports;
 namespace Gamesmiths.Forge.Statescript.Nodes;
 
 /// <summary>
-/// Node representing the exit point of a graph. It has a single input port that receives a message to stop the graph
-/// execution.
+/// Node representing the exit point of a graph. When a message reaches this node, the entire graph execution is
+/// stopped, all active state nodes are disabled, node contexts are removed, and the execution is finalized.
 /// </summary>
+/// <remarks>
+/// <para>Place an <see cref="ExitNode"/> at any point in the graph where you want to force the execution to end. This
+/// has the same effect as calling <see cref="GraphRunner.StopGraph"/> externally.</para>
+/// </remarks>
 public class ExitNode : Node
 {
 	/// <summary>
@@ -24,7 +28,6 @@ public class ExitNode : Node
 	/// <inheritdoc/>
 	protected override void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
 	{
-		// TODO: Implement the logic to stop the graph execution when a message is received on the input port.
-		throw new NotImplementedException();
+		graphContext.Runner?.StopGraph();
 	}
 }

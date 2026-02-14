@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Diagnostics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript.Ports;
 
@@ -17,6 +16,7 @@ public abstract class StateNode<T> : Node
 	/// <summary>
 	/// Port index for the input port.
 	/// </summary>
+#pragma warning disable RCS1158 // Static member in generic type should use a type parameter
 	public const byte InputPort = 0;
 
 	/// <summary>
@@ -43,6 +43,7 @@ public abstract class StateNode<T> : Node
 	/// Port index for the subgraph port.
 	/// </summary>
 	public const byte SubgraphPort = 3;
+#pragma warning restore RCS1158 // Static member in generic type should use a type parameter
 
 	/// <summary>
 	/// Called when the node is activated.
@@ -226,15 +227,20 @@ public abstract class StateNode<T> : Node
 		base.AfterDisable(graphContext);
 
 		nodeContext.Active = false;
-		graphContext.ActiveStateNodeCount--;
+		graphContext.ActiveStateNodes.Remove(this);
 		OnDeactivate(graphContext);
+
+		if (graphContext.ActiveStateNodes.Count == 0)
+		{
+			graphContext.Runner?.FinalizeGraph();
+		}
 	}
 
 	private void ActivateNode(IGraphContext graphContext)
 	{
 		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 		nodeContext.Active = true;
-		graphContext.ActiveStateNodeCount++;
+		graphContext.ActiveStateNodes.Add(this);
 		OnActivate(graphContext);
 	}
 

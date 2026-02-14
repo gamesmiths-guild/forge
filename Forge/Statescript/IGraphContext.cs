@@ -11,12 +11,6 @@ namespace Gamesmiths.Forge.Statescript;
 public interface IGraphContext
 {
 	/// <summary>
-	/// Gets or sets the count of active state nodes in the graph. This property is used to track how many state nodes
-	/// are currently active during graph execution.
-	/// </summary>
-	int ActiveStateNodeCount { get; set; }
-
-	/// <summary>
 	/// Gets a value indicating whether the graph is currently active. A graph is considered active if it has at least
 	/// one active state node.
 	/// </summary>
@@ -40,6 +34,27 @@ public interface IGraphContext
 	/// currently active or inactive during execution.
 	/// </summary>
 	Dictionary<Guid, bool> InternalNodeActivationStatus { get; }
+
+	/// <summary>
+	/// Gets the set of state nodes that are currently active during this graph execution. Only active state nodes
+	/// are updated each tick, avoiding unnecessary iteration over inactive nodes.
+	/// </summary>
+	HashSet<Node> ActiveStateNodes { get; }
+
+	/// <summary>
+	/// Gets or sets the <see cref="GraphRunner"/> currently executing this context. This reference allows nodes
+	/// (such as <see cref="Nodes.ExitNode"/>) to trigger graph-level operations like stopping execution. Set
+	/// automatically by <see cref="GraphRunner.StartGraph"/> and cleared by <see cref="GraphRunner.StopGraph"/>.
+	/// </summary>
+	GraphRunner? Runner { get; set; }
+
+	/// <summary>
+	/// Gets or sets a value indicating whether the graph has been started and is awaiting completion. This flag is
+	/// set to <see langword="true"/> when the graph starts executing and is cleared when the graph completes or is
+	/// explicitly stopped. It is used to distinguish between a graph that was never started and one that has finished
+	/// naturally (i.e., all state nodes have deactivated).
+	/// </summary>
+	bool HasStarted { get; set; }
 
 	/// <summary>
 	/// Gets or creates a node context of type T for the specified node ID. If a context for the given node ID already

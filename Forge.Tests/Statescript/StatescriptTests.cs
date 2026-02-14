@@ -232,21 +232,23 @@ public class StatescriptTests
 	public void Stopping_graph_removes_all_node_contexts()
 	{
 		var graph = new Graph();
-		var actionNode = new TrackingActionNode();
+		graph.VariableDefinitions.DefineVariable("duration", 5.0);
 
-		graph.AddNode(actionNode);
-		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], actionNode.InputPorts[ActionNode.InputPort]));
+		var timer = new TimerStateNode("duration");
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
 		var context = new TestGraphContext();
 		var runner = new GraphRunner(graph, context);
 		runner.StartGraph();
 
-		// ActionNodes register in InternalNodeActivationStatus when they receive messages.
 		context.InternalNodeActivationStatus.Should().NotBeEmpty();
+		context.NodeContextCount.Should().BePositive();
 
 		runner.StopGraph();
 
 		context.NodeContextCount.Should().Be(0);
+		context.InternalNodeActivationStatus.Should().BeEmpty();
 	}
 
 	[Fact]
@@ -663,19 +665,283 @@ public class StatescriptTests
 		value2.Should().Be(11);
 	}
 
+	[Fact]
+	[Trait("Graph", "ExitNode")]
+	public void Exit_node_stops_graph_execution()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 5.0);
+
+		var timer = new TimerStateNode("duration");
+		var exitNode = new ExitNode();
+
+		graph.AddNode(timer);
+		graph.AddNode(exitNode);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(timer.OutputPorts[StateNode<TimerNodeContext>.OnDeactivatePort], exitNode.InputPorts[ExitNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		context.IsActive.Should().BeTrue();
+
+		// Timer deactivates after 5 seconds, which triggers ExitNode.
+		runner.UpdateGraph(5.0);
+
+		context.IsActive.Should().BeFalse();
+		context.NodeContextCount.Should().Be(0);
+		context.Runner.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Graph", "ExitNode")]
+	public void Exit_node_connected_to_action_stops_graph_after_action()
+	{
+		var graph = new Graph();
+		var actionNode = new TrackingActionNode();
+		var exitNode = new ExitNode();
+
+		graph.AddNode(actionNode);
+		graph.AddNode(exitNode);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], actionNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(actionNode.OutputPorts[ActionNode.OutputPort], exitNode.InputPorts[ExitNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		actionNode.ExecutionCount.Should().Be(1);
+		context.NodeContextCount.Should().Be(0);
+		context.Runner.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Graph", "ExitNode")]
+	public void Exit_node_stops_all_active_state_nodes()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("shortDuration", 1.0);
+		graph.VariableDefinitions.DefineVariable("longDuration", 10.0);
+
+		var shortTimer = new TimerStateNode("shortDuration");
+		var longTimer = new TimerStateNode("longDuration");
+		var exitNode = new ExitNode();
+
+		graph.AddNode(shortTimer);
+		graph.AddNode(longTimer);
+		graph.AddNode(exitNode);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], shortTimer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], longTimer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+
+		// When the short timer completes, exit the graph (which should also stop the long timer).
+		graph.AddConnection(new Connection(shortTimer.OutputPorts[StateNode<TimerNodeContext>.OnDeactivatePort], exitNode.InputPorts[ExitNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		context.ActiveStateNodes.Should().HaveCount(2);
+
+		// Short timer elapses, triggering ExitNode which stops everything.
+		runner.UpdateGraph(1.0);
+
+		context.IsActive.Should().BeFalse();
+		context.ActiveStateNodes.Should().BeEmpty();
+		context.NodeContextCount.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void Runner_reference_is_set_on_start_and_cleared_on_stop()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 5.0);
+
+		var timer = new TimerStateNode("duration");
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+
+		context.Runner.Should().BeNull();
+
+		runner.StartGraph();
+		context.Runner.Should().Be(runner);
+
+		runner.StopGraph();
+		context.Runner.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void Active_state_nodes_set_tracks_active_nodes()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 2.0);
+
+		var timer = new TimerStateNode("duration");
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		context.ActiveStateNodes.Should().ContainSingle().Which.Should().Be(timer);
+
+		runner.UpdateGraph(2.0);
+
+		context.ActiveStateNodes.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void Action_only_graph_finalizes_immediately_after_start()
+	{
+		var graph = new Graph();
+		var actionNode = new TrackingActionNode();
+
+		graph.AddNode(actionNode);
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], actionNode.InputPorts[ActionNode.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		actionNode.ExecutionCount.Should().Be(1);
+		context.Runner.Should().BeNull();
+		context.HasStarted.Should().BeFalse();
+		context.NodeContextCount.Should().Be(0);
+		context.InternalNodeActivationStatus.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void Timer_graph_finalizes_when_last_state_node_deactivates()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 2.0);
+
+		var timer = new TimerStateNode("duration");
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		context.HasStarted.Should().BeTrue();
+		context.Runner.Should().Be(runner);
+
+		runner.UpdateGraph(2.0);
+
+		context.IsActive.Should().BeFalse();
+		context.HasStarted.Should().BeFalse();
+		context.Runner.Should().BeNull();
+		context.NodeContextCount.Should().Be(0);
+		context.InternalNodeActivationStatus.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void Multiple_timers_finalize_only_after_all_deactivate()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("shortDuration", 1.0);
+		graph.VariableDefinitions.DefineVariable("longDuration", 3.0);
+
+		var shortTimer = new TimerStateNode("shortDuration");
+		var longTimer = new TimerStateNode("longDuration");
+
+		graph.AddNode(shortTimer);
+		graph.AddNode(longTimer);
+
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], shortTimer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], longTimer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		context.ActiveStateNodes.Should().HaveCount(2);
+		context.HasStarted.Should().BeTrue();
+
+		// Short timer elapses, but long timer still active — graph should NOT finalize.
+		runner.UpdateGraph(1.0);
+		context.ActiveStateNodes.Should().ContainSingle();
+		context.HasStarted.Should().BeTrue();
+		context.Runner.Should().Be(runner);
+
+		// Long timer elapses — now the graph should finalize.
+		runner.UpdateGraph(2.0);
+		context.IsActive.Should().BeFalse();
+		context.HasStarted.Should().BeFalse();
+		context.Runner.Should().BeNull();
+		context.NodeContextCount.Should().Be(0);
+		context.InternalNodeActivationStatus.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void Update_graph_does_nothing_after_finalization()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		var timer = new TimerStateNode("duration");
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(graph.EntryNode.OutputPorts[EntryNode.OutputPort], timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+		runner.StartGraph();
+
+		runner.UpdateGraph(1.0);
+		context.HasStarted.Should().BeFalse();
+
+		// Subsequent updates should be no-ops and not throw.
+		runner.UpdateGraph(1.0);
+		runner.UpdateGraph(1.0);
+		context.HasStarted.Should().BeFalse();
+		context.Runner.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void Empty_graph_finalizes_immediately()
+	{
+		var graph = new Graph();
+		var context = new TestGraphContext();
+		var runner = new GraphRunner(graph, context);
+
+		runner.StartGraph();
+
+		context.HasStarted.Should().BeFalse();
+		context.Runner.Should().BeNull();
+	}
+
 	private sealed class TestGraphContext : IGraphContext
 	{
 		private readonly Dictionary<Guid, INodeContext> _nodeContexts = [];
 
-		public int ActiveStateNodeCount { get; set; }
-
-		public bool IsActive => ActiveStateNodeCount > 0;
+		public bool IsActive => ActiveStateNodes.Count > 0;
 
 		public IForgeEntity? Owner { get; set; }
 
 		public Variables GraphVariables { get; } = new Variables();
 
 		public Dictionary<Guid, bool> InternalNodeActivationStatus { get; } = [];
+
+		public HashSet<Node> ActiveStateNodes { get; } = [];
+
+		public GraphRunner? Runner { get; set; }
+
+		public bool HasStarted { get; set; }
 
 		public int NodeContextCount => _nodeContexts.Count;
 
