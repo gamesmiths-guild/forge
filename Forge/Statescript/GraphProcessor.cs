@@ -43,11 +43,15 @@ public class GraphProcessor(Graph graph, IGraphContext graphContext)
 	/// variable definitions, ensuring that each execution instance has independent state, and then initiates the
 	/// graph's entry node to begin processing.
 	/// </summary>
-	public void StartGraph()
+	/// <param name="variableOverrides">An optional callback invoked after variables are initialized from definitions
+	/// but before the graph's entry node begins processing. Use this to overwrite specific variable values with
+	/// runtime data (e.g., activation context from an ability).</param>
+	public void StartGraph(Action<Variables>? variableOverrides = null)
 	{
 		GraphContext.Processor = this;
 		GraphContext.HasStarted = true;
 		GraphContext.GraphVariables.InitializeFrom(Graph.VariableDefinitions);
+		variableOverrides?.Invoke(GraphContext.GraphVariables);
 		Graph.EntryNode.StartGraph(GraphContext);
 
 		// If no state nodes were activated during the initial message propagation (e.g., action-only graphs), the graph

@@ -6,7 +6,7 @@ namespace Gamesmiths.Forge.Statescript;
 
 /// <summary>
 /// Represents a Statescript graph definition consisting of nodes and connections. A <see cref="Graph"/> instance is
-/// constructed once and can then be shared across multiple <see cref="GraphRunner"/> instances (Flyweight pattern).
+/// constructed once and can then be shared across multiple <see cref="GraphProcessor"/> instances (Flyweight pattern).
 /// Each runner pairs the shared graph with its own <see cref="IGraphContext"/>, which holds all mutable runtime state.
 /// </summary>
 /// <remarks>
