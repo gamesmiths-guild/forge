@@ -21,9 +21,11 @@ public class SubgraphPort : OutputPort
 	/// <param name="graphContext">The graph context for the message.</param>
 	public void EmitDisableSubgraphMessage(IGraphContext graphContext)
 	{
-		foreach (InputPort inputPort in ConnectedPorts)
+		InputPort[] ports = FinalizedConnectedPorts!;
+
+		for (var i = 0; i < ports.Length; i++)
 		{
-			inputPort.ReceiveDisableSubgraphMessage(graphContext);
+			ports[i].ReceiveDisableSubgraphMessage(graphContext);
 		}
 	}
 }

@@ -76,6 +76,43 @@ public abstract class StateNode<T> : Node
 		OnUpdate(deltaTime, graphContext);
 	}
 
+	/// <inheritdoc/>
+	internal override IEnumerable<int> GetReachableOutputPorts(byte inputPortIndex)
+	{
+		if (inputPortIndex == InputPort)
+		{
+			// InputPort fires OnActivatePort and SubgraphPort directly, and may fire OnDeactivatePort and custom
+			// EventPorts via deferred deactivation.
+			yield return OnActivatePort;
+			yield return OnDeactivatePort;
+			yield return SubgraphPort;
+
+			for (var i = SubgraphPort + 1; i < OutputPorts.Length; i++)
+			{
+				yield return i;
+			}
+		}
+		else if (inputPortIndex == AbortPort)
+		{
+			// AbortPort fires OnAbortPort directly, then DeactivateNode fires OnDeactivatePort and all SubgraphPorts
+			// via BeforeDisable.
+			yield return OnDeactivatePort;
+			yield return OnAbortPort;
+
+			for (var i = 0; i < SubgraphPorts.Length; i++)
+			{
+				yield return SubgraphPorts[i].Index;
+			}
+		}
+	}
+
+	/// <inheritdoc/>
+	internal override IEnumerable<int> GetMessagePortsOnDisable()
+	{
+		// BeforeDisable fires OnDeactivatePort.EmitMessage() as a regular message.
+		yield return OnDeactivatePort;
+	}
+
 	/// <summary>
 	/// Called every update tick while the node is active. Override this method to implement per-frame or per-tick logic
 	/// such as timers, animations, or continuous state evaluation.
@@ -179,12 +216,9 @@ public abstract class StateNode<T> : Node
 	{
 		BeforeDisable(graphContext);
 
-		foreach (OutputPort outputPort in OutputPorts)
+		foreach (SubgraphPort subgraphPort in SubgraphPorts)
 		{
-			if (outputPort is SubgraphPort subgraphPort)
-			{
-				subgraphPort.EmitDisableSubgraphMessage(graphContext);
-			}
+			subgraphPort.EmitDisableSubgraphMessage(graphContext);
 		}
 
 		AfterDisable(graphContext);
@@ -207,7 +241,6 @@ public abstract class StateNode<T> : Node
 		base.BeforeDisable(graphContext);
 
 		OutputPorts[OnDeactivatePort].EmitMessage(graphContext);
-		((SubgraphPort)OutputPorts[SubgraphPort]).EmitDisableSubgraphMessage(graphContext);
 	}
 
 	/// <inheritdoc/>

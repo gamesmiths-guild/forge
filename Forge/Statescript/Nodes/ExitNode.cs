@@ -20,6 +20,12 @@ public class ExitNode : Node
 	public const byte InputPort = 0;
 
 	/// <inheritdoc/>
+	internal override IEnumerable<int> GetReachableOutputPorts(byte inputPortIndex)
+	{
+		return [];
+	}
+
+	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
 		inputPorts.Add(CreatePort<InputPort>(InputPort));

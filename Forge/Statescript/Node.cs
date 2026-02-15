@@ -35,6 +35,12 @@ public abstract class Node
 	public OutputPort[] OutputPorts { get; }
 
 	/// <summary>
+	/// Gets the subgraph output ports of this node. This is a cached subset of <see cref="OutputPorts"/> containing
+	/// only <see cref="SubgraphPort"/> instances, built once during construction to avoid runtime type checks.
+	/// </summary>
+	internal SubgraphPort[] SubgraphPorts { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="Node"/> class.
 	/// </summary>
 	protected Node()
@@ -55,6 +61,7 @@ public abstract class Node
 
 		InputPorts = [.. inputPorts];
 		OutputPorts = [.. outputPorts];
+		SubgraphPorts = [.. OutputPorts.OfType<SubgraphPort>()];
 	}
 
 	internal void OnMessageReceived(
@@ -86,6 +93,42 @@ public abstract class Node
 		}
 
 		AfterDisable(graphContext);
+	}
+
+	/// <summary>
+	/// Returns the indices of output ports that may emit a message when the specified input port receives a message.
+	/// Used at graph construction time for static loop detection.
+	/// </summary>
+	/// <remarks>
+	/// <para>The default implementation returns all output ports for any input, which is a safe over-approximation.
+	/// Subclasses should override this to provide precise mappings for accurate cycle detection.</para>
+	/// </remarks>
+	/// <param name="inputPortIndex">The index of the input port that received the message.</param>
+	/// <returns>An enumerable of output port indices that may fire in response.</returns>
+	internal virtual IEnumerable<int> GetReachableOutputPorts(byte inputPortIndex)
+	{
+		for (var i = 0; i < OutputPorts.Length; i++)
+		{
+			yield return i;
+		}
+	}
+
+	/// <summary>
+	/// Returns the output ports that emit <b>regular messages</b> (not disable-subgraph messages) when this node
+	/// receives a disable-subgraph signal. Used at graph construction time for static loop detection.
+	/// </summary>
+	/// <remarks>
+	/// <para>When a node receives a disable-subgraph signal, two things happen: (1) some output ports may emit regular
+	/// messages (e.g., <c>OnDeactivatePort</c> on a <see cref="Nodes.StateNode{T}"/>), and (2) all output ports
+	/// propagate the disable-subgraph signal downstream. This method returns only category (1): the ports that emit
+	/// regular messages, which can trigger <see cref="HandleMessage"/> on downstream nodes.</para>
+	/// <para>The default implementation returns empty (no regular messages emitted during disable), which is correct
+	/// for <see cref="Nodes.ActionNode"/> and <see cref="Nodes.ConditionNode"/>.</para>
+	/// </remarks>
+	/// <returns>An enumerable of output port indices that emit regular messages during disable.</returns>
+	internal virtual IEnumerable<int> GetMessagePortsOnDisable()
+	{
+		return [];
 	}
 
 	/// <summary>

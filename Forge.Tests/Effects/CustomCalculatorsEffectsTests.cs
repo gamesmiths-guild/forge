@@ -9,10 +9,10 @@ using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Events;
+using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Core;
 using Gamesmiths.Forge.Tests.Helpers;
-using Gamesmiths.Forge.Statescript;
 
 namespace Gamesmiths.Forge.Tests.Effects;
 

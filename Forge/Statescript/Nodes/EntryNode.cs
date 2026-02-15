@@ -34,6 +34,12 @@ public class EntryNode : Node
 	}
 
 	/// <inheritdoc/>
+	internal override IEnumerable<int> GetReachableOutputPorts(byte inputPortIndex)
+	{
+		yield return OutputPort;
+	}
+
+	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
 		outputPorts.Add(CreatePort<SubgraphPort>(OutputPort));

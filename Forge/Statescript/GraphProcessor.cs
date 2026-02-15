@@ -52,6 +52,7 @@ public class GraphProcessor(Graph graph, IGraphContext graphContext)
 		GraphContext.HasStarted = true;
 		GraphContext.GraphVariables.InitializeFrom(Graph.VariableDefinitions);
 		variableOverrides?.Invoke(GraphContext.GraphVariables);
+		Graph.FinalizeConnections();
 		Graph.EntryNode.StartGraph(GraphContext);
 
 		// If no state nodes were activated during the initial message propagation (e.g., action-only graphs), the graph

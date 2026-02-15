@@ -33,6 +33,15 @@ public abstract class ConditionNode : Node
 	protected abstract bool Test(IGraphContext graphContext);
 
 	/// <inheritdoc/>
+#pragma warning disable SA1202 // Elements should be ordered by access
+	internal override IEnumerable<int> GetReachableOutputPorts(byte inputPortIndex)
+#pragma warning restore SA1202 // Elements should be ordered by access
+	{
+		yield return TruePort;
+		yield return FalsePort;
+	}
+
+	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
 		inputPorts.Add(CreatePort<InputPort>(InputPort));

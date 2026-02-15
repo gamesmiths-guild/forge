@@ -7,7 +7,10 @@ namespace Gamesmiths.Forge.Statescript.Ports;
 /// </summary>
 public class InputPort : Port
 {
-	private Node? _ownerNode;
+	/// <summary>
+	/// Gets the node that owns this input port.
+	/// </summary>
+	internal Node? OwnerNode { get; private set; }
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="InputPort"/> class.
@@ -23,7 +26,7 @@ public class InputPort : Port
 	/// <param name="ownerNode">The owner node to set.</param>
 	public void SetOwnerNode(Node ownerNode)
 	{
-		_ownerNode = ownerNode;
+		OwnerNode = ownerNode;
 	}
 
 	/// <summary>
@@ -32,7 +35,7 @@ public class InputPort : Port
 	/// <param name="graphContext">The graph context for the message.</param>
 	public void ReceiveMessage(IGraphContext graphContext)
 	{
-		_ownerNode?.OnMessageReceived(this, graphContext);
+		OwnerNode?.OnMessageReceived(this, graphContext);
 	}
 
 	/// <summary>
@@ -41,6 +44,6 @@ public class InputPort : Port
 	/// <param name="graphContext">The graph context for the message.</param>
 	public void ReceiveDisableSubgraphMessage(IGraphContext graphContext)
 	{
-		_ownerNode?.OnSubgraphDisabledMessageReceived(graphContext);
+		OwnerNode?.OnSubgraphDisabledMessageReceived(graphContext);
 	}
 }
