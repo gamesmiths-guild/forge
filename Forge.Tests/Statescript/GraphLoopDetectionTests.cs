@@ -737,7 +737,7 @@ public sealed class GraphLoopDetectionTests : IDisposable
 		}
 
 		// The graph should still work normally without the loop.
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 

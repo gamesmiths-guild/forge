@@ -17,19 +17,16 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// (zero).</para>
 /// </remarks>
 /// <param name="referencedPropertyName">The name of the graph variable or property to resolve at runtime.</param>
-public class VariableResolver(StringKey referencedPropertyName) : IPropertyResolver
+/// <param name="valueType">The type of the value this resolver produces.</param>
+public class VariableResolver(StringKey referencedPropertyName, Type valueType) : IPropertyResolver
 {
 	private readonly StringKey _referencedPropertyName = referencedPropertyName;
 
 	/// <inheritdoc/>
-	/// <remarks>
-	/// Returns <see cref="double"/> as the default numeric type for comparisons. The actual resolved value depends on
-	/// the referenced property's type.
-	/// </remarks>
-	public Type ValueType => typeof(double);
+	public Type ValueType { get; } = valueType;
 
 	/// <inheritdoc/>
-	public Variant128 Resolve(IGraphContext graphContext)
+	public Variant128 Resolve(GraphContext graphContext)
 	{
 		if (!graphContext.GraphVariables.TryGetVariant(_referencedPropertyName, graphContext, out Variant128 value))
 		{

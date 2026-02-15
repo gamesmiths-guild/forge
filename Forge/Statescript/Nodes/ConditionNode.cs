@@ -30,7 +30,7 @@ public abstract class ConditionNode : Node
 	/// </summary>
 	/// <param name="graphContext">The current graph context.</param>
 	/// <returns><see langword="true"/> if the condition is met; otherwise, <see langword="false"/>.</returns>
-	protected abstract bool Test(IGraphContext graphContext);
+	protected abstract bool Test(GraphContext graphContext);
 
 	/// <inheritdoc/>
 #pragma warning disable SA1202 // Elements should be ordered by access
@@ -50,7 +50,7 @@ public abstract class ConditionNode : Node
 	}
 
 	/// <inheritdoc/>
-	protected sealed override void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
+	protected sealed override void HandleMessage(InputPort receiverPort, GraphContext graphContext)
 	{
 		if (Test(graphContext))
 		{

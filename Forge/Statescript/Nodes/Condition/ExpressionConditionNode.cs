@@ -22,7 +22,7 @@ public class ExpressionConditionNode(StringKey conditionPropertyName) : Conditio
 	private readonly StringKey _conditionPropertyName = conditionPropertyName;
 
 	/// <inheritdoc/>
-	protected override bool Test(IGraphContext graphContext)
+	protected override bool Test(GraphContext graphContext)
 	{
 		if (!graphContext.GraphVariables.TryGet(_conditionPropertyName, graphContext, out bool result))
 		{

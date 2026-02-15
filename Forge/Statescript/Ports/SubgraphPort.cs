@@ -19,7 +19,7 @@ public class SubgraphPort : OutputPort
 	/// Emits a disable subgraph message to all connected input ports.
 	/// </summary>
 	/// <param name="graphContext">The graph context for the message.</param>
-	public void EmitDisableSubgraphMessage(IGraphContext graphContext)
+	public void EmitDisableSubgraphMessage(GraphContext graphContext)
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
 

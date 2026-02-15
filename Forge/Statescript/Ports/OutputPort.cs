@@ -15,7 +15,7 @@ public class OutputPort : Port
 	/// <summary>
 	/// Event triggered when a disable subgraph message is emitted from this output port.
 	/// </summary>
-	public event Action<Guid>? OnEmitMessageDisableSubgraphMessage;
+	public event Action<Guid>? OnEmitDisableSubgraphMessage;
 
 	/// <summary>
 	/// Gets the number of input ports connected to this output port.
@@ -76,7 +76,7 @@ public class OutputPort : Port
 		FinalizedConnectedPorts = [.. PendingConnectedPorts];
 	}
 
-	internal void EmitMessage(IGraphContext graphContext)
+	internal void EmitMessage(GraphContext graphContext)
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
 
@@ -88,7 +88,7 @@ public class OutputPort : Port
 		OnEmitMessage?.Invoke(PortID);
 	}
 
-	internal void InternalEmitDisableSubgraphMessage(IGraphContext graphContext)
+	internal void InternalEmitDisableSubgraphMessage(GraphContext graphContext)
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
 
@@ -97,6 +97,6 @@ public class OutputPort : Port
 			ports[i].ReceiveDisableSubgraphMessage(graphContext);
 		}
 
-		OnEmitMessageDisableSubgraphMessage?.Invoke(PortID);
+		OnEmitDisableSubgraphMessage?.Invoke(PortID);
 	}
 }

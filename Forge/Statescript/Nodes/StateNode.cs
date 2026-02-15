@@ -49,13 +49,13 @@ public abstract class StateNode<T> : Node
 	/// Called when the node is activated.
 	/// </summary>
 	/// <param name="graphContext">The graph's context.</param>
-	protected abstract void OnActivate(IGraphContext graphContext);
+	protected abstract void OnActivate(GraphContext graphContext);
 
 	/// <summary>
 	/// Called when the node is deactivated.
 	/// </summary>
 	/// <param name="graphContext">The graph's context.</param>
-	protected abstract void OnDeactivate(IGraphContext graphContext);
+	protected abstract void OnDeactivate(GraphContext graphContext);
 
 	/// <summary>
 	/// Updates this state node with the given delta time. Only processes the update if the node is currently active.
@@ -63,12 +63,17 @@ public abstract class StateNode<T> : Node
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
 	/// <param name="graphContext">The graph's context.</param>
 #pragma warning disable SA1202 // Elements should be ordered by access
-	internal override void Update(double deltaTime, IGraphContext graphContext)
+	internal override void Update(double deltaTime, GraphContext graphContext)
 #pragma warning restore SA1202 // Elements should be ordered by access
 	{
+		if (!graphContext.HasNodeContext(NodeID))
+		{
+			return;
+		}
+
 		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 
-		if (nodeContext?.Active != true)
+		if (!nodeContext.Active)
 		{
 			return;
 		}
@@ -119,7 +124,7 @@ public abstract class StateNode<T> : Node
 	/// </summary>
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
 	/// <param name="graphContext">The graph's context.</param>
-	protected virtual void OnUpdate(double deltaTime, IGraphContext graphContext)
+	protected virtual void OnUpdate(double deltaTime, GraphContext graphContext)
 	{
 	}
 
@@ -135,7 +140,7 @@ public abstract class StateNode<T> : Node
 	}
 
 	/// <inheritdoc/>
-	protected sealed override void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
+	protected sealed override void HandleMessage(InputPort receiverPort, GraphContext graphContext)
 	{
 		if (receiverPort.Index == InputPort)
 		{
@@ -158,7 +163,7 @@ public abstract class StateNode<T> : Node
 	}
 
 	/// <inheritdoc/>
-	protected override void EmitMessage(IGraphContext graphContext, params int[] portIds)
+	protected override void EmitMessage(GraphContext graphContext, params int[] portIds)
 	{
 		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 
@@ -184,7 +189,7 @@ public abstract class StateNode<T> : Node
 	/// </remarks>
 	/// <param name="graphContext">The graph's context.</param>
 	/// <param name="eventPortIds">ID of ports you want to Emit a message to.</param>
-	protected void DeactivateNodeAndEmitMessage(IGraphContext graphContext, params int[] eventPortIds)
+	protected void DeactivateNodeAndEmitMessage(GraphContext graphContext, params int[] eventPortIds)
 	{
 		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 
@@ -212,7 +217,7 @@ public abstract class StateNode<T> : Node
 	/// Deactivates the node without emitting any custom messages.
 	/// </summary>
 	/// <param name="graphContext">The graph's context.</param>
-	protected void DeactivateNode(IGraphContext graphContext)
+	protected void DeactivateNode(GraphContext graphContext)
 	{
 		BeforeDisable(graphContext);
 
@@ -225,13 +230,14 @@ public abstract class StateNode<T> : Node
 	}
 
 	/// <inheritdoc/>
-	protected sealed override void BeforeDisable(IGraphContext graphContext)
+	protected sealed override void BeforeDisable(GraphContext graphContext)
 	{
-		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
-		if (nodeContext is null)
+		if (!graphContext.HasNodeContext(NodeID))
 		{
 			return;
 		}
+
+		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 
 		if (!nodeContext.Active)
 		{
@@ -244,13 +250,14 @@ public abstract class StateNode<T> : Node
 	}
 
 	/// <inheritdoc/>
-	protected sealed override void AfterDisable(IGraphContext graphContext)
+	protected sealed override void AfterDisable(GraphContext graphContext)
 	{
-		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
-		if (nodeContext is null)
+		if (!graphContext.HasNodeContext(NodeID))
 		{
 			return;
 		}
+
+		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 
 		if (!nodeContext.Active)
 		{
@@ -269,7 +276,7 @@ public abstract class StateNode<T> : Node
 		}
 	}
 
-	private void ActivateNode(IGraphContext graphContext)
+	private void ActivateNode(GraphContext graphContext)
 	{
 		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 		nodeContext.Active = true;
@@ -277,7 +284,7 @@ public abstract class StateNode<T> : Node
 		OnActivate(graphContext);
 	}
 
-	private void HandleDeferredEmitMessages(IGraphContext graphContext, StateNodeContext nodeContext)
+	private void HandleDeferredEmitMessages(GraphContext graphContext, StateNodeContext nodeContext)
 	{
 		if (nodeContext.DeferredEmitMessageData.Count > 0)
 		{
@@ -290,7 +297,7 @@ public abstract class StateNode<T> : Node
 		}
 	}
 
-	private void HandleDeferredDeactivationMessages(IGraphContext graphContext, StateNodeContext nodeContext)
+	private void HandleDeferredDeactivationMessages(GraphContext graphContext, StateNodeContext nodeContext)
 	{
 		if (nodeContext.DeferredDeactivationEventPortIds is not null)
 		{

@@ -19,7 +19,7 @@ public class EntryNode : Node
 	/// Starts the graph execution by emitting a message through the output port.
 	/// </summary>
 	/// <param name="graphContext">The graph context providing the runtime variables and execution state.</param>
-	public void StartGraph(IGraphContext graphContext)
+	public void StartGraph(GraphContext graphContext)
 	{
 		OutputPorts[OutputPort].EmitMessage(graphContext);
 	}
@@ -28,7 +28,7 @@ public class EntryNode : Node
 	/// Stops the graph execution by emitting a disable message through the output port.
 	/// </summary>
 	/// <param name="graphContext">The graph context providing the runtime variables and execution state.</param>
-	public void StopGraph(IGraphContext graphContext)
+	public void StopGraph(GraphContext graphContext)
 	{
 		((SubgraphPort)OutputPorts[OutputPort]).EmitDisableSubgraphMessage(graphContext);
 	}
@@ -46,8 +46,8 @@ public class EntryNode : Node
 	}
 
 	/// <inheritdoc/>
-	protected override void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
+	protected override void HandleMessage(InputPort receiverPort, GraphContext graphContext)
 	{
-		throw new NotImplementedException();
+		throw new InvalidOperationException("EntryNode does not accept incoming messages.");
 	}
 }

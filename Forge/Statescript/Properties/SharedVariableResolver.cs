@@ -16,19 +16,16 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// the entity-level shared bag, allowing one ability's graph to read values written by another.</para>
 /// </remarks>
 /// <param name="variableName">The name of the shared variable to read from the owner entity.</param>
-public class SharedVariableResolver(StringKey variableName) : IPropertyResolver
+/// <param name="valueType">The type of the value this resolver produces.</param>
+public class SharedVariableResolver(StringKey variableName, Type valueType) : IPropertyResolver
 {
 	private readonly StringKey _variableName = variableName;
 
 	/// <inheritdoc/>
-	/// <remarks>
-	/// Returns <see cref="double"/> as the default numeric type. The actual resolved value depends on the shared
-	/// variable's stored type.
-	/// </remarks>
-	public Type ValueType => typeof(double);
+	public Type ValueType { get; } = valueType;
 
 	/// <inheritdoc/>
-	public Variant128 Resolve(IGraphContext graphContext)
+	public Variant128 Resolve(GraphContext graphContext)
 	{
 		if (graphContext.Owner is null)
 		{

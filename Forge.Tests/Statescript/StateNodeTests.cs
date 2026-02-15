@@ -24,7 +24,7 @@ public class StateNodeTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			timer.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -63,7 +63,7 @@ public class StateNodeTests
 			timer.OutputPorts[TimerNode.OnDeactivatePort],
 			onDeactivateAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -94,7 +94,7 @@ public class StateNodeTests
 			timer.OutputPorts[TimerNode.OnActivatePort],
 			onActivateAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -115,10 +115,10 @@ public class StateNodeTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			timer.InputPorts[ActionNode.InputPort]));
 
-		var context1 = new TestGraphContext();
+		var context1 = new GraphContext();
 		var processor1 = new GraphProcessor(graph, context1);
 
-		var context2 = new TestGraphContext();
+		var context2 = new GraphContext();
 		var processor2 = new GraphProcessor(graph, context2);
 
 		processor1.StartGraph();

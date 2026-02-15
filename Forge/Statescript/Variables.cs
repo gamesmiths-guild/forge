@@ -61,7 +61,7 @@ public class Variables
 	/// <param name="value">The resolved value if the entry was found.</param>
 	/// <returns><see langword="true"/> if the entry was found and resolved successfully, <see langword="false"/>
 	/// otherwise.</returns>
-	public bool TryGet<T>(StringKey name, IGraphContext graphContext, out T value)
+	public bool TryGet<T>(StringKey name, GraphContext graphContext, out T value)
 		where T : unmanaged
 	{
 		value = default;
@@ -85,7 +85,7 @@ public class Variables
 	/// <param name="value">The resolved value if the entry was found.</param>
 	/// <returns><see langword="true"/> if the entry was found and resolved successfully, <see langword="false"/>
 	/// otherwise.</returns>
-	public bool TryGetVariant(StringKey name, IGraphContext graphContext, out Variant128 value)
+	public bool TryGetVariant(StringKey name, GraphContext graphContext, out Variant128 value)
 	{
 		value = default;
 

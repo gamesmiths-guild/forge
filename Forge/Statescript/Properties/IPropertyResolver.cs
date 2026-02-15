@@ -18,5 +18,5 @@ public interface IPropertyResolver
 	/// </summary>
 	/// <param name="graphContext">The graph context providing the runtime state and owner entity.</param>
 	/// <returns>The resolved value as a <see cref="Variant128"/>.</returns>
-	Variant128 Resolve(IGraphContext graphContext);
+	Variant128 Resolve(GraphContext graphContext);
 }

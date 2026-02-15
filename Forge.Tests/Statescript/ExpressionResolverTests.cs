@@ -46,7 +46,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -84,7 +84,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -122,7 +122,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -141,9 +141,9 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 		graph.VariableDefinitions.DefineProperty(
 			"isHealthAboveThreshold",
 			new ComparisonResolver(
-				new VariableResolver("health"),
+				new VariableResolver("health", typeof(double)),
 				ComparisonOperation.GreaterThan,
-				new VariableResolver("threshold")));
+				new VariableResolver("threshold", typeof(double))));
 
 		var condition = new ExpressionConditionNode("isHealthAboveThreshold");
 		var trueAction = new TrackingActionNode();
@@ -163,7 +163,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -201,7 +201,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -239,7 +239,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -271,7 +271,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -290,9 +290,9 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 		graph.VariableDefinitions.DefineProperty(
 			"hasEnoughScore",
 			new ComparisonResolver(
-				new VariableResolver("score"),
+				new VariableResolver("score", typeof(int)),
 				ComparisonOperation.GreaterThanOrEqual,
-				new VariableResolver("requiredScore")));
+				new VariableResolver("requiredScore", typeof(int))));
 
 		var condition = new ExpressionConditionNode("hasEnoughScore");
 		var trueAction = new TrackingActionNode();
@@ -312,7 +312,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -334,7 +334,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			new ComparisonResolver(
 				new AttributeResolver("TestAttributeSet.Attribute5"),
 				ComparisonOperation.GreaterThanOrEqual,
-				new VariableResolver("required")));
+				new VariableResolver("required", typeof(int))));
 
 		var condition = new ExpressionConditionNode("hasEnoughAttribute");
 		var trueAction = new TrackingActionNode();
@@ -354,7 +354,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext
+		var context = new GraphContext
 		{
 			Owner = entity,
 		};

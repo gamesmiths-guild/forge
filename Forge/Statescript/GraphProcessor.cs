@@ -7,7 +7,7 @@ namespace Gamesmiths.Forge.Statescript;
 /// </summary>
 /// <remarks>
 /// <para>The <see cref="GraphProcessor"/> class pairs a shared, immutable <see cref="Graph"/> definition with a
-/// per-execution <see cref="IGraphContext"/> that holds all mutable runtime state (variable values, node contexts,
+/// per-execution <see cref="GraphContext"/> that holds all mutable runtime state (variable values, node contexts,
 /// activation flags). Multiple processors can share the same <see cref="Graph"/> instance, each with its own context
 /// (Flyweight pattern).</para>
 /// <para>A <see cref="GraphProcessor"/> is reusable: after a graph completes naturally or is explicitly stopped,
@@ -16,7 +16,7 @@ namespace Gamesmiths.Forge.Statescript;
 /// <param name="graph">The graph to be executed by this processor.</param>
 /// <param name="graphContext">The context in which the graph will be executed, providing runtime state for this
 /// execution instance.</param>
-public class GraphProcessor(Graph graph, IGraphContext graphContext)
+public class GraphProcessor(Graph graph, GraphContext graphContext)
 {
 	private readonly List<Node> _updateBuffer = [];
 
@@ -29,7 +29,7 @@ public class GraphProcessor(Graph graph, IGraphContext graphContext)
 	/// Gets the context in which the graph is executed. The context holds all mutable runtime state including variable
 	/// values, node contexts, and activation status.
 	/// </summary>
-	public IGraphContext GraphContext { get; } = graphContext;
+	public GraphContext GraphContext { get; } = graphContext;
 
 	/// <summary>
 	/// Gets or sets an optional callback that is invoked when the graph completes naturally (i.e., all state nodes

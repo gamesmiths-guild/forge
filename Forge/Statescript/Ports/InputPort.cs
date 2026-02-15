@@ -33,7 +33,7 @@ public class InputPort : Port
 	/// Receives a message and notifies the owner node.
 	/// </summary>
 	/// <param name="graphContext">The graph context for the message.</param>
-	public void ReceiveMessage(IGraphContext graphContext)
+	public void ReceiveMessage(GraphContext graphContext)
 	{
 		OwnerNode?.OnMessageReceived(this, graphContext);
 	}
@@ -42,7 +42,7 @@ public class InputPort : Port
 	/// Receives a disable subgraph message and notifies the owner node.
 	/// </summary>
 	/// <param name="graphContext">The graph context for the message.</param>
-	public void ReceiveDisableSubgraphMessage(IGraphContext graphContext)
+	public void ReceiveDisableSubgraphMessage(GraphContext graphContext)
 	{
 		OwnerNode?.OnSubgraphDisabledMessageReceived(graphContext);
 	}

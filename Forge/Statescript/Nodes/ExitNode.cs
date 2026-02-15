@@ -32,7 +32,7 @@ public class ExitNode : Node
 	}
 
 	/// <inheritdoc/>
-	protected override void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
+	protected override void HandleMessage(InputPort receiverPort, GraphContext graphContext)
 	{
 		graphContext.Processor?.StopGraph();
 	}

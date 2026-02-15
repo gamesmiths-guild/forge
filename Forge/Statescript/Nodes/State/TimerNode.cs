@@ -22,19 +22,19 @@ public class TimerNode(StringKey durationPropertyName) : StateNode<TimerNodeCont
 	private readonly StringKey _durationPropertyName = durationPropertyName;
 
 	/// <inheritdoc/>
-	protected override void OnActivate(IGraphContext graphContext)
+	protected override void OnActivate(GraphContext graphContext)
 	{
-		TimerNodeContext nodeContext = graphContext.GetOrCreateNodeContext<TimerNodeContext>(NodeID);
+		TimerNodeContext nodeContext = graphContext.GetNodeContext<TimerNodeContext>(NodeID);
 		nodeContext.ElapsedTime = 0;
 	}
 
 	/// <inheritdoc/>
-	protected override void OnDeactivate(IGraphContext graphContext)
+	protected override void OnDeactivate(GraphContext graphContext)
 	{
 	}
 
 	/// <inheritdoc/>
-	protected override void OnUpdate(double deltaTime, IGraphContext graphContext)
+	protected override void OnUpdate(double deltaTime, GraphContext graphContext)
 	{
 		TimerNodeContext nodeContext = graphContext.GetNodeContext<TimerNodeContext>(NodeID);
 

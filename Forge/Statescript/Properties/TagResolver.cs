@@ -21,7 +21,7 @@ public class TagResolver(Tag tag) : IPropertyResolver
 	public Type ValueType => typeof(bool);
 
 	/// <inheritdoc/>
-	public Variant128 Resolve(IGraphContext graphContext)
+	public Variant128 Resolve(GraphContext graphContext)
 	{
 		if (graphContext.Owner is null)
 		{

@@ -31,7 +31,7 @@ public class ActionNodeTests
 			setNode.OutputPorts[ActionNode.OutputPort],
 			readNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -64,7 +64,7 @@ public class ActionNodeTests
 			setNode.OutputPorts[ActionNode.OutputPort],
 			readNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -97,7 +97,7 @@ public class ActionNodeTests
 			readTarget.OutputPorts[ActionNode.OutputPort],
 			readSource.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -125,7 +125,7 @@ public class ActionNodeTests
 			setNode.OutputPorts[ActionNode.OutputPort],
 			readNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -153,7 +153,7 @@ public class ActionNodeTests
 			setNode.OutputPorts[ActionNode.OutputPort],
 			readNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -181,7 +181,7 @@ public class ActionNodeTests
 			setNode.OutputPorts[ActionNode.OutputPort],
 			readNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		var processor = new GraphProcessor(graph, context);
 		processor.StartGraph();
 
@@ -209,10 +209,10 @@ public class ActionNodeTests
 			incrementNode.OutputPorts[ActionNode.OutputPort],
 			setNode.InputPorts[ActionNode.InputPort]));
 
-		var context1 = new TestGraphContext();
+		var context1 = new GraphContext();
 		var processor1 = new GraphProcessor(graph, context1);
 
-		var context2 = new TestGraphContext();
+		var context2 = new GraphContext();
 		var processor2 = new GraphProcessor(graph, context2);
 
 		processor1.StartGraph();

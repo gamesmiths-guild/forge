@@ -16,7 +16,7 @@ namespace Gamesmiths.Forge.Statescript;
 /// <param name="dataBinder">A delegate that writes <typeparamref name="TData"/> fields into graph
 /// <see cref="Variables"/> before the graph starts. Use <see cref="Variables.SetVar{T}"/> to map each relevant field to
 /// the graph variable expected by the graph's nodes.</param>
-public class GraphAbilityBehavior<TData>(Graph graph, IGraphContext graphContext, Action<TData, Variables> dataBinder)
+public class GraphAbilityBehavior<TData>(Graph graph, GraphContext graphContext, Action<TData, Variables> dataBinder)
 	: GraphAbilityBehavior(graph, graphContext), IAbilityBehavior<TData>
 {
 	private readonly Action<TData, Variables> _dataBinder = dataBinder;

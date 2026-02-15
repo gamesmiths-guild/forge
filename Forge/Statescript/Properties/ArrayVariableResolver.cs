@@ -38,7 +38,7 @@ public class ArrayVariableResolver(Variant128[] initialValues, Type elementType)
 	/// <remarks>
 	/// Returns the first element of the array, or a default <see cref="Variant128"/> if the array is empty.
 	/// </remarks>
-	public Variant128 Resolve(IGraphContext graphContext)
+	public Variant128 Resolve(GraphContext graphContext)
 	{
 		return _values.Count > 0 ? _values[0] : default;
 	}

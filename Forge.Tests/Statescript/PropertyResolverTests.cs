@@ -21,7 +21,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var resolver = new AttributeResolver("TestAttributeSet.Attribute5");
 
-		var context = new TestGraphContext { Owner = entity };
+		var context = new GraphContext { Owner = entity };
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -35,7 +35,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var resolver = new AttributeResolver("TestAttributeSet.NonExistent");
 
-		var context = new TestGraphContext { Owner = entity };
+		var context = new GraphContext { Owner = entity };
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -48,7 +48,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 	{
 		var resolver = new AttributeResolver("TestAttributeSet.Attribute5");
 
-		var context = new TestGraphContext { Owner = null };
+		var context = new GraphContext { Owner = null };
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -72,7 +72,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var resolver1 = new AttributeResolver("TestAttributeSet.Attribute1");
 		var resolver90 = new AttributeResolver("TestAttributeSet.Attribute90");
 
-		var context = new TestGraphContext { Owner = entity };
+		var context = new GraphContext { Owner = entity };
 
 		resolver1.Resolve(context).AsInt().Should().Be(1);
 		resolver90.Resolve(context).AsInt().Should().Be(90);
@@ -86,7 +86,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var tag = Tag.RequestTag(_tagsManager, "enemy.undead.zombie");
 		var resolver = new TagResolver(tag);
 
-		var context = new TestGraphContext { Owner = entity };
+		var context = new GraphContext { Owner = entity };
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -101,7 +101,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var tag = Tag.RequestTag(_tagsManager, "enemy.beast.wolf");
 		var resolver = new TagResolver(tag);
 
-		var context = new TestGraphContext { Owner = entity };
+		var context = new GraphContext { Owner = entity };
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -115,7 +115,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var tag = Tag.RequestTag(_tagsManager, "enemy.undead.zombie");
 		var resolver = new TagResolver(tag);
 
-		var context = new TestGraphContext { Owner = null };
+		var context = new GraphContext { Owner = null };
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -140,7 +140,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var parentTag = Tag.RequestTag(_tagsManager, "enemy.undead");
 		var resolver = new TagResolver(parentTag);
 
-		var context = new TestGraphContext { Owner = entity };
+		var context = new GraphContext { Owner = entity };
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -153,7 +153,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 	{
 		var resolver = new VariantResolver(new Variant128(42.0), typeof(double));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -168,7 +168,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 
 		resolver.Set(25);
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		Variant128 result = resolver.Resolve(context);
 
 		result.AsInt().Should().Be(25);
@@ -194,10 +194,10 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("speed", 7.5);
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		context.GraphVariables.InitializeFrom(graph.VariableDefinitions);
 
-		var resolver = new VariableResolver("speed");
+		var resolver = new VariableResolver("speed", typeof(double));
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -210,10 +210,10 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 	{
 		var graph = new Graph();
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		context.GraphVariables.InitializeFrom(graph.VariableDefinitions);
 
-		var resolver = new VariableResolver("nonexistent");
+		var resolver = new VariableResolver("nonexistent", typeof(double));
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -227,10 +227,10 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("counter", 0);
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 		context.GraphVariables.InitializeFrom(graph.VariableDefinitions);
 
-		var resolver = new VariableResolver("counter");
+		var resolver = new VariableResolver("counter", typeof(int));
 
 		resolver.Resolve(context).AsInt().Should().Be(0);
 
@@ -243,7 +243,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 	[Trait("Resolver", "Variable")]
 	public void Variable_resolver_value_type_is_double()
 	{
-		var resolver = new VariableResolver("anything");
+		var resolver = new VariableResolver("anything", typeof(double));
 
 		resolver.ValueType.Should().Be(typeof(double));
 	}
@@ -269,7 +269,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 			ComparisonOperation.Equal,
 			new VariantResolver(new Variant128(5.0), typeof(double)));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 
 		resolver.Resolve(context).AsBool().Should().BeTrue();
 	}
@@ -283,7 +283,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 			ComparisonOperation.Equal,
 			new VariantResolver(new Variant128(10.0), typeof(double)));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 
 		resolver.Resolve(context).AsBool().Should().BeFalse();
 	}
@@ -297,7 +297,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 			ComparisonOperation.NotEqual,
 			new VariantResolver(new Variant128(2.0), typeof(double)));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 
 		resolver.Resolve(context).AsBool().Should().BeTrue();
 	}
@@ -311,7 +311,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 			ComparisonOperation.LessThan,
 			new VariantResolver(new Variant128(10.0), typeof(double)));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 
 		resolver.Resolve(context).AsBool().Should().BeTrue();
 	}
@@ -325,7 +325,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 			ComparisonOperation.LessThan,
 			new VariantResolver(new Variant128(10.0), typeof(double)));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 
 		resolver.Resolve(context).AsBool().Should().BeFalse();
 	}
@@ -339,7 +339,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 			ComparisonOperation.GreaterThan,
 			new VariantResolver(new Variant128(10.0), typeof(double)));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 
 		resolver.Resolve(context).AsBool().Should().BeTrue();
 	}
@@ -353,7 +353,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 			ComparisonOperation.GreaterThanOrEqual,
 			new VariantResolver(new Variant128(10.0), typeof(double)));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 
 		resolver.Resolve(context).AsBool().Should().BeTrue();
 	}
@@ -369,7 +369,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 			ComparisonOperation.GreaterThan,
 			new VariantResolver(new Variant128(3.0), typeof(double)));
 
-		var context = new TestGraphContext { Owner = entity };
+		var context = new GraphContext { Owner = entity };
 
 		resolver.Resolve(context).AsBool().Should().BeTrue("Attribute5 (5) > 3");
 	}
@@ -381,9 +381,9 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		entity.SharedVariables.DefineVariable("abilityLock", true);
 
-		var resolver = new SharedVariableResolver("abilityLock");
+		var resolver = new SharedVariableResolver("abilityLock", typeof(bool));
 
-		var context = new TestGraphContext { Owner = entity };
+		var context = new GraphContext { Owner = entity };
 
 		resolver.Resolve(context).AsBool().Should().BeTrue();
 	}
@@ -392,9 +392,9 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 	[Trait("Resolver", "SharedVariable")]
 	public void Shared_variable_resolver_returns_default_when_owner_is_null()
 	{
-		var resolver = new SharedVariableResolver("abilityLock");
+		var resolver = new SharedVariableResolver("abilityLock", typeof(double));
 
-		var context = new TestGraphContext { Owner = null };
+		var context = new GraphContext { Owner = null };
 
 		resolver.Resolve(context).AsDouble().Should().Be(0);
 	}
@@ -404,9 +404,9 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 	public void Shared_variable_resolver_returns_default_for_missing_variable()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var resolver = new SharedVariableResolver("nonexistent");
+		var resolver = new SharedVariableResolver("nonexistent", typeof(double));
 
-		var context = new TestGraphContext { Owner = entity };
+		var context = new GraphContext { Owner = entity };
 
 		resolver.Resolve(context).AsDouble().Should().Be(0);
 	}
@@ -415,7 +415,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 	[Trait("Resolver", "SharedVariable")]
 	public void Shared_variable_resolver_value_type_is_double()
 	{
-		var resolver = new SharedVariableResolver("anything");
+		var resolver = new SharedVariableResolver("anything", typeof(double));
 
 		resolver.ValueType.Should().Be(typeof(double));
 	}
@@ -427,10 +427,10 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		entity.SharedVariables.DefineVariable("sharedCounter", 0);
 
-		var resolver = new SharedVariableResolver("sharedCounter");
+		var resolver = new SharedVariableResolver("sharedCounter", typeof(int));
 
-		var context1 = new TestGraphContext { Owner = entity };
-		var context2 = new TestGraphContext { Owner = entity };
+		var context1 = new GraphContext { Owner = entity };
+		var context2 = new GraphContext { Owner = entity };
 
 		resolver.Resolve(context1).AsInt().Should().Be(0);
 
@@ -448,7 +448,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 			[new Variant128(10), new Variant128(20), new Variant128(30)],
 			typeof(int));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 
 		resolver.Resolve(context).AsInt().Should().Be(10);
 	}
@@ -459,7 +459,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 	{
 		var resolver = new ArrayVariableResolver([], typeof(int));
 
-		var context = new TestGraphContext();
+		var context = new GraphContext();
 
 		resolver.Resolve(context).AsInt().Should().Be(0);
 	}

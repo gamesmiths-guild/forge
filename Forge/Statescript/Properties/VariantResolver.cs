@@ -55,7 +55,7 @@ public class VariantResolver(Variant128 initialValue, Type valueType) : IPropert
 	}
 
 	/// <inheritdoc/>
-	public Variant128 Resolve(IGraphContext graphContext)
+	public Variant128 Resolve(GraphContext graphContext)
 	{
 		return Value;
 	}

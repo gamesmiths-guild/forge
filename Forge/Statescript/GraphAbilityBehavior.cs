@@ -17,7 +17,7 @@ namespace Gamesmiths.Forge.Statescript;
 /// </remarks>
 /// <param name="graph">The graph definition to execute when the ability activates.</param>
 /// <param name="graphContext">The per-instance context that holds mutable runtime state for the graph.</param>
-public class GraphAbilityBehavior(Graph graph, IGraphContext graphContext) : IAbilityBehavior
+public class GraphAbilityBehavior(Graph graph, GraphContext graphContext) : IAbilityBehavior
 {
 	/// <summary>
 	/// Gets the <see cref="GraphProcessor"/> that drives this behavior. Callers must invoke

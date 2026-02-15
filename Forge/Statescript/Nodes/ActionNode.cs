@@ -24,7 +24,7 @@ public abstract class ActionNode : Node
 	/// Executes the action associated with this node. This method is called when the input port receives a message.
 	/// </summary>
 	/// <param name="graphContext">The current graph context.</param>
-	protected abstract void Execute(IGraphContext graphContext);
+	protected abstract void Execute(GraphContext graphContext);
 
 	/// <inheritdoc/>
 #pragma warning disable SA1202 // Elements should be ordered by access
@@ -42,7 +42,7 @@ public abstract class ActionNode : Node
 	}
 
 	/// <inheritdoc/>
-	protected override void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
+	protected override void HandleMessage(InputPort receiverPort, GraphContext graphContext)
 	{
 		Execute(graphContext);
 		OutputPorts[OutputPort].EmitMessage(graphContext);

@@ -66,14 +66,14 @@ public abstract class Node
 
 	internal void OnMessageReceived(
 		InputPort receiverPort,
-		IGraphContext graphContext)
+		GraphContext graphContext)
 	{
 		graphContext.InternalNodeActivationStatus[NodeID] = true;
 
 		HandleMessage(receiverPort, graphContext);
 	}
 
-	internal void OnSubgraphDisabledMessageReceived(IGraphContext graphContext)
+	internal void OnSubgraphDisabledMessageReceived(GraphContext graphContext)
 	{
 		if (!graphContext.InternalNodeActivationStatus.TryAdd(NodeID, false))
 		{
@@ -137,7 +137,7 @@ public abstract class Node
 	/// </summary>
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
 	/// <param name="graphContext">The graph context.</param>
-	internal virtual void Update(double deltaTime, IGraphContext graphContext)
+	internal virtual void Update(double deltaTime, GraphContext graphContext)
 	{
 	}
 
@@ -161,7 +161,7 @@ public abstract class Node
 	/// </summary>
 	/// <param name="graphContext">The graph context.</param>
 	/// <param name="portIds">The IDs of the output ports to emit the message from.</param>
-	protected virtual void EmitMessage(IGraphContext graphContext, params int[] portIds)
+	protected virtual void EmitMessage(GraphContext graphContext, params int[] portIds)
 	{
 		foreach (var portId in portIds)
 		{
@@ -174,7 +174,7 @@ public abstract class Node
 	/// </summary>
 	/// <param name="receiverPort">The input port that received the message.</param>
 	/// <param name="graphContext">The graph context.</param>
-	protected virtual void HandleMessage(InputPort receiverPort, IGraphContext graphContext)
+	protected virtual void HandleMessage(InputPort receiverPort, GraphContext graphContext)
 	{
 	}
 
@@ -182,7 +182,7 @@ public abstract class Node
 	/// Called before the node is disabled.
 	/// </summary>
 	/// <param name="graphContext">The graph context.</param>
-	protected virtual void BeforeDisable(IGraphContext graphContext)
+	protected virtual void BeforeDisable(GraphContext graphContext)
 	{
 	}
 
@@ -190,7 +190,7 @@ public abstract class Node
 	/// Called after the node is disabled.
 	/// </summary>
 	/// <param name="graphContext">The graph context.</param>
-	protected virtual void AfterDisable(IGraphContext graphContext)
+	protected virtual void AfterDisable(GraphContext graphContext)
 	{
 	}
 }

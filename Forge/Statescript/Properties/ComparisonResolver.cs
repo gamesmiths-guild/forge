@@ -32,7 +32,7 @@ public class ComparisonResolver(
 	public Type ValueType => typeof(bool);
 
 	/// <inheritdoc/>
-	public Variant128 Resolve(IGraphContext graphContext)
+	public Variant128 Resolve(GraphContext graphContext)
 	{
 		var leftValue = ResolveAsDouble(_left, graphContext);
 		var rightValue = ResolveAsDouble(_right, graphContext);
@@ -53,7 +53,7 @@ public class ComparisonResolver(
 		return new Variant128(result);
 	}
 
-	private static double ResolveAsDouble(IPropertyResolver resolver, IGraphContext graphContext)
+	private static double ResolveAsDouble(IPropertyResolver resolver, GraphContext graphContext)
 	{
 		Variant128 value = resolver.Resolve(graphContext);
 
@@ -114,7 +114,7 @@ public class ComparisonResolver(
 			return (double)value.AsDecimal();
 		}
 
-		// Fallback: reinterpret as double (works when the resolver stored a double).
-		return value.AsDouble();
+		throw new ArgumentException(
+			$"ComparisonResolver does not support operand type '{type}'. Only numeric types are allowed.");
 	}
 }

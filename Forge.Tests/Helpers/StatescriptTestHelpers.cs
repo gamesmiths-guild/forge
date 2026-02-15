@@ -1,61 +1,10 @@
 // Copyright © Gamesmiths Guild.
 #pragma warning disable SA1649, SA1402 // File name should match first type name
 
-using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
-
-internal sealed class TestGraphContext : IGraphContext
-{
-	private readonly Dictionary<Guid, INodeContext> _nodeContexts = [];
-
-	public bool IsActive => ActiveStateNodes.Count > 0;
-
-	public IForgeEntity? Owner { get; set; }
-
-	public Variables GraphVariables { get; } = new Variables();
-
-	public Dictionary<Guid, bool> InternalNodeActivationStatus { get; } = [];
-
-	public HashSet<Node> ActiveStateNodes { get; } = [];
-
-	public GraphProcessor? Processor { get; set; }
-
-	public bool HasStarted { get; set; }
-
-	public int NodeContextCount => _nodeContexts.Count;
-
-	public T GetOrCreateNodeContext<T>(Guid nodeID)
-		where T : INodeContext, new()
-	{
-		if (_nodeContexts.TryGetValue(nodeID, out INodeContext? context))
-		{
-			return (T)context;
-		}
-
-		var newContext = new T();
-		_nodeContexts[nodeID] = newContext;
-		return newContext;
-	}
-
-	public T GetNodeContext<T>(Guid nodeID)
-		where T : INodeContext, new()
-	{
-		if (_nodeContexts.TryGetValue(nodeID, out INodeContext? context))
-		{
-			return (T)context;
-		}
-
-		return default!;
-	}
-
-	public void RemoveAllNodeContext()
-	{
-		_nodeContexts.Clear();
-	}
-}
 
 internal sealed class TrackingActionNode(string? name = null, List<string>? executionLog = null) : ActionNode
 {
@@ -64,7 +13,7 @@ internal sealed class TrackingActionNode(string? name = null, List<string>? exec
 
 	public int ExecutionCount { get; private set; }
 
-	protected override void Execute(IGraphContext graphContext)
+	protected override void Execute(GraphContext graphContext)
 	{
 		ExecutionCount++;
 
@@ -79,7 +28,7 @@ internal sealed class FixedConditionNode(bool result) : ConditionNode
 {
 	private readonly bool _result = result;
 
-	protected override bool Test(IGraphContext graphContext)
+	protected override bool Test(GraphContext graphContext)
 	{
 		return _result;
 	}
@@ -103,7 +52,7 @@ internal sealed class ThresholdConditionNode : ConditionNode
 		_fixedThreshold = threshold;
 	}
 
-	protected override bool Test(IGraphContext graphContext)
+	protected override bool Test(GraphContext graphContext)
 	{
 		graphContext.GraphVariables.TryGetVar(_variableName, out int value);
 
@@ -121,7 +70,7 @@ internal sealed class IncrementCounterNode(string variableName) : ActionNode
 {
 	private readonly string _variableName = variableName;
 
-	protected override void Execute(IGraphContext graphContext)
+	protected override void Execute(GraphContext graphContext)
 	{
 		graphContext.GraphVariables.TryGetVar(_variableName, out int currentValue);
 		graphContext.GraphVariables.SetVar(_variableName, currentValue + 1);
@@ -135,7 +84,7 @@ internal sealed class ReadVariableNode<T>(string variableName) : ActionNode
 
 	public T LastReadValue { get; private set; }
 
-	protected override void Execute(IGraphContext graphContext)
+	protected override void Execute(GraphContext graphContext)
 	{
 		graphContext.GraphVariables.TryGetVar(_variableName, out T value);
 		LastReadValue = value;
