@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Events;
+using Gamesmiths.Forge.Statescript;
 
 namespace Gamesmiths.Forge.Core;
 
@@ -34,4 +35,10 @@ public interface IForgeEntity
 	/// Gets the event bus for this entity.
 	/// </summary>
 	EventManager Events { get; }
+
+	/// <summary>
+	/// Gets the shared variables for this entity. Shared variables are accessible by all graph instances running on
+	/// this entity, providing a communication channel between abilities and scripts besides tags and attributes.
+	/// </summary>
+	Variables SharedVariables { get; }
 }

@@ -691,4 +691,76 @@ public class GraphProcessorTests
 		context.HasStarted.Should().BeFalse();
 		context.Processor.Should().BeNull();
 	}
+
+	[Fact]
+	[Trait("Graph", "ArrayVariables")]
+	public void Array_variable_is_initialized_from_definition()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineArrayVariable("targets", 10, 20, 30);
+
+		var context = new TestGraphContext();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
+
+		context.GraphVariables.GetArrayLength("targets").Should().Be(3);
+		context.GraphVariables.TryGetArrayElement("targets", 0, out int v0).Should().BeTrue();
+		context.GraphVariables.TryGetArrayElement("targets", 1, out int v1).Should().BeTrue();
+		context.GraphVariables.TryGetArrayElement("targets", 2, out int v2).Should().BeTrue();
+		v0.Should().Be(10);
+		v1.Should().Be(20);
+		v2.Should().Be(30);
+	}
+
+	[Fact]
+	[Trait("Graph", "ArrayVariables")]
+	public void Array_variable_has_independent_state_per_processor()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineArrayVariable("ids", 1, 2, 3);
+
+		var context1 = new TestGraphContext();
+		var processor1 = new GraphProcessor(graph, context1);
+		processor1.StartGraph();
+
+		var context2 = new TestGraphContext();
+		var processor2 = new GraphProcessor(graph, context2);
+		processor2.StartGraph();
+
+		context1.GraphVariables.SetArrayElement("ids", 0, 99);
+
+		context1.GraphVariables.TryGetArrayElement("ids", 0, out int val1);
+		context2.GraphVariables.TryGetArrayElement("ids", 0, out int val2);
+
+		val1.Should().Be(99);
+		val2.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Graph", "ArrayVariables")]
+	public void Array_variable_returns_negative_length_for_nonexistent_variable()
+	{
+		var graph = new Graph();
+
+		var context = new TestGraphContext();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
+
+		context.GraphVariables.GetArrayLength("nonexistent").Should().Be(-1);
+	}
+
+	[Fact]
+	[Trait("Graph", "ArrayVariables")]
+	public void Array_variable_try_get_returns_false_for_out_of_range_index()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineArrayVariable("data", 1.0, 2.0);
+
+		var context = new TestGraphContext();
+		var processor = new GraphProcessor(graph, context);
+		processor.StartGraph();
+
+		context.GraphVariables.TryGetArrayElement("data", 5, out double _).Should().BeFalse();
+		context.GraphVariables.TryGetArrayElement("data", -1, out double _).Should().BeFalse();
+	}
 }

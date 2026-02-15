@@ -61,6 +61,47 @@ public class GraphVariableDefinitions
 	}
 
 	/// <summary>
+	/// Adds a mutable array variable definition with the specified name and initial values. At runtime, a fresh
+	/// <see cref="ArrayVariableResolver"/> is created for each graph execution with copies of the initial values.
+	/// </summary>
+	/// <typeparam name="T">The type of each element. Must be supported by <see cref="Variant128"/>.</typeparam>
+	/// <param name="name">The name of the array variable.</param>
+	/// <param name="initialValues">The initial values for the array elements.</param>
+	/// <exception cref="ArgumentException">Thrown if the type T is not supported by <see cref="Variant128"/>.
+	/// </exception>
+	public void DefineArrayVariable<T>(StringKey name, params T[] initialValues)
+	{
+		var variants = new Variant128[initialValues.Length];
+		for (var i = 0; i < initialValues.Length; i++)
+		{
+			variants[i] = initialValues[i] switch
+			{
+				bool @bool => new Variant128(@bool),
+				byte @byte => new Variant128(@byte),
+				sbyte @sbyte => new Variant128(@sbyte),
+				char @char => new Variant128(@char),
+				decimal @decimal => new Variant128(@decimal),
+				double @double => new Variant128(@double),
+				float @float => new Variant128(@float),
+				int @int => new Variant128(@int),
+				uint @uint => new Variant128(@uint),
+				long @long => new Variant128(@long),
+				ulong @ulong => new Variant128(@ulong),
+				short @short => new Variant128(@short),
+				ushort @ushort => new Variant128(@ushort),
+				Vector2 vector2 => new Variant128(vector2),
+				Vector3 vector3 => new Variant128(vector3),
+				Vector4 vector4 => new Variant128(vector4),
+				Plane plane => new Variant128(plane),
+				Quaternion quaternion => new Variant128(quaternion),
+				_ => throw new ArgumentException($"{typeof(T)} is not supported by Variant128"),
+			};
+		}
+
+		Definitions.Add(new PropertyDefinition(name, new ArrayVariableResolver(variants, typeof(T))));
+	}
+
+	/// <summary>
 	/// Adds a read-only property definition with the specified name and resolver.
 	/// </summary>
 	/// <param name="name">The name of the property.</param>

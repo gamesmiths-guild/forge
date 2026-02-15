@@ -20,22 +20,17 @@ public class VariantResolver(Variant128 initialValue, Type valueType) : IPropert
 	/// <inheritdoc/>
 	public Type ValueType { get; } = valueType;
 
-	/// <inheritdoc/>
-	public Variant128 Resolve(IGraphContext graphContext)
-	{
-		return Value;
-	}
-
 	/// <summary>
-	/// Sets the value from a typed input, converting it to a <see cref="Variant128"/>.
+	/// Creates a <see cref="Variant128"/> from a typed value.
 	/// </summary>
-	/// <typeparam name="T">The type of the value to set. Must be supported by <see cref="Variant128"/>.</typeparam>
-	/// <param name="value">The value to set.</param>
+	/// <typeparam name="T">The type of the value. Must be supported by <see cref="Variant128"/>.</typeparam>
+	/// <param name="value">The value to convert.</param>
+	/// <returns>A <see cref="Variant128"/> containing the value.</returns>
 	/// <exception cref="ArgumentException">Thrown if the type T is not supported by <see cref="Variant128"/>.
 	/// </exception>
-	public void Set<T>(T value)
+	public static Variant128 CreateVariant<T>(T value)
 	{
-		Value = value switch
+		return value switch
 		{
 			bool @bool => new Variant128(@bool),
 			byte @byte => new Variant128(@byte),
@@ -57,5 +52,23 @@ public class VariantResolver(Variant128 initialValue, Type valueType) : IPropert
 			Quaternion quaternion => new Variant128(quaternion),
 			_ => throw new ArgumentException($"{typeof(T)} is not supported by Variant128"),
 		};
+	}
+
+	/// <inheritdoc/>
+	public Variant128 Resolve(IGraphContext graphContext)
+	{
+		return Value;
+	}
+
+	/// <summary>
+	/// Sets the value from a typed input, converting it to a <see cref="Variant128"/>.
+	/// </summary>
+	/// <typeparam name="T">The type of the value to set. Must be supported by <see cref="Variant128"/>.</typeparam>
+	/// <param name="value">The value to set.</param>
+	/// <exception cref="ArgumentException">Thrown if the type T is not supported by <see cref="Variant128"/>.
+	/// </exception>
+	public void Set<T>(T value)
+	{
+		Value = CreateVariant(value);
 	}
 }
