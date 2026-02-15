@@ -17,7 +17,7 @@ public class StateNodeTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 2.0);
 
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
@@ -50,7 +50,7 @@ public class StateNodeTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 1.0);
 
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		var onDeactivateAction = new TrackingActionNode();
 
 		graph.AddNode(timer);
@@ -60,7 +60,7 @@ public class StateNodeTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			timer.InputPorts[ActionNode.InputPort]));
 		graph.AddConnection(new Connection(
-			timer.OutputPorts[TimerStateNode.OnDeactivatePort],
+			timer.OutputPorts[TimerNode.OnDeactivatePort],
 			onDeactivateAction.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
@@ -81,7 +81,7 @@ public class StateNodeTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
 
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		var onActivateAction = new TrackingActionNode();
 
 		graph.AddNode(timer);
@@ -91,7 +91,7 @@ public class StateNodeTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			timer.InputPorts[ActionNode.InputPort]));
 		graph.AddConnection(new Connection(
-			timer.OutputPorts[TimerStateNode.OnActivatePort],
+			timer.OutputPorts[TimerNode.OnActivatePort],
 			onActivateAction.InputPorts[ActionNode.InputPort]));
 
 		var context = new TestGraphContext();
@@ -108,7 +108,7 @@ public class StateNodeTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 2.0);
 
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(

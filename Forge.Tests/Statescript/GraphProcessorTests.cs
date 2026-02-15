@@ -269,7 +269,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
 
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -417,7 +417,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
 
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		var exitNode = new ExitNode();
 
 		graph.AddNode(timer);
@@ -478,8 +478,8 @@ public class GraphProcessorTests
 		graph.VariableDefinitions.DefineVariable("shortDuration", 1.0);
 		graph.VariableDefinitions.DefineVariable("longDuration", 10.0);
 
-		var shortTimer = new TimerStateNode("shortDuration");
-		var longTimer = new TimerStateNode("longDuration");
+		var shortTimer = new TimerNode("shortDuration");
+		var longTimer = new TimerNode("longDuration");
 		var exitNode = new ExitNode();
 
 		graph.AddNode(shortTimer);
@@ -516,7 +516,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
 
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -541,7 +541,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 2.0);
 
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -588,7 +588,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 2.0);
 
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -618,8 +618,8 @@ public class GraphProcessorTests
 		graph.VariableDefinitions.DefineVariable("shortDuration", 1.0);
 		graph.VariableDefinitions.DefineVariable("longDuration", 3.0);
 
-		var shortTimer = new TimerStateNode("shortDuration");
-		var longTimer = new TimerStateNode("longDuration");
+		var shortTimer = new TimerNode("shortDuration");
+		var longTimer = new TimerNode("longDuration");
 
 		graph.AddNode(shortTimer);
 		graph.AddNode(longTimer);
@@ -658,7 +658,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 1.0);
 
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],

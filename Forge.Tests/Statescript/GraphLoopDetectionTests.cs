@@ -218,7 +218,7 @@ public sealed class GraphLoopDetectionTests : IDisposable
 	{
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		graph.AddNode(timer);
 
 		graph.AddConnection(new Connection(
@@ -238,7 +238,7 @@ public sealed class GraphLoopDetectionTests : IDisposable
 	{
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		var action = new TrackingActionNode();
 		graph.AddNode(timer);
 		graph.AddNode(action);
@@ -263,7 +263,7 @@ public sealed class GraphLoopDetectionTests : IDisposable
 	{
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		var exitNode = new ExitNode();
 		graph.AddNode(timer);
 		graph.AddNode(exitNode);
@@ -287,7 +287,7 @@ public sealed class GraphLoopDetectionTests : IDisposable
 	{
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		var action = new TrackingActionNode();
 		graph.AddNode(timer);
 		graph.AddNode(action);
@@ -312,8 +312,8 @@ public sealed class GraphLoopDetectionTests : IDisposable
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("short", 1.0);
 		graph.VariableDefinitions.DefineVariable("long", 10.0);
-		var shortTimer = new TimerStateNode("short");
-		var longTimer = new TimerStateNode("long");
+		var shortTimer = new TimerNode("short");
+		var longTimer = new TimerNode("long");
 		graph.AddNode(shortTimer);
 		graph.AddNode(longTimer);
 
@@ -340,8 +340,8 @@ public sealed class GraphLoopDetectionTests : IDisposable
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("d1", 5.0);
 		graph.VariableDefinitions.DefineVariable("d2", 5.0);
-		var timer1 = new TimerStateNode("d1");
-		var timer2 = new TimerStateNode("d2");
+		var timer1 = new TimerNode("d1");
+		var timer2 = new TimerNode("d2");
 		graph.AddNode(timer1);
 		graph.AddNode(timer2);
 
@@ -364,7 +364,7 @@ public sealed class GraphLoopDetectionTests : IDisposable
 	{
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		graph.AddNode(timer);
 
 		graph.AddConnection(new Connection(
@@ -385,8 +385,8 @@ public sealed class GraphLoopDetectionTests : IDisposable
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("d1", 5.0);
 		graph.VariableDefinitions.DefineVariable("d2", 5.0);
-		var timer1 = new TimerStateNode("d1");
-		var timer2 = new TimerStateNode("d2");
+		var timer1 = new TimerNode("d1");
+		var timer2 = new TimerNode("d2");
 		graph.AddNode(timer1);
 		graph.AddNode(timer2);
 
@@ -416,7 +416,7 @@ public sealed class GraphLoopDetectionTests : IDisposable
 	{
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		var action = new TrackingActionNode();
 		graph.AddNode(timer);
 		graph.AddNode(action);
@@ -444,7 +444,7 @@ public sealed class GraphLoopDetectionTests : IDisposable
 	{
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		graph.AddNode(timer);
 
 		graph.AddConnection(new Connection(
@@ -470,8 +470,8 @@ public sealed class GraphLoopDetectionTests : IDisposable
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("d1", 5.0);
 		graph.VariableDefinitions.DefineVariable("d2", 5.0);
-		var timer1 = new TimerStateNode("d1");
-		var timer2 = new TimerStateNode("d2");
+		var timer1 = new TimerNode("d1");
+		var timer2 = new TimerNode("d2");
 		var action1 = new TrackingActionNode();
 		var action2 = new TrackingActionNode();
 		graph.AddNode(timer1);
@@ -507,7 +507,7 @@ public sealed class GraphLoopDetectionTests : IDisposable
 		// Disable cascades through actions but they don't emit regular messages on disable.
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		var action1 = new TrackingActionNode();
 		var action2 = new TrackingActionNode();
 		graph.AddNode(timer);
@@ -541,8 +541,8 @@ public sealed class GraphLoopDetectionTests : IDisposable
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("d1", 5.0);
 		graph.VariableDefinitions.DefineVariable("d2", 3.0);
-		var timer1 = new TimerStateNode("d1");
-		var timer2 = new TimerStateNode("d2");
+		var timer1 = new TimerNode("d1");
+		var timer2 = new TimerNode("d2");
 		graph.AddNode(timer1);
 		graph.AddNode(timer2);
 
@@ -654,7 +654,7 @@ public sealed class GraphLoopDetectionTests : IDisposable
 	{
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
-		var timer = new TimerStateNode("duration");
+		var timer = new TimerNode("duration");
 		var condition = new FixedConditionNode(result: true);
 		var action = new TrackingActionNode();
 		graph.AddNode(timer);

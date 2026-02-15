@@ -17,7 +17,7 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// </remarks>
 /// <param name="durationPropertyName">The name of the graph variable or property that provides the timer duration in
 /// seconds.</param>
-public class TimerStateNode(StringKey durationPropertyName) : StateNode<TimerNodeContext>
+public class TimerNode(StringKey durationPropertyName) : StateNode<TimerNodeContext>
 {
 	private readonly StringKey _durationPropertyName = durationPropertyName;
 
