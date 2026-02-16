@@ -9,6 +9,7 @@ using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Events;
+using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Core;
 using Gamesmiths.Forge.Tests.Helpers;
@@ -1015,6 +1016,8 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		public EntityAbilities Abilities { get; }
 
 		public EventManager Events { get; }
+
+		public Variables SharedVariables { get; } = new Variables();
 
 		public NoAttributesEntity(TagsManager tagsManager, CuesManager cuesManager)
 		{

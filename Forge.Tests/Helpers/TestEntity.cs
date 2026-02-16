@@ -4,6 +4,7 @@ using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Events;
+using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
@@ -21,6 +22,8 @@ public class TestEntity : IForgeEntity
 	public EntityAbilities Abilities { get; }
 
 	public EventManager Events { get; }
+
+	public Variables SharedVariables { get; } = new Variables();
 
 	public TestEntity(TagsManager tagsManager, CuesManager cuesManager)
 	{

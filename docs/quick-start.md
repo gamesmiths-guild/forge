@@ -682,8 +682,8 @@ public class HealthDrainExecution : CustomExecution
 
         // Get attribute values
         int targetHealth = CaptureAttributeMagnitude(TargetHealth, effect, target, effectEvaluatedData);
-        int sourceHealth = CaptureAttributeMagnitude(SourceHealth, effect, effect.Ownership.Owner, effectEvaluatedData);
-        int sourceStrength = CaptureAttributeMagnitude(SourceStrength, effect, effect.Ownership.Owner, effectEvaluatedData);
+        int sourceHealth = CaptureAttributeMagnitude(SourceHealth, effect, effect.Ownership.Source, effectEvaluatedData);
+        int sourceStrength = CaptureAttributeMagnitude(SourceStrength, effect, effect.Ownership.Source, effectEvaluatedData);
 
         // Calculate health drain amount based on source strength
         float drainAmount = sourceStrength * 0.5f;

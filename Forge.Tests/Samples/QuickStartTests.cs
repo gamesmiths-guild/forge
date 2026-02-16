@@ -22,6 +22,7 @@ using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests;
 using Gamesmiths.Forge.Tests.Core;
+using Gamesmiths.Forge.Statescript;
 using static Gamesmiths.Forge.Tests.Samples.QuickStartTests;
 
 namespace Gamesmiths.Forge.Tests.Samples;
@@ -1085,6 +1086,8 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 
 		public EventManager Events { get; }
 
+		public Variables SharedVariables { get; } = new Variables();
+
 		public Player(TagsManager tagsManager, CuesManager cuesManager)
 		{
 			// Initialize base tags during construction
@@ -1209,12 +1212,12 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			int sourceHealth = CaptureAttributeMagnitude(
 				SourceHealth,
 				effect,
-				effect.Ownership.Owner,
+				effect.Ownership.Source,
 				effectEvaluatedData);
 			int sourceStrength = CaptureAttributeMagnitude(
 				SourceStrength,
 				effect,
-				effect.Ownership.Owner,
+				effect.Ownership.Source,
 				effectEvaluatedData);
 
 			// Calculate health drain amount based on source strength
