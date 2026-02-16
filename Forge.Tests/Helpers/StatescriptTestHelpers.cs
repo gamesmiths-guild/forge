@@ -114,3 +114,13 @@ internal sealed class TryGetActivationContextNode<T> : ActionNode
 		CapturedContext = data;
 	}
 }
+
+internal sealed class CaptureGraphContextNode : ActionNode
+{
+	public GraphContext? CapturedGraphContext { get; private set; }
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		CapturedGraphContext = graphContext;
+	}
+}

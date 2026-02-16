@@ -1,7 +1,13 @@
 // Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
+using Gamesmiths.Forge.Abilities;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Components;
+using Gamesmiths.Forge.Effects.Duration;
+using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Condition;
@@ -346,8 +352,28 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var processor = new GraphProcessor(graph, entity);
-		processor.StartGraph();
+		var behavior = new GraphAbilityBehavior(graph);
+
+		var abilityData = new AbilityData("AttrResolverTest", behaviorFactory: () => behavior);
+
+		var grantConfig = new GrantAbilityConfig(
+			abilityData,
+			new ScalableInt(1),
+			AbilityDeactivationPolicy.CancelImmediately,
+			AbilityDeactivationPolicy.CancelImmediately,
+			false,
+			false,
+			LevelComparison.Higher);
+
+		var grantEffectData = new EffectData(
+			"Grant",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [new GrantAbilityEffectComponent([grantConfig])]);
+
+		var grantEffect = new Effect(grantEffectData, new EffectOwnership(null, null));
+		_ = entity.EffectsManager.ApplyEffect(grantEffect);
+		entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle);
+		handle!.Activate(out _);
 
 		trueAction.ExecutionCount.Should().Be(1);
 		falseAction.ExecutionCount.Should().Be(0);

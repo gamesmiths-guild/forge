@@ -1,8 +1,15 @@
 // Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
+using Gamesmiths.Forge.Abilities;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Components;
+using Gamesmiths.Forge.Effects.Duration;
+using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Statescript;
+using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
@@ -21,7 +28,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var resolver = new AttributeResolver("TestAttributeSet.Attribute5");
 
-		var context = new GraphContext { Owner = entity };
+		GraphContext context = CreateAbilityGraphContext(entity);
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -35,7 +42,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var resolver = new AttributeResolver("TestAttributeSet.NonExistent");
 
-		var context = new GraphContext { Owner = entity };
+		GraphContext context = CreateAbilityGraphContext(entity);
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -44,11 +51,11 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 
 	[Fact]
 	[Trait("Resolver", "Attribute")]
-	public void Attribute_resolver_returns_default_when_owner_is_null()
+	public void Attribute_resolver_returns_default_when_no_activation_context()
 	{
 		var resolver = new AttributeResolver("TestAttributeSet.Attribute5");
 
-		var context = new GraphContext { Owner = null };
+		var context = new GraphContext();
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -72,7 +79,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var resolver1 = new AttributeResolver("TestAttributeSet.Attribute1");
 		var resolver90 = new AttributeResolver("TestAttributeSet.Attribute90");
 
-		var context = new GraphContext { Owner = entity };
+		GraphContext context = CreateAbilityGraphContext(entity);
 
 		resolver1.Resolve(context).AsInt().Should().Be(1);
 		resolver90.Resolve(context).AsInt().Should().Be(90);
@@ -86,7 +93,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var tag = Tag.RequestTag(_tagsManager, "enemy.undead.zombie");
 		var resolver = new TagResolver(tag);
 
-		var context = new GraphContext { Owner = entity };
+		GraphContext context = CreateAbilityGraphContext(entity);
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -101,7 +108,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var tag = Tag.RequestTag(_tagsManager, "enemy.beast.wolf");
 		var resolver = new TagResolver(tag);
 
-		var context = new GraphContext { Owner = entity };
+		GraphContext context = CreateAbilityGraphContext(entity);
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -110,12 +117,12 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 
 	[Fact]
 	[Trait("Resolver", "Tag")]
-	public void Tag_resolver_returns_false_when_owner_is_null()
+	public void Tag_resolver_returns_false_when_no_activation_context()
 	{
 		var tag = Tag.RequestTag(_tagsManager, "enemy.undead.zombie");
 		var resolver = new TagResolver(tag);
 
-		var context = new GraphContext { Owner = null };
+		var context = new GraphContext();
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -140,7 +147,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var parentTag = Tag.RequestTag(_tagsManager, "enemy.undead");
 		var resolver = new TagResolver(parentTag);
 
-		var context = new GraphContext { Owner = entity };
+		GraphContext context = CreateAbilityGraphContext(entity);
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -369,32 +376,32 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 			ComparisonOperation.GreaterThan,
 			new VariantResolver(new Variant128(3.0), typeof(double)));
 
-		var context = new GraphContext { Owner = entity };
+		GraphContext context = CreateAbilityGraphContext(entity);
 
 		resolver.Resolve(context).AsBool().Should().BeTrue("Attribute5 (5) > 3");
 	}
 
 	[Fact]
 	[Trait("Resolver", "SharedVariable")]
-	public void Shared_variable_resolver_reads_value_from_owner_shared_variables()
+	public void Shared_variable_resolver_reads_value_from_shared_variables()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		entity.SharedVariables.DefineVariable("abilityLock", true);
 
 		var resolver = new SharedVariableResolver("abilityLock", typeof(bool));
 
-		var context = new GraphContext { Owner = entity };
+		var context = new GraphContext { SharedVariables = entity.SharedVariables };
 
 		resolver.Resolve(context).AsBool().Should().BeTrue();
 	}
 
 	[Fact]
 	[Trait("Resolver", "SharedVariable")]
-	public void Shared_variable_resolver_returns_default_when_owner_is_null()
+	public void Shared_variable_resolver_returns_default_when_shared_variables_is_null()
 	{
 		var resolver = new SharedVariableResolver("abilityLock", typeof(double));
 
-		var context = new GraphContext { Owner = null };
+		var context = new GraphContext();
 
 		resolver.Resolve(context).AsDouble().Should().Be(0);
 	}
@@ -406,7 +413,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var resolver = new SharedVariableResolver("nonexistent", typeof(double));
 
-		var context = new GraphContext { Owner = entity };
+		var context = new GraphContext { SharedVariables = entity.SharedVariables };
 
 		resolver.Resolve(context).AsDouble().Should().Be(0);
 	}
@@ -429,8 +436,8 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 
 		var resolver = new SharedVariableResolver("sharedCounter", typeof(int));
 
-		var context1 = new GraphContext { Owner = entity };
-		var context2 = new GraphContext { Owner = entity };
+		var context1 = new GraphContext { SharedVariables = entity.SharedVariables };
+		var context2 = new GraphContext { SharedVariables = entity.SharedVariables };
 
 		resolver.Resolve(context1).AsInt().Should().Be(0);
 
@@ -539,5 +546,51 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var resolver = new ArrayVariableResolver([], typeof(double));
 
 		resolver.ValueType.Should().Be(typeof(double));
+	}
+
+	private static GraphContext CreateAbilityGraphContext(TestEntity entity)
+	{
+		var graph = new Graph();
+		var captureNode = new CaptureGraphContextNode();
+
+		graph.AddNode(captureNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			captureNode.InputPorts[ActionNode.InputPort]));
+
+		var behavior = new GraphAbilityBehavior(graph);
+
+		AbilityData abilityData = CreateAbilityData("ResolverTest", () => behavior);
+		AbilityHandle? handle = Grant(entity, abilityData);
+		handle!.Activate(out _);
+
+		return captureNode.CapturedGraphContext!;
+	}
+
+	private static AbilityHandle? Grant(TestEntity target, AbilityData data)
+	{
+		var grantConfig = new GrantAbilityConfig(
+			data,
+			new ScalableInt(1),
+			AbilityDeactivationPolicy.CancelImmediately,
+			AbilityDeactivationPolicy.CancelImmediately,
+			false,
+			false,
+			LevelComparison.Higher);
+
+		var effectData = new EffectData(
+			"Grant",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [new GrantAbilityEffectComponent([grantConfig])]);
+
+		var grantEffect = new Effect(effectData, new EffectOwnership(null, null));
+		_ = target.EffectsManager.ApplyEffect(grantEffect);
+		target.Abilities.TryGetAbility(data, out AbilityHandle? handle);
+		return handle;
+	}
+
+	private static AbilityData CreateAbilityData(string name, Func<IAbilityBehavior> behaviorFactory)
+	{
+		return new AbilityData(name, behaviorFactory: behaviorFactory);
 	}
 }

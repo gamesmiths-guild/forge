@@ -1,7 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Core;
-
 namespace Gamesmiths.Forge.Statescript;
 
 /// <summary>
@@ -41,12 +39,12 @@ public class GraphProcessor
 	/// Initializes a new instance of the <see cref="GraphProcessor"/> class.
 	/// </summary>
 	/// <param name="graph">The graph to be executed by this processor.</param>
-	/// <param name="owner">An optional owner entity for this graph execution. The owner provides access to entity
-	/// attributes, tags, and other systems that property resolvers can use to compute derived values.</param>
-	public GraphProcessor(Graph graph, IForgeEntity? owner = null)
+	/// <param name="sharedVariables">Optional shared variables for this graph execution. When set, property resolvers
+	/// such as <see cref="Properties.SharedVariableResolver"/> can read entity-level shared state.</param>
+	public GraphProcessor(Graph graph, Variables? sharedVariables = null)
 	{
 		Graph = graph;
-		GraphContext = new GraphContext { Owner = owner };
+		GraphContext = new GraphContext { SharedVariables = sharedVariables };
 	}
 
 	/// <summary>

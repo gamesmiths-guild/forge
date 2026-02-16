@@ -21,11 +21,12 @@ public sealed class GraphContext
 	public bool IsActive => ActiveStateNodes.Count > 0;
 
 	/// <summary>
-	/// Gets or sets the optional owner entity for this graph execution. The owner provides access to entity attributes,
-	/// tags, and other systems that property resolvers can use to compute derived values. May be
-	/// <see langword="null"/> if the graph does not require an owner entity.
+	/// Gets or sets the optional shared variables for this graph execution. When the graph is driven by an ability,
+	/// this is set to the owner entity's <see cref="IForgeEntity.SharedVariables"/>, allowing property resolvers and
+	/// nodes to access entity-level shared state. For standalone graphs this may be <see langword="null"/> or set to
+	/// a custom <see cref="Variables"/> instance.
 	/// </summary>
-	public IForgeEntity? Owner { get; set; }
+	public Variables? SharedVariables { get; set; }
 
 	/// <summary>
 	/// Gets or sets optional activation context data for this graph execution. This provides a generic extensibility

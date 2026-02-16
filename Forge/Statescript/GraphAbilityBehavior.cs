@@ -45,7 +45,7 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 	/// the graph's entry node fires.</param>
 	protected void StartGraph(AbilityBehaviorContext context, Action<Variables>? variableOverrides = null)
 	{
-		Processor.GraphContext.Owner = context.Owner;
+		Processor.GraphContext.SharedVariables = context.Owner.SharedVariables;
 		Processor.GraphContext.ActivationContext = context;
 		Processor.OnGraphCompleted = context.InstanceHandle.End;
 		Processor.StartGraph(variableOverrides);

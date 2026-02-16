@@ -135,8 +135,8 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 	}
 
 	[Fact]
-	[Trait("GraphBehavior", "Owner")]
-	public void Owner_is_set_from_ability_context()
+	[Trait("GraphBehavior", "SharedVariables")]
+	public void Shared_variables_are_set_from_ability_context_owner()
 	{
 		var graph = new Graph();
 		var actionNode = new TrackingActionNode();
@@ -149,13 +149,13 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var behavior = new GraphAbilityBehavior(graph);
 
-		AbilityData abilityData = CreateAbilityData("OwnerGraph", behaviorFactory: () => behavior);
+		AbilityData abilityData = CreateAbilityData("SharedVarsGraph", behaviorFactory: () => behavior);
 		AbilityHandle? handle = Grant(entity, abilityData);
 		handle.Should().NotBeNull();
 
 		handle!.Activate(out _).Should().BeTrue();
 
-		behavior.Processor.GraphContext.Owner.Should().Be(entity);
+		behavior.Processor.GraphContext.SharedVariables.Should().BeSameAs(entity.SharedVariables);
 	}
 
 	[Fact]
