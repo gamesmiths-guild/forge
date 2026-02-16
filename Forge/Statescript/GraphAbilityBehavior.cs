@@ -16,14 +16,13 @@ namespace Gamesmiths.Forge.Statescript;
 /// alongside <see cref="Effects.EffectsManager.UpdateEffects(double)"/>.</para>
 /// </remarks>
 /// <param name="graph">The graph definition to execute when the ability activates.</param>
-/// <param name="graphContext">The per-instance context that holds mutable runtime state for the graph.</param>
-public class GraphAbilityBehavior(Graph graph, GraphContext graphContext) : IAbilityBehavior
+public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 {
 	/// <summary>
 	/// Gets the <see cref="GraphProcessor"/> that drives this behavior. Callers must invoke
 	/// <see cref="GraphProcessor.UpdateGraph"/> each frame to advance time-dependent state nodes.
 	/// </summary>
-	public GraphProcessor Processor { get; } = new GraphProcessor(graph, graphContext);
+	public GraphProcessor Processor { get; } = new GraphProcessor(graph);
 
 	/// <inheritdoc/>
 	public void OnStarted(AbilityBehaviorContext context)
@@ -46,6 +45,8 @@ public class GraphAbilityBehavior(Graph graph, GraphContext graphContext) : IAbi
 	/// the graph's entry node fires.</param>
 	protected void StartGraph(AbilityBehaviorContext context, Action<Variables>? variableOverrides = null)
 	{
+		Processor.GraphContext.Owner = context.Owner;
+		Processor.GraphContext.ActivationContext = context;
 		Processor.OnGraphCompleted = context.InstanceHandle.End;
 		Processor.StartGraph(variableOverrides);
 	}

@@ -46,8 +46,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(1);
@@ -84,8 +83,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(0);
@@ -122,8 +120,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(1);
@@ -163,8 +160,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(0, "health (25) is NOT above threshold (50)");
@@ -201,8 +197,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(1, "10 <= 10 is true");
@@ -239,8 +234,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(1);
@@ -271,8 +265,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(0);
@@ -312,8 +305,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(1, "score (100) >= requiredScore (50)");
@@ -354,12 +346,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext
-		{
-			Owner = entity,
-		};
-
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph, entity);
 		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(1);

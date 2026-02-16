@@ -24,23 +24,22 @@ public class StateNodeTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			timer.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
-		context.IsActive.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeTrue();
 
 		// Not enough time has passed.
 		processor.UpdateGraph(1.0);
-		context.IsActive.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeTrue();
 
 		// Still not enough.
 		processor.UpdateGraph(0.5);
-		context.IsActive.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeTrue();
 
 		// Now it should deactivate (total: 1.0 + 0.5 + 0.5 = 2.0).
 		processor.UpdateGraph(0.5);
-		context.IsActive.Should().BeFalse();
+		processor.GraphContext.IsActive.Should().BeFalse();
 	}
 
 	[Fact]
@@ -63,8 +62,7 @@ public class StateNodeTests
 			timer.OutputPorts[TimerNode.OnDeactivatePort],
 			onDeactivateAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		onDeactivateAction.ExecutionCount.Should().Be(0);
@@ -94,8 +92,7 @@ public class StateNodeTests
 			timer.OutputPorts[TimerNode.OnActivatePort],
 			onActivateAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		onActivateAction.ExecutionCount.Should().Be(1);
@@ -115,11 +112,8 @@ public class StateNodeTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			timer.InputPorts[ActionNode.InputPort]));
 
-		var context1 = new GraphContext();
-		var processor1 = new GraphProcessor(graph, context1);
-
-		var context2 = new GraphContext();
-		var processor2 = new GraphProcessor(graph, context2);
+		var processor1 = new GraphProcessor(graph);
+		var processor2 = new GraphProcessor(graph);
 
 		processor1.StartGraph();
 		processor2.StartGraph();
@@ -127,10 +121,10 @@ public class StateNodeTests
 		processor1.UpdateGraph(2.0);
 		processor2.UpdateGraph(1.0);
 
-		context1.IsActive.Should().BeFalse();
-		context2.IsActive.Should().BeTrue();
+		processor1.GraphContext.IsActive.Should().BeFalse();
+		processor2.GraphContext.IsActive.Should().BeTrue();
 
 		processor2.UpdateGraph(1.0);
-		context2.IsActive.Should().BeFalse();
+		processor2.GraphContext.IsActive.Should().BeFalse();
 	}
 }

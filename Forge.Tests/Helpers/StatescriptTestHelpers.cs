@@ -90,3 +90,27 @@ internal sealed class ReadVariableNode<T>(string variableName) : ActionNode
 		LastReadValue = value;
 	}
 }
+
+internal sealed class CaptureActivationContextNode : ActionNode
+{
+	public object? CapturedActivationContext { get; private set; }
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		CapturedActivationContext = graphContext.ActivationContext;
+	}
+}
+
+internal sealed class TryGetActivationContextNode<T> : ActionNode
+	where T : class
+{
+	public bool Found { get; private set; }
+
+	public T? CapturedContext { get; private set; }
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		Found = graphContext.TryGetActivationContext(out T? data);
+		CapturedContext = data;
+	}
+}

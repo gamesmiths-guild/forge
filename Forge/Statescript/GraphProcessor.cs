@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Core;
+
 namespace Gamesmiths.Forge.Statescript;
 
 /// <summary>
@@ -13,23 +15,20 @@ namespace Gamesmiths.Forge.Statescript;
 /// <para>A <see cref="GraphProcessor"/> is reusable: after a graph completes naturally or is explicitly stopped,
 /// it can be started again with a fresh execution cycle.</para>
 /// </remarks>
-/// <param name="graph">The graph to be executed by this processor.</param>
-/// <param name="graphContext">The context in which the graph will be executed, providing runtime state for this
-/// execution instance.</param>
-public class GraphProcessor(Graph graph, GraphContext graphContext)
+public class GraphProcessor
 {
 	private readonly List<Node> _updateBuffer = [];
 
 	/// <summary>
 	/// Gets the graph that this processor is responsible for executing.
 	/// </summary>
-	public Graph Graph { get; } = graph;
+	public Graph Graph { get; }
 
 	/// <summary>
 	/// Gets the context in which the graph is executed. The context holds all mutable runtime state including variable
 	/// values, node contexts, and activation status.
 	/// </summary>
-	public GraphContext GraphContext { get; } = graphContext;
+	public GraphContext GraphContext { get; }
 
 	/// <summary>
 	/// Gets or sets an optional callback that is invoked when the graph completes naturally (i.e., all state nodes
@@ -37,6 +36,18 @@ public class GraphProcessor(Graph graph, GraphContext graphContext)
 	/// completion without polling.
 	/// </summary>
 	public Action? OnGraphCompleted { get; set; }
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="GraphProcessor"/> class.
+	/// </summary>
+	/// <param name="graph">The graph to be executed by this processor.</param>
+	/// <param name="owner">An optional owner entity for this graph execution. The owner provides access to entity
+	/// attributes, tags, and other systems that property resolvers can use to compute derived values.</param>
+	public GraphProcessor(Graph graph, IForgeEntity? owner = null)
+	{
+		Graph = graph;
+		GraphContext = new GraphContext { Owner = owner };
+	}
 
 	/// <summary>
 	/// Starts the execution of the graph. This method initializes the context's runtime variables from the graph's

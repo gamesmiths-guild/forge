@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Statescript;
@@ -27,6 +28,15 @@ public sealed class GraphContext
 	public IForgeEntity? Owner { get; set; }
 
 	/// <summary>
+	/// Gets or sets optional activation context data for this graph execution. This provides a generic extensibility
+	/// point that allows external systems to pass contextual data into the graph without coupling
+	/// <see cref="GraphContext"/> to specific subsystems. For example, when a graph is driven by an ability,
+	/// <see cref="Abilities.AbilityBehaviorContext"/> is stored here so that ability-aware nodes can access the ability
+	/// handle for operations like committing cooldowns or costs.
+	/// </summary>
+	public object? ActivationContext { get; set; }
+
+	/// <summary>
 	/// Gets the runtime variables for this graph execution instance. These are initialized from the graph's variable
 	/// definitions when the graph starts, providing each execution with independent state.
 	/// </summary>
@@ -41,6 +51,29 @@ public sealed class GraphContext
 	internal bool HasStarted { get; set; }
 
 	internal int NodeContextCount => _nodeContexts.Count;
+
+	/// <summary>
+	/// Attempts to retrieve the <see cref="ActivationContext"/> as a specific type. This is the recommended way for
+	/// nodes to access activation context data, providing a safe pattern that gracefully handles both missing and
+	/// mismatched data.
+	/// </summary>
+	/// <typeparam name="T">The expected type of the activation context.</typeparam>
+	/// <param name="data">When this method returns <see langword="true"/>, contains the activation context cast to
+	/// <typeparamref name="T"/>; otherwise, <see langword="null"/>.</param>
+	/// <returns><see langword="true"/> if <see cref="ActivationContext"/> is not <see langword="null"/> and is of type
+	/// <typeparamref name="T"/>; otherwise, <see langword="false"/>.</returns>
+	public bool TryGetActivationContext<T>([NotNullWhen(true)] out T? data)
+		where T : class
+	{
+		if (ActivationContext is T typed)
+		{
+			data = typed;
+			return true;
+		}
+
+		data = null;
+		return false;
+	}
 
 	/// <summary>
 	/// Gets the node context of type T for the specified node ID. The context is guaranteed to exist because the

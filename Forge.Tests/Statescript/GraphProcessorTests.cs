@@ -28,12 +28,11 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("health", 100);
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 
 		processor.StartGraph();
 
-		context.GraphVariables.TryGetVar("health", out int value).Should().BeTrue();
+		processor.GraphContext.GraphVariables.TryGetVar("health", out int value).Should().BeTrue();
 		value.Should().Be(100);
 	}
 
@@ -49,8 +48,7 @@ public class GraphProcessorTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			actionNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		actionNode.ExecutionCount.Should().Be(1);
@@ -81,8 +79,7 @@ public class GraphProcessorTests
 			action2.OutputPorts[ActionNode.OutputPort],
 			action3.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		executionOrder.Should().ContainInOrder("A", "B", "C");
@@ -111,8 +108,7 @@ public class GraphProcessorTests
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(1);
@@ -142,8 +138,7 @@ public class GraphProcessorTests
 			condition.OutputPorts[ConditionNode.FalsePort],
 			falseAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		trueAction.ExecutionCount.Should().Be(0);
@@ -170,8 +165,7 @@ public class GraphProcessorTests
 			incrementNode.OutputPorts[ActionNode.OutputPort],
 			readNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		readNode.LastReadValue.Should().Be(1);
@@ -203,8 +197,7 @@ public class GraphProcessorTests
 			condition.OutputPorts[ConditionNode.FalsePort],
 			belowAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		aboveAction.ExecutionCount.Should().Be(1, "value (15) is above threshold (10)");
@@ -229,8 +222,7 @@ public class GraphProcessorTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			action2.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		action1.ExecutionCount.Should().Be(1);
@@ -251,11 +243,10 @@ public class GraphProcessorTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			incrementNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
-		context.GraphVariables.TryGetVar("counter", out int valueAfterStart).Should().BeTrue();
+		processor.GraphContext.GraphVariables.TryGetVar("counter", out int valueAfterStart).Should().BeTrue();
 		valueAfterStart.Should().Be(1);
 
 		// StopGraph cleans up node contexts; verify it doesn't throw.
@@ -276,18 +267,17 @@ public class GraphProcessorTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		var completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
-		context.IsActive.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeTrue();
 		completed.Should().BeFalse();
 
 		processor.StopGraph();
 
-		context.IsActive.Should().BeFalse();
+		processor.GraphContext.IsActive.Should().BeFalse();
 		completed.Should().BeTrue();
 	}
 
@@ -323,8 +313,7 @@ public class GraphProcessorTests
 			condition.OutputPorts[ConditionNode.FalsePort],
 			trackB.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		trackA.ExecutionCount.Should().Be(1);
@@ -347,8 +336,7 @@ public class GraphProcessorTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			connectedAction.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		connectedAction.ExecutionCount.Should().Be(1);
@@ -368,17 +356,14 @@ public class GraphProcessorTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			incrementNode.InputPorts[ActionNode.InputPort]));
 
-		var context1 = new GraphContext();
-		var processor1 = new GraphProcessor(graph, context1);
-
-		var context2 = new GraphContext();
-		var processor2 = new GraphProcessor(graph, context2);
+		var processor1 = new GraphProcessor(graph);
+		var processor2 = new GraphProcessor(graph);
 
 		processor1.StartGraph();
 		processor2.StartGraph();
 
-		context1.GraphVariables.TryGetVar("counter", out int value1);
-		context2.GraphVariables.TryGetVar("counter", out int value2);
+		processor1.GraphContext.GraphVariables.TryGetVar("counter", out int value1);
+		processor2.GraphContext.GraphVariables.TryGetVar("counter", out int value2);
 
 		value1.Should().Be(1);
 		value2.Should().Be(1);
@@ -433,18 +418,17 @@ public class GraphProcessorTests
 			timer.OutputPorts[StateNode<TimerNodeContext>.OnDeactivatePort],
 			exitNode.InputPorts[ExitNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		var completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
-		context.IsActive.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeTrue();
 		completed.Should().BeFalse();
 
 		processor.UpdateGraph(5.0);
 
-		context.IsActive.Should().BeFalse();
+		processor.GraphContext.IsActive.Should().BeFalse();
 		completed.Should().BeTrue();
 	}
 
@@ -466,8 +450,7 @@ public class GraphProcessorTests
 			actionNode.OutputPorts[ActionNode.OutputPort],
 			exitNode.InputPorts[ExitNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		var completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
@@ -502,17 +485,16 @@ public class GraphProcessorTests
 			shortTimer.OutputPorts[StateNode<TimerNodeContext>.OnDeactivatePort],
 			exitNode.InputPorts[ExitNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		var completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
-		context.IsActive.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeTrue();
 
 		processor.UpdateGraph(1.0);
 
-		context.IsActive.Should().BeFalse();
+		processor.GraphContext.IsActive.Should().BeFalse();
 		completed.Should().BeTrue();
 	}
 
@@ -528,14 +510,13 @@ public class GraphProcessorTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			actionNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		var completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
 		actionNode.ExecutionCount.Should().Be(1);
-		context.IsActive.Should().BeFalse();
+		processor.GraphContext.IsActive.Should().BeFalse();
 		completed.Should().BeTrue();
 	}
 
@@ -552,18 +533,17 @@ public class GraphProcessorTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		var completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
-		context.IsActive.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeTrue();
 		completed.Should().BeFalse();
 
 		processor.UpdateGraph(2.0);
 
-		context.IsActive.Should().BeFalse();
+		processor.GraphContext.IsActive.Should().BeFalse();
 		completed.Should().BeTrue();
 	}
 
@@ -588,21 +568,20 @@ public class GraphProcessorTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			longTimer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		var completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
-		context.IsActive.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeTrue();
 		completed.Should().BeFalse();
 
 		processor.UpdateGraph(1.0);
-		context.IsActive.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeTrue();
 		completed.Should().BeFalse();
 
 		processor.UpdateGraph(2.0);
-		context.IsActive.Should().BeFalse();
+		processor.GraphContext.IsActive.Should().BeFalse();
 		completed.Should().BeTrue();
 	}
 
@@ -619,8 +598,7 @@ public class GraphProcessorTests
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		var completedCount = 0;
 		processor.OnGraphCompleted = () => completedCount++;
 		processor.StartGraph();
@@ -632,7 +610,7 @@ public class GraphProcessorTests
 		processor.UpdateGraph(1.0);
 		processor.UpdateGraph(1.0);
 		completedCount.Should().Be(1);
-		context.IsActive.Should().BeFalse();
+		processor.GraphContext.IsActive.Should().BeFalse();
 	}
 
 	[Fact]
@@ -640,14 +618,13 @@ public class GraphProcessorTests
 	public void Empty_graph_completes_immediately()
 	{
 		var graph = new Graph();
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		var completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 
 		processor.StartGraph();
 
-		context.IsActive.Should().BeFalse();
+		processor.GraphContext.IsActive.Should().BeFalse();
 		completed.Should().BeTrue();
 	}
 
@@ -658,14 +635,13 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineArrayVariable("targets", 10, 20, 30);
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
-		context.GraphVariables.GetArrayLength("targets").Should().Be(3);
-		context.GraphVariables.TryGetArrayElement("targets", 0, out int v0).Should().BeTrue();
-		context.GraphVariables.TryGetArrayElement("targets", 1, out int v1).Should().BeTrue();
-		context.GraphVariables.TryGetArrayElement("targets", 2, out int v2).Should().BeTrue();
+		processor.GraphContext.GraphVariables.GetArrayLength("targets").Should().Be(3);
+		processor.GraphContext.GraphVariables.TryGetArrayElement("targets", 0, out int v0).Should().BeTrue();
+		processor.GraphContext.GraphVariables.TryGetArrayElement("targets", 1, out int v1).Should().BeTrue();
+		processor.GraphContext.GraphVariables.TryGetArrayElement("targets", 2, out int v2).Should().BeTrue();
 		v0.Should().Be(10);
 		v1.Should().Be(20);
 		v2.Should().Be(30);
@@ -678,18 +654,16 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineArrayVariable("ids", 1, 2, 3);
 
-		var context1 = new GraphContext();
-		var processor1 = new GraphProcessor(graph, context1);
+		var processor1 = new GraphProcessor(graph);
 		processor1.StartGraph();
 
-		var context2 = new GraphContext();
-		var processor2 = new GraphProcessor(graph, context2);
+		var processor2 = new GraphProcessor(graph);
 		processor2.StartGraph();
 
-		context1.GraphVariables.SetArrayElement("ids", 0, 99);
+		processor1.GraphContext.GraphVariables.SetArrayElement("ids", 0, 99);
 
-		context1.GraphVariables.TryGetArrayElement("ids", 0, out int val1);
-		context2.GraphVariables.TryGetArrayElement("ids", 0, out int val2);
+		processor1.GraphContext.GraphVariables.TryGetArrayElement("ids", 0, out int val1);
+		processor2.GraphContext.GraphVariables.TryGetArrayElement("ids", 0, out int val2);
 
 		val1.Should().Be(99);
 		val2.Should().Be(1);
@@ -701,11 +675,10 @@ public class GraphProcessorTests
 	{
 		var graph = new Graph();
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
-		context.GraphVariables.GetArrayLength("nonexistent").Should().Be(-1);
+		processor.GraphContext.GraphVariables.GetArrayLength("nonexistent").Should().Be(-1);
 	}
 
 	[Fact]
@@ -715,11 +688,10 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineArrayVariable("data", 1.0, 2.0);
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
-		context.GraphVariables.TryGetArrayElement("data", 5, out double _).Should().BeFalse();
-		context.GraphVariables.TryGetArrayElement("data", -1, out double _).Should().BeFalse();
+		processor.GraphContext.GraphVariables.TryGetArrayElement("data", 5, out double _).Should().BeFalse();
+		processor.GraphContext.GraphVariables.TryGetArrayElement("data", -1, out double _).Should().BeFalse();
 	}
 }

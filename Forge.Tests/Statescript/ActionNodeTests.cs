@@ -31,8 +31,7 @@ public class ActionNodeTests
 			setNode.OutputPorts[ActionNode.OutputPort],
 			readNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		readNode.LastReadValue.Should().Be(42);
@@ -64,8 +63,7 @@ public class ActionNodeTests
 			setNode.OutputPorts[ActionNode.OutputPort],
 			readNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		readNode.LastReadValue.Should().Be(1);
@@ -97,8 +95,7 @@ public class ActionNodeTests
 			readTarget.OutputPorts[ActionNode.OutputPort],
 			readSource.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		readTarget.LastReadValue.Should().Be(99);
@@ -125,8 +122,7 @@ public class ActionNodeTests
 			setNode.OutputPorts[ActionNode.OutputPort],
 			readNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		readNode.LastReadValue.Should().Be(77);
@@ -153,8 +149,7 @@ public class ActionNodeTests
 			setNode.OutputPorts[ActionNode.OutputPort],
 			readNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		readNode.LastReadValue.Should().Be(3.5);
@@ -181,8 +176,7 @@ public class ActionNodeTests
 			setNode.OutputPorts[ActionNode.OutputPort],
 			readNode.InputPorts[ActionNode.InputPort]));
 
-		var context = new GraphContext();
-		var processor = new GraphProcessor(graph, context);
+		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
 		readNode.LastReadValue.Should().BeTrue();
@@ -209,17 +203,14 @@ public class ActionNodeTests
 			incrementNode.OutputPorts[ActionNode.OutputPort],
 			setNode.InputPorts[ActionNode.InputPort]));
 
-		var context1 = new GraphContext();
-		var processor1 = new GraphProcessor(graph, context1);
-
-		var context2 = new GraphContext();
-		var processor2 = new GraphProcessor(graph, context2);
+		var processor1 = new GraphProcessor(graph);
+		var processor2 = new GraphProcessor(graph);
 
 		processor1.StartGraph();
 		processor2.StartGraph();
 
-		context1.GraphVariables.TryGetVar("target", out int value1);
-		context2.GraphVariables.TryGetVar("target", out int value2);
+		processor1.GraphContext.GraphVariables.TryGetVar("target", out int value1);
+		processor2.GraphContext.GraphVariables.TryGetVar("target", out int value2);
 
 		value1.Should().Be(11);
 		value2.Should().Be(11);

@@ -12,12 +12,11 @@ namespace Gamesmiths.Forge.Statescript;
 /// </summary>
 /// <typeparam name="TData">The type of the activation data expected from the ability system.</typeparam>
 /// <param name="graph">The graph definition to execute when the ability activates.</param>
-/// <param name="graphContext">The per-instance context that holds mutable runtime state for the graph.</param>
 /// <param name="dataBinder">A delegate that writes <typeparamref name="TData"/> fields into graph
 /// <see cref="Variables"/> before the graph starts. Use <see cref="Variables.SetVar{T}"/> to map each relevant field to
 /// the graph variable expected by the graph's nodes.</param>
-public class GraphAbilityBehavior<TData>(Graph graph, GraphContext graphContext, Action<TData, Variables> dataBinder)
-	: GraphAbilityBehavior(graph, graphContext), IAbilityBehavior<TData>
+public class GraphAbilityBehavior<TData>(Graph graph, Action<TData, Variables> dataBinder)
+	: GraphAbilityBehavior(graph), IAbilityBehavior<TData>
 {
 	private readonly Action<TData, Variables> _dataBinder = dataBinder;
 
