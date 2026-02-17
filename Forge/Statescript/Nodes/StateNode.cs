@@ -57,6 +57,9 @@ public abstract class StateNode<T> : Node
 	/// <param name="graphContext">The graph's context.</param>
 	protected abstract void OnDeactivate(GraphContext graphContext);
 
+	/// <inheritdoc/>
+	public override string Description => $"A {GetType().Name.Replace("Node", string.Empty)} state node.";
+
 	/// <summary>
 	/// Updates this state node with the given delta time. Only processes the update if the node is currently active.
 	/// </summary>

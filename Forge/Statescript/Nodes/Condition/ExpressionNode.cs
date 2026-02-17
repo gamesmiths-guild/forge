@@ -17,9 +17,12 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 /// </remarks>
 /// <param name="conditionPropertyName">The name of the graph property that provides the condition result. Must resolve
 /// to a <see langword="bool"/> value.</param>
-public class ExpressionConditionNode(StringKey conditionPropertyName) : ConditionNode
+public class ExpressionNode(StringKey conditionPropertyName) : ConditionNode
 {
 	private readonly StringKey _conditionPropertyName = conditionPropertyName;
+
+	/// <inheritdoc/>
+	public override string Description => "Evaluates the given property to determine which port to activate.";
 
 	/// <inheritdoc/>
 	protected override bool Test(GraphContext graphContext)

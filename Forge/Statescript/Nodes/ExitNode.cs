@@ -20,6 +20,9 @@ public class ExitNode : Node
 	public const byte InputPort = 0;
 
 	/// <inheritdoc/>
+	public override string Description => "Exit point of the graph. Stops execution when a message is received.";
+
+	/// <inheritdoc/>
 	internal override IEnumerable<int> GetReachableOutputPorts(byte inputPortIndex)
 	{
 		return [];

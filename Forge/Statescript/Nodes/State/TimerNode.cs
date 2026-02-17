@@ -22,6 +22,9 @@ public class TimerNode(StringKey durationPropertyName) : StateNode<TimerNodeCont
 	private readonly StringKey _durationPropertyName = durationPropertyName;
 
 	/// <inheritdoc/>
+	public override string Description => "Remains active for a configured duration, then deactivates.";
+
+	/// <inheritdoc/>
 	protected override void OnActivate(GraphContext graphContext)
 	{
 		TimerNodeContext nodeContext = graphContext.GetNodeContext<TimerNodeContext>(NodeID);

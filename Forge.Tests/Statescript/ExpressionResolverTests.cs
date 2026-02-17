@@ -34,7 +34,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.GreaterThan,
 				new VariantResolver(new Variant128(10.0), typeof(double))));
 
-		var condition = new ExpressionConditionNode("isAboveThreshold");
+		var condition = new ExpressionNode("isAboveThreshold");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -71,7 +71,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.GreaterThan,
 				new VariantResolver(new Variant128(10.0), typeof(double))));
 
-		var condition = new ExpressionConditionNode("isAboveThreshold");
+		var condition = new ExpressionNode("isAboveThreshold");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -108,7 +108,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.Equal,
 				new VariantResolver(new Variant128(42.0), typeof(double))));
 
-		var condition = new ExpressionConditionNode("isEqual");
+		var condition = new ExpressionNode("isEqual");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -148,7 +148,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.GreaterThan,
 				new VariableResolver("threshold", typeof(double))));
 
-		var condition = new ExpressionConditionNode("isHealthAboveThreshold");
+		var condition = new ExpressionNode("isHealthAboveThreshold");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -185,7 +185,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.LessThanOrEqual,
 				new VariantResolver(new Variant128(10.0), typeof(double))));
 
-		var condition = new ExpressionConditionNode("atBoundary");
+		var condition = new ExpressionNode("atBoundary");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -222,7 +222,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.NotEqual,
 				new VariantResolver(new Variant128(2.0), typeof(double))));
 
-		var condition = new ExpressionConditionNode("isDifferent");
+		var condition = new ExpressionNode("isDifferent");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -253,7 +253,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 	{
 		var graph = new Graph();
 
-		var condition = new ExpressionConditionNode("nonexistent");
+		var condition = new ExpressionNode("nonexistent");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -293,7 +293,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.GreaterThanOrEqual,
 				new VariableResolver("requiredScore", typeof(int))));
 
-		var condition = new ExpressionConditionNode("hasEnoughScore");
+		var condition = new ExpressionNode("hasEnoughScore");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -334,7 +334,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.GreaterThanOrEqual,
 				new VariableResolver("required", typeof(int))));
 
-		var condition = new ExpressionConditionNode("hasEnoughAttribute");
+		var condition = new ExpressionNode("hasEnoughAttribute");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
