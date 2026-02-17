@@ -22,7 +22,7 @@ public abstract class Node
 	/// <summary>
 	/// Gets a description of the node type, which is used in editor tooltips and documentation.
 	/// </summary>
-	public virtual string Description => $"A {GetType().Name.Replace("Node", string.Empty)} node.";
+	public virtual string Description => $"{GetType().Name.Replace("Node", string.Empty)} node.";
 
 	/// <summary>
 	/// Gets or sets the unique identifier for this node.
