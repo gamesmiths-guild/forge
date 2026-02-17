@@ -27,6 +27,9 @@ public abstract class ActionNode : Node
 	protected abstract void Execute(GraphContext graphContext);
 
 	/// <inheritdoc/>
+	public override string Description => $"A {GetType().Name.Replace("Node", string.Empty)} action node.";
+
+	/// <inheritdoc/>
 #pragma warning disable SA1202 // Elements should be ordered by access
 	internal override IEnumerable<int> GetReachableOutputPorts(byte inputPortIndex)
 #pragma warning restore SA1202 // Elements should be ordered by access

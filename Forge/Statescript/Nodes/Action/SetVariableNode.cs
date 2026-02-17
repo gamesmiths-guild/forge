@@ -24,6 +24,9 @@ public class SetVariableNode(StringKey sourcePropertyName, StringKey targetVaria
 	private readonly StringKey _targetVariableName = targetVariableName;
 
 	/// <inheritdoc/>
+	public override string Description => "Sets a graph variable to the value of a property.";
+
+	/// <inheritdoc/>
 	protected override void Execute(GraphContext graphContext)
 	{
 		if (!graphContext.GraphVariables.TryGetVariant(_sourcePropertyName, graphContext, out Variant128 value))

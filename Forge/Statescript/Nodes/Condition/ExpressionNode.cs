@@ -22,6 +22,9 @@ public class ExpressionNode(StringKey conditionPropertyName) : ConditionNode
 	private readonly StringKey _conditionPropertyName = conditionPropertyName;
 
 	/// <inheritdoc/>
+	public override string Description => "Evaluates the given property to determine which port to activate.";
+
+	/// <inheritdoc/>
 	protected override bool Test(GraphContext graphContext)
 	{
 		if (!graphContext.GraphVariables.TryGet(_conditionPropertyName, graphContext, out bool result))
