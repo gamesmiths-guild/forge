@@ -15,6 +15,9 @@ public class EntryNode : Node
 	/// </summary>
 	public const byte OutputPort = 0;
 
+	/// <inheritdoc/>
+	public override string Description => "Entry point of the graph. Emits a message to start execution.";
+
 	/// <summary>
 	/// Starts the graph execution by emitting a message through the output port.
 	/// </summary>
