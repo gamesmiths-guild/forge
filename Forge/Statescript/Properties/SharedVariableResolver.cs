@@ -33,7 +33,7 @@ public class SharedVariableResolver(StringKey variableName, Type valueType) : IP
 			return default;
 		}
 
-		if (!graphContext.SharedVariables.TryGetVariant(_variableName, graphContext, out Variant128 value))
+		if (!graphContext.SharedVariables.TryGetVariant(_variableName, out Variant128 value))
 		{
 			return default;
 		}

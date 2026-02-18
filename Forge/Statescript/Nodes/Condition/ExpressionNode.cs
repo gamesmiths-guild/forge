@@ -1,7 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Core;
-
 namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 
 /// <summary>
@@ -15,19 +13,26 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 /// conditions. Instead of writing C# logic, the scripter composes an expression from resolvers at graph construction
 /// time.</para>
 /// </remarks>
-/// <param name="conditionPropertyName">The name of the graph property that provides the condition result. Must resolve
-/// to a <see langword="bool"/> value.</param>
-public class ExpressionNode(StringKey conditionPropertyName) : ConditionNode
+public class ExpressionNode : ConditionNode
 {
-	private readonly StringKey _conditionPropertyName = conditionPropertyName;
+	/// <summary>
+	/// Input property index for the condition expression.
+	/// </summary>
+	public const byte ConditionInput = 0;
 
 	/// <inheritdoc/>
 	public override string Description => "Evaluates the given property to determine which port to activate.";
 
 	/// <inheritdoc/>
+	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
+	{
+		inputProperties.Add(new InputProperty("Condition", typeof(bool)));
+	}
+
+	/// <inheritdoc/>
 	protected override bool Test(GraphContext graphContext)
 	{
-		if (!graphContext.GraphVariables.TryGet(_conditionPropertyName, graphContext, out bool result))
+		if (!graphContext.TryResolve(InputProperties[ConditionInput].BoundName, out bool result))
 		{
 			return false;
 		}

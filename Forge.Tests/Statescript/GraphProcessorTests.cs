@@ -4,7 +4,9 @@ using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.State;
+using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tests.Helpers;
+using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
 
 namespace Gamesmiths.Forge.Tests.Statescript;
 
@@ -261,7 +263,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -405,7 +407,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		var exitNode = new ExitNode();
 
 		graph.AddNode(timer);
@@ -467,8 +469,8 @@ public class GraphProcessorTests
 		graph.VariableDefinitions.DefineVariable("shortDuration", 1.0);
 		graph.VariableDefinitions.DefineVariable("longDuration", 10.0);
 
-		var shortTimer = new TimerNode("shortDuration");
-		var longTimer = new TimerNode("longDuration");
+		TimerNode shortTimer = CreateTimerNode("shortDuration");
+		TimerNode longTimer = CreateTimerNode("longDuration");
 		var exitNode = new ExitNode();
 
 		graph.AddNode(shortTimer);
@@ -527,7 +529,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 2.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -555,8 +557,8 @@ public class GraphProcessorTests
 		graph.VariableDefinitions.DefineVariable("shortDuration", 1.0);
 		graph.VariableDefinitions.DefineVariable("longDuration", 3.0);
 
-		var shortTimer = new TimerNode("shortDuration");
-		var longTimer = new TimerNode("longDuration");
+		TimerNode shortTimer = CreateTimerNode("shortDuration");
+		TimerNode longTimer = CreateTimerNode("longDuration");
 
 		graph.AddNode(shortTimer);
 		graph.AddNode(longTimer);
@@ -592,7 +594,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 1.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -693,5 +695,68 @@ public class GraphProcessorTests
 
 		processor.GraphContext.GraphVariables.TryGetArrayElement("data", 5, out double _).Should().BeFalse();
 		processor.GraphContext.GraphVariables.TryGetArrayElement("data", -1, out double _).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolve_finds_variable_before_property()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 2.0);
+		graph.VariableDefinitions.DefineProperty(
+			"duration",
+			new VariantResolver(new Variant128(100.0), typeof(double)));
+
+		TimerNode timer = CreateTimerNode("duration");
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.IsActive.Should().BeTrue();
+
+		processor.UpdateGraph(2.0);
+
+		processor.GraphContext.IsActive.Should().BeFalse(
+			"timer should use the variable (2.0) not the property (100.0)");
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolve_falls_back_to_property_when_variable_not_found()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineProperty(
+			"constant",
+			new VariantResolver(new Variant128(7.5), typeof(double)));
+
+		TimerNode timer = CreateTimerNode("constant");
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.IsActive.Should().BeTrue();
+
+		processor.UpdateGraph(7.5);
+
+		processor.GraphContext.IsActive.Should().BeFalse("timer should complete using the property-defined duration");
+	}
+
+	[Fact]
+	[Trait("Graph", "Validation")]
+	public void Validate_property_type_checks_array_variable_element_type()
+	{
+		var definitions = new GraphVariableDefinitions();
+		definitions.DefineArrayVariable("targets", 1, 2, 3);
+
+		definitions.ValidatePropertyType("targets", typeof(int)).Should().BeTrue();
+		definitions.ValidatePropertyType("targets", typeof(double)).Should().BeFalse();
 	}
 }

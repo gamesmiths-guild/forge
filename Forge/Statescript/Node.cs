@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript.Ports;
 
 namespace Gamesmiths.Forge.Statescript;
@@ -40,6 +41,18 @@ public abstract class Node
 	public OutputPort[] OutputPorts { get; }
 
 	/// <summary>
+	/// Gets the input property declarations for this node. Each entry describes a named value the node reads at
+	/// runtime. Use <see cref="BindInput"/> to assign the actual variable or property name.
+	/// </summary>
+	public InputProperty[] InputProperties { get; }
+
+	/// <summary>
+	/// Gets the output variable declarations for this node. Each entry describes a named variable the node writes at
+	/// runtime. Use <see cref="BindOutput"/> to assign the actual variable name.
+	/// </summary>
+	public OutputVariable[] OutputVariables { get; }
+
+	/// <summary>
 	/// Gets the subgraph output ports of this node. This is a cached subset of <see cref="OutputPorts"/> containing
 	/// only <see cref="SubgraphPort"/> instances, built once during construction to avoid runtime type checks.
 	/// </summary>
@@ -67,6 +80,56 @@ public abstract class Node
 		InputPorts = [.. inputPorts];
 		OutputPorts = [.. outputPorts];
 		SubgraphPorts = [.. OutputPorts.OfType<SubgraphPort>()];
+
+		var inputProperties = new List<InputProperty>();
+		var outputVariables = new List<OutputVariable>();
+
+#pragma warning disable S1699 // Constructors should only call non-overridable methods
+		DefineParameters(inputProperties, outputVariables);
+#pragma warning restore S1699 // Constructors should only call non-overridable methods
+
+		InputProperties = [.. inputProperties];
+		OutputVariables = [.. outputVariables];
+	}
+
+	/// <summary>
+	/// Binds an input property to a variable or property name. At runtime, the node will resolve this name through
+	/// <see cref="GraphContext.TryResolve{T}"/> or <see cref="GraphContext.TryResolveVariant"/>.
+	/// </summary>
+	/// <param name="index">The zero-based index of the input property to bind (as declared in
+	/// <see cref="DefineParameters"/>).</param>
+	/// <param name="propertyName">The name of the graph variable or property to bind to.</param>
+	/// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="index"/> is out of range.</exception>
+	public void BindInput(byte index, StringKey propertyName)
+	{
+		if (index >= InputProperties.Length)
+		{
+			throw new ArgumentOutOfRangeException(
+				nameof(index),
+				$"Input index {index} is out of range. This node has {InputProperties.Length} input(s).");
+		}
+
+		InputProperties[index] = InputProperties[index] with { BoundName = propertyName };
+	}
+
+	/// <summary>
+	/// Binds an output variable to a variable name with an explicit scope override. Use this overload when the target
+	/// variable bag (graph vs shared) should be configurable at bind time rather than fixed by the node's schema.
+	/// </summary>
+	/// <param name="index">The zero-based index of the output variable to bind.</param>
+	/// <param name="variableName">The name of the variable to bind to.</param>
+	/// <param name="scope">Which <see cref="Variables"/> bag this output should write to.</param>
+	/// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="index"/> is out of range.</exception>
+	public void BindOutput(byte index, StringKey variableName, VariableScope scope = VariableScope.Graph)
+	{
+		if (index >= OutputVariables.Length)
+		{
+			throw new ArgumentOutOfRangeException(
+				nameof(index),
+				$"Output index {index} is out of range. This node has {OutputVariables.Length} output(s).");
+		}
+
+		OutputVariables[index] = OutputVariables[index] with { BoundName = variableName, Scope = scope };
 	}
 
 	internal void OnMessageReceived(
@@ -159,6 +222,22 @@ public abstract class Node
 		{
 			Index = index,
 		};
+	}
+
+	/// <summary>
+	/// Defines the input properties and output variables for this node. Subclasses override this method to declare
+	/// their parameter schema: the labels and expected types. The actual variable/property names are bound later via
+	/// <see cref="BindInput"/> and <see cref="BindOutput"/>.
+	/// </summary>
+	/// <remarks>
+	/// The default implementation declares no parameters, which is correct for nodes like
+	/// <see cref="Nodes.EntryNode"/> and <see cref="Nodes.ExitNode"/> that have no data dependencies.
+	/// </remarks>
+	/// <param name="inputProperties">The list to add input property declarations to.</param>
+	/// <param name="outputVariables">The list to add output variable declarations to.</param>
+	protected virtual void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
+	{
+		// Intentionally left blank.
 	}
 
 	/// <summary>

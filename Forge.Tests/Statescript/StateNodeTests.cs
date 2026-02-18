@@ -6,6 +6,8 @@ using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.State;
 using Gamesmiths.Forge.Tests.Helpers;
 
+using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
+
 namespace Gamesmiths.Forge.Tests.Statescript;
 
 public class StateNodeTests
@@ -17,7 +19,7 @@ public class StateNodeTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 2.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
@@ -49,7 +51,7 @@ public class StateNodeTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 1.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		var onDeactivateAction = new TrackingActionNode();
 
 		graph.AddNode(timer);
@@ -79,7 +81,7 @@ public class StateNodeTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		var onActivateAction = new TrackingActionNode();
 
 		graph.AddNode(timer);
@@ -105,7 +107,7 @@ public class StateNodeTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 2.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(

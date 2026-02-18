@@ -6,6 +6,8 @@ using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Action;
 using Gamesmiths.Forge.Tests.Helpers;
 
+using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
+
 namespace Gamesmiths.Forge.Tests.Statescript;
 
 public class ActionNodeTests
@@ -18,7 +20,7 @@ public class ActionNodeTests
 		graph.VariableDefinitions.DefineVariable("source", 42);
 		graph.VariableDefinitions.DefineVariable("target", 0);
 
-		var setNode = new SetVariableNode("source", "target");
+		SetVariableNode setNode = CreateSetVariableNode("source", "target");
 		var readNode = new ReadVariableNode<int>("target");
 
 		graph.AddNode(setNode);
@@ -46,7 +48,7 @@ public class ActionNodeTests
 		graph.VariableDefinitions.DefineVariable("result", 0);
 
 		var incrementNode = new IncrementCounterNode("counter");
-		var setNode = new SetVariableNode("counter", "result");
+		SetVariableNode setNode = CreateSetVariableNode("counter", "result");
 		var readNode = new ReadVariableNode<int>("result");
 
 		graph.AddNode(incrementNode);
@@ -77,7 +79,7 @@ public class ActionNodeTests
 		graph.VariableDefinitions.DefineVariable("source", 99);
 		graph.VariableDefinitions.DefineVariable("target", 0);
 
-		var setNode = new SetVariableNode("source", "target");
+		SetVariableNode setNode = CreateSetVariableNode("source", "target");
 		var readSource = new ReadVariableNode<int>("source");
 		var readTarget = new ReadVariableNode<int>("target");
 
@@ -109,7 +111,7 @@ public class ActionNodeTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("target", 77);
 
-		var setNode = new SetVariableNode("nonexistent", "target");
+		SetVariableNode setNode = CreateSetVariableNode("nonexistent", "target");
 		var readNode = new ReadVariableNode<int>("target");
 
 		graph.AddNode(setNode);
@@ -136,7 +138,7 @@ public class ActionNodeTests
 		graph.VariableDefinitions.DefineVariable("duration", 3.5);
 		graph.VariableDefinitions.DefineVariable("cachedDuration", 0.0);
 
-		var setNode = new SetVariableNode("duration", "cachedDuration");
+		SetVariableNode setNode = CreateSetVariableNode("duration", "cachedDuration");
 		var readNode = new ReadVariableNode<double>("cachedDuration");
 
 		graph.AddNode(setNode);
@@ -163,7 +165,7 @@ public class ActionNodeTests
 		graph.VariableDefinitions.DefineVariable("flag", true);
 		graph.VariableDefinitions.DefineVariable("copy", false);
 
-		var setNode = new SetVariableNode("flag", "copy");
+		SetVariableNode setNode = CreateSetVariableNode("flag", "copy");
 		var readNode = new ReadVariableNode<bool>("copy");
 
 		graph.AddNode(setNode);
@@ -191,7 +193,7 @@ public class ActionNodeTests
 		graph.VariableDefinitions.DefineVariable("target", 0);
 
 		var incrementNode = new IncrementCounterNode("source");
-		var setNode = new SetVariableNode("source", "target");
+		SetVariableNode setNode = CreateSetVariableNode("source", "target");
 
 		graph.AddNode(incrementNode);
 		graph.AddNode(setNode);

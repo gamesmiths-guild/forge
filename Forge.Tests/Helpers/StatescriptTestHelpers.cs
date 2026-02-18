@@ -1,10 +1,45 @@
 // Copyright © Gamesmiths Guild.
 #pragma warning disable SA1649, SA1402 // File name should match first type name
 
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
+using Gamesmiths.Forge.Statescript.Nodes.Action;
+using Gamesmiths.Forge.Statescript.Nodes.Condition;
+using Gamesmiths.Forge.Statescript.Nodes.State;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
+
+/// <summary>
+/// Convenience helpers for creating and binding framework nodes in tests.
+/// </summary>
+internal static class NodeBindings
+{
+	public static TimerNode CreateTimerNode(StringKey durationPropertyName)
+	{
+		var node = new TimerNode();
+		node.BindInput(TimerNode.DurationInput, durationPropertyName);
+		return node;
+	}
+
+	public static ExpressionNode CreateExpressionNode(StringKey conditionPropertyName)
+	{
+		var node = new ExpressionNode();
+		node.BindInput(ExpressionNode.ConditionInput, conditionPropertyName);
+		return node;
+	}
+
+	public static SetVariableNode CreateSetVariableNode(
+		StringKey sourcePropertyName,
+		StringKey targetVariableName,
+		VariableScope scope = VariableScope.Graph)
+	{
+		var node = new SetVariableNode();
+		node.BindInput(SetVariableNode.SourceInput, sourcePropertyName);
+		node.BindOutput(SetVariableNode.TargetOutput, targetVariableName, scope);
+		return node;
+	}
+}
 
 internal sealed class TrackingActionNode(string? name = null, List<string>? executionLog = null) : ActionNode
 {

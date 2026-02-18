@@ -2,6 +2,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Statescript.Properties;
 
 namespace Gamesmiths.Forge.Statescript;
 
@@ -73,6 +74,73 @@ public sealed class GraphContext
 		}
 
 		data = null;
+		return false;
+	}
+
+	/// <summary>
+	/// Resolves a named value by first checking graph variables and then falling back to read-only property definitions
+	/// on the graph. This is the primary way for nodes to read a named value at runtime without caring whether it is a
+	/// mutable variable or a computed property.
+	/// </summary>
+	/// <typeparam name="T">The type to interpret the value as. Must be supported by <see cref="Variant128"/>.
+	/// </typeparam>
+	/// <param name="name">The name of the variable or property.</param>
+	/// <param name="value">The resolved value if found.</param>
+	/// <returns><see langword="true"/> if the name was resolved, <see langword="false"/> otherwise.</returns>
+	public bool TryResolve<T>(StringKey name, out T value)
+		where T : unmanaged
+	{
+		if (GraphVariables.TryGetVar(name, out value))
+		{
+			return true;
+		}
+
+		if (Processor is null)
+		{
+			return false;
+		}
+
+		foreach (PropertyDefinition definition in Processor.Graph.VariableDefinitions.PropertyDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				Variant128 resolved = definition.Resolver.Resolve(this);
+				value = resolved.Get<T>();
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Resolves a named value as a raw <see cref="Variant128"/> by first checking graph variables and then falling back
+	/// to read-only property definitions.
+	/// </summary>
+	/// <param name="name">The name of the variable or property.</param>
+	/// <param name="value">The resolved value if found.</param>
+	/// <returns><see langword="true"/> if the name was resolved, <see langword="false"/> otherwise.</returns>
+	public bool TryResolveVariant(StringKey name, out Variant128 value)
+	{
+		if (GraphVariables.TryGetVariant(name, out value))
+		{
+			return true;
+		}
+
+		if (Processor is null)
+		{
+			return false;
+		}
+
+		foreach (PropertyDefinition definition in Processor.Graph.VariableDefinitions.PropertyDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				value = definition.Resolver.Resolve(this);
+				return true;
+			}
+		}
+
 		return false;
 	}
 
