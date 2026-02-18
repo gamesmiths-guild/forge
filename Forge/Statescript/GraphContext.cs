@@ -145,6 +145,45 @@ public sealed class GraphContext
 	}
 
 	/// <summary>
+	/// Resolves a named array value by first checking array variables in <see cref="GraphVariables"/> and then falling
+	/// back to read-only array property definitions on the graph. This is the primary way for nodes to read a named
+	/// array at runtime without caring whether it is a mutable array variable or a computed array property.
+	/// </summary>
+	/// <param name="name">The name of the array variable or array property.</param>
+	/// <param name="values">The resolved array if found; otherwise, <see langword="null"/>.</param>
+	/// <returns><see langword="true"/> if the name was resolved, <see langword="false"/> otherwise.</returns>
+	public bool TryResolveArray(StringKey name, [NotNullWhen(true)] out Variant128[]? values)
+	{
+		var length = GraphVariables.GetArrayLength(name);
+		if (length >= 0)
+		{
+			values = new Variant128[length];
+			for (var i = 0; i < length; i++)
+			{
+				GraphVariables.TryGetArrayVariant(name, i, out values[i]);
+			}
+
+			return true;
+		}
+
+		if (Processor is not null)
+		{
+			foreach (ArrayPropertyDefinition definition in
+				Processor.Graph.VariableDefinitions.ArrayPropertyDefinitions)
+			{
+				if (definition.Name == name)
+				{
+					values = definition.Resolver.ResolveArray(this);
+					return true;
+				}
+			}
+		}
+
+		values = null;
+		return false;
+	}
+
+	/// <summary>
 	/// Gets the node context of type T for the specified node ID. The context is guaranteed to exist because the
 	/// framework creates it automatically when the node first receives a message, before any user code runs.
 	/// </summary>

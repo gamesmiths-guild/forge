@@ -548,6 +548,44 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		resolver.ValueType.Should().Be(typeof(double));
 	}
 
+	[Fact]
+	[Trait("Resolver", "ArrayProperty")]
+	public void Array_property_resolver_returns_resolved_array()
+	{
+		Variant128[] expected = [new Variant128(10), new Variant128(20), new Variant128(30)];
+		var resolver = new TestArrayPropertyResolver(typeof(int), [expected]);
+
+		var context = new GraphContext();
+
+		Variant128[] result = resolver.ResolveArray(context);
+
+		result.Should().BeEquivalentTo(expected);
+	}
+
+	[Fact]
+	[Trait("Resolver", "ArrayProperty")]
+	public void Array_property_resolver_reports_correct_element_type()
+	{
+		var intResolver = new TestArrayPropertyResolver(typeof(int), [[]]);
+		var doubleResolver = new TestArrayPropertyResolver(typeof(double), [[]]);
+
+		intResolver.ElementType.Should().Be(typeof(int));
+		doubleResolver.ElementType.Should().Be(typeof(double));
+	}
+
+	[Fact]
+	[Trait("Resolver", "ArrayProperty")]
+	public void Array_property_resolver_returns_empty_array()
+	{
+		var resolver = new TestArrayPropertyResolver(typeof(int), [[]]);
+
+		var context = new GraphContext();
+
+		Variant128[] result = resolver.ResolveArray(context);
+
+		result.Should().BeEmpty();
+	}
+
 	private static GraphContext CreateAbilityGraphContext(TestEntity entity)
 	{
 		var graph = new Graph();

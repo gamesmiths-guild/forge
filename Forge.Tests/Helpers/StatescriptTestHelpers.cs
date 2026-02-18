@@ -7,6 +7,7 @@ using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Action;
 using Gamesmiths.Forge.Statescript.Nodes.Condition;
 using Gamesmiths.Forge.Statescript.Nodes.State;
+using Gamesmiths.Forge.Statescript.Properties;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
 
@@ -157,5 +158,45 @@ internal sealed class CaptureGraphContextNode : ActionNode
 	protected override void Execute(GraphContext graphContext)
 	{
 		CapturedGraphContext = graphContext;
+	}
+}
+
+internal sealed class TestArrayPropertyResolver(Type elementType, Variant128[][] values) : IArrayPropertyResolver
+{
+	private readonly Variant128[][] _values = values;
+
+	public Type ElementType { get; } = elementType;
+
+	public int CallCount { get; private set; }
+
+	public Variant128[] ResolveArray(GraphContext graphContext)
+	{
+		// Cycle through provided arrays for test variety
+		Variant128[] array = _values[CallCount % _values.Length];
+		CallCount++;
+		return array;
+	}
+}
+
+internal sealed class ReadArrayPropertyNode : ActionNode
+{
+	public const byte InputArray = 0;
+
+	public Variant128[]? LastReadArray { get; private set; }
+
+	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
+	{
+		inputProperties.Add(new InputProperty("Array", typeof(int[])));
+	}
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		if (!graphContext.TryResolveArray(InputProperties[InputArray].BoundName, out Variant128[]? resolved))
+		{
+			LastReadArray = null;
+			return;
+		}
+
+		LastReadArray = resolved;
 	}
 }

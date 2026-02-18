@@ -30,6 +30,12 @@ public class GraphVariableDefinitions
 	public List<PropertyDefinition> PropertyDefinitions { get; } = [];
 
 	/// <summary>
+	/// Gets the list of array property definitions for the graph. Array properties are read-only computed values that
+	/// resolve to arrays (e.g., a list of entity IDs within a radius).
+	/// </summary>
+	public List<ArrayPropertyDefinition> ArrayPropertyDefinitions { get; } = [];
+
+	/// <summary>
 	/// Adds a mutable variable definition with the specified name and initial value.
 	/// </summary>
 	/// <typeparam name="T">The type of the initial value. Must be supported by <see cref="Variant128"/>.</typeparam>
@@ -73,6 +79,16 @@ public class GraphVariableDefinitions
 	}
 
 	/// <summary>
+	/// Adds a read-only array property definition with the specified name and resolver.
+	/// </summary>
+	/// <param name="name">The name of the array property.</param>
+	/// <param name="resolver">The resolver used to compute the property's array value at runtime.</param>
+	public void DefineArrayProperty(StringKey name, IArrayPropertyResolver resolver)
+	{
+		ArrayPropertyDefinitions.Add(new ArrayPropertyDefinition(name, resolver));
+	}
+
+	/// <summary>
 	/// Validates that the variable or property with the specified name produces a value assignable to the expected
 	/// type. This should be called at graph construction time to catch type mismatches early.
 	/// </summary>
@@ -87,6 +103,20 @@ public class GraphVariableDefinitions
 			if (definition.Name == name)
 			{
 				return expectedType.IsAssignableFrom(definition.Resolver.ValueType);
+			}
+		}
+
+		foreach (ArrayPropertyDefinition definition in ArrayPropertyDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				// expectedType should be an array type (e.g., typeof(int[])), and element type must match
+				if (expectedType.IsArray && expectedType.GetElementType() is Type elementType)
+				{
+					return elementType.IsAssignableFrom(definition.Resolver.ElementType);
+				}
+
+				return false;
 			}
 		}
 
@@ -109,6 +139,21 @@ public class GraphVariableDefinitions
 		return false;
 	}
 }
+
+/// <summary>
+/// Represents a named array property definition with a resolver.
+/// </summary>
+/// <param name="Name">The name of the array property.</param>
+/// <param name="Resolver">The resolver used to provide the property's array value at runtime.</param>
+public readonly record struct ArrayPropertyDefinition(StringKey Name, IArrayPropertyResolver Resolver);
+
+/// <summary>
+/// Represents the definition of a graph property, including its name and the resolver used to compute its value at
+/// runtime. This is immutable definition data that belongs to the graph.
+/// </summary>
+/// <param name="Name">The name of the property, used as the lookup key at runtime.</param>
+/// <param name="Resolver">The resolver used to provide the property's value at runtime.</param>
+public readonly record struct PropertyDefinition(StringKey Name, IPropertyResolver Resolver);
 
 /// <summary>
 /// Represents a named variable definition with an initial value.

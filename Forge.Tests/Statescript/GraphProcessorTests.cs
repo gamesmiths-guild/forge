@@ -750,13 +750,128 @@ public class GraphProcessorTests
 	}
 
 	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolveArray_finds_array_variable_before_array_property()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineArrayVariable("ids", 1, 2, 3);
+		graph.VariableDefinitions.DefineArrayProperty(
+			"ids",
+			new TestArrayPropertyResolver(typeof(int), [[new Variant128(99)]]));
+
+		var node = new ReadArrayPropertyNode();
+		node.BindInput(ReadArrayPropertyNode.InputArray, "ids");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.LastReadArray.Should().NotBeNull();
+		node.LastReadArray.Should().HaveCount(3);
+		node.LastReadArray![0].AsInt().Should().Be(1, "should use the array variable, not the array property");
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolveArray_falls_back_to_array_property_when_variable_not_found()
+	{
+		var graph = new Graph();
+		Variant128[] expected = [new Variant128(10), new Variant128(20), new Variant128(30)];
+		graph.VariableDefinitions.DefineArrayProperty(
+			"computed",
+			new TestArrayPropertyResolver(typeof(int), [expected]));
+
+		var node = new ReadArrayPropertyNode();
+		node.BindInput(ReadArrayPropertyNode.InputArray, "computed");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.LastReadArray.Should().NotBeNull();
+		node.LastReadArray.Should().BeEquivalentTo(expected);
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolveArray_returns_false_for_nonexistent_name()
+	{
+		var graph = new Graph();
+		var node = new ReadArrayPropertyNode();
+		node.BindInput(ReadArrayPropertyNode.InputArray, "nonexistent");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.LastReadArray.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolver")]
+	public void ReadArrayPropertyNode_reads_array_property_at_runtime()
+	{
+		var graph = new Graph();
+		Variant128[][] arrays =
+		[
+			[new Variant128(10), new Variant128(20), new Variant128(30)],
+			[new Variant128(40), new Variant128(50)],
+		];
+
+		var resolver = new TestArrayPropertyResolver(typeof(int), arrays);
+		graph.VariableDefinitions.DefineArrayProperty("testArray", resolver);
+
+		var node = new ReadArrayPropertyNode();
+		node.BindInput(ReadArrayPropertyNode.InputArray, "testArray");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[0],
+			node.InputPorts[0]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.LastReadArray.Should().NotBeNull();
+		node.LastReadArray.Should().BeEquivalentTo(arrays[0]);
+
+		processor.StartGraph();
+
+		node.LastReadArray.Should().BeEquivalentTo(arrays[1]);
+	}
+
+	[Fact]
 	[Trait("Graph", "Validation")]
-	public void Validate_property_type_checks_array_variable_element_type()
+	public void ValidatePropertyType_checks_array_variable_element_type()
 	{
 		var definitions = new GraphVariableDefinitions();
 		definitions.DefineArrayVariable("targets", 1, 2, 3);
 
 		definitions.ValidatePropertyType("targets", typeof(int)).Should().BeTrue();
 		definitions.ValidatePropertyType("targets", typeof(double)).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Validation")]
+	public void ValidatePropertyType_checks_array_property_type()
+	{
+		var definitions = new GraphVariableDefinitions();
+		var resolver = new TestArrayPropertyResolver(typeof(int), [[new Variant128(1)]]);
+
+		definitions.DefineArrayProperty("ids", resolver);
+
+		definitions.ArrayPropertyDefinitions.Should().ContainSingle(x => x.Name == "ids");
+
+		definitions.ValidatePropertyType("ids", typeof(int)).Should().BeFalse();
+		definitions.ValidatePropertyType("ids", typeof(double[])).Should().BeFalse();
+		definitions.ValidatePropertyType("ids", typeof(int[])).Should().BeTrue();
 	}
 }

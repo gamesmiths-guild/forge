@@ -159,6 +159,32 @@ public class Variables
 	}
 
 	/// <summary>
+	/// Gets the raw <see cref="Variant128"/> element at the specified index from an array variable.
+	/// </summary>
+	/// <param name="name">The name of the array variable.</param>
+	/// <param name="index">The zero-based index of the element to get.</param>
+	/// <param name="value">The raw variant value of the element if found.</param>
+	/// <returns><see langword="true"/> if the array variable was found and the index was valid, <see langword="false"/>
+	/// otherwise.</returns>
+	public bool TryGetArrayVariant(StringKey name, int index, out Variant128 value)
+	{
+		value = default;
+
+		if (!_arrays.TryGetValue(name, out List<Variant128>? array))
+		{
+			return false;
+		}
+
+		if (index < 0 || index >= array.Count)
+		{
+			return false;
+		}
+
+		value = array[index];
+		return true;
+	}
+
+	/// <summary>
 	/// Sets the element at the specified index in an array variable.
 	/// </summary>
 	/// <typeparam name="T">The type of the value to set. Must be supported by <see cref="Variant128"/>.</typeparam>
