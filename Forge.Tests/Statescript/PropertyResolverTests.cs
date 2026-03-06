@@ -382,6 +382,20 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 	}
 
 	[Fact]
+	[Trait("Resolver", "Comparison")]
+	public void Comparison_resolver_supports_different_variant_types()
+	{
+		var resolver = new ComparisonResolver(
+			new VariantResolver(new Variant128(20), typeof(int)),
+			ComparisonOperation.GreaterThan,
+			new VariantResolver(new Variant128(10.0f), typeof(float)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsBool().Should().BeTrue();
+	}
+
+	[Fact]
 	[Trait("Resolver", "SharedVariable")]
 	public void Shared_variable_resolver_reads_value_from_shared_variables()
 	{
