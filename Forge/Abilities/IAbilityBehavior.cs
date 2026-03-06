@@ -18,6 +18,15 @@ public interface IAbilityBehavior
 	/// </summary>
 	/// <param name="context">The context for the ended ability instance.</param>
 	void OnEnded(AbilityBehaviorContext context);
+
+	/// <summary>
+	/// Called once per frame (or tick) to advance the behavior's internal state. The default implementation does
+	/// nothing, which is correct for behaviors that complete synchronously during <see cref="OnStarted"/>.
+	/// </summary>
+	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
+	void OnUpdate(double deltaTime)
+	{
+	}
 }
 
 /// <summary>

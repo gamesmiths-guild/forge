@@ -218,6 +218,19 @@ public class EntityAbilities(IForgeEntity owner)
 		return newAbility.Handle;
 	}
 
+	/// <summary>
+	/// Updates all active ability behaviors. Call this once per frame alongside
+	/// <see cref="Effects.EffectsManager.UpdateEffects(double)"/>.
+	/// </summary>
+	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
+	public void UpdateAbilities(double deltaTime)
+	{
+		foreach (AbilityHandle handle in GrantedAbilities)
+		{
+			handle.Ability?.UpdateBehaviors(deltaTime);
+		}
+	}
+
 	internal AbilityHandle GrantAbility(
 		AbilityData abilityData,
 		int abilityLevel,
