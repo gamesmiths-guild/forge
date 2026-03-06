@@ -284,6 +284,43 @@ public class GraphProcessorTests
 	}
 
 	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void Stopping_graph_fires_on_graph_completed_once()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 5.0);
+		graph.VariableDefinitions.DefineVariable("counter", 0);
+
+		TimerNode timer = CreateTimerNode("duration");
+		var incrementCounterNode = new IncrementCounterNode("counter");
+		var exit = new ExitNode();
+		graph.AddNode(timer);
+		graph.AddNode(incrementCounterNode);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnDeactivatePort],
+			incrementCounterNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			incrementCounterNode.OutputPorts[ActionNode.OutputPort],
+			exit.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.IsActive.Should().BeTrue();
+
+		processor.UpdateGraph(5f);
+
+		processor.GraphContext.IsActive.Should().BeFalse();
+
+		processor.GraphContext.GraphVariables.TryGetVar("counter", out int value).Should().BeTrue();
+		value.Should().Be(1);
+	}
+
+	[Fact]
 	[Trait("Graph", "Complex")]
 	public void Complex_graph_with_condition_and_multiple_actions_executes_correctly()
 	{

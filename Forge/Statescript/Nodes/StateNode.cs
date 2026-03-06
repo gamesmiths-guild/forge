@@ -247,6 +247,8 @@ public abstract class StateNode<T> : Node
 			return;
 		}
 
+		nodeContext.Active = false;
+
 		base.BeforeDisable(graphContext);
 
 		OutputPorts[OnDeactivatePort].EmitMessage(graphContext);
@@ -260,16 +262,8 @@ public abstract class StateNode<T> : Node
 			return;
 		}
 
-		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
-
-		if (!nodeContext.Active)
-		{
-			return;
-		}
-
 		base.AfterDisable(graphContext);
 
-		nodeContext.Active = false;
 		graphContext.ActiveStateNodes.Remove(this);
 		OnDeactivate(graphContext);
 
