@@ -2,7 +2,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Core;
-using Gamesmiths.Forge.Statescript.Properties;
 
 namespace Gamesmiths.Forge.Statescript;
 
