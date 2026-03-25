@@ -130,6 +130,37 @@ public class Variables
 	}
 
 	/// <summary>
+	/// Defines a new mutable variable directly in this <see cref="Variables"/> bag using a raw <see cref="Variant128"/>
+	/// value. If a variable with the given name already exists, its value is updated instead.
+	/// </summary>
+	/// <remarks>
+	/// This overload is useful when the value has already been converted to a <see cref="Variant128"/> (e.g., from a
+	/// serialized source). For typed values, prefer <see cref="DefineVariable{T}(StringKey, T)"/> instead.
+	/// </remarks>
+	/// <param name="name">The name of the variable.</param>
+	/// <param name="value">The raw variant value.</param>
+	public void DefineVariable(StringKey name, Variant128 value)
+	{
+		_variables[name] = value;
+	}
+
+	/// <summary>
+	/// Defines a new mutable array variable directly in this <see cref="Variables"/> bag. If an array variable with
+	/// the given name already exists, its values are replaced.
+	/// </summary>
+	/// <remarks>
+	/// This is intended for entity-level shared variables that are not defined through a graph's
+	/// <see cref="GraphVariableDefinitions"/>. For graph instance variables, use
+	/// <see cref="InitializeFrom(GraphVariableDefinitions)"/> instead.
+	/// </remarks>
+	/// <param name="name">The name of the array variable.</param>
+	/// <param name="values">The initial values of the array variable.</param>
+	public void DefineArrayVariable(StringKey name, IEnumerable<Variant128> values)
+	{
+		_arrays[name] = [.. values];
+	}
+
+	/// <summary>
 	/// Gets the element at the specified index from an array variable.
 	/// </summary>
 	/// <typeparam name="T">The type to interpret the element as. Must be supported by <see cref="Variant128"/>.
