@@ -8,6 +8,7 @@ using Gamesmiths.Forge.Effects.Calculator;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
+using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
@@ -965,6 +966,282 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
+	}
+
+	[Fact]
+	[Trait("Periodic", "Execution")]
+	public void Periodic_effect_with_custom_execution_executes_on_each_tick()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var customCalculatorClass = new CustomTestExecutionClass(false);
+
+		var effectData = new EffectData(
+			"Periodic Custom Execution",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(3f))),
+			periodicData: new PeriodicData(new ScalableFloat(1f), true, PeriodInhibitionRemovedPolicy.NeverReset),
+			customExecutions:
+			[
+				customCalculatorClass
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				owner,
+				owner));
+
+		// Custom execution produces:
+		//   target.Attribute1 += Attribute3 * Attribute5 = 3 * 5 = 15
+		//   target.Attribute2 += Attribute3 + Attribute5 + Attribute1(snapshot) = 3 + 5 + 1 = 9
+		//   owner.Attribute90 += -1
+		target.EffectsManager.ApplyEffect(effect);
+
+		// After ExecuteOnApplication (tick 0):
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 16, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 11, 0, 0]);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [89, 89, 0, 0]);
+
+		// After 1 second (tick 1):
+		target.EffectsManager.UpdateEffects(1);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [31, 31, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [20, 20, 0, 0]);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [88, 88, 0, 0]);
+
+		// After 2 seconds (tick 2):
+		target.EffectsManager.UpdateEffects(1);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [46, 46, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [29, 29, 0, 0]);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [87, 87, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Periodic", "Execution")]
+	public void Periodic_effect_with_combined_modifiers_and_custom_execution_executes_on_each_tick()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var customCalculatorClass = new CustomTestExecutionClass(false);
+
+		var effectData = new EffectData(
+			"Periodic Combined",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(3f))),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(5)))
+			],
+			periodicData: new PeriodicData(new ScalableFloat(1f), true, PeriodInhibitionRemovedPolicy.NeverReset),
+			customExecutions:
+			[
+				customCalculatorClass
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				owner,
+				owner));
+
+		// Regular modifier: target.Attribute1 += 5
+		// Custom execution:
+		//   source1 = owner.Attribute3 = 3, source2 = owner.Attribute5 = 5
+		//   target.Attribute1 += source1 * source2 = 15
+		//   target.Attribute2 += source1 + source2 + snapshot(target.Attribute1 with pending) = 3 + 5 + snapshot
+		//   owner.Attribute90 += -1
+		// TargetAttribute1 is snapshot=true, so cached on first evaluation with pending +5 modifier.
+		target.EffectsManager.ApplyEffect(effect);
+
+		// Tick 0 (ExecuteOnApplication):
+		// Attribute1 snapshot captures: base(1) + pending(5) = 6, cached in SnapshotAttributes.
+		// target.Attribute1: 1 + 5 + 15 = 21
+		// target.Attribute2: 2 + (3 + 5 + 6) = 16
+		// owner.Attribute90: 90 - 1 = 89
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [21, 21, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [16, 16, 0, 0]);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [89, 89, 0, 0]);
+
+		// Tick 1:
+		// Snapshot stays 6 but pending recalculates: (21 + 5) - 6 = 20, so capture = 26.
+		// target.Attribute1: 21 + 5 + 15 = 41
+		// target.Attribute2: 16 + (3 + 5 + 26) = 50
+		// owner.Attribute90: 89 - 1 = 88
+		target.EffectsManager.UpdateEffects(1);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [50, 50, 0, 0]);
+		TestUtils.TestAttribute(owner, "TestAttributeSet.Attribute90", [88, 88, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Periodic", "Execution")]
+	public void Periodic_effect_with_event_firing_custom_execution_fires_event_on_each_tick()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		var eventFiringExecution = new EventFiringExecution(eventTag);
+
+		var effectData = new EffectData(
+			"Periodic Event Effect",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(5f))),
+			periodicData: new PeriodicData(new ScalableFloat(1f), true, PeriodInhibitionRemovedPolicy.NeverReset),
+			customExecutions:
+			[
+				eventFiringExecution
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				owner,
+				owner));
+
+		var eventCount = 0;
+		float lastMagnitude = 0;
+
+		target.Events.Subscribe(eventTag, x =>
+		{
+			eventCount++;
+			lastMagnitude = x.EventMagnitude;
+		});
+
+		// ExecuteOnApplication fires on apply.
+		target.EffectsManager.ApplyEffect(effect);
+		eventCount.Should().Be(1);
+		lastMagnitude.Should().Be(1);
+
+		// Tick 1 at t=1s.
+		target.EffectsManager.UpdateEffects(1);
+		eventCount.Should().Be(2);
+		lastMagnitude.Should().Be(2);
+
+		// Tick 2 at t=2s.
+		target.EffectsManager.UpdateEffects(1);
+		eventCount.Should().Be(3);
+		lastMagnitude.Should().Be(3);
+
+		// Tick 3 at t=3s.
+		target.EffectsManager.UpdateEffects(1);
+		eventCount.Should().Be(4);
+		lastMagnitude.Should().Be(4);
+
+		// Tick 4 at t=4s.
+		target.EffectsManager.UpdateEffects(1);
+		eventCount.Should().Be(5);
+		lastMagnitude.Should().Be(5);
+
+		// Tick 5 at t=5s (last tick before expiration).
+		target.EffectsManager.UpdateEffects(1);
+		eventCount.Should().Be(6);
+		lastMagnitude.Should().Be(6);
+
+		// No more ticks after expiration.
+		target.EffectsManager.UpdateEffects(1);
+		eventCount.Should().Be(6);
+	}
+
+	[Fact]
+	[Trait("Periodic", "Execution")]
+	public void Periodic_effect_without_execute_on_application_does_not_fire_event_until_first_tick()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		var eventFiringExecution = new EventFiringExecution(eventTag);
+
+		var effectData = new EffectData(
+			"Periodic Event Effect",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.ScalableFloat,
+					new ScalableFloat(3f))),
+			periodicData: new PeriodicData(new ScalableFloat(1f), false, PeriodInhibitionRemovedPolicy.NeverReset),
+			customExecutions:
+			[
+				eventFiringExecution
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				owner,
+				owner));
+
+		var eventCount = 0;
+		float lastMagnitude = 0;
+
+		target.Events.Subscribe(eventTag, x =>
+		{
+			eventCount++;
+			lastMagnitude = x.EventMagnitude;
+		});
+
+		// No event on application since ExecuteOnApplication is false.
+		target.EffectsManager.ApplyEffect(effect);
+		eventCount.Should().Be(0);
+
+		// Advancing time but not enough to reach the first tick.
+		target.EffectsManager.UpdateEffects(0.5);
+		eventCount.Should().Be(0);
+
+		// First tick at t=1s fires the event for the first time.
+		target.EffectsManager.UpdateEffects(0.5);
+		eventCount.Should().Be(1);
+		lastMagnitude.Should().Be(1);
+
+		// Tick 2 at t=2s.
+		target.EffectsManager.UpdateEffects(1);
+		eventCount.Should().Be(2);
+		lastMagnitude.Should().Be(2);
+	}
+
+	private sealed class EventFiringExecution : CustomExecution
+	{
+		private readonly Tag _eventTag;
+		private int _fireCount;
+
+		public EventFiringExecution(Tag eventTag)
+		{
+			_eventTag = eventTag;
+		}
+
+		public override ModifierEvaluatedData[] EvaluateExecution(
+			Effect effect,
+			IForgeEntity target,
+			EffectEvaluatedData? effectEvaluatedData)
+		{
+			_fireCount++;
+
+			target.Events.Raise(new EventData
+			{
+				EventTags = _eventTag.GetSingleTagContainer()!,
+				Source = effect.Ownership.Owner,
+				Target = target,
+				EventMagnitude = _fireCount,
+			});
+
+			return [];
+		}
 	}
 
 	private sealed class CustomMagnitudeCalculator : CustomModifierMagnitudeCalculator
