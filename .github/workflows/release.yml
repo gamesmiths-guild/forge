@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -31,6 +33,7 @@ jobs:
         if: success() && github.event_name == 'push'
         run: |
           dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+          dotnet nuget push ./artifacts/*.snupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
           dotnet nuget add source --username ${{ github.actor }} --password ${{ secrets.GH_PACKAGE_RELEASE }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
           dotnet nuget push ./artifacts/*.nupkg --source "github" --api-key ${{ secrets.GH_PACKAGE_RELEASE }} --skip-duplicate
 
