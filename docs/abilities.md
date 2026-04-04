@@ -846,6 +846,43 @@ entity.Events.Raise(new EventData<HitLocationData>
 - Prefer typed data over loosely structured objects.
 - Event Triggers are ideal for world-driven context injection.
 
+## Statescript Integration
+
+Abilities can be driven by Statescript graphs instead of handwritten `IAbilityBehavior` classes. This is done through `GraphAbilityBehavior`, which connects the ability lifecycle to a graph's execution:
+
+- When the ability **starts**, the graph begins processing from its Entry node.
+- Each frame, `OnUpdate(deltaTime)` advances all active state nodes in the graph.
+- When the graph **completes** (all state nodes deactivate) or an Exit node is reached, the ability instance ends.
+- When the ability is **canceled**, the graph is stopped and all active nodes are disabled.
+
+### GraphAbilityBehavior
+
+```csharp
+var graph = new Graph();
+// ... build graph with nodes and connections ...
+
+var behavior = new GraphAbilityBehavior(graph);
+
+var abilityData = new AbilityData(
+    "Fireball",
+    instancingPolicy: AbilityInstancingPolicy.PerExecution,
+    behaviorFactory: () => behavior);
+```
+
+### GraphAbilityBehavior&lt;TData&gt;
+
+For abilities that receive typed activation data, use the generic variant with a data binder that maps fields into graph variables:
+
+```csharp
+var behavior = new GraphAbilityBehavior<DashData>(graph, (data, variables) =>
+{
+    variables.SetVar(new StringKey("Distance"), data.Distance);
+    variables.SetVar(new StringKey("Speed"), data.Speed);
+});
+```
+
+For detailed documentation on Statescript concepts, see the [Statescript documentation](statescript/README.md).
+
 ## Best Practices
 
 1. **Separate Data from Behavior**: Define ability configuration in `AbilityData` and implement logic in `IAbilityBehavior`.

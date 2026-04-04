@@ -318,7 +318,7 @@ A common pattern is to raise an Event for gameplay logic, then trigger the corre
 
 ```csharp
 // Event for gameplay (reliable, affects game state)
-entity.Events. Raise(new EventData
+entity.Events.Raise(new EventData
 {
     EventTags = damageEventTag.GetSingleTagContainer(),
     Source = attacker,

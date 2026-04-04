@@ -79,6 +79,17 @@ Effects can be instant or persistent, with various duration types including infi
 
 This system keeps gameplay logic separate from presentation concerns.
 
+### Statescript System
+
+[Statescript](statescript/README.md) is a state-based scripting system for defining ability behaviors:
+
+- **Node Graph**: Graphs composed of Entry, Exit, Action, Condition, and State nodes define execution flow.
+- **Hybrid Execution**: Combines declarative state management with imperative message propagation.
+- **Subgraphs**: State nodes own downstream subgraphs, providing automatic lifetime management and cleanup.
+- **Variables**: Mutable graph variables and entity-level shared variables connect graph logic to runtime data.
+- **Property Resolvers**: Data-driven inputs from attributes, tags, comparisons, and activation context.
+- **Ability Integration**: Graphs plug directly into the Abilities system as `IAbilityBehavior` implementations.
+
 ## Architecture Overview
 
 Forge's architecture follows these key principles:
@@ -119,6 +130,7 @@ For more detailed information about specific systems, refer to these documentati
 - [Abilities](abilities.md): Ability granting, activation, instancing, costs, cooldowns, and tag requirements.
 - [Events](events.md): Event data, tagging, and trigger hooks.
 - [Cues](cues.md): Connecting gameplay events to visual and audio feedback.
+- [Statescript](statescript/README.md): Visual state-based scripting for ability behaviors.
 
 ### Effect Features
 

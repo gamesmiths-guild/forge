@@ -14,6 +14,7 @@ The framework eliminates the need to rebuild status systems for every game proje
 - **Abilities**: Creation, granting, activation, cooldowns, costs, and instancing rules for gameplay abilities.
 - **Events**: Gameplay event handling and propagation used for ability triggers and game logic reactions.
 - **Cues**: Visual and audio feedback system that bridges gameplay with presentation.
+- **Statescript**: State-based scripting system for defining ability behaviors through node graphs.
 
 ## Installation
 
