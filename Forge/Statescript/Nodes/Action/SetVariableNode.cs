@@ -46,7 +46,13 @@ public class SetVariableNode : ActionNode
 
 		if (target.Scope == VariableScope.Shared)
 		{
-			graphContext.SharedVariables?.SetVariant(target.BoundName, value);
+			if (graphContext.SharedVariables is null)
+			{
+				throw new InvalidOperationException(
+					$"Cannot write to shared variable '{target.BoundName}': SharedVariables is not available in this context.");
+			}
+
+			graphContext.SharedVariables.SetVariant(target.BoundName, value);
 		}
 		else
 		{

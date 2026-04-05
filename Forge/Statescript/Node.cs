@@ -102,6 +102,11 @@ public abstract class Node
 	/// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="index"/> is out of range.</exception>
 	public void BindInput(byte index, StringKey propertyName)
 	{
+		if (propertyName == StringKey.Empty)
+		{
+			throw new ArgumentException("Property name must not be empty or default.", nameof(propertyName));
+		}
+
 		if (index >= InputProperties.Length)
 		{
 			throw new ArgumentOutOfRangeException(
@@ -122,6 +127,11 @@ public abstract class Node
 	/// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="index"/> is out of range.</exception>
 	public void BindOutput(byte index, StringKey variableName, VariableScope scope = VariableScope.Graph)
 	{
+		if (variableName == StringKey.Empty)
+		{
+			throw new ArgumentException("Variable name must not be empty or default.", nameof(variableName));
+		}
+
 		if (index >= OutputVariables.Length)
 		{
 			throw new ArgumentOutOfRangeException(

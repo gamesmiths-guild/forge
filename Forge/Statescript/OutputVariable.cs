@@ -33,7 +33,7 @@ public readonly record struct OutputVariable(string Label, Type ValueType, Varia
 {
 	/// <summary>
 	/// Gets the bound variable name. This is set via <see cref="Node.BindOutput"/> after the node is constructed.
-	/// Before binding, this value is <see langword="default"/>.
+	/// Before binding, this value is <see cref="StringKey.Empty"/>.
 	/// </summary>
-	public StringKey BoundName { get; internal init; }
+	public StringKey BoundName { get; internal init; } = StringKey.Empty;
 }

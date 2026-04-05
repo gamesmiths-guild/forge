@@ -262,9 +262,20 @@ public abstract class StateNode<T> : Node
 			return;
 		}
 
+		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
+
+		if (nodeContext.Active)
+		{
+			return;
+		}
+
+		if (!graphContext.ActiveStateNodes.Remove(this))
+		{
+			return;
+		}
+
 		base.AfterDisable(graphContext);
 
-		graphContext.ActiveStateNodes.Remove(this);
 		OnDeactivate(graphContext);
 
 		if (graphContext.ActiveStateNodes.Count == 0)

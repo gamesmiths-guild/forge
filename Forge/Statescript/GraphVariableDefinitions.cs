@@ -132,7 +132,12 @@ public class GraphVariableDefinitions
 		{
 			if (definition.Name == name)
 			{
-				return expectedType.IsAssignableFrom(definition.ElementType);
+				if (expectedType.IsArray && expectedType.GetElementType() is Type elementType)
+				{
+					return elementType.IsAssignableFrom(definition.ElementType);
+				}
+
+				return false;
 			}
 		}
 

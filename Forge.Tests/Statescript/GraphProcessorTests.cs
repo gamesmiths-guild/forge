@@ -892,8 +892,9 @@ public class GraphProcessorTests
 		var definitions = new GraphVariableDefinitions();
 		definitions.DefineArrayVariable("targets", 1, 2, 3);
 
-		definitions.ValidatePropertyType("targets", typeof(int)).Should().BeTrue();
-		definitions.ValidatePropertyType("targets", typeof(double)).Should().BeFalse();
+		definitions.ValidatePropertyType("targets", typeof(int)).Should().BeFalse();
+		definitions.ValidatePropertyType("targets", typeof(double[])).Should().BeFalse();
+		definitions.ValidatePropertyType("targets", typeof(int[])).Should().BeTrue();
 	}
 
 	[Fact]
