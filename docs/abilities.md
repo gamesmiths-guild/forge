@@ -630,27 +630,35 @@ var abilityData = new AbilityData(
 
 ## Ability Triggers
 
-Abilities can be automatically activated in response to events or tag changes:
+Abilities can be automatically activated in response to events or tag changes. Use the static factory methods on `AbilityTriggerData` to create trigger configurations:
 
 ### Event Trigger
 
 Activate when a specific event is raised:
 
 ```csharp
+var blockedTag = Tag.RequestTag(tagsManager, "events.combat.blocked");
+
 var abilityData = new AbilityData(
     "Counter Attack",
-    abilityTriggerData: new AbilityTriggerData(
-        TriggerTag: Tag.RequestTag(tagsManager, "events.combat.blocked"),
-        TriggerSource: AbilityTriggerSource.Event));
+    abilityTriggerData: AbilityTriggerData.ForEvent(blockedTag));
 
 // Later, when the entity blocks an attack:
 entity.Events.Raise(new EventData
 {
-    EventTags = blockedEventTags,
+    EventTags = blockedTag.GetSingleTagContainer()!,
     Source = attacker,
     Target = entity
 });
 // Counter Attack activates automatically
+```
+
+For abilities that need access to a typed event payload, use the generic overload. The payload is forwarded to the behavior's `OnStarted` method when the behavior implements `IAbilityBehavior<TPayload>`:
+
+```csharp
+var abilityData = new AbilityData(
+    "Counter Attack",
+    abilityTriggerData: AbilityTriggerData.ForEvent<DamageInfo>(blockedTag));
 ```
 
 ### Tag Added Trigger
@@ -660,9 +668,8 @@ Activate when a tag is added to the entity:
 ```csharp
 var abilityData = new AbilityData(
     "Rage",
-    abilityTriggerData: new AbilityTriggerData(
-        TriggerTag: Tag.RequestTag(tagsManager, "status.enraged"),
-        TriggerSource: AbilityTriggerSource.TagAdded));
+    abilityTriggerData: AbilityTriggerData.ForTagAdded(
+        Tag.RequestTag(tagsManager, "status.enraged")));
 
 // When the entity gains the "status.enraged" tag, Rage activates
 ```
@@ -674,9 +681,8 @@ Stay active while a tag is present. This acts as a toggle:
 ```csharp
 var abilityData = new AbilityData(
     "Burning Aura",
-    abilityTriggerData: new AbilityTriggerData(
-        TriggerTag: Tag.RequestTag(tagsManager, "status.on_fire"),
-        TriggerSource: AbilityTriggerSource.TagPresent));
+    abilityTriggerData: AbilityTriggerData.ForTagPresent(
+        Tag.RequestTag(tagsManager, "status.on_fire")));
 
 // 1. Tag "status.on_fire" added -> Ability Activates
 // 2. Tag "status.on_fire" removed -> Ability is Canceled
@@ -839,6 +845,43 @@ entity.Events.Raise(new EventData<HitLocationData>
 - Do not use activation data for static ability configuration.
 - Prefer typed data over loosely structured objects.
 - Event Triggers are ideal for world-driven context injection.
+
+## Statescript Integration
+
+Abilities can be driven by Statescript graphs instead of handwritten `IAbilityBehavior` classes. This is done through `GraphAbilityBehavior`, which connects the ability lifecycle to a graph's execution:
+
+- When the ability **starts**, the graph begins processing from its Entry node.
+- Each frame, `OnUpdate(deltaTime)` advances all active state nodes in the graph.
+- When the graph **completes** (all state nodes deactivate) or an Exit node is reached, the ability instance ends.
+- When the ability is **canceled**, the graph is stopped and all active nodes are disabled.
+
+### GraphAbilityBehavior
+
+```csharp
+var graph = new Graph();
+// ... build graph with nodes and connections ...
+
+var behavior = new GraphAbilityBehavior(graph);
+
+var abilityData = new AbilityData(
+    "Fireball",
+    instancingPolicy: AbilityInstancingPolicy.PerExecution,
+    behaviorFactory: () => behavior);
+```
+
+### GraphAbilityBehavior&lt;TData&gt;
+
+For abilities that receive typed activation data, use the generic variant with a data binder that maps fields into graph variables:
+
+```csharp
+var behavior = new GraphAbilityBehavior<DashData>(graph, (data, variables) =>
+{
+    variables.SetVar(new StringKey("Distance"), data.Distance);
+    variables.SetVar(new StringKey("Speed"), data.Speed);
+});
+```
+
+For detailed documentation on Statescript concepts, see the [Statescript documentation](statescript/README.md).
 
 ## Best Practices
 

@@ -382,6 +382,20 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 	}
 
 	[Fact]
+	[Trait("Resolver", "Comparison")]
+	public void Comparison_resolver_supports_different_variant_types()
+	{
+		var resolver = new ComparisonResolver(
+			new VariantResolver(new Variant128(20), typeof(int)),
+			ComparisonOperation.GreaterThan,
+			new VariantResolver(new Variant128(10.0f), typeof(float)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsBool().Should().BeTrue();
+	}
+
+	[Fact]
 	[Trait("Resolver", "SharedVariable")]
 	public void Shared_variable_resolver_reads_value_from_shared_variables()
 	{
@@ -548,7 +562,109 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		resolver.ValueType.Should().Be(typeof(double));
 	}
 
-	private static GraphContext CreateAbilityGraphContext(TestEntity entity)
+	[Fact]
+	[Trait("Resolver", "ArrayProperty")]
+	public void Array_property_resolver_returns_resolved_array()
+	{
+		Variant128[] expected = [new Variant128(10), new Variant128(20), new Variant128(30)];
+		var resolver = new TestArrayPropertyResolver(typeof(int), [expected]);
+
+		var context = new GraphContext();
+
+		Variant128[] result = resolver.ResolveArray(context);
+
+		result.Should().BeEquivalentTo(expected);
+	}
+
+	[Fact]
+	[Trait("Resolver", "ArrayProperty")]
+	public void Array_property_resolver_reports_correct_element_type()
+	{
+		var intResolver = new TestArrayPropertyResolver(typeof(int), [[]]);
+		var doubleResolver = new TestArrayPropertyResolver(typeof(double), [[]]);
+
+		intResolver.ElementType.Should().Be(typeof(int));
+		doubleResolver.ElementType.Should().Be(typeof(double));
+	}
+
+	[Fact]
+	[Trait("Resolver", "ArrayProperty")]
+	public void Array_property_resolver_returns_empty_array()
+	{
+		var resolver = new TestArrayPropertyResolver(typeof(int), [[]]);
+
+		var context = new GraphContext();
+
+		Variant128[] result = resolver.ResolveArray(context);
+
+		result.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Resolver", "Magnitude")]
+	public void Magnitude_resolver_value_type_is_float()
+	{
+		var resolver = new MagnitudeResolver();
+
+		resolver.ValueType.Should().Be(typeof(float));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Magnitude")]
+	public void Magnitude_resolver_returns_default_when_no_activation_context()
+	{
+		var resolver = new MagnitudeResolver();
+
+		var context = new GraphContext();
+
+		Variant128 result = resolver.Resolve(context);
+
+		result.AsFloat().Should().Be(0f);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Magnitude")]
+	public void Magnitude_resolver_returns_zero_magnitude()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var resolver = new MagnitudeResolver();
+
+		GraphContext context = CreateAbilityGraphContext(entity);
+
+		Variant128 result = resolver.Resolve(context);
+
+		result.AsFloat().Should().Be(0f);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Magnitude")]
+	public void Magnitude_resolver_returns_magnitude_from_activation_context()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var resolver = new MagnitudeResolver();
+
+		GraphContext context = CreateAbilityGraphContext(entity, magnitude: 42.5f);
+
+		Variant128 result = resolver.Resolve(context);
+
+		result.AsFloat().Should().Be(42.5f);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Magnitude")]
+	public void Magnitude_resolver_returns_different_magnitudes_for_different_activations()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var resolver = new MagnitudeResolver();
+
+		GraphContext context1 = CreateAbilityGraphContext(entity, magnitude: 10f);
+		GraphContext context2 = CreateAbilityGraphContext(entity, magnitude: 99.9f);
+
+		resolver.Resolve(context1).AsFloat().Should().Be(10f);
+		resolver.Resolve(context2).AsFloat().Should().Be(99.9f);
+	}
+
+	private static GraphContext CreateAbilityGraphContext(TestEntity entity, float magnitude = 0f)
 	{
 		var graph = new Graph();
 		var captureNode = new CaptureGraphContextNode();
@@ -562,7 +678,7 @@ public class PropertyResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 
 		AbilityData abilityData = CreateAbilityData("ResolverTest", () => behavior);
 		AbilityHandle? handle = Grant(entity, abilityData);
-		handle!.Activate(out _);
+		handle!.Activate(out _, magnitude: magnitude);
 
 		return captureNode.CapturedGraphContext!;
 	}

@@ -15,6 +15,8 @@ using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
+using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
+
 namespace Gamesmiths.Forge.Tests.Statescript;
 
 public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<TagsAndCuesFixture>
@@ -34,7 +36,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.GreaterThan,
 				new VariantResolver(new Variant128(10.0), typeof(double))));
 
-		var condition = new ExpressionNode("isAboveThreshold");
+		ExpressionNode condition = CreateExpressionNode("isAboveThreshold");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -71,7 +73,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.GreaterThan,
 				new VariantResolver(new Variant128(10.0), typeof(double))));
 
-		var condition = new ExpressionNode("isAboveThreshold");
+		ExpressionNode condition = CreateExpressionNode("isAboveThreshold");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -108,7 +110,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.Equal,
 				new VariantResolver(new Variant128(42.0), typeof(double))));
 
-		var condition = new ExpressionNode("isEqual");
+		ExpressionNode condition = CreateExpressionNode("isEqual");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -148,7 +150,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.GreaterThan,
 				new VariableResolver("threshold", typeof(double))));
 
-		var condition = new ExpressionNode("isHealthAboveThreshold");
+		ExpressionNode condition = CreateExpressionNode("isHealthAboveThreshold");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -185,7 +187,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.LessThanOrEqual,
 				new VariantResolver(new Variant128(10.0), typeof(double))));
 
-		var condition = new ExpressionNode("atBoundary");
+		ExpressionNode condition = CreateExpressionNode("atBoundary");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -222,7 +224,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.NotEqual,
 				new VariantResolver(new Variant128(2.0), typeof(double))));
 
-		var condition = new ExpressionNode("isDifferent");
+		ExpressionNode condition = CreateExpressionNode("isDifferent");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -253,7 +255,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 	{
 		var graph = new Graph();
 
-		var condition = new ExpressionNode("nonexistent");
+		ExpressionNode condition = CreateExpressionNode("nonexistent");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -293,7 +295,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.GreaterThanOrEqual,
 				new VariableResolver("requiredScore", typeof(int))));
 
-		var condition = new ExpressionNode("hasEnoughScore");
+		ExpressionNode condition = CreateExpressionNode("hasEnoughScore");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 
@@ -334,7 +336,7 @@ public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 				ComparisonOperation.GreaterThanOrEqual,
 				new VariableResolver("required", typeof(int))));
 
-		var condition = new ExpressionNode("hasEnoughAttribute");
+		ExpressionNode condition = CreateExpressionNode("hasEnoughAttribute");
 		var trueAction = new TrackingActionNode();
 		var falseAction = new TrackingActionNode();
 

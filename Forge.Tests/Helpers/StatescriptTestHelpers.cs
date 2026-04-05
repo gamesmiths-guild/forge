@@ -1,10 +1,46 @@
 // Copyright © Gamesmiths Guild.
 #pragma warning disable SA1649, SA1402 // File name should match first type name
 
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
+using Gamesmiths.Forge.Statescript.Nodes.Action;
+using Gamesmiths.Forge.Statescript.Nodes.Condition;
+using Gamesmiths.Forge.Statescript.Nodes.State;
+using Gamesmiths.Forge.Statescript.Properties;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
+
+/// <summary>
+/// Convenience helpers for creating and binding framework nodes in tests.
+/// </summary>
+internal static class NodeBindings
+{
+	public static TimerNode CreateTimerNode(StringKey durationPropertyName)
+	{
+		var node = new TimerNode();
+		node.BindInput(TimerNode.DurationInput, durationPropertyName);
+		return node;
+	}
+
+	public static ExpressionNode CreateExpressionNode(StringKey conditionPropertyName)
+	{
+		var node = new ExpressionNode();
+		node.BindInput(ExpressionNode.ConditionInput, conditionPropertyName);
+		return node;
+	}
+
+	public static SetVariableNode CreateSetVariableNode(
+		StringKey sourcePropertyName,
+		StringKey targetVariableName,
+		VariableScope scope = VariableScope.Graph)
+	{
+		var node = new SetVariableNode();
+		node.BindInput(SetVariableNode.SourceInput, sourcePropertyName);
+		node.BindOutput(SetVariableNode.TargetOutput, targetVariableName, scope);
+		return node;
+	}
+}
 
 internal sealed class TrackingActionNode(string? name = null, List<string>? executionLog = null) : ActionNode
 {
@@ -122,5 +158,45 @@ internal sealed class CaptureGraphContextNode : ActionNode
 	protected override void Execute(GraphContext graphContext)
 	{
 		CapturedGraphContext = graphContext;
+	}
+}
+
+internal sealed class TestArrayPropertyResolver(Type elementType, Variant128[][] values) : IArrayPropertyResolver
+{
+	private readonly Variant128[][] _values = values;
+
+	public Type ElementType { get; } = elementType;
+
+	public int CallCount { get; private set; }
+
+	public Variant128[] ResolveArray(GraphContext graphContext)
+	{
+		// Cycle through provided arrays for test variety
+		Variant128[] array = _values[CallCount % _values.Length];
+		CallCount++;
+		return array;
+	}
+}
+
+internal sealed class ReadArrayPropertyNode : ActionNode
+{
+	public const byte InputArray = 0;
+
+	public Variant128[]? LastReadArray { get; private set; }
+
+	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
+	{
+		inputProperties.Add(new InputProperty("Array", typeof(int[])));
+	}
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		if (!graphContext.TryResolveArray(InputProperties[InputArray].BoundName, out Variant128[]? resolved))
+		{
+			LastReadArray = null;
+			return;
+		}
+
+		LastReadArray = resolved;
 	}
 }

@@ -36,6 +36,12 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 		StopGraph();
 	}
 
+	/// <inheritdoc/>
+	public void OnUpdate(double deltaTime)
+	{
+		Processor.UpdateGraph(deltaTime);
+	}
+
 	/// <summary>
 	/// Starts the graph processor, wiring up the <see cref="GraphProcessor.OnGraphCompleted"/> callback to
 	/// automatically end the ability instance when the graph finishes.

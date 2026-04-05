@@ -77,6 +77,112 @@ public sealed class GraphContext
 	}
 
 	/// <summary>
+	/// Resolves a named value by first checking graph variables and then falling back to read-only property definitions
+	/// on the graph. This is the primary way for nodes to read a named value at runtime without caring whether it is a
+	/// mutable variable or a computed property.
+	/// </summary>
+	/// <typeparam name="T">The type to interpret the value as. Must be supported by <see cref="Variant128"/>.
+	/// </typeparam>
+	/// <param name="name">The name of the variable or property.</param>
+	/// <param name="value">The resolved value if found.</param>
+	/// <returns><see langword="true"/> if the name was resolved, <see langword="false"/> otherwise.</returns>
+	public bool TryResolve<T>(StringKey name, out T value)
+		where T : unmanaged
+	{
+		if (GraphVariables.TryGetVar(name, out value))
+		{
+			return true;
+		}
+
+		if (Processor is null)
+		{
+			return false;
+		}
+
+		foreach (PropertyDefinition definition in Processor.Graph.VariableDefinitions.PropertyDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				Variant128 resolved = definition.Resolver.Resolve(this);
+				value = resolved.Get<T>();
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Resolves a named value as a raw <see cref="Variant128"/> by first checking graph variables and then falling back
+	/// to read-only property definitions.
+	/// </summary>
+	/// <param name="name">The name of the variable or property.</param>
+	/// <param name="value">The resolved value if found.</param>
+	/// <returns><see langword="true"/> if the name was resolved, <see langword="false"/> otherwise.</returns>
+	public bool TryResolveVariant(StringKey name, out Variant128 value)
+	{
+		if (GraphVariables.TryGetVariant(name, out value))
+		{
+			return true;
+		}
+
+		if (Processor is null)
+		{
+			return false;
+		}
+
+		foreach (PropertyDefinition definition in Processor.Graph.VariableDefinitions.PropertyDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				value = definition.Resolver.Resolve(this);
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Resolves a named array value by first checking array variables in <see cref="GraphVariables"/> and then falling
+	/// back to read-only array property definitions on the graph. This is the primary way for nodes to read a named
+	/// array at runtime without caring whether it is a mutable array variable or a computed array property.
+	/// </summary>
+	/// <param name="name">The name of the array variable or array property.</param>
+	/// <param name="values">The resolved array if found; otherwise, <see langword="null"/>.</param>
+	/// <returns><see langword="true"/> if the name was resolved, <see langword="false"/> otherwise.</returns>
+	public bool TryResolveArray(StringKey name, [NotNullWhen(true)] out Variant128[]? values)
+	{
+		var length = GraphVariables.GetArrayLength(name);
+		if (length >= 0)
+		{
+			values = new Variant128[length];
+			for (var i = 0; i < length; i++)
+			{
+				GraphVariables.TryGetArrayVariant(name, i, out values[i]);
+			}
+
+			return true;
+		}
+
+		if (Processor is not null)
+		{
+			foreach (ArrayPropertyDefinition definition in
+				Processor.Graph.VariableDefinitions.ArrayPropertyDefinitions)
+			{
+				if (definition.Name == name)
+				{
+					values = definition.Resolver.ResolveArray(this);
+					return true;
+				}
+			}
+		}
+
+		values = null;
+		return false;
+	}
+
+	/// <summary>
 	/// Gets the node context of type T for the specified node ID. The context is guaranteed to exist because the
 	/// framework creates it automatically when the node first receives a message, before any user code runs.
 	/// </summary>

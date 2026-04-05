@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Effects.Calculator;
 using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
@@ -114,21 +115,71 @@ public class Effect
 		in EffectEvaluatedData effectEvaluatedData,
 		IEffectComponent[]? componentInstances)
 	{
-		foreach (ModifierEvaluatedData modifier in effectEvaluatedData.ModifiersEvaluatedData)
+		CustomExecution[] customExecutions = effectEvaluatedData.Effect.EffectData.CustomExecutions;
+
+		if (customExecutions.Length > 0)
 		{
-			switch (modifier.ModifierOperation)
+			var allModifiers = new List<ModifierEvaluatedData>(effectEvaluatedData.ModifierCount);
+
+			for (var i = 0; i < effectEvaluatedData.ModifierCount; i++)
 			{
-				case ModifierOperation.FlatBonus:
-					modifier.Attribute.ExecuteFlatModifier((int)modifier.Magnitude);
-					break;
+				allModifiers.Add(effectEvaluatedData.ModifiersEvaluatedData[i]);
+			}
 
-				case ModifierOperation.PercentBonus:
-					modifier.Attribute.ExecutePercentModifier(modifier.Magnitude);
-					break;
+			foreach (CustomExecution execution in customExecutions)
+			{
+				if (CustomExecution.ExecutionHasInvalidAttributeCaptures(
+					execution,
+					effectEvaluatedData.Effect,
+					effectEvaluatedData.Target))
+				{
+					continue;
+				}
 
-				case ModifierOperation.Override:
-					modifier.Attribute.ExecuteOverride((int)modifier.Magnitude);
-					break;
+				allModifiers.AddRange(execution.EvaluateExecution(
+					effectEvaluatedData.Effect,
+					effectEvaluatedData.Target,
+					effectEvaluatedData));
+			}
+
+			effectEvaluatedData.RefreshCustomCueParameters();
+
+			foreach (ModifierEvaluatedData modifier in allModifiers)
+			{
+				switch (modifier.ModifierOperation)
+				{
+					case ModifierOperation.FlatBonus:
+						modifier.Attribute.ExecuteFlatModifier((int)modifier.Magnitude);
+						break;
+
+					case ModifierOperation.PercentBonus:
+						modifier.Attribute.ExecutePercentModifier(modifier.Magnitude);
+						break;
+
+					case ModifierOperation.Override:
+						modifier.Attribute.ExecuteOverride((int)modifier.Magnitude);
+						break;
+				}
+			}
+		}
+		else
+		{
+			foreach (ModifierEvaluatedData modifier in effectEvaluatedData.ModifiersEvaluatedData)
+			{
+				switch (modifier.ModifierOperation)
+				{
+					case ModifierOperation.FlatBonus:
+						modifier.Attribute.ExecuteFlatModifier((int)modifier.Magnitude);
+						break;
+
+					case ModifierOperation.PercentBonus:
+						modifier.Attribute.ExecutePercentModifier(modifier.Magnitude);
+						break;
+
+					case ModifierOperation.Override:
+						modifier.Attribute.ExecuteOverride((int)modifier.Magnitude);
+						break;
+				}
 			}
 		}
 

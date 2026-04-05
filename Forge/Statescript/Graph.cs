@@ -9,14 +9,14 @@ namespace Gamesmiths.Forge.Statescript;
 /// <summary>
 /// Represents a Statescript graph definition consisting of nodes and connections. A <see cref="Graph"/> instance is
 /// constructed once and can then be shared across multiple <see cref="GraphProcessor"/> instances (Flyweight pattern).
-/// Each runner pairs the shared graph with its own <see cref="IGraphContext"/>, which holds all mutable runtime state.
+/// Each runner pairs the shared graph with its own <see cref="GraphContext"/>, which holds all mutable runtime state.
 /// </summary>
 /// <remarks>
 /// <para>The Flyweight boundary is at the <see cref="Graph"/> level, not the individual <see cref="Node"/> level.
 /// Nodes own their ports, and ports store connection data, so a given <see cref="Node"/> instance is bound to the
 /// graph that wired it. Do not add the same <see cref="Node"/> instance to multiple graphs.</para>
 /// <para>All mutable runtime state (variable values, node contexts, activation status) lives in
-/// <see cref="IGraphContext"/>.</para>
+/// <see cref="GraphContext"/>.</para>
 /// </remarks>
 public class Graph
 {

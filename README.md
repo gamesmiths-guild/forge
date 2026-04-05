@@ -29,6 +29,7 @@ Forge is built around core systems that work together to provide comprehensive g
 - **[Abilities](docs/abilities.md)**: Creation, granting, activation, cooldowns, costs, and instancing rules for gameplay abilities.
 - **[Events](docs/events.md)**: Gameplay event handling and propagation used for ability triggers and game logic reactions.
 - **[Cues](docs/cues.md)**: Visual and audio feedback system that bridges gameplay with presentation.
+- **[Statescript](docs/statescript/README.md)**: State-based scripting system for defining ability behaviors through node graphs.
 
 ### Entity Integration
 
@@ -39,6 +40,7 @@ Every game object that uses Forge implements the `IForgeEntity` interface, provi
 - `EffectsManager` - Controls effect application, stacking, and lifecycle.
 - `EntityAbilities` - Grants and activates abilities, handles cooldowns/costs, and manages instancing.
 - `EventManager` - Dispatches and listens to gameplay events for triggers and reactions.
+- `SharedVariables` - Entity-level variable bag for cross-ability communication through Statescript graphs.
 
 ### Advanced Features
 
@@ -64,11 +66,11 @@ Forge supports a variety of gameplay mechanics through specialized subsystems:
 - **Custom Calculators**: Flexible logic execution for effects.
 - **Abilities System**: Ability granting, activation, instancing, costs, cooldowns, and tag-based requirements.
 - **Events System**: Gameplay event handling, tagging, and trigger support.
+- **Statescript**: State-based scripting system for defining ability behaviors through node graphs.
 
 ### Planned Features 🚧
 
 - **Multiplayer Support**: Network replication for all systems.
-- **Statescript**: Backend support for state-based scripting of Ability behaviors.
 
 ## Installation
 

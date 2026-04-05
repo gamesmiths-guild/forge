@@ -4,7 +4,9 @@ using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.State;
+using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tests.Helpers;
+using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
 
 namespace Gamesmiths.Forge.Tests.Statescript;
 
@@ -261,7 +263,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -279,6 +281,43 @@ public class GraphProcessorTests
 
 		processor.GraphContext.IsActive.Should().BeFalse();
 		completed.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void Stopping_graph_fires_on_graph_completed_once()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 5.0);
+		graph.VariableDefinitions.DefineVariable("counter", 0);
+
+		TimerNode timer = CreateTimerNode("duration");
+		var incrementCounterNode = new IncrementCounterNode("counter");
+		var exit = new ExitNode();
+		graph.AddNode(timer);
+		graph.AddNode(incrementCounterNode);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnDeactivatePort],
+			incrementCounterNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			incrementCounterNode.OutputPorts[ActionNode.OutputPort],
+			exit.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.IsActive.Should().BeTrue();
+
+		processor.UpdateGraph(5f);
+
+		processor.GraphContext.IsActive.Should().BeFalse();
+
+		processor.GraphContext.GraphVariables.TryGetVar("counter", out int value).Should().BeTrue();
+		value.Should().Be(1);
 	}
 
 	[Fact]
@@ -405,7 +444,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 5.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		var exitNode = new ExitNode();
 
 		graph.AddNode(timer);
@@ -467,8 +506,8 @@ public class GraphProcessorTests
 		graph.VariableDefinitions.DefineVariable("shortDuration", 1.0);
 		graph.VariableDefinitions.DefineVariable("longDuration", 10.0);
 
-		var shortTimer = new TimerNode("shortDuration");
-		var longTimer = new TimerNode("longDuration");
+		TimerNode shortTimer = CreateTimerNode("shortDuration");
+		TimerNode longTimer = CreateTimerNode("longDuration");
 		var exitNode = new ExitNode();
 
 		graph.AddNode(shortTimer);
@@ -527,7 +566,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 2.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -555,8 +594,8 @@ public class GraphProcessorTests
 		graph.VariableDefinitions.DefineVariable("shortDuration", 1.0);
 		graph.VariableDefinitions.DefineVariable("longDuration", 3.0);
 
-		var shortTimer = new TimerNode("shortDuration");
-		var longTimer = new TimerNode("longDuration");
+		TimerNode shortTimer = CreateTimerNode("shortDuration");
+		TimerNode longTimer = CreateTimerNode("longDuration");
 
 		graph.AddNode(shortTimer);
 		graph.AddNode(longTimer);
@@ -592,7 +631,7 @@ public class GraphProcessorTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 1.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -693,5 +732,184 @@ public class GraphProcessorTests
 
 		processor.GraphContext.GraphVariables.TryGetArrayElement("data", 5, out double _).Should().BeFalse();
 		processor.GraphContext.GraphVariables.TryGetArrayElement("data", -1, out double _).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolve_finds_variable_before_property()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 2.0);
+		graph.VariableDefinitions.DefineProperty(
+			"duration",
+			new VariantResolver(new Variant128(100.0), typeof(double)));
+
+		TimerNode timer = CreateTimerNode("duration");
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.IsActive.Should().BeTrue();
+
+		processor.UpdateGraph(2.0);
+
+		processor.GraphContext.IsActive.Should().BeFalse(
+			"timer should use the variable (2.0) not the property (100.0)");
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolve_falls_back_to_property_when_variable_not_found()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineProperty(
+			"constant",
+			new VariantResolver(new Variant128(7.5), typeof(double)));
+
+		TimerNode timer = CreateTimerNode("constant");
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.IsActive.Should().BeTrue();
+
+		processor.UpdateGraph(7.5);
+
+		processor.GraphContext.IsActive.Should().BeFalse("timer should complete using the property-defined duration");
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolveArray_finds_array_variable_before_array_property()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineArrayVariable("ids", 1, 2, 3);
+		graph.VariableDefinitions.DefineArrayProperty(
+			"ids",
+			new TestArrayPropertyResolver(typeof(int), [[new Variant128(99)]]));
+
+		var node = new ReadArrayPropertyNode();
+		node.BindInput(ReadArrayPropertyNode.InputArray, "ids");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.LastReadArray.Should().NotBeNull();
+		node.LastReadArray.Should().HaveCount(3);
+		node.LastReadArray![0].AsInt().Should().Be(1, "should use the array variable, not the array property");
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolveArray_falls_back_to_array_property_when_variable_not_found()
+	{
+		var graph = new Graph();
+		Variant128[] expected = [new Variant128(10), new Variant128(20), new Variant128(30)];
+		graph.VariableDefinitions.DefineArrayProperty(
+			"computed",
+			new TestArrayPropertyResolver(typeof(int), [expected]));
+
+		var node = new ReadArrayPropertyNode();
+		node.BindInput(ReadArrayPropertyNode.InputArray, "computed");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.LastReadArray.Should().NotBeNull();
+		node.LastReadArray.Should().BeEquivalentTo(expected);
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolveArray_returns_false_for_nonexistent_name()
+	{
+		var graph = new Graph();
+		var node = new ReadArrayPropertyNode();
+		node.BindInput(ReadArrayPropertyNode.InputArray, "nonexistent");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.LastReadArray.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolver")]
+	public void ReadArrayPropertyNode_reads_array_property_at_runtime()
+	{
+		var graph = new Graph();
+		Variant128[][] arrays =
+		[
+			[new Variant128(10), new Variant128(20), new Variant128(30)],
+			[new Variant128(40), new Variant128(50)],
+		];
+
+		var resolver = new TestArrayPropertyResolver(typeof(int), arrays);
+		graph.VariableDefinitions.DefineArrayProperty("testArray", resolver);
+
+		var node = new ReadArrayPropertyNode();
+		node.BindInput(ReadArrayPropertyNode.InputArray, "testArray");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[0],
+			node.InputPorts[0]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.LastReadArray.Should().NotBeNull();
+		node.LastReadArray.Should().BeEquivalentTo(arrays[0]);
+
+		processor.StartGraph();
+
+		node.LastReadArray.Should().BeEquivalentTo(arrays[1]);
+	}
+
+	[Fact]
+	[Trait("Graph", "Validation")]
+	public void ValidatePropertyType_checks_array_variable_element_type()
+	{
+		var definitions = new GraphVariableDefinitions();
+		definitions.DefineArrayVariable("targets", 1, 2, 3);
+
+		definitions.ValidatePropertyType("targets", typeof(int)).Should().BeFalse();
+		definitions.ValidatePropertyType("targets", typeof(double[])).Should().BeFalse();
+		definitions.ValidatePropertyType("targets", typeof(int[])).Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Validation")]
+	public void ValidatePropertyType_checks_array_property_type()
+	{
+		var definitions = new GraphVariableDefinitions();
+		var resolver = new TestArrayPropertyResolver(typeof(int), [[new Variant128(1)]]);
+
+		definitions.DefineArrayProperty("ids", resolver);
+
+		definitions.ArrayPropertyDefinitions.Should().ContainSingle(x => x.Name == "ids");
+
+		definitions.ValidatePropertyType("ids", typeof(int)).Should().BeFalse();
+		definitions.ValidatePropertyType("ids", typeof(double[])).Should().BeFalse();
+		definitions.ValidatePropertyType("ids", typeof(int[])).Should().BeTrue();
 	}
 }

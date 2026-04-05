@@ -534,9 +534,9 @@ public class QuestDamageCalculator : CustomModifierMagnitudeCalculator
 }
 ```
 
-### Event-Driven Updates
+### Integrating External Game State
 
-Custom calculators can subscribe to game events for even more dynamic behavior:
+Custom executions can read from and write to external game systems, making them a powerful bridge between Forge's effect system and the rest of your game logic:
 
 ```csharp
 public class ComboAttackExecution : CustomExecution
@@ -600,6 +600,59 @@ public class ComboAttackExecution : CustomExecution
     }
 }
 ```
+
+### Firing Events from Custom Executions
+
+Custom executions have access to both the `effect` and `target` parameters, which means they can raise events on any entity's `EventManager`. This is especially powerful when combined with [periodic effects](periodic.md): the custom execution runs on every tick, and can fire an event each time to trigger other systems like [ability activation](../abilities.md#event-trigger).
+
+```csharp
+public class PeriodicDamageWithEventExecution : CustomExecution
+{
+    private readonly Tag _damageEventTag;
+
+    public AttributeCaptureDefinition TargetHealth { get; }
+
+    public PeriodicDamageWithEventExecution(Tag damageEventTag)
+    {
+        _damageEventTag = damageEventTag;
+
+        TargetHealth = new AttributeCaptureDefinition(
+            "CombatAttributeSet.CurrentHealth",
+            AttributeCaptureSource.Target,
+            snapshot: false);
+
+        AttributesToCapture.Add(TargetHealth);
+    }
+
+    public override ModifierEvaluatedData[] EvaluateExecution(Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
+    {
+        var results = new List<ModifierEvaluatedData>();
+
+        float damage = 10f;
+
+        if (TargetHealth.TryGetAttribute(target, out EntityAttribute? healthAttribute))
+        {
+            results.Add(new ModifierEvaluatedData(
+                healthAttribute,
+                ModifierOperation.FlatBonus,
+                -damage));
+        }
+
+        // Fire an event on the target. This can trigger event-driven abilities.
+        target.Events.Raise(new EventData
+        {
+            EventTags = _damageEventTag.GetSingleTagContainer()!,
+            Source = effect.Ownership.Owner,
+            Target = target,
+            EventMagnitude = damage,
+        });
+
+        return results.ToArray();
+    }
+}
+```
+
+This pattern is the recommended way to bridge periodic effects with event-triggered abilities. For example, a poison-over-time effect can fire a `"damage.poison.tick"` event on each periodic tick, which in turn activates a "Poison Resistance" ability on the target via `AbilityTriggerData.ForEvent(poisonTickTag)`.
 
 ## Effect Activation Context
 

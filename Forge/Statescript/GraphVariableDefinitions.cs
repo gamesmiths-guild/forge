@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Numerics;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript.Properties;
 
@@ -8,24 +7,36 @@ namespace Gamesmiths.Forge.Statescript;
 
 /// <summary>
 /// Defines the schema of variables and properties for a graph. This is immutable definition data that belongs to the
-/// <see cref="Graph"/>, it contains no runtime state. When a graph execution starts, a runtime <see cref="Variables"/>
-/// instance is created from these definitions and placed into the <see cref="IGraphContext"/>.
+/// <see cref="Graph"/>. When a graph execution starts, the variable definitions are used to initialize a runtime
+/// <see cref="Variables"/> instance placed into the <see cref="GraphContext"/>. Properties are resolved on demand
+/// through the graph's property definitions.
 /// </summary>
-/// <remarks>
-/// <para>Variables and properties are both stored as <see cref="PropertyDefinition"/>s. A variable is simply a property
-/// backed by a <see cref="VariantResolver"/> (mutable <see cref="Variant128"/>), while read-only properties use other
-/// <see cref="IPropertyResolver"/> implementations.</para>
-/// </remarks>
 public class GraphVariableDefinitions
 {
 	/// <summary>
-	/// Gets the list of property definitions for the graph.
+	/// Gets the list of variable definitions for the graph.
 	/// </summary>
-	public List<PropertyDefinition> Definitions { get; } = [];
+	public List<VariableDefinition> VariableDefinitions { get; } = [];
 
 	/// <summary>
-	/// Adds a mutable variable definition with the specified name and initial value. At runtime, a fresh
-	/// <see cref="VariantResolver"/> is created for each graph execution with the given initial value.
+	/// Gets the list of array variable definitions for the graph.
+	/// </summary>
+	public List<ArrayVariableDefinition> ArrayVariableDefinitions { get; } = [];
+
+	/// <summary>
+	/// Gets the list of property definitions for the graph. Properties are read-only computed values resolved on demand
+	/// from external sources (attributes, tags, comparisons, etc.).
+	/// </summary>
+	public List<PropertyDefinition> PropertyDefinitions { get; } = [];
+
+	/// <summary>
+	/// Gets the list of array property definitions for the graph. Array properties are read-only computed values that
+	/// resolve to arrays (e.g., a list of entity IDs within a radius).
+	/// </summary>
+	public List<ArrayPropertyDefinition> ArrayPropertyDefinitions { get; } = [];
+
+	/// <summary>
+	/// Adds a mutable variable definition with the specified name and initial value.
 	/// </summary>
 	/// <typeparam name="T">The type of the initial value. Must be supported by <see cref="Variant128"/>.</typeparam>
 	/// <param name="name">The name of the variable.</param>
@@ -34,35 +45,12 @@ public class GraphVariableDefinitions
 	/// </exception>
 	public void DefineVariable<T>(StringKey name, T initialValue)
 	{
-		Variant128 variant = initialValue switch
-		{
-			bool @bool => new Variant128(@bool),
-			byte @byte => new Variant128(@byte),
-			sbyte @sbyte => new Variant128(@sbyte),
-			char @char => new Variant128(@char),
-			decimal @decimal => new Variant128(@decimal),
-			double @double => new Variant128(@double),
-			float @float => new Variant128(@float),
-			int @int => new Variant128(@int),
-			uint @uint => new Variant128(@uint),
-			long @long => new Variant128(@long),
-			ulong @ulong => new Variant128(@ulong),
-			short @short => new Variant128(@short),
-			ushort @ushort => new Variant128(@ushort),
-			Vector2 vector2 => new Variant128(vector2),
-			Vector3 vector3 => new Variant128(vector3),
-			Vector4 vector4 => new Variant128(vector4),
-			Plane plane => new Variant128(plane),
-			Quaternion quaternion => new Variant128(quaternion),
-			_ => throw new ArgumentException($"{typeof(T)} is not supported by Variant128"),
-		};
-
-		Definitions.Add(new PropertyDefinition(name, new VariantResolver(variant, typeof(T))));
+		Variant128 variant = Variables.CreateVariant(initialValue);
+		VariableDefinitions.Add(new VariableDefinition(name, variant, typeof(T)));
 	}
 
 	/// <summary>
-	/// Adds a mutable array variable definition with the specified name and initial values. At runtime, a fresh
-	/// <see cref="ArrayVariableResolver"/> is created for each graph execution with copies of the initial values.
+	/// Adds a mutable array variable definition with the specified name and initial values.
 	/// </summary>
 	/// <typeparam name="T">The type of each element. Must be supported by <see cref="Variant128"/>.</typeparam>
 	/// <param name="name">The name of the array variable.</param>
@@ -74,31 +62,10 @@ public class GraphVariableDefinitions
 		var variants = new Variant128[initialValues.Length];
 		for (var i = 0; i < initialValues.Length; i++)
 		{
-			variants[i] = initialValues[i] switch
-			{
-				bool @bool => new Variant128(@bool),
-				byte @byte => new Variant128(@byte),
-				sbyte @sbyte => new Variant128(@sbyte),
-				char @char => new Variant128(@char),
-				decimal @decimal => new Variant128(@decimal),
-				double @double => new Variant128(@double),
-				float @float => new Variant128(@float),
-				int @int => new Variant128(@int),
-				uint @uint => new Variant128(@uint),
-				long @long => new Variant128(@long),
-				ulong @ulong => new Variant128(@ulong),
-				short @short => new Variant128(@short),
-				ushort @ushort => new Variant128(@ushort),
-				Vector2 vector2 => new Variant128(vector2),
-				Vector3 vector3 => new Variant128(vector3),
-				Vector4 vector4 => new Variant128(vector4),
-				Plane plane => new Variant128(plane),
-				Quaternion quaternion => new Variant128(quaternion),
-				_ => throw new ArgumentException($"{typeof(T)} is not supported by Variant128"),
-			};
+			variants[i] = Variables.CreateVariant(initialValues[i]);
 		}
 
-		Definitions.Add(new PropertyDefinition(name, new ArrayVariableResolver(variants, typeof(T))));
+		ArrayVariableDefinitions.Add(new ArrayVariableDefinition(name, variants, typeof(T)));
 	}
 
 	/// <summary>
@@ -108,21 +75,30 @@ public class GraphVariableDefinitions
 	/// <param name="resolver">The resolver used to compute the property's value at runtime.</param>
 	public void DefineProperty(StringKey name, IPropertyResolver resolver)
 	{
-		Definitions.Add(new PropertyDefinition(name, resolver));
+		PropertyDefinitions.Add(new PropertyDefinition(name, resolver));
 	}
 
 	/// <summary>
-	/// Validates that the property or variable with the specified name produces a value assignable to the expected
-	/// type. This should be called at graph construction time to catch type mismatches early (e.g., binding a
-	/// <see cref="TagResolver"/> to a timer duration that expects a numeric type).
+	/// Adds a read-only array property definition with the specified name and resolver.
 	/// </summary>
-	/// <param name="name">The name of the property or variable to validate.</param>
+	/// <param name="name">The name of the array property.</param>
+	/// <param name="resolver">The resolver used to compute the property's array value at runtime.</param>
+	public void DefineArrayProperty(StringKey name, IArrayPropertyResolver resolver)
+	{
+		ArrayPropertyDefinitions.Add(new ArrayPropertyDefinition(name, resolver));
+	}
+
+	/// <summary>
+	/// Validates that the variable or property with the specified name produces a value assignable to the expected
+	/// type. This should be called at graph construction time to catch type mismatches early.
+	/// </summary>
+	/// <param name="name">The name of the variable or property to validate.</param>
 	/// <param name="expectedType">The expected value type.</param>
-	/// <returns><see langword="true"/> if the property exists and its value type is assignable to the expected type;
+	/// <returns><see langword="true"/> if the entry exists and its value type is assignable to the expected type;
 	/// <see langword="false"/> otherwise.</returns>
 	public bool ValidatePropertyType(StringKey name, Type expectedType)
 	{
-		foreach (PropertyDefinition definition in Definitions)
+		foreach (PropertyDefinition definition in PropertyDefinitions)
 		{
 			if (definition.Name == name)
 			{
@@ -130,6 +106,72 @@ public class GraphVariableDefinitions
 			}
 		}
 
+		foreach (ArrayPropertyDefinition definition in ArrayPropertyDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				// expectedType should be an array type (e.g., typeof(int[])), and element type must match
+				if (expectedType.IsArray && expectedType.GetElementType() is Type elementType)
+				{
+					return elementType.IsAssignableFrom(definition.Resolver.ElementType);
+				}
+
+				return false;
+			}
+		}
+
+		foreach (VariableDefinition definition in VariableDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				return expectedType.IsAssignableFrom(definition.ValueType);
+			}
+		}
+
+		foreach (ArrayVariableDefinition definition in ArrayVariableDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				if (expectedType.IsArray && expectedType.GetElementType() is Type elementType)
+				{
+					return elementType.IsAssignableFrom(definition.ElementType);
+				}
+
+				return false;
+			}
+		}
+
 		return false;
 	}
 }
+
+/// <summary>
+/// Represents a named array property definition with a resolver.
+/// </summary>
+/// <param name="Name">The name of the array property.</param>
+/// <param name="Resolver">The resolver used to provide the property's array value at runtime.</param>
+public readonly record struct ArrayPropertyDefinition(StringKey Name, IArrayPropertyResolver Resolver);
+
+/// <summary>
+/// Represents the definition of a graph property, including its name and the resolver used to compute its value at
+/// runtime. This is immutable definition data that belongs to the graph.
+/// </summary>
+/// <param name="Name">The name of the property, used as the lookup key at runtime.</param>
+/// <param name="Resolver">The resolver used to provide the property's value at runtime.</param>
+public readonly record struct PropertyDefinition(StringKey Name, IPropertyResolver Resolver);
+
+/// <summary>
+/// Represents a named variable definition with an initial value.
+/// </summary>
+/// <param name="Name">The name of the variable.</param>
+/// <param name="InitialValue">The initial value of the variable.</param>
+/// <param name="ValueType">The type of the variable's value.</param>
+public readonly record struct VariableDefinition(StringKey Name, Variant128 InitialValue, Type ValueType);
+
+/// <summary>
+/// Represents a named array variable definition with initial values.
+/// </summary>
+/// <param name="Name">The name of the array variable.</param>
+/// <param name="InitialValues">The initial values for the array elements.</param>
+/// <param name="ElementType">The type of each element in the array.</param>
+public readonly record struct ArrayVariableDefinition(StringKey Name, Variant128[] InitialValues, Type ElementType);

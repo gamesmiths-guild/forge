@@ -15,6 +15,8 @@ using Gamesmiths.Forge.Statescript.Nodes.State;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
+using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
+
 namespace Gamesmiths.Forge.Tests.Statescript;
 
 public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFixture>
@@ -55,7 +57,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 2.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -86,7 +88,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 10.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		graph.AddNode(timer);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -207,7 +209,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 1.0);
 
-		var timer = new TimerNode("duration");
+		TimerNode timer = CreateTimerNode("duration");
 		var exitNode = new ExitNode();
 
 		graph.AddNode(timer);

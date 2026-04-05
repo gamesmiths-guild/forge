@@ -71,6 +71,11 @@ public sealed class EffectEvaluatedData
 	/// </summary>
 	public Dictionary<StringKey, object>? CustomCueParameters { get; private set; }
 
+	/// <summary>
+	/// Gets the number of regular (non-custom-execution) modifiers in <see cref="ModifiersEvaluatedData"/>.
+	/// </summary>
+	internal int ModifierCount { get; private set; }
+
 	internal EffectApplicationContext? ApplicationContext { get; }
 
 	internal Dictionary<AttributeSnapshotKey, float> SnapshotAttributes { get; } = [];
@@ -158,6 +163,11 @@ public sealed class EffectEvaluatedData
 		CustomCueParameters = EvaluateCustomCueParameters();
 	}
 
+	internal void RefreshCustomCueParameters()
+	{
+		CustomCueParameters = EvaluateCustomCueParameters();
+	}
+
 	internal float EvaluateDuration(DurationData durationData)
 	{
 		if (!durationData.DurationMagnitude.HasValue)
@@ -208,7 +218,18 @@ public sealed class EffectEvaluatedData
 					modifier.Channel));
 		}
 
+		ModifierCount = modifiersEvaluatedData.Count;
+
 		if (Effect.EffectData.CustomExecutions.Length == 0)
+		{
+			return [.. modifiersEvaluatedData];
+		}
+
+		// For effects that are executed (instant or periodic), custom executions are evaluated fresh at execution time
+		// in Effect.Execute(). Only pre-evaluate them here for non-periodic duration effects that apply modifiers
+		// directly.
+		if (Effect.EffectData.DurationData.DurationType == DurationType.Instant
+			|| Effect.EffectData.PeriodicData.HasValue)
 		{
 			return [.. modifiersEvaluatedData];
 		}

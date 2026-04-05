@@ -2,6 +2,8 @@
 
 The Events system in Forge provides a flexible event bus for triggering gameplay reactions, driving ability activation, and propagating tagged event data.
 
+For a practical guide on using events with abilities, see the [Abilities documentation](abilities.md#ability-triggers).
+
 ## Core Concepts
 
 - Events carry tags for filtering `EventTags` plus optional source, target, magnitude, and payload data.

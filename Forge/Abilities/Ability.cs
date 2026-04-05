@@ -328,6 +328,14 @@ internal sealed class Ability
 		}
 	}
 
+	internal void UpdateBehaviors(double deltaTime)
+	{
+		foreach (BehaviorBinding binding in _behaviors.Values)
+		{
+			binding.Behavior.OnUpdate(deltaTime);
+		}
+	}
+
 	internal bool CanActivate(IForgeEntity? abilityTarget, out AbilityActivationFailures failureFlags)
 	{
 		var canActivate = true;
