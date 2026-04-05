@@ -71,6 +71,7 @@ Forge supports a variety of gameplay mechanics through specialized subsystems:
 ### Planned Features 🚧
 
 - **Multiplayer Support**: Network replication for all systems.
+- **More Built-in Content**: More built-in components, nodes and resolvers.
 
 ## Installation
 
