@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5.2.0
         with:
           dotnet-version: 8.0.x
 
@@ -29,7 +29,7 @@ jobs:
 
       - name: Test report
         if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@dc3a92680fcc15842eef52e8c4606ea7ce6bd3f3
+        uses: dorny/test-reporter@v3.0.0
         with:
           name: Test Reporter
           path: "TestResults/test-results.trx"
