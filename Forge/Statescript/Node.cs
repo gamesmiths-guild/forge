@@ -100,6 +100,7 @@ public abstract class Node
 	/// <see cref="DefineParameters"/>).</param>
 	/// <param name="propertyName">The name of the graph variable or property to bind to.</param>
 	/// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="index"/> is out of range.</exception>
+	/// <exception cref="ArgumentException"><paramref name="propertyName"/> is empty or default.</exception>
 	public void BindInput(byte index, StringKey propertyName)
 	{
 		if (propertyName == StringKey.Empty)
@@ -125,6 +126,7 @@ public abstract class Node
 	/// <param name="variableName">The name of the variable to bind to.</param>
 	/// <param name="scope">Which <see cref="Variables"/> bag this output should write to.</param>
 	/// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="index"/> is out of range.</exception>
+	/// <exception cref="ArgumentException"><paramref name="variableName"/> is empty or default.</exception>
 	public void BindOutput(byte index, StringKey variableName, VariableScope scope = VariableScope.Graph)
 	{
 		if (variableName == StringKey.Empty)
