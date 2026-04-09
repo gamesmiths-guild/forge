@@ -1,6 +1,6 @@
 # Custom Resolvers
 
-Property resolvers provide read-only computed values that nodes can bind to as input properties. Forge ships with several [built-in resolvers](variables.md#built-in-resolvers) (`AttributeResolver`, `TagResolver`, `ComparisonResolver`, `VariableResolver`, `SharedVariableResolver`, `VariantResolver`, `MagnitudeResolver`), but you can create your own to expose any data source to graph nodes without writing custom node subclasses.
+Property resolvers provide read-only computed values that nodes can bind to as input properties. Forge ships with several [built-in resolvers](resolvers/README.md), but you can create your own to expose any data source to graph nodes without writing custom node subclasses.
 
 For an overview of the Statescript system, see the [Statescript overview](README.md). For how resolvers fit into the broader data flow, see [Variables and Data](variables.md).
 

@@ -128,86 +128,7 @@ This means a graph variable can "shadow" a property definition with the same nam
 
 ### Built-in Resolvers
 
-#### VariableResolver
-
-Reads a graph variable by name. Useful for property expressions that reference mutable graph variables.
-
-```csharp
-new VariableResolver("counter", typeof(int))
-```
-
-#### SharedVariableResolver
-
-Reads a shared variable from the entity's shared variable bag. Enables cross-ability communication.
-
-```csharp
-new SharedVariableResolver("comboCounter", typeof(int))
-```
-
-#### VariantResolver
-
-Holds a fixed constant value. Useful as the right-hand side of a `ComparisonResolver`.
-
-```csharp
-new VariantResolver(new Variant128(50), typeof(int))    // Constant 50
-new VariantResolver(new Variant128(3.14f), typeof(float)) // Constant 3.14
-```
-
-#### AttributeResolver
-
-Reads the `CurrentValue` of a specific entity attribute. Requires the graph to be driven by an ability (accesses the owner entity from `AbilityBehaviorContext` stored in `GraphContext.ActivationContext`).
-
-```csharp
-new AttributeResolver("CombatAttributeSet.Health")
-```
-
-Returns `int` (the attribute's `CurrentValue`). Returns `0` if no activation context is available or the attribute doesn't exist.
-
-#### TagResolver
-
-Checks whether the owner entity has a specific gameplay tag. Requires ability activation context.
-
-```csharp
-new TagResolver(Tag.RequestTag(tagsManager, "status.enraged"))
-```
-
-Returns `bool`. Returns `false` if no activation context is available.
-
-#### ComparisonResolver
-
-Compares two values using a `ComparisonOperation` and returns a `bool`. Both operands are resolved through their own `IPropertyResolver` instances and converted to `double` for comparison.
-
-```csharp
-// "Is health greater than 50?"
-new ComparisonResolver(
-    new AttributeResolver("CombatAttributeSet.Health"),
-    ComparisonOperation.GreaterThan,
-    new VariantResolver(new Variant128(50), typeof(int)))
-```
-
-**Supported operations:** `Equal`, `NotEqual`, `LessThan`, `LessThanOrEqual`, `GreaterThan`, `GreaterThanOrEqual`.
-
-Supports nesting: operands can be other `ComparisonResolver` instances or any `IPropertyResolver`, enabling arbitrarily complex expressions. Use as the condition input for an `ExpressionNode` to create data-driven branching without custom C# code.
-
-```csharp
-// "Is health > 50 AND is enraged?"
-// Use two separate properties bound to an ExpressionNode, or nest comparisons:
-graph.VariableDefinitions.DefineProperty("healthAbove50",
-    new ComparisonResolver(
-        new AttributeResolver("CombatAttributeSet.Health"),
-        ComparisonOperation.GreaterThan,
-        new VariantResolver(new Variant128(50), typeof(int))));
-```
-
-#### MagnitudeResolver
-
-Reads the `Magnitude` float from the ability's activation context. This is the numeric value passed during `AbilityHandle.Activate()` or propagated from an event trigger's `EventMagnitude`.
-
-```csharp
-new MagnitudeResolver()
-```
-
-Returns `float`. Returns `0` if no activation context is available.
+Forge ships with several built-in resolvers for common data sources: entity attributes, gameplay tags, variable lookups, comparisons, constants, and activation magnitudes. For a full reference of each built-in resolver with constructor parameters, behavior details, and usage examples, see the [Property Resolvers](resolvers/README.md) documentation.
 
 ### Array Property Resolvers
 
@@ -221,7 +142,7 @@ Nodes can read array properties through `GraphContext.TryResolveArray()`.
 
 ### Creating Custom Resolvers
 
-Implement `IPropertyResolver` (or `IArrayPropertyResolver` for arrays) to create custom data sources that expose game-specific values to graph nodes. For a full guide with examples covering activation context access, composition with built-in resolvers, and best practices, see [Custom Resolvers](resolvers.md).
+Implement `IPropertyResolver` (or `IArrayPropertyResolver` for arrays) to create custom data sources that expose game-specific values to graph nodes. For a full guide with examples covering activation context access, composition with built-in resolvers, and best practices, see [Custom Resolvers](custom-resolvers.md).
 
 ## Input Properties and Output Variables
 
