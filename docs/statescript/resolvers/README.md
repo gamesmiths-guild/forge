@@ -22,10 +22,13 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
 | [AbsResolver](abs-resolver.md) | *(promoted)* | Computes the absolute value of a signed numeric value. |
+| [ACosHResolver](acosh-resolver.md) | `float`/`double` | Computes the inverse hyperbolic cosine. |
 | [ACosResolver](acos-resolver.md) | `float`/`double` | Computes the arc cosine (inverse cosine), returning angle in radians. |
 | [AddResolver](add-resolver.md) | *(promoted)* | Adds two numeric or vector values. |
+| [ASinHResolver](asinh-resolver.md) | `float`/`double` | Computes the inverse hyperbolic sine. |
 | [ASinResolver](asin-resolver.md) | `float`/`double` | Computes the arc sine (inverse sine), returning angle in radians. |
 | [ATan2Resolver](atan2-resolver.md) | `float`/`double` | Computes the angle from two coordinates using `ATan2(y, x)`. |
+| [ATanHResolver](atanh-resolver.md) | `float`/`double` | Computes the inverse hyperbolic tangent. |
 | [ATanResolver](atan-resolver.md) | `float`/`double` | Computes the arc tangent (inverse tangent), returning angle in radians. |
 | [CbrtResolver](cbrt-resolver.md) | `float`/`double` | Computes the cube root. |
 | [CeilResolver](ceil-resolver.md) | *(same)* | Rounds up to the smallest integer greater than or equal to the operand. |
