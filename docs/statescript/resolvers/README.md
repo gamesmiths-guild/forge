@@ -30,6 +30,9 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [ExpResolver](exp-resolver.md) | `float`/`double` | Computes `e` raised to a specified power (`e^x`). |
 | [FloorResolver](floor-resolver.md) | *(same)* | Rounds down to the largest integer less than or equal to the operand. |
 | [LerpResolver](lerp-resolver.md) | `float`/`double`/vector/quaternion | Linearly interpolates between two values (scalar, vector, or quaternion). |
+| [Log10Resolver](log10-resolver.md) | `float`/`double` | Computes the base-10 logarithm. |
+| [Log2Resolver](log2-resolver.md) | `float`/`double` | Computes the base-2 logarithm. |
+| [LogResolver](log-resolver.md) | `float`/`double` | Computes the natural logarithm (base `e`). |
 | [MaxResolver](max-resolver.md) | *(promoted)* | Returns the larger of two numeric values. |
 | [MinResolver](min-resolver.md) | *(promoted)* | Returns the smaller of two numeric values. |
 | [ModuloResolver](modulo-resolver.md) | *(promoted)* | Computes the remainder of dividing two numeric values. |
