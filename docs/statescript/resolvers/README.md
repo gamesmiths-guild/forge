@@ -22,7 +22,11 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
 | [AbsResolver](abs-resolver.md) | *(promoted)* | Computes the absolute value of a signed numeric value. |
+| [ACosResolver](acos-resolver.md) | `float`/`double` | Computes the arc cosine (inverse cosine), returning angle in radians. |
 | [AddResolver](add-resolver.md) | *(promoted)* | Adds two numeric or vector values. |
+| [ASinResolver](asin-resolver.md) | `float`/`double` | Computes the arc sine (inverse sine), returning angle in radians. |
+| [ATan2Resolver](atan2-resolver.md) | `float`/`double` | Computes the angle from two coordinates using `ATan2(y, x)`. |
+| [ATanResolver](atan-resolver.md) | `float`/`double` | Computes the arc tangent (inverse tangent), returning angle in radians. |
 | [CbrtResolver](cbrt-resolver.md) | `float`/`double` | Computes the cube root. |
 | [CeilResolver](ceil-resolver.md) | *(same)* | Rounds up to the smallest integer greater than or equal to the operand. |
 | [ClampResolver](clamp-resolver.md) | *(promoted)* | Clamps a numeric value between a minimum and maximum bound. |
