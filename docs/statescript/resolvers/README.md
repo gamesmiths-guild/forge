@@ -16,3 +16,9 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [TagResolver](tag-resolver.md) | `bool` | Checks whether the owner entity has a specific tag. |
 | [VariableResolver](variable-resolver.md) | *(configured)* | Reads a graph variable by name. |
 | [VariantResolver](variant-resolver.md) | *(configured)* | Holds a fixed constant value. |
+
+## Math Resolvers
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [AddResolver](add-resolver.md) | *(promoted)* | Adds two numeric or vector values. |
