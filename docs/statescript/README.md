@@ -43,7 +43,7 @@ Messages flow from output ports to input ports. This propagation is **synchronou
 | **Condition** | Branches execution | Evaluates a test and routes the message to True or False. |
 | **State** | Maintains active state over time | Activates on input, remains active, deactivates based on internal logic. |
 
-For detailed information on each node type, see the [Nodes](nodes.md) reference.
+For detailed information on each node type, see the [Nodes](nodes/README.md) reference.
 
 ## Subgraphs
 
@@ -106,8 +106,9 @@ Statescript graphs must be **acyclic**. The framework validates this at graph co
 
 ## Documentation
 
-- [Nodes](nodes.md): Detailed reference for all node types and their ports.
+- [Nodes](nodes/README.md): Detailed reference for all node types and their ports.
 - [Subgraphs](subgraphs.md): Deep dive into subgraph lifetime, patterns, and common pitfalls.
 - [Variables and Data](variables.md): Variables, shared variables, and property resolvers.
-- [Custom Resolvers](resolvers.md): Creating custom property resolvers to expose game-specific data.
+- [Property Resolvers](resolvers/README.md): Built-in resolver reference.
+- [Custom Resolvers](custom-resolvers.md): Creating custom property resolvers to expose game-specific data.
 - [Ability Integration](ability-integration.md): Connecting Statescript graphs to the Abilities system.

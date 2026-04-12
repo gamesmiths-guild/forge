@@ -17,9 +17,9 @@ using Gamesmiths.Forge.Tests.Helpers;
 
 using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
 
-namespace Gamesmiths.Forge.Tests.Statescript;
+namespace Gamesmiths.Forge.Tests.Statescript.Nodes.Condition;
 
-public class ExpressionResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<TagsAndCuesFixture>
+public class ExpressionNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<TagsAndCuesFixture>
 {
 	private readonly TagsManager _tagsManager = tagsAndCuesFixture.TagsManager;
 	private readonly CuesManager _cuesManager = tagsAndCuesFixture.CuesManager;
