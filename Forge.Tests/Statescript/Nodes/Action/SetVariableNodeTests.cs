@@ -8,9 +8,9 @@ using Gamesmiths.Forge.Tests.Helpers;
 
 using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
 
-namespace Gamesmiths.Forge.Tests.Statescript;
+namespace Gamesmiths.Forge.Tests.Statescript.Nodes.Action;
 
-public class ActionNodeTests
+public class SetVariableNodeTests
 {
 	[Fact]
 	[Trait("Graph", "SetVariable")]

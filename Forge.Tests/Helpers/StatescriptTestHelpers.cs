@@ -1,7 +1,12 @@
 // Copyright © Gamesmiths Guild.
 #pragma warning disable SA1649, SA1402 // File name should match first type name
 
+using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Components;
+using Gamesmiths.Forge.Effects.Duration;
+using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Action;
@@ -39,6 +44,79 @@ internal static class NodeBindings
 		node.BindInput(SetVariableNode.SourceInput, sourcePropertyName);
 		node.BindOutput(SetVariableNode.TargetOutput, targetVariableName, scope);
 		return node;
+	}
+}
+
+/// <summary>
+/// Convenience helpers for creating ability-driven graph contexts in resolver tests.
+/// </summary>
+internal static class ResolverTestContextFactory
+{
+	public static GraphContext CreateAbilityGraphContext(TestEntity entity, float magnitude = 0f)
+	{
+		var graph = new Graph();
+		var captureNode = new CaptureGraphContextNode();
+
+		graph.AddNode(captureNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			captureNode.InputPorts[ActionNode.InputPort]));
+
+		var behavior = new GraphAbilityBehavior(graph);
+
+		AbilityData abilityData = CreateAbilityData("ResolverTest", () => behavior);
+		AbilityHandle? handle = Grant(entity, abilityData) ?? throw new InvalidOperationException(
+				"Failed to grant the resolver test ability and create an ability graph context.");
+
+		if (!handle.Activate(out _, magnitude: magnitude))
+		{
+			throw new InvalidOperationException(
+				"Failed to activate the resolver test ability while creating an ability graph context." +
+				$" Magnitude: {magnitude}.");
+		}
+
+		if (captureNode.CapturedGraphContext is null)
+		{
+			throw new InvalidOperationException(
+				"The resolver test ability activated, but no graph context was captured by CaptureGraphContextNode.");
+		}
+
+		return captureNode.CapturedGraphContext;
+	}
+
+	private static AbilityHandle? Grant(TestEntity target, AbilityData data)
+	{
+		var grantConfig = new GrantAbilityConfig(
+			data,
+			new ScalableInt(1),
+			AbilityDeactivationPolicy.CancelImmediately,
+			AbilityDeactivationPolicy.CancelImmediately,
+			false,
+			false,
+			LevelComparison.Higher);
+
+		var effectData = new EffectData(
+			"Grant",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [new GrantAbilityEffectComponent([grantConfig])]);
+
+		var grantEffect = new Effect(effectData, new EffectOwnership(null, null));
+		_ = target.EffectsManager.ApplyEffect(grantEffect);
+
+		target.Abilities.TryGetAbility(data, out AbilityHandle? handle);
+
+		if (handle is null)
+		{
+			throw new InvalidOperationException(
+				"Failed to retrieve the granted ability handle after applying the grant effect.");
+		}
+
+		return handle;
+	}
+
+	private static AbilityData CreateAbilityData(string name, Func<IAbilityBehavior> behaviorFactory)
+	{
+		return new AbilityData(name, behaviorFactory: behaviorFactory);
 	}
 }
 
