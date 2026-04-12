@@ -35,6 +35,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [NegateResolver](negate-resolver.md) | *(promoted)* | Negates a numeric or vector value. |
 | [PowResolver](pow-resolver.md) | `float`/`double` | Raises a value to a specified power. |
 | [RoundResolver](round-resolver.md) | *(same)* | Rounds to the nearest integer using banker's rounding. |
+| [SignResolver](sign-resolver.md) | `int` | Returns -1, 0, or 1 indicating the sign of a numeric value. |
 | [SqrtResolver](sqrt-resolver.md) | `float`/`double` | Computes the square root of a numeric value. |
 | [SubtractResolver](subtract-resolver.md) | *(promoted)* | Subtracts two numeric or vector values. |
 | [TruncateResolver](truncate-resolver.md) | *(same)* | Removes the fractional part, rounding toward zero. |
