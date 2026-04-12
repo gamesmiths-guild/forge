@@ -26,6 +26,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [CbrtResolver](cbrt-resolver.md) | `float`/`double` | Computes the cube root. |
 | [CeilResolver](ceil-resolver.md) | *(same)* | Rounds up to the smallest integer greater than or equal to the operand. |
 | [ClampResolver](clamp-resolver.md) | *(promoted)* | Clamps a numeric value between a minimum and maximum bound. |
+| [CosResolver](cos-resolver.md) | `float`/`double` | Computes the cosine of an angle in radians. |
 | [DivideResolver](divide-resolver.md) | *(promoted)* | Divides two numeric or vector values. |
 | [ExpResolver](exp-resolver.md) | `float`/`double` | Computes `e` raised to a specified power (`e^x`). |
 | [FloorResolver](floor-resolver.md) | *(same)* | Rounds down to the largest integer less than or equal to the operand. |
@@ -41,6 +42,8 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [PowResolver](pow-resolver.md) | `float`/`double` | Raises a value to a specified power. |
 | [RoundResolver](round-resolver.md) | *(same)* | Rounds to the nearest integer using banker's rounding. |
 | [SignResolver](sign-resolver.md) | `int` | Returns -1, 0, or 1 indicating the sign of a numeric value. |
+| [SinResolver](sin-resolver.md) | `float`/`double` | Computes the sine of an angle in radians. |
 | [SqrtResolver](sqrt-resolver.md) | `float`/`double` | Computes the square root of a numeric value. |
 | [SubtractResolver](subtract-resolver.md) | *(promoted)* | Subtracts two numeric or vector values. |
+| [TanResolver](tan-resolver.md) | `float`/`double` | Computes the tangent of an angle in radians. |
 | [TruncateResolver](truncate-resolver.md) | *(same)* | Removes the fractional part, rounding toward zero. |
