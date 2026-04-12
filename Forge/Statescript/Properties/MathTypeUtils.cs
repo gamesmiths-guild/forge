@@ -383,6 +383,158 @@ internal static class MathTypeUtils
 	}
 
 	/// <summary>
+	/// Determines the result type for a ternary operation (e.g., Clamp) among three operand types, applying standard
+	/// C# numeric promotion rules.
+	/// </summary>
+	/// <param name="resolverName">The name of the resolver (for error messages).</param>
+	/// <param name="type1">The type of the first operand.</param>
+	/// <param name="type2">The type of the second operand.</param>
+	/// <param name="type3">The type of the third operand.</param>
+	/// <returns>The promoted result type.</returns>
+	/// <exception cref="ArgumentException">Thrown when the type combination is unsupported.</exception>
+	internal static Type DetermineTernaryResultType(
+		string resolverName,
+		Type type1,
+		Type type2,
+		Type type3)
+	{
+		if (IsVectorOrQuaternionType(type1))
+		{
+			throw new ArgumentException($"{resolverName} does not support operand type '{type1}'.");
+		}
+
+		if (IsVectorOrQuaternionType(type2))
+		{
+			throw new ArgumentException($"{resolverName} does not support operand type '{type2}'.");
+		}
+
+		if (IsVectorOrQuaternionType(type3))
+		{
+			throw new ArgumentException($"{resolverName} does not support operand type '{type3}'.");
+		}
+
+		if (!IsNumericType(type1))
+		{
+			throw new ArgumentException($"{resolverName} does not support operand type '{type1}'.");
+		}
+
+		if (!IsNumericType(type2))
+		{
+			throw new ArgumentException($"{resolverName} does not support operand type '{type2}'.");
+		}
+
+		if (!IsNumericType(type3))
+		{
+			throw new ArgumentException($"{resolverName} does not support operand type '{type3}'.");
+		}
+
+		Type promoted = PromoteNumericTypes(type1, type2);
+		return PromoteNumericTypes(promoted, type3);
+	}
+
+	/// <summary>
+	/// Determines the result type for a floating-point-only unary operation (e.g., Floor, Ceil, Round, Truncate).
+	/// Only <see langword="float"/>, <see langword="double"/>, and <see langword="decimal"/> are supported.
+	/// </summary>
+	/// <param name="resolverName">The name of the resolver (for error messages).</param>
+	/// <param name="operandType">The type of the operand.</param>
+	/// <returns>The result type (same as the operand type).</returns>
+	/// <exception cref="ArgumentException">Thrown when the type is not a supported floating-point type.</exception>
+	internal static Type DetermineFloatingPointUnaryResultType(string resolverName, Type operandType)
+	{
+		if (operandType == typeof(float) || operandType == typeof(double) || operandType == typeof(decimal))
+		{
+			return operandType;
+		}
+
+		throw new ArgumentException(
+			$"{resolverName} only supports floating-point types (float, double, decimal). Got '{operandType}'.");
+	}
+
+	/// <summary>
+	/// Determines the result type for a floating-point-only binary operation (e.g., Pow). Only
+	/// <see langword="float"/> and <see langword="double"/> are supported. Integer operand types are promoted to
+	/// <see langword="double"/>.
+	/// </summary>
+	/// <param name="resolverName">The name of the resolver (for error messages).</param>
+	/// <param name="leftType">The type of the left operand.</param>
+	/// <param name="rightType">The type of the right operand.</param>
+	/// <returns>The result type.</returns>
+	/// <exception cref="ArgumentException">Thrown when the type combination is unsupported.</exception>
+	internal static Type DetermineFloatingPointBinaryResultType(
+		string resolverName,
+		Type leftType,
+		Type rightType)
+	{
+		if (IsVectorOrQuaternionType(leftType))
+		{
+			throw new ArgumentException($"{resolverName} does not support operand type '{leftType}'.");
+		}
+
+		if (IsVectorOrQuaternionType(rightType))
+		{
+			throw new ArgumentException($"{resolverName} does not support operand type '{rightType}'.");
+		}
+
+		if (!IsNumericType(leftType))
+		{
+			throw new ArgumentException($"{resolverName} does not support operand type '{leftType}'.");
+		}
+
+		if (!IsNumericType(rightType))
+		{
+			throw new ArgumentException($"{resolverName} does not support operand type '{rightType}'.");
+		}
+
+		if (leftType == typeof(decimal) || rightType == typeof(decimal))
+		{
+			throw new ArgumentException($"{resolverName} does not support decimal operands. Use double instead.");
+		}
+
+		// If both are float, result is float; otherwise promote to double.
+		if (leftType == typeof(float) && rightType == typeof(float))
+		{
+			return typeof(float);
+		}
+
+		return typeof(double);
+	}
+
+	/// <summary>
+	/// Determines the result type for a floating-point-only unary operation where integer types are promoted to
+	/// <see langword="double"/> (e.g., Sqrt). Only <see langword="float"/>, <see langword="double"/>, and integer
+	/// types are supported.
+	/// </summary>
+	/// <param name="resolverName">The name of the resolver (for error messages).</param>
+	/// <param name="operandType">The type of the operand.</param>
+	/// <returns>The result type.</returns>
+	/// <exception cref="ArgumentException">Thrown when the type is not supported.</exception>
+	internal static Type DetermineFloatingPointPromotedUnaryResultType(string resolverName, Type operandType)
+	{
+		if (IsVectorOrQuaternionType(operandType))
+		{
+			throw new ArgumentException($"{resolverName} does not support operand type '{operandType}'.");
+		}
+
+		if (!IsNumericType(operandType))
+		{
+			throw new ArgumentException($"{resolverName} does not support operand type '{operandType}'.");
+		}
+
+		if (operandType == typeof(decimal))
+		{
+			throw new ArgumentException($"{resolverName} does not support decimal operands. Use double instead.");
+		}
+
+		if (operandType == typeof(float))
+		{
+			return typeof(float);
+		}
+
+		return typeof(double);
+	}
+
+	/// <summary>
 	/// Rank determines promotion order. Types with the same rank are identical.
 	/// The ranking follows C# numeric promotion rules:
 	/// byte/sbyte/short/ushort → int → uint → long → ulong → float → double → decimal.
