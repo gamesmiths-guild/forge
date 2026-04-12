@@ -1,7 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-// Copyright © Gamesmiths Guild.
-
 using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
