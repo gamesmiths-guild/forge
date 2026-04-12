@@ -41,6 +41,17 @@ resolver.RemoveAt(0);
 resolver.Clear();
 ```
 
+## Composition
+
+```csharp
+// Compare the first element of an array against a threshold
+graph.VariableDefinitions.DefineProperty("firstEnemyClose",
+    new ComparisonResolver(
+        myArrayResolver,
+        ComparisonOperation.LessThan,
+        new VariantResolver(new Variant128(10.0f), typeof(float))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

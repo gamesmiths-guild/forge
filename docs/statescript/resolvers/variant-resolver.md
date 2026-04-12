@@ -29,6 +29,17 @@ new VariantResolver(new Variant128(3.14f), typeof(float))   // Constant 3.14
 new VariantResolver(new Variant128(true), typeof(bool))     // Constant true
 ```
 
+## Composition
+
+```csharp
+// Use as a constant operand in a comparison
+graph.VariableDefinitions.DefineProperty("isOverThreshold",
+    new ComparisonResolver(
+        new AttributeResolver("CombatAttributeSet.Health"),
+        ComparisonOperation.GreaterThan,
+        new VariantResolver(new Variant128(50), typeof(int))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

@@ -31,7 +31,7 @@ new {ClassName}({parameters})
 
 ## Composition
 
-{Show how this resolver composes with other resolvers, if applicable.}
+{Show how this resolver composes with other resolvers. For resolvers that accept `IPropertyResolver` operands, show nesting. For leaf resolvers (constants, variable reads), show them being used as operands in math or comparison resolvers.}
 
 ```csharp
 // {Example showing composition}

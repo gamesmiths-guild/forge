@@ -30,6 +30,17 @@ new SharedVariableResolver("comboCounter", typeof(int))
 new SharedVariableResolver("abilityLock", typeof(bool))
 ```
 
+## Composition
+
+```csharp
+// Compare a shared counter against a threshold
+graph.VariableDefinitions.DefineProperty("comboReady",
+    new ComparisonResolver(
+        new SharedVariableResolver("comboCounter", typeof(int)),
+        ComparisonOperation.GreaterThanOrEqual,
+        new VariantResolver(new Variant128(3), typeof(int))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

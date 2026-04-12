@@ -30,6 +30,16 @@ new VariableResolver("counter", typeof(int))
 new VariableResolver("speed", typeof(double))
 ```
 
+## Composition
+
+```csharp
+// Use a graph variable as an operand in arithmetic
+graph.VariableDefinitions.DefineProperty("boostedSpeed",
+    new MultiplyResolver(
+        new VariableResolver("baseSpeed", typeof(float)),
+        new VariantResolver(new Variant128(1.5f), typeof(float))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)
