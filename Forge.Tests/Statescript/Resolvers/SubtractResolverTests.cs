@@ -9,8 +9,6 @@ namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
 public class SubtractResolverTests
 {
-	// --- Value Type ---
-
 	[Fact]
 	[Trait("Resolver", "Subtract")]
 	public void Subtract_resolver_int_minus_int_value_type_is_int()
@@ -43,8 +41,6 @@ public class SubtractResolverTests
 
 		resolver.ValueType.Should().Be(typeof(Vector3));
 	}
-
-	// --- Arithmetic ---
 
 	[Fact]
 	[Trait("Resolver", "Subtract")]
@@ -138,8 +134,6 @@ public class SubtractResolverTests
 		resolver.Resolve(context).AsInt().Should().Be(30);
 	}
 
-	// --- Negative result ---
-
 	[Fact]
 	[Trait("Resolver", "Subtract")]
 	public void Subtract_resolver_handles_negative_result()
@@ -165,8 +159,6 @@ public class SubtractResolverTests
 
 		resolver.Resolve(context).AsInt().Should().Be(42);
 	}
-
-	// --- Vectors ---
 
 	[Fact]
 	[Trait("Resolver", "Subtract")]
@@ -223,8 +215,6 @@ public class SubtractResolverTests
 		resolver.Resolve(context).AsQuaternion().Should().Be(left - right);
 	}
 
-	// --- Nesting ---
-
 	[Fact]
 	[Trait("Resolver", "Subtract")]
 	public void Subtract_resolver_supports_nesting()
@@ -242,8 +232,6 @@ public class SubtractResolverTests
 
 		outer.Resolve(context).AsInt().Should().Be(50);
 	}
-
-	// --- Invalid types ---
 
 	[Fact]
 	[Trait("Resolver", "Subtract")]
