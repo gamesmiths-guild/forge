@@ -65,10 +65,23 @@ internal static class ResolverTestContextFactory
 		var behavior = new GraphAbilityBehavior(graph);
 
 		AbilityData abilityData = CreateAbilityData("ResolverTest", () => behavior);
-		AbilityHandle? handle = Grant(entity, abilityData);
-		handle!.Activate(out _, magnitude: magnitude);
+		AbilityHandle? handle = Grant(entity, abilityData) ?? throw new InvalidOperationException(
+				"Failed to grant the resolver test ability and create an ability graph context.");
 
-		return captureNode.CapturedGraphContext!;
+		if (!handle.Activate(out _, magnitude: magnitude))
+		{
+			throw new InvalidOperationException(
+				"Failed to activate the resolver test ability while creating an ability graph context." +
+				$" Magnitude: {magnitude}.");
+		}
+
+		if (captureNode.CapturedGraphContext is null)
+		{
+			throw new InvalidOperationException(
+				"The resolver test ability activated, but no graph context was captured by CaptureGraphContextNode.");
+		}
+
+		return captureNode.CapturedGraphContext;
 	}
 
 	private static AbilityHandle? Grant(TestEntity target, AbilityData data)
@@ -89,7 +102,15 @@ internal static class ResolverTestContextFactory
 
 		var grantEffect = new Effect(effectData, new EffectOwnership(null, null));
 		_ = target.EffectsManager.ApplyEffect(grantEffect);
+
 		target.Abilities.TryGetAbility(data, out AbilityHandle? handle);
+
+		if (handle is null)
+		{
+			throw new InvalidOperationException(
+				"Failed to retrieve the granted ability handle after applying the grant effect.");
+		}
+
 		return handle;
 	}
 
