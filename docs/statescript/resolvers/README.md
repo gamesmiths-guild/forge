@@ -29,4 +29,5 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [MultiplyResolver](multiply-resolver.md) | *(promoted)* | Multiplies two numeric or vector values. |
 | [NegateResolver](negate-resolver.md) | *(promoted)* | Negates a numeric or vector value. |
 | [PowResolver](pow-resolver.md) | `float`/`double` | Raises a value to a specified power. |
+| [SqrtResolver](sqrt-resolver.md) | `float`/`double` | Computes the square root of a numeric value. |
 | [SubtractResolver](subtract-resolver.md) | *(promoted)* | Subtracts two numeric or vector values. |
