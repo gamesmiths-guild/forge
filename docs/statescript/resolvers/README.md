@@ -27,6 +27,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [CeilResolver](ceil-resolver.md) | *(same)* | Rounds up to the smallest integer greater than or equal to the operand. |
 | [ClampResolver](clamp-resolver.md) | *(promoted)* | Clamps a numeric value between a minimum and maximum bound. |
 | [DivideResolver](divide-resolver.md) | *(promoted)* | Divides two numeric or vector values. |
+| [ExpResolver](exp-resolver.md) | `float`/`double` | Computes `e` raised to a specified power (`e^x`). |
 | [FloorResolver](floor-resolver.md) | *(same)* | Rounds down to the largest integer less than or equal to the operand. |
 | [LerpResolver](lerp-resolver.md) | `float`/`double`/vector/quaternion | Linearly interpolates between two values (scalar, vector, or quaternion). |
 | [MaxResolver](max-resolver.md) | *(promoted)* | Returns the larger of two numeric values. |
