@@ -39,16 +39,16 @@ When operands differ, the wider numeric type wins:
 
 | Mixed Operands | Result Type |
 |----------------|-------------|
-| `int` + `float` | `float` |
-| `int` + `double` | `double` |
-| `float` + `double` | `double` |
-| `byte` + `int` | `int` |
-| `short` + `long` | `long` |
-| `int` + `decimal` | `decimal` |
+| `int + float` | `float` |
+| `int + double` | `double` |
+| `float + double` | `double` |
+| `byte + int` | `int` |
+| `short + long` | `long` |
+| `int + decimal` | `decimal` |
 
 **Invalid combinations** (throw `ArgumentException` at construction time):
-- Mixing vector/quaternion types (e.g., `Vector2` + `Vector3`).
-- Mixing vector/quaternion with numeric types (e.g., `Vector3` + `float`).
+- Mixing vector/quaternion types (e.g., `Vector2 + Vector3`).
+- Mixing vector/quaternion with numeric types (e.g., `Vector3 + float`).
 - Unsupported types (`bool`, `char`).
 
 ## Behavior

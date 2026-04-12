@@ -10,8 +10,8 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 internal static class MathTypeUtils
 {
 	/// <summary>
-	/// Determines the result type for a binary operation between two operand types, applying standard
-	/// C# numeric promotion rules. Vector and quaternion types must match exactly.
+	/// Determines the result type for a binary operation between two operand types, applying standard C# numeric
+	/// promotion rules. Vector and quaternion types must match exactly.
 	/// </summary>
 	/// <param name="resolverName">The name of the resolver (for error messages).</param>
 	/// <param name="leftType">The type of the left operand.</param>
