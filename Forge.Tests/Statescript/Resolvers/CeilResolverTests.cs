@@ -1,0 +1,177 @@
+// Copyright © Gamesmiths Guild.
+
+using System.Numerics;
+using FluentAssertions;
+using Gamesmiths.Forge.Statescript;
+using Gamesmiths.Forge.Statescript.Properties;
+
+namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
+
+public class CeilResolverTests
+{
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_float_value_type_is_float()
+	{
+		var resolver = new CeilResolver(
+			new VariantResolver(new Variant128(2.3f), typeof(float)));
+
+		resolver.ValueType.Should().Be(typeof(float));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_double_value_type_is_double()
+	{
+		var resolver = new CeilResolver(
+			new VariantResolver(new Variant128(2.3), typeof(double)));
+
+		resolver.ValueType.Should().Be(typeof(double));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_decimal_value_type_is_decimal()
+	{
+		var resolver = new CeilResolver(
+			new VariantResolver(new Variant128(2.3m), typeof(decimal)));
+
+		resolver.ValueType.Should().Be(typeof(decimal));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_positive_float()
+	{
+		var resolver = new CeilResolver(
+			new VariantResolver(new Variant128(2.3f), typeof(float)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsFloat().Should().Be(3.0f);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_negative_float()
+	{
+		var resolver = new CeilResolver(
+			new VariantResolver(new Variant128(-2.7f), typeof(float)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsFloat().Should().Be(-2.0f);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_positive_double()
+	{
+		var resolver = new CeilResolver(
+			new VariantResolver(new Variant128(3.01), typeof(double)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(4.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_negative_double()
+	{
+		var resolver = new CeilResolver(
+			new VariantResolver(new Variant128(-1.9), typeof(double)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(-1.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_positive_decimal()
+	{
+		var resolver = new CeilResolver(
+			new VariantResolver(new Variant128(5.1m), typeof(decimal)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDecimal().Should().Be(6.0m);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_negative_decimal()
+	{
+		var resolver = new CeilResolver(
+			new VariantResolver(new Variant128(-5.9m), typeof(decimal)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDecimal().Should().Be(-5.0m);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_whole_number_returns_same()
+	{
+		var resolver = new CeilResolver(
+			new VariantResolver(new Variant128(5.0), typeof(double)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(5.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_supports_nesting()
+	{
+		// Ceil(2.3 + 0.1) = Ceil(2.4) = 3.0
+		var sum = new AddResolver(
+			new VariantResolver(new Variant128(2.3), typeof(double)),
+			new VariantResolver(new Variant128(0.1), typeof(double)));
+
+		var resolver = new CeilResolver(sum);
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(3.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_throws_for_int_operand()
+	{
+#pragma warning disable CA1806
+		Action act = () => new CeilResolver(
+			new VariantResolver(new Variant128(5), typeof(int)));
+#pragma warning restore CA1806
+
+		act.Should().Throw<ArgumentException>();
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_throws_for_vector_operand()
+	{
+#pragma warning disable CA1806
+		Action act = () => new CeilResolver(
+			new VariantResolver(new Variant128(Vector3.One), typeof(Vector3)));
+#pragma warning restore CA1806
+
+		act.Should().Throw<ArgumentException>();
+	}
+
+	[Fact]
+	[Trait("Resolver", "Ceil")]
+	public void Ceil_resolver_throws_for_bool_operand()
+	{
+#pragma warning disable CA1806
+		Action act = () => new CeilResolver(
+			new VariantResolver(new Variant128(true), typeof(bool)));
+#pragma warning restore CA1806
+
+		act.Should().Throw<ArgumentException>();
+	}
+}

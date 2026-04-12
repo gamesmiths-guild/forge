@@ -23,6 +23,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 |----------|-------------|-------------|
 | [AbsResolver](abs-resolver.md) | *(promoted)* | Computes the absolute value of a signed numeric value. |
 | [AddResolver](add-resolver.md) | *(promoted)* | Adds two numeric or vector values. |
+| [CeilResolver](ceil-resolver.md) | *(same)* | Rounds up to the smallest integer greater than or equal to the operand. |
 | [DivideResolver](divide-resolver.md) | *(promoted)* | Divides two numeric or vector values. |
 | [FloorResolver](floor-resolver.md) | *(same)* | Rounds down to the largest integer less than or equal to the operand. |
 | [LerpResolver](lerp-resolver.md) | `float`/`double`/vector/quaternion | Linearly interpolates between two values (scalar, vector, or quaternion). |
