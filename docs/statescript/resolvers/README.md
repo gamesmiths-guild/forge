@@ -37,3 +37,4 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [RoundResolver](round-resolver.md) | *(same)* | Rounds to the nearest integer using banker's rounding. |
 | [SqrtResolver](sqrt-resolver.md) | `float`/`double` | Computes the square root of a numeric value. |
 | [SubtractResolver](subtract-resolver.md) | *(promoted)* | Subtracts two numeric or vector values. |
+| [TruncateResolver](truncate-resolver.md) | *(same)* | Removes the fractional part, rounding toward zero. |
