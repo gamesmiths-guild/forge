@@ -22,5 +22,6 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
 | [AddResolver](add-resolver.md) | *(promoted)* | Adds two numeric or vector values. |
+| [DivideResolver](divide-resolver.md) | *(promoted)* | Divides two numeric or vector values. |
 | [MultiplyResolver](multiply-resolver.md) | *(promoted)* | Multiplies two numeric or vector values. |
 | [SubtractResolver](subtract-resolver.md) | *(promoted)* | Subtracts two numeric or vector values. |
