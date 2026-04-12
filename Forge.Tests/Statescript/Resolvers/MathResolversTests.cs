@@ -453,4 +453,299 @@ public class MathResolversTests
 
 		resolver.Resolve(context).AsDouble().Should().BeApproximately(83.333, 0.01);
 	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Clamped_health_after_damage()
+	{
+		// clampedHealth = Clamp(currentHealth - damage, 0, maxHealth)
+		// Clamp(100 - 150, 0, 100) = Clamp(-50, 0, 100) = 0
+		var resolver = new ClampResolver(
+			new SubtractResolver(
+				new VariantResolver(new Variant128(100), typeof(int)),
+				new VariantResolver(new Variant128(150), typeof(int))),
+			new VariantResolver(new Variant128(0), typeof(int)),
+			new VariantResolver(new Variant128(100), typeof(int)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsInt().Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Clamped_health_after_heal()
+	{
+		// clampedHealth = Clamp(currentHealth + heal, 0, maxHealth)
+		// Clamp(80 + 50, 0, 100) = Clamp(130, 0, 100) = 100
+		var resolver = new ClampResolver(
+			new AddResolver(
+				new VariantResolver(new Variant128(80), typeof(int)),
+				new VariantResolver(new Variant128(50), typeof(int))),
+			new VariantResolver(new Variant128(0), typeof(int)),
+			new VariantResolver(new Variant128(100), typeof(int)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsInt().Should().Be(100);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Min_max_to_clamp_stat()
+	{
+		// Clamp implemented as Max(min, Min(value, max))
+		// Max(0, Min(150, 100)) = Max(0, 100) = 100
+		var resolver = new MaxResolver(
+			new VariantResolver(new Variant128(0), typeof(int)),
+			new MinResolver(
+				new VariantResolver(new Variant128(150), typeof(int)),
+				new VariantResolver(new Variant128(100), typeof(int))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsInt().Should().Be(100);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Lerp_for_smooth_transition()
+	{
+		// Smoothly transition between walk and run speed
+		// Lerp(walkSpeed, runSpeed, t) = Lerp(3.0, 8.0, 0.7) = 3 + (8 - 3) * 0.7 = 3 + 3.5 = 6.5
+		var resolver = new LerpResolver(
+			new VariantResolver(new Variant128(3.0f), typeof(float)),
+			new VariantResolver(new Variant128(8.0f), typeof(float)),
+			new VariantResolver(new Variant128(0.7f), typeof(float)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(6.5f, 0.001f);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Clamped_lerp_for_safe_interpolation()
+	{
+		// Safe lerp: Lerp(a, b, Clamp(t, 0, 1))
+		// Lerp(0, 100, Clamp(1.5, 0, 1)) = Lerp(0, 100, 1.0) = 100
+		var resolver = new LerpResolver(
+			new VariantResolver(new Variant128(0.0f), typeof(float)),
+			new VariantResolver(new Variant128(100.0f), typeof(float)),
+			new ClampResolver(
+				new VariantResolver(new Variant128(1.5f), typeof(float)),
+				new VariantResolver(new Variant128(0.0f), typeof(float)),
+				new VariantResolver(new Variant128(1.0f), typeof(float))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsFloat().Should().Be(100.0f);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Distance_formula_with_sqrt()
+	{
+		// distance = Sqrt((x2-x1)^2 + (y2-y1)^2)
+		// Sqrt((4-1)^2 + (5-1)^2) = Sqrt(9 + 16) = Sqrt(25) = 5
+		var dx = new SubtractResolver(
+			new VariantResolver(new Variant128(4.0), typeof(double)),
+			new VariantResolver(new Variant128(1.0), typeof(double)));
+
+		var dy = new SubtractResolver(
+			new VariantResolver(new Variant128(5.0), typeof(double)),
+			new VariantResolver(new Variant128(1.0), typeof(double)));
+
+		var resolver = new SqrtResolver(
+			new AddResolver(
+				new PowResolver(dx, new VariantResolver(new Variant128(2.0), typeof(double))),
+				new PowResolver(dy, new VariantResolver(new Variant128(2.0), typeof(double)))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(5.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Exponential_decay_formula()
+	{
+		// decay = initialValue * Pow(decayRate, time)
+		// 100 * Pow(0.5, 3) = 100 * 0.125 = 12.5
+		var resolver = new MultiplyResolver(
+			new VariantResolver(new Variant128(100.0), typeof(double)),
+			new PowResolver(
+				new VariantResolver(new Variant128(0.5), typeof(double)),
+				new VariantResolver(new Variant128(3.0), typeof(double))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(12.5);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Floor_for_grid_snapping()
+	{
+		// gridX = Floor(worldX / cellSize) * cellSize
+		// Floor(7.8 / 2.0) * 2.0 = Floor(3.9) * 2.0 = 3.0 * 2.0 = 6.0
+		var resolver = new MultiplyResolver(
+			new FloorResolver(
+				new DivideResolver(
+					new VariantResolver(new Variant128(7.8), typeof(double)),
+					new VariantResolver(new Variant128(2.0), typeof(double)))),
+			new VariantResolver(new Variant128(2.0), typeof(double)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(6.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Ceil_for_resource_cost_rounding_up()
+	{
+		// requiredItems = Ceil(totalCost / costPerItem)
+		// Ceil(10.0 / 3.0) = Ceil(3.333...) = 4.0
+		var resolver = new CeilResolver(
+			new DivideResolver(
+				new VariantResolver(new Variant128(10.0), typeof(double)),
+				new VariantResolver(new Variant128(3.0), typeof(double))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(4.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Truncate_for_integer_conversion()
+	{
+		// Convert float position to grid coordinate (always toward zero)
+		// Truncate(-7.8 / 2.0) = Truncate(-3.9) = -3.0
+		var resolver = new TruncateResolver(
+			new DivideResolver(
+				new VariantResolver(new Variant128(-7.8), typeof(double)),
+				new VariantResolver(new Variant128(2.0), typeof(double))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(-3.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Round_for_display_value()
+	{
+		// displayValue = Round(rawValue * 100) / 100 — but using Round directly
+		// Round(3.14159 * 1.0) = Round(3.14159) = 3.0
+		var resolver = new RoundResolver(
+			new VariantResolver(new Variant128(3.14159), typeof(double)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(3.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Effective_stat_with_min_cap()
+	{
+		// effectiveStat = Max(baseStat + modifier, minimumStat)
+		// Max(10 + (-15), 1) = Max(-5, 1) = 1
+		var resolver = new MaxResolver(
+			new AddResolver(
+				new VariantResolver(new Variant128(10), typeof(int)),
+				new VariantResolver(new Variant128(-15), typeof(int))),
+			new VariantResolver(new Variant128(1), typeof(int)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsInt().Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Damage_with_crit_floor()
+	{
+		// critDamage = Floor(baseDamage * critMultiplier)
+		// Floor(47.0 * 1.5) = Floor(70.5) = 70.0
+		var resolver = new FloorResolver(
+			new MultiplyResolver(
+				new VariantResolver(new Variant128(47.0), typeof(double)),
+				new VariantResolver(new Variant128(1.5), typeof(double))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(70.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Level_scaling_with_sqrt()
+	{
+		// scaledStat = baseStat + Floor(Sqrt(level) * growthRate)
+		// 10 + Floor(Sqrt(25.0) * 3.0) = 10 + Floor(5.0 * 3.0) = 10 + Floor(15.0) = 10 + 15.0 = 25.0
+		var resolver = new AddResolver(
+			new VariantResolver(new Variant128(10.0), typeof(double)),
+			new FloorResolver(
+				new MultiplyResolver(
+					new SqrtResolver(
+						new VariantResolver(new Variant128(25.0), typeof(double))),
+					new VariantResolver(new Variant128(3.0), typeof(double)))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(25.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Experience_curve_with_pow()
+	{
+		// xpRequired = Floor(baseXP * Pow(level, exponent))
+		// Floor(100.0 * Pow(5.0, 1.5)) = Floor(100.0 * 11.1803...) = Floor(1118.03...) = 1118.0
+		var resolver = new FloorResolver(
+			new MultiplyResolver(
+				new VariantResolver(new Variant128(100.0), typeof(double)),
+				new PowResolver(
+					new VariantResolver(new Variant128(5.0), typeof(double)),
+					new VariantResolver(new Variant128(1.5), typeof(double)))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(1118.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Vector3_lerp_for_position_interpolation()
+	{
+		// Smoothly move between two positions at t=0.25
+		// Lerp((0,0,0), (8,4,12), 0.25) = (2, 1, 3)
+		var resolver = new LerpResolver(
+			new VariantResolver(new Variant128(new Vector3(0, 0, 0)), typeof(Vector3)),
+			new VariantResolver(new Variant128(new Vector3(8, 4, 12)), typeof(Vector3)),
+			new VariantResolver(new Variant128(0.25f), typeof(float)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsVector3().Should().Be(new Vector3(2, 1, 3));
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Vector2_lerp_for_ui_animation()
+	{
+		// Animate a UI element from one position to another
+		// Lerp((10, 200), (300, 50), 0.5) = (155, 125)
+		var resolver = new LerpResolver(
+			new VariantResolver(new Variant128(new Vector2(10, 200)), typeof(Vector2)),
+			new VariantResolver(new Variant128(new Vector2(300, 50)), typeof(Vector2)),
+			new VariantResolver(new Variant128(0.5f), typeof(float)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsVector2().Should().Be(new Vector2(155, 125));
+	}
 }
