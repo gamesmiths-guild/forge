@@ -21,6 +21,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
+| [AbsResolver](abs-resolver.md) | *(promoted)* | Computes the absolute value of a signed numeric value. |
 | [AddResolver](add-resolver.md) | *(promoted)* | Adds two numeric or vector values. |
 | [DivideResolver](divide-resolver.md) | *(promoted)* | Divides two numeric or vector values. |
 | [ModuloResolver](modulo-resolver.md) | *(promoted)* | Computes the remainder of dividing two numeric values. |
