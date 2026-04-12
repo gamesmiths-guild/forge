@@ -33,6 +33,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [CbrtResolver](cbrt-resolver.md) | `float`/`double` | Computes the cube root. |
 | [CeilResolver](ceil-resolver.md) | *(same)* | Rounds up to the smallest integer greater than or equal to the operand. |
 | [ClampResolver](clamp-resolver.md) | *(promoted)* | Clamps a numeric value between a minimum and maximum bound. |
+| [CopySignResolver](copysign-resolver.md) | `float`/`double` | Returns a value with the magnitude of one operand and the sign of another. |
 | [CosHResolver](cosh-resolver.md) | `float`/`double` | Computes the hyperbolic cosine. |
 | [CosResolver](cos-resolver.md) | `float`/`double` | Computes the cosine of an angle in radians. |
 | [DivideResolver](divide-resolver.md) | *(promoted)* | Divides two numeric or vector values. |
