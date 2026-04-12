@@ -23,5 +23,6 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 |----------|-------------|-------------|
 | [AddResolver](add-resolver.md) | *(promoted)* | Adds two numeric or vector values. |
 | [DivideResolver](divide-resolver.md) | *(promoted)* | Divides two numeric or vector values. |
+| [ModuloResolver](modulo-resolver.md) | *(promoted)* | Computes the remainder of dividing two numeric values. |
 | [MultiplyResolver](multiply-resolver.md) | *(promoted)* | Multiplies two numeric or vector values. |
 | [SubtractResolver](subtract-resolver.md) | *(promoted)* | Subtracts two numeric or vector values. |
