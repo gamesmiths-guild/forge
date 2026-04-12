@@ -748,4 +748,209 @@ public class MathResolversTests
 
 		resolver.Resolve(context).AsVector2().Should().Be(new Vector2(155, 125));
 	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Sine_wave_oscillation()
+	{
+		// amplitude * Sin(frequency * time)
+		// 10.0 * Sin(2.0 * π/2) = 10.0 * Sin(π) ≈ 10.0 * 0.0 = 0.0
+		var resolver = new MultiplyResolver(
+			new VariantResolver(new Variant128(10.0), typeof(double)),
+			new SinResolver(
+				new MultiplyResolver(
+					new VariantResolver(new Variant128(2.0), typeof(double)),
+					new VariantResolver(new Variant128(Math.PI / 2.0), typeof(double)))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.0, 0.001);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Angle_between_two_points_with_atan2()
+	{
+		// angle = ATan2(dy, dx)
+		// ATan2(3 - 0, 4 - 0) = ATan2(3, 4) ≈ 0.6435 radians
+		var resolver = new ATan2Resolver(
+			new SubtractResolver(
+				new VariantResolver(new Variant128(3.0), typeof(double)),
+				new VariantResolver(new Variant128(0.0), typeof(double))),
+			new SubtractResolver(
+				new VariantResolver(new Variant128(4.0), typeof(double)),
+				new VariantResolver(new Variant128(0.0), typeof(double))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.6435, 0.001);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Exponential_growth_with_exp()
+	{
+		// population = initial * Exp(rate * time)
+		// 100 * Exp(0.1 * 10) = 100 * Exp(1) = 100 * e ≈ 271.83
+		var resolver = new MultiplyResolver(
+			new VariantResolver(new Variant128(100.0), typeof(double)),
+			new ExpResolver(
+				new MultiplyResolver(
+					new VariantResolver(new Variant128(0.1), typeof(double)),
+					new VariantResolver(new Variant128(10.0), typeof(double)))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(100.0 * Math.E, 0.01);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Logarithmic_scaling_for_difficulty()
+	{
+		// difficulty = baseValue + scaleFactor * Log(level)
+		// 10.0 + 5.0 * Log(e^2) = 10.0 + 5.0 * 2.0 = 20.0
+		var resolver = new AddResolver(
+			new VariantResolver(new Variant128(10.0), typeof(double)),
+			new MultiplyResolver(
+				new VariantResolver(new Variant128(5.0), typeof(double)),
+				new LogResolver(
+					new VariantResolver(new Variant128(Math.E * Math.E), typeof(double)))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(20.0, 0.001);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Bit_depth_calculation_with_log2()
+	{
+		// bitsNeeded = Ceil(Log2(numValues))
+		// Ceil(Log2(1000)) = Ceil(9.9658) = 10.0
+		var resolver = new CeilResolver(
+			new Log2Resolver(
+				new VariantResolver(new Variant128(1000.0), typeof(double))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(10.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Decibel_calculation_with_log10()
+	{
+		// decibels = 20 * Log10(amplitude / reference)
+		// 20 * Log10(100 / 1) = 20 * Log10(100) = 20 * 2 = 40
+		var resolver = new MultiplyResolver(
+			new VariantResolver(new Variant128(20.0), typeof(double)),
+			new Log10Resolver(
+				new DivideResolver(
+					new VariantResolver(new Variant128(100.0), typeof(double)),
+					new VariantResolver(new Variant128(1.0), typeof(double)))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(40.0, 0.001);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Smooth_step_approximation_with_tanh()
+	{
+		// smoothValue = (TanH(x) + 1) / 2 — maps (-∞,+∞) to (0, 1)
+		// (TanH(0) + 1) / 2 = (0 + 1) / 2 = 0.5
+		var resolver = new DivideResolver(
+			new AddResolver(
+				new TanHResolver(
+					new VariantResolver(new Variant128(0.0), typeof(double))),
+				new VariantResolver(new Variant128(1.0), typeof(double))),
+			new VariantResolver(new Variant128(2.0), typeof(double)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.5, 0.001);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Direction_sign_with_copysign()
+	{
+		// Apply direction sign to speed: CopySign(speed, direction)
+		// CopySign(Abs(-7.5), -1.0) = CopySign(7.5, -1.0) = -7.5
+		var resolver = new CopySignResolver(
+			new AbsResolver(
+				new VariantResolver(new Variant128(-7.5), typeof(double))),
+			new VariantResolver(new Variant128(-1.0), typeof(double)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(-7.5);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Cube_root_for_volume_to_side_length()
+	{
+		// sideLength = Cbrt(volume)
+		// Cbrt(27) = 3
+		var resolver = new CbrtResolver(
+			new VariantResolver(new Variant128(27.0), typeof(double)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(3.0, 0.0001);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Sign_for_movement_direction()
+	{
+		// direction = Sign(targetX - currentX)
+		// Sign(10 - 25) = Sign(-15) = -1
+		var resolver = new SignResolver(
+			new SubtractResolver(
+				new VariantResolver(new Variant128(10), typeof(int)),
+				new VariantResolver(new Variant128(25), typeof(int))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsInt().Should().Be(-1);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Pythagorean_identity_sin_squared_plus_cos_squared()
+	{
+		// Sin²(x) + Cos²(x) = 1 for any x
+		var angle = new VariantResolver(new Variant128(0.7), typeof(double));
+
+		var resolver = new AddResolver(
+			new PowResolver(
+				new SinResolver(angle),
+				new VariantResolver(new Variant128(2.0), typeof(double))),
+			new PowResolver(
+				new CosResolver(angle),
+				new VariantResolver(new Variant128(2.0), typeof(double))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(1.0, 0.0001);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Exp_and_log_are_inverses()
+	{
+		// Log(Exp(x)) = x
+		// Log(Exp(3.5)) = 3.5
+		var resolver = new LogResolver(
+			new ExpResolver(
+				new VariantResolver(new Variant128(3.5), typeof(double))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(3.5, 0.0001);
+	}
 }
