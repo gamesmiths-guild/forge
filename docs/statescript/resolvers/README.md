@@ -37,6 +37,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [CosHResolver](cosh-resolver.md) | `float`/`double` | Computes the hyperbolic cosine. |
 | [CosResolver](cos-resolver.md) | `float`/`double` | Computes the cosine of an angle in radians. |
 | [DivideResolver](divide-resolver.md) | *(promoted)* | Divides two numeric or vector values. |
+| [EResolver](e-resolver.md) | `float`/`double` | Returns the mathematical constant `e` (Euler's number). |
 | [ExpResolver](exp-resolver.md) | `float`/`double` | Computes `e` raised to a specified power (`e^x`). |
 | [FloorResolver](floor-resolver.md) | *(same)* | Rounds down to the largest integer less than or equal to the operand. |
 | [LerpResolver](lerp-resolver.md) | `float`/`double`/vector/quaternion | Linearly interpolates between two values (scalar, vector, or quaternion). |
@@ -48,6 +49,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [ModuloResolver](modulo-resolver.md) | *(promoted)* | Computes the remainder of dividing two numeric values. |
 | [MultiplyResolver](multiply-resolver.md) | *(promoted)* | Multiplies two numeric or vector values. |
 | [NegateResolver](negate-resolver.md) | *(promoted)* | Negates a numeric or vector value. |
+| [PiResolver](pi-resolver.md) | `float`/`double` | Returns the mathematical constant π (pi). |
 | [PowResolver](pow-resolver.md) | `float`/`double` | Raises a value to a specified power. |
 | [RoundResolver](round-resolver.md) | *(same)* | Rounds to the nearest integer using banker's rounding. |
 | [SignResolver](sign-resolver.md) | `int` | Returns -1, 0, or 1 indicating the sign of a numeric value. |
