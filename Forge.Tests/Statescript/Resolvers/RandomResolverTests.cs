@@ -5,6 +5,7 @@ using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -204,58 +205,5 @@ public class RandomResolverTests
 #pragma warning restore CA1806
 
 		act.Should().Throw<ArgumentException>();
-	}
-
-	private sealed class FixedRandom(int nextInt = 0, float nextSingle = 0.0f, double nextDouble = 0.0) : IRandom
-	{
-		public int NextInt()
-		{
-			return nextInt;
-		}
-
-		public int NextInt(int maxValue)
-		{
-			return nextInt;
-		}
-
-		public int NextInt(int minValue, int maxValue)
-		{
-			return nextInt;
-		}
-
-		public float NextSingle()
-		{
-			return nextSingle;
-		}
-
-		public double NextDouble()
-		{
-			return nextDouble;
-		}
-
-		public long NextInt64()
-		{
-			throw new NotImplementedException();
-		}
-
-		public long NextInt64(long maxValue)
-		{
-			throw new NotImplementedException();
-		}
-
-		public long NextInt64(long minValue, long maxValue)
-		{
-			throw new NotImplementedException();
-		}
-
-		public void NextBytes(byte[] buffer)
-		{
-			throw new NotImplementedException();
-		}
-
-		public void NextBytes(Span<byte> buffer)
-		{
-			throw new NotImplementedException();
-		}
 	}
 }

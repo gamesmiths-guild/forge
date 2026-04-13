@@ -2,8 +2,10 @@
 
 using System.Numerics;
 using FluentAssertions;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -952,5 +954,129 @@ public class MathResolversTests
 		var context = new GraphContext();
 
 		resolver.Resolve(context).AsDouble().Should().BeApproximately(3.5, 0.0001);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Trig_with_degrees_using_DegToRad()
+	{
+		// Sin(DegToRad(30)) = Sin(π/6) = 0.5
+		var resolver = new SinResolver(
+			new DegToRadResolver(
+				new VariantResolver(new Variant128(30.0), typeof(double))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.5, 0.001);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void RadToDeg_after_ATan2_for_aiming_angle()
+	{
+		// angle = RadToDeg(ATan2(1, 1)) = RadToDeg(π/4) = 45°
+		var resolver = new RadToDegResolver(
+			new ATan2Resolver(
+				new VariantResolver(new Variant128(1.0), typeof(double)),
+				new VariantResolver(new Variant128(1.0), typeof(double))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(45.0, 0.001);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Pi_resolver_in_circle_area_formula()
+	{
+		// area = Pi * r^2
+		// Pi * 5^2 = Pi * 25 ≈ 78.5398
+		var resolver = new MultiplyResolver(
+			new PiResolver(),
+			new PowResolver(
+				new VariantResolver(new Variant128(5.0), typeof(double)),
+				new VariantResolver(new Variant128(2.0), typeof(double))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.PI * 25.0, 0.001);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void E_resolver_in_natural_exponential()
+	{
+		// Pow(e, 2) = e^2 ≈ 7.389
+		var resolver = new PowResolver(
+			new EResolver(),
+			new VariantResolver(new Variant128(2.0), typeof(double)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.E * Math.E, 0.001);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Random_damage_range()
+	{
+		// damage = baseDamage + Random(0, bonusRange)
+		// With fixed random (nextSingle=0.5): 50 + Random(0, 20) = 50 + 10 = 60
+		var resolver = new AddResolver(
+			new VariantResolver(new Variant128(50.0f), typeof(float)),
+			new RandomResolver(
+				new FixedRandom(nextSingle: 0.5f),
+				new VariantResolver(new Variant128(0.0f), typeof(float)),
+				new VariantResolver(new Variant128(20.0f), typeof(float))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsFloat().Should().Be(60.0f);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Round_with_digits_for_display_value()
+	{
+		// Display damage per second with 1 decimal place
+		// Round(totalDamage / time, 1) = Round(100.0 / 3.0, 1) = Round(33.333, 1) = 33.3
+		var resolver = new RoundResolver(
+			new DivideResolver(
+				new VariantResolver(new Variant128(100.0), typeof(double)),
+				new VariantResolver(new Variant128(3.0), typeof(double))),
+			digits: 1);
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(33.3);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void Round_away_from_zero_for_score_display()
+	{
+		// Round score to nearest 0.5 increment using AwayFromZero
+		// Round(7.5, AwayFromZero) = 8 (not 8 with ToEven, but here the midpoint rounds up)
+		var resolver = new RoundResolver(
+			new VariantResolver(new Variant128(7.5), typeof(double)),
+			mode: MidpointRounding.AwayFromZero);
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(8.0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "MathComposition")]
+	public void DegToRad_and_RadToDeg_roundtrip()
+	{
+		// RadToDeg(DegToRad(135)) = 135
+		var resolver = new RadToDegResolver(
+			new DegToRadResolver(
+				new VariantResolver(new Variant128(135.0), typeof(double))));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(135.0, 0.0001);
 	}
 }
