@@ -17,7 +17,8 @@ public interface IRandom
 	/// Returns a non-negative random integer that is less than the specified maximum.
 	/// </summary>
 	/// <param name="maxValue">Exclusive max value.</param>
-	/// <returns>An integer in the range [0, <paramref name="maxValue"/>), or 0 if <paramref name="maxValue"/> is less than or equal to 0.</returns>
+	/// <returns>An integer in the range [0, <paramref name="maxValue"/>), or 0 if <paramref name="maxValue"/> is less
+	/// than or equal to 0.</returns>
 	int NextInt(int maxValue);
 
 	/// <summary>
@@ -25,7 +26,8 @@ public interface IRandom
 	/// </summary>
 	/// <param name="minValue">Inclusive min value.</param>
 	/// <param name="maxValue">Exclusive max value.</param>
-	/// <returns>An integer in the range [<paramref name="minValue"/>, <paramref name="maxValue"/>), or <paramref name="minValue"/> if the range is invalid.</returns>
+	/// <returns>An integer in the range [<paramref name="minValue"/>, <paramref name="maxValue"/>), or
+	/// <paramref name="minValue"/> if the range is invalid.</returns>
 	int NextInt(int minValue, int maxValue);
 
 	/// <summary>
@@ -50,7 +52,8 @@ public interface IRandom
 	/// Returns a non-negative random integer that is less than the specified maximum.
 	/// </summary>
 	/// <param name="maxValue">Exclusive max value.</param>
-	/// <returns>A 64-bit integer in the range [0, <paramref name="maxValue"/>), or 0 if <paramref name="maxValue"/> is less than or equal to 0.</returns>
+	/// <returns>A 64-bit integer in the range [0, <paramref name="maxValue"/>), or 0 if <paramref name="maxValue"/> is
+	/// less than or equal to 0.</returns>
 	long NextInt64(long maxValue);
 
 	/// <summary>
@@ -58,7 +61,8 @@ public interface IRandom
 	/// </summary>
 	/// <param name="minValue">Inclusive min value.</param>
 	/// <param name="maxValue">Exclusive max value.</param>
-	/// <returns>A 64-bit integer in the range [<paramref name="minValue"/>, <paramref name="maxValue"/>), or <paramref name="minValue"/> if the range is invalid.</returns>
+	/// <returns>A 64-bit integer in the range [<paramref name="minValue"/>, <paramref name="maxValue"/>), or
+	/// <paramref name="minValue"/> if the range is invalid.</returns>
 	long NextInt64(long minValue, long maxValue);
 
 	/// <summary>
