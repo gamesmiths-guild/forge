@@ -54,6 +54,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [PowResolver](pow-resolver.md) | `float`/`double` | Raises a value to a specified power. |
 | [RoundResolver](round-resolver.md) | *(same)* | Rounds to the nearest integer using banker's rounding. |
 | [RadToDegResolver](radtodeg-resolver.md) | `float`/`double` | Converts radians to degrees. |
+| [RandomResolver](random-resolver.md) | `int`/`float`/`double` | Generates a random value in a range using an `IRandom` provider. |
 | [SignResolver](sign-resolver.md) | `int` | Returns -1, 0, or 1 indicating the sign of a numeric value. |
 | [SinHResolver](sinh-resolver.md) | `float`/`double` | Computes the hyperbolic sine. |
 | [SinResolver](sin-resolver.md) | `float`/`double` | Computes the sine of an angle in radians. |
