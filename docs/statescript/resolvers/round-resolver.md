@@ -3,17 +3,22 @@
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.RoundResolver`
 > **Output Type:** *(same as operand type)*
 
-Rounds the operand to the nearest integer using banker's rounding (`MidpointRounding.ToEven`). Only `float`, `double`, and `decimal` types are supported. Integer, vector, and quaternion types are not supported.
+Rounds the operand to a specified number of fractional digits using a configurable rounding strategy. Only `float`, `double`, and `decimal` types are supported. Integer, vector, and quaternion types are not supported.
 
 ## Constructor
 
 ```csharp
 new RoundResolver(operand)
+new RoundResolver(operand, digits: 2)
+new RoundResolver(operand, mode: MidpointRounding.AwayFromZero)
+new RoundResolver(operand, digits: 2, mode: MidpointRounding.AwayFromZero)
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| operand | `IPropertyResolver` | The resolver for the operand. |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| operand | `IPropertyResolver` | *(required)* | The resolver for the operand. |
+| digits | `int` | `0` | Number of fractional digits in the result (0–15). |
+| mode | `MidpointRounding` | `ToEven` | The rounding strategy (banker's rounding by default). |
 
 ## Type Promotion
 
@@ -30,17 +35,30 @@ The result type matches the operand type exactly:
 - `Vector2`, `Vector3`, `Vector4`, `Quaternion`.
 - Unsupported types (`bool`, `char`).
 
+**Invalid digits** (throw `ArgumentOutOfRangeException` at construction time):
+- Values less than `0` or greater than `15`.
+
+## Rounding Modes
+
+| Mode | Behavior | Example (`2.5`) |
+|------|----------|-----------------|
+| `ToEven` (default) | Banker's rounding — rounds to nearest even | `2.0` |
+| `AwayFromZero` | Traditional rounding — always rounds away from zero | `3.0` |
+| `ToZero` | Truncates toward zero | `2.0` |
+| `ToPositiveInfinity` | Rounds toward +∞ (like Ceiling) | `3.0` |
+| `ToNegativeInfinity` | Rounds toward -∞ (like Floor) | `2.0` |
+
 ## Behavior
 
 - Resolves the operand through its `IPropertyResolver` instance.
-- Applies `Math.Round` (or `MathF.Round` for `float`) and returns the result as a `Variant128`.
-- Uses **banker's rounding** (round half to even): `Round(2.5) = 2.0`, `Round(3.5) = 4.0`.
-- Type validation happens at construction time (fail-fast), not at runtime.
+- Applies `Math.Round(value, digits, mode)` and returns the result as a `Variant128`.
+- With default parameters, preserves the original behavior: `Round(2.5) = 2.0` (banker's rounding to integer).
+- Type validation and digits validation happen at construction time (fail-fast), not at runtime.
 
 ## Usage
 
 ```csharp
-// Round a computed stat value to the nearest integer
+// Round a computed stat value to the nearest integer (default behavior)
 graph.VariableDefinitions.DefineProperty("displayStat",
     new RoundResolver(
         new MultiplyResolver(
@@ -51,12 +69,19 @@ graph.VariableDefinitions.DefineProperty("displayStat",
 ## Composition
 
 ```csharp
-// Round after computing an average
-graph.VariableDefinitions.DefineProperty("averageDamage",
+// Display DPS with 1 decimal place
+graph.VariableDefinitions.DefineProperty("dps",
     new RoundResolver(
         new DivideResolver(
             new VariableResolver("totalDamage", typeof(double)),
-            new VariableResolver("hitCount", typeof(double)))));
+            new VariableResolver("elapsed", typeof(double))),
+        digits: 1));
+
+// Traditional rounding for player-facing values
+graph.VariableDefinitions.DefineProperty("displayScore",
+    new RoundResolver(
+        new VariableResolver("rawScore", typeof(double)),
+        mode: MidpointRounding.AwayFromZero));
 ```
 
 ## See Also
