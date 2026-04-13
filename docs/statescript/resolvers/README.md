@@ -36,6 +36,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [CopySignResolver](copysign-resolver.md) | `float`/`double` | Returns a value with the magnitude of one operand and the sign of another. |
 | [CosHResolver](cosh-resolver.md) | `float`/`double` | Computes the hyperbolic cosine. |
 | [CosResolver](cos-resolver.md) | `float`/`double` | Computes the cosine of an angle in radians. |
+| [DegToRadResolver](degtorad-resolver.md) | `float`/`double` | Converts degrees to radians. |
 | [DivideResolver](divide-resolver.md) | *(promoted)* | Divides two numeric or vector values. |
 | [EResolver](e-resolver.md) | `float`/`double` | Returns the mathematical constant `e` (Euler's number). |
 | [ExpResolver](exp-resolver.md) | `float`/`double` | Computes `e` raised to a specified power (`e^x`). |
@@ -52,6 +53,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [PiResolver](pi-resolver.md) | `float`/`double` | Returns the mathematical constant π (pi). |
 | [PowResolver](pow-resolver.md) | `float`/`double` | Raises a value to a specified power. |
 | [RoundResolver](round-resolver.md) | *(same)* | Rounds to the nearest integer using banker's rounding. |
+| [RadToDegResolver](radtodeg-resolver.md) | `float`/`double` | Converts radians to degrees. |
 | [SignResolver](sign-resolver.md) | `int` | Returns -1, 0, or 1 indicating the sign of a numeric value. |
 | [SinHResolver](sinh-resolver.md) | `float`/`double` | Computes the hyperbolic sine. |
 | [SinResolver](sin-resolver.md) | `float`/`double` | Computes the sine of an angle in radians. |
