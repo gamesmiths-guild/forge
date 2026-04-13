@@ -48,7 +48,7 @@ new LerpResolver(a, b, t)
 - For vector types, delegates to `Vector2.Lerp`, `Vector3.Lerp`, or `Vector4.Lerp`.
 - For quaternion types, delegates to `Quaternion.Lerp` (normalized linear interpolation).
 - When `t = 0`, returns `a`. When `t = 1`, returns `b`.
-- Values of `t` outside `[0, 1]` will extrapolate for scalar types. Vector and quaternion built-in Lerp methods may clamp `t`.
+- Values of `t` outside `[0, 1]` will extrapolate beyond the `[a, b]` range. This applies to both scalar and vector types. `Quaternion.Lerp` also normalizes the result.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
 ## Usage

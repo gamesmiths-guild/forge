@@ -52,7 +52,7 @@ When operands differ, the wider numeric type wins:
 - Converts each operand to the promoted result type.
 - Performs the remainder operation (`left % right`) and returns the result as a `Variant128`.
 - For integer types, follows C# truncation-toward-zero semantics (e.g., `-10 % 3 = -1`).
-- For floating-point types, computes the IEEE remainder.
+- For floating-point types, computes the truncated remainder (C# `%` operator), not the IEEE remainder (`Math.IEEERemainder`).
 - Type validation happens at construction time (fail-fast), not at runtime.
 
 ## Usage

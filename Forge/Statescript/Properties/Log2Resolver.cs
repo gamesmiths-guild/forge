@@ -10,7 +10,9 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// <param name="operand">The resolver for the operand (must be positive).</param>
 public class Log2Resolver(IPropertyResolver operand) : IPropertyResolver
 {
-	private static readonly double _log2E = Math.Log(2.0);
+	private static readonly float _ln2F = MathF.Log(2.0f);
+
+	private static readonly double _ln2 = Math.Log(2.0);
 
 	private readonly IPropertyResolver _operand = operand;
 
@@ -27,13 +29,13 @@ public class Log2Resolver(IPropertyResolver operand) : IPropertyResolver
 
 		if (resultType == typeof(float))
 		{
-			return new Variant128((float)(MathF.Log(value.AsFloat()) / _log2E));
+			return new Variant128(MathF.Log(value.AsFloat()) / _ln2F);
 		}
 
 		if (resultType == typeof(double))
 		{
 			return new Variant128(
-				Math.Log(MathTypeUtils.ResolveAsDouble(_operand.ValueType, value)) / _log2E);
+				Math.Log(MathTypeUtils.ResolveAsDouble(_operand.ValueType, value)) / _ln2);
 		}
 
 		throw new InvalidOperationException(

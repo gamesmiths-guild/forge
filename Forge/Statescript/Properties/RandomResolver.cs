@@ -6,9 +6,11 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
 /// Resolves a random value within a range defined by two <see cref="IPropertyResolver"/> operands, using a provided
-/// <see cref="IRandom"/> implementation. The random value is in the range [min, max) for floating-point types and
-/// [min, max) for integer types. Supports <see langword="int"/>, <see langword="float"/>, and
-/// <see langword="double"/> types. Other numeric, vector, and quaternion types are not supported.
+/// <see cref="IRandom"/> implementation. The random value is in the range [min, max) for both integer and
+/// floating-point types. Supports <see langword="int"/>, <see langword="float"/>, and <see langword="double"/>
+/// types. Sub-int operand types (<see langword="byte"/>, <see langword="sbyte"/>, <see langword="short"/>,
+/// <see langword="ushort"/>) are promoted to <see langword="int"/>. Other numeric, vector, and quaternion types are
+/// not supported.
 /// </summary>
 /// <param name="random">The random provider to use for generating values.</param>
 /// <param name="min">The resolver for the inclusive minimum bound.</param>
