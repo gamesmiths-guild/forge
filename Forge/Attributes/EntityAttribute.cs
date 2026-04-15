@@ -115,7 +115,7 @@ public sealed class EntityAttribute
 
 	internal void SetMinValue(int newMinValue)
 	{
-		Validation.Assert(newMinValue <= Max, "MinValue cannot be lower than MaxValue.");
+		Validation.Assert(newMinValue <= Max, "MinValue cannot be greater than MaxValue.");
 
 		var oldValue = CurrentValue;
 
