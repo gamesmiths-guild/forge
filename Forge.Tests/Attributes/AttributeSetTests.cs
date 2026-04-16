@@ -2,6 +2,7 @@
 
 using FluentAssertions;
 using Gamesmiths.Forge.Attributes;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Attributes;
 
@@ -19,6 +20,7 @@ public class AttributeSetTests
 	}
 
 	[Fact]
+	[Trait("Initialization", null)]
 	public void Initialized_attribute_has_the_configured_default_values()
 	{
 		var set = new SimpleAttributeSet();
@@ -33,6 +35,7 @@ public class AttributeSetTests
 	}
 
 	[Fact]
+	[Trait("Initialization", null)]
 	public void Vital_attribute_set_attributes_initialize_with_configured_values()
 	{
 		var set = new VitalAttributeSet();
@@ -59,6 +62,99 @@ public class AttributeSetTests
 		set.CurrentHealth.CurrentValue.Should().Be(100);
 	}
 
+	[Fact]
+	[Trait("SetValue", null)]
+	public void SetMaxValue_updates_the_max_value_of_the_attribute()
+	{
+		var set = new VitalAttributeSet();
+
+		set.CurrentHealth.Max.Should().Be(100);
+
+		set.UpdateMaxHealth(200);
+
+		set.CurrentHealth.Max.Should().Be(200);
+	}
+
+	[Fact]
+	[Trait("SetValue", null)]
+	public void SetMaxValue_clamps_base_value_when_it_exceeds_new_max()
+	{
+		var set = new VitalAttributeSet();
+
+		set.CurrentHealth.BaseValue.Should().Be(100);
+		set.CurrentHealth.Max.Should().Be(100);
+
+		set.UpdateMaxHealth(50);
+
+		set.CurrentHealth.Max.Should().Be(50);
+		set.CurrentHealth.BaseValue.Should().Be(50);
+		set.CurrentHealth.CurrentValue.Should().Be(50);
+	}
+
+	[Fact]
+	[Trait("SetValue", null)]
+	public void SetMaxValue_does_not_change_base_value_when_it_is_within_new_max()
+	{
+		var set = new VitalAttributeSet();
+
+		set.CurrentHealth.BaseValue.Should().Be(100);
+		set.CurrentHealth.Max.Should().Be(100);
+
+		set.UpdateMaxHealth(150);
+
+		set.CurrentHealth.Max.Should().Be(150);
+		set.CurrentHealth.BaseValue.Should().Be(100);
+		set.CurrentHealth.CurrentValue.Should().Be(100);
+	}
+
+	[Fact]
+	[Trait("SetValue", null)]
+	public void SetMinValue_updates_the_min_value_of_the_attribute()
+	{
+		var set = new VitalAttributeSet();
+
+		set.CurrentHealth.Min.Should().Be(0);
+
+		set.UpdateMinHealth(10);
+
+		set.CurrentHealth.Min.Should().Be(10);
+	}
+
+	[Fact]
+	[Trait("SetValue", null)]
+	public void SetMinValue_clamps_base_value_when_it_is_below_new_min()
+	{
+		var set = new VitalAttributeSet();
+
+		set.UpdateMaxHealth(200);
+		set.UpdateBaseHealth(50);
+
+		set.CurrentHealth.BaseValue.Should().Be(50);
+		set.CurrentHealth.Min.Should().Be(0);
+
+		set.UpdateMinHealth(75);
+
+		set.CurrentHealth.Min.Should().Be(75);
+		set.CurrentHealth.BaseValue.Should().Be(75);
+		set.CurrentHealth.CurrentValue.Should().Be(75);
+	}
+
+	[Fact]
+	[Trait("SetValue", null)]
+	public void SetMinValue_does_not_change_base_value_when_it_is_above_new_min()
+	{
+		var set = new VitalAttributeSet();
+
+		set.CurrentHealth.BaseValue.Should().Be(100);
+		set.CurrentHealth.Min.Should().Be(0);
+
+		set.UpdateMinHealth(10);
+
+		set.CurrentHealth.Min.Should().Be(10);
+		set.CurrentHealth.BaseValue.Should().Be(100);
+		set.CurrentHealth.CurrentValue.Should().Be(100);
+	}
+
 	private sealed class SimpleAttributeSet : AttributeSet
 	{
 		public EntityAttribute InitializedAttribute { get; }
@@ -72,55 +168,6 @@ public class AttributeSetTests
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor.
 		{
 			InitializedAttribute = InitializeAttribute(nameof(InitializedAttribute), 5, 0, 10);
-		}
-	}
-
-	private sealed class VitalAttributeSet : AttributeSet
-	{
-		public EntityAttribute Vitality { get; }
-
-		public EntityAttribute MaxHealth { get; }
-
-		public EntityAttribute CurrentHealth { get; }
-
-		public VitalAttributeSet()
-		{
-			Vitality = InitializeAttribute(nameof(Vitality), 10, 0, 99);
-			MaxHealth = InitializeAttribute(nameof(MaxHealth), Vitality.CurrentValue * 10, 0, 1000);
-			CurrentHealth = InitializeAttribute(nameof(CurrentHealth), 100, 0, MaxHealth.CurrentValue);
-		}
-
-		protected override void AttributeOnValueChanged(EntityAttribute attribute, int change)
-		{
-			base.AttributeOnValueChanged(attribute, change);
-
-			if (attribute == Vitality)
-			{
-				// Do health to vit calculations here.
-				SetAttributeMaxValue(MaxHealth, Vitality.CurrentValue * 10);
-			}
-
-			if (attribute == MaxHealth)
-			{
-				SetAttributeMaxValue(CurrentHealth, MaxHealth.CurrentValue);
-			}
-
-			if (attribute == CurrentHealth)
-			{
-				if (change < 0)
-				{
-					Console.WriteLine($"Damage: {change}");
-
-					if (CurrentHealth.CurrentValue <= 0)
-					{
-						Console.WriteLine("Death");
-					}
-				}
-				else
-				{
-					Console.WriteLine($"Healing: {change}");
-				}
-			}
 		}
 	}
 }

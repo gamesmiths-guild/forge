@@ -3774,6 +3774,97 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [3, 3, 0, 0]);
 	}
 
+	[Fact]
+	[Trait("Instant", null)]
+	public void Instant_effect_on_vitality_cascades_max_value_changes_to_dependent_attributes()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new VitalTestEntity(_tagsManager, _cuesManager);
+
+		var effectData = new EffectData(
+			"Vitality Drain",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"VitalAttributeSet.Vitality",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				new TestEntity(_tagsManager, _cuesManager),
+				owner));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		target.VitalAttributeSet.Vitality.BaseValue.Should().Be(5);
+		target.VitalAttributeSet.Vitality.CurrentValue.Should().Be(5);
+
+		target.VitalAttributeSet.MaxHealth.Max.Should().Be(50);
+		target.VitalAttributeSet.MaxHealth.BaseValue.Should().Be(50);
+		target.VitalAttributeSet.MaxHealth.CurrentValue.Should().Be(50);
+
+		target.VitalAttributeSet.CurrentHealth.Max.Should().Be(50);
+		target.VitalAttributeSet.CurrentHealth.BaseValue.Should().Be(50);
+		target.VitalAttributeSet.CurrentHealth.CurrentValue.Should().Be(50);
+	}
+
+	[Fact]
+	[Trait("Duration", null)]
+	public void Duration_effect_on_vitality_cascades_max_value_changes_and_restores_max_on_removal()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new VitalTestEntity(_tagsManager, _cuesManager);
+
+		var effectData = new EffectData(
+			"Vitality Curse",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"VitalAttributeSet.Vitality",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-8)))
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(owner, new TestEntity(_tagsManager, _cuesManager)));
+
+		ActiveEffectHandle? handle = target.EffectsManager.ApplyEffect(effect);
+
+		// With -8 modifier, Vitality.CurrentValue drops from 10 to 2.
+		// This cascades: MaxHealth.Max = 2 * 10 = 20, clamping its BaseValue from 100 to 20.
+		// Then CurrentHealth.Max = 20, clamping its BaseValue from 100 to 20.
+		target.VitalAttributeSet.Vitality.CurrentValue.Should().Be(2);
+		target.VitalAttributeSet.Vitality.Modifier.Should().Be(-8);
+
+		target.VitalAttributeSet.MaxHealth.Max.Should().Be(20);
+		target.VitalAttributeSet.MaxHealth.BaseValue.Should().Be(20);
+		target.VitalAttributeSet.MaxHealth.CurrentValue.Should().Be(20);
+
+		target.VitalAttributeSet.CurrentHealth.Max.Should().Be(20);
+		target.VitalAttributeSet.CurrentHealth.BaseValue.Should().Be(20);
+		target.VitalAttributeSet.CurrentHealth.CurrentValue.Should().Be(20);
+
+		target.EffectsManager.RemoveEffect(handle!);
+
+		// After removal, Vitality modifier is gone so CurrentValue returns to 10.
+		// MaxHealth.Max is restored to 10 * 10 = 100, but BaseValue was permanently clamped to 20.
+		// CurrentHealth.Max remains 20 since MaxHealth.CurrentValue didn't change (still 20).
+		target.VitalAttributeSet.Vitality.CurrentValue.Should().Be(10);
+		target.VitalAttributeSet.Vitality.Modifier.Should().Be(0);
+
+		target.VitalAttributeSet.MaxHealth.Max.Should().Be(100);
+		target.VitalAttributeSet.MaxHealth.BaseValue.Should().Be(20);
+		target.VitalAttributeSet.MaxHealth.CurrentValue.Should().Be(20);
+
+		target.VitalAttributeSet.CurrentHealth.Max.Should().Be(20);
+		target.VitalAttributeSet.CurrentHealth.BaseValue.Should().Be(20);
+		target.VitalAttributeSet.CurrentHealth.CurrentValue.Should().Be(20);
+	}
+
 	private sealed class DurationFromSourceAttributeCalculator : CustomModifierMagnitudeCalculator
 	{
 		private readonly AttributeCaptureDefinition _sourceAttr;
