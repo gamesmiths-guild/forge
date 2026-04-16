@@ -45,15 +45,15 @@ public sealed class EntityAttribute
 	/// <summary>
 	/// Gets the max value for this attribute.
 	/// </summary>
-	public int Max { get; }
+	public int Max { get; private set; }
 
 	/// <summary>
 	/// Gets the min value for this attribute.
 	/// </summary>
-	public int Min { get; }
+	public int Min { get; private set; }
 
 	/// <summary>
-	/// Gets the total modifier value kept so we can make Status Effect application consise.
+	/// Gets the total modifier value kept so we can make Status Effect application concise.
 	/// </summary>
 	/// <remarks>
 	/// Use <see cref="CurrentValue"/> to get the actual final value for the Attribute. This value could be clamped by
@@ -119,6 +119,7 @@ public sealed class EntityAttribute
 
 		var oldValue = CurrentValue;
 
+		Min = newMinValue;
 		BaseValue = Math.Max(BaseValue, Min);
 
 		UpdateCachedValues();
@@ -135,6 +136,7 @@ public sealed class EntityAttribute
 
 		var oldValue = CurrentValue;
 
+		Max = newMaxValue;
 		BaseValue = Math.Min(BaseValue, Max);
 
 		UpdateCachedValues();
