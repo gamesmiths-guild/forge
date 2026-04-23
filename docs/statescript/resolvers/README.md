@@ -63,3 +63,9 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [TanHResolver](tanh-resolver.md) | `float`/`double` | Computes the hyperbolic tangent. |
 | [TanResolver](tan-resolver.md) | `float`/`double` | Computes the tangent of an angle in radians. |
 | [TruncateResolver](truncate-resolver.md) | *(same)* | Removes the fractional part, rounding toward zero. |
+
+## Vector and Quaternion Resolvers
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [DotResolver](dot-resolver.md) | `float` | Computes the dot product of two vector operands. |
