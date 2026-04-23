@@ -75,3 +75,4 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [LengthResolver](length-resolver.md) | `float` | Computes the length (magnitude) of a vector operand. |
 | [LengthSquaredResolver](lengthsquared-resolver.md) | `float` | Computes the squared length of a vector operand. |
 | [NormalizeResolver](normalize-resolver.md) | vector/quaternion | Computes the normalized (unit-length) form of a vector or quaternion. |
+| [ScaleResolver](scale-resolver.md) | vector | Scales a vector by a float scalar value. |
