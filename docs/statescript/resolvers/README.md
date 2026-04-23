@@ -68,4 +68,5 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
+| [CrossResolver](cross-resolver.md) | `Vector3` | Computes the cross product of two `Vector3` operands. |
 | [DotResolver](dot-resolver.md) | `float` | Computes the dot product of two vector operands. |
