@@ -1,9 +1,9 @@
 # NormalizeResolver
 
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.NormalizeResolver`
-> **Output Type:** `Vector2`, `Vector3`, `Vector4`, or `Quaternion`
+> **Output Type:** `Vector2`, `Vector3`, `Vector4`, `Plane`, or `Quaternion`
 
-Resolves the normalized (unit-length) form of a vector or quaternion operand. Supports `Vector2`, `Vector3`, `Vector4`, and `Quaternion`. Scalar and plane types are not supported.
+Resolves the normalized form of a vector, plane, or quaternion operand. Supports `Vector2`, `Vector3`, `Vector4`, `Plane`, and `Quaternion`. Scalar types are not supported.
 
 ## Constructor
 
@@ -22,6 +22,7 @@ new NormalizeResolver(operand)
 | `Vector2` | `Vector2` |
 | `Vector3` | `Vector3` |
 | `Vector4` | `Vector4` |
+| `Plane` | `Plane` |
 | `Quaternion` | `Quaternion` |
 
 **Invalid types** (throw `ArgumentException` at construction time):
@@ -31,8 +32,9 @@ new NormalizeResolver(operand)
 ## Behavior
 
 - Resolves the operand through its `IPropertyResolver` instance.
-- Delegates to `Vector2.Normalize`, `Vector3.Normalize`, `Vector4.Normalize`, or `Quaternion.Normalize` depending on the operand type.
+- Delegates to `Vector2.Normalize`, `Vector3.Normalize`, `Vector4.Normalize`, `Plane.Normalize`, or `Quaternion.Normalize` depending on the operand type.
 - Returns a vector or quaternion with the same direction but unit length.
+- For planes, normalizes the plane normal and adjusts the plane distance accordingly.
 - For a zero-length vector, the result contains `NaN` components (standard `System.Numerics` behavior).
 - Type validation happens at construction time (fail-fast), not at runtime.
 

@@ -1,9 +1,9 @@
 # MaxResolver
 
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.MaxResolver`
-> **Output Type:** *(promoted from operand types)*
+> **Output Type:** *(promoted from operand types, or same vector type)*
 
-Returns the larger of two operands. Supports all numeric types in `Variant128`. Vector and quaternion types are not supported. When the two operands have different numeric types, standard numeric promotion rules apply.
+Returns the larger of two operands. Supports all numeric types in `Variant128` as well as `Vector2`, `Vector3`, and `Vector4`. Quaternion types are not supported. When the two numeric operands have different types, standard numeric promotion rules apply. For vector types, the maximum is computed component-wise.
 
 ## Constructor
 
@@ -33,15 +33,24 @@ When both operands have the same type, the result type is determined by promotio
 
 When operands differ, the wider numeric type wins (e.g., `int` + `double` → `double`).
 
+### Vector Types
+
+| Operand Types | Result Type |
+|---------------|-------------|
+| `Vector2`, `Vector2` | `Vector2` |
+| `Vector3`, `Vector3` | `Vector3` |
+| `Vector4`, `Vector4` | `Vector4` |
+
 **Invalid types** (throw `ArgumentException` at construction time):
-- `Vector2`, `Vector3`, `Vector4`, `Quaternion`.
+- `Quaternion`.
 - Unsupported types (`bool`, `char`).
 
 ## Behavior
 
 - Resolves both operands through their respective `IPropertyResolver` instances.
 - Converts each operand to the promoted result type.
-- Returns the larger value as a `Variant128` using `Math.Max`.
+- Returns the larger value as a `Variant128` using `Math.Max` for numeric types, or `Vector2.Max`, `Vector3.Max`, or `Vector4.Max` for vector types.
+- For vector types, the maximum is selected component-wise.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
 ## Usage
@@ -54,6 +63,12 @@ graph.VariableDefinitions.DefineProperty("effectiveStat",
             new VariableResolver("baseStat", typeof(int)),
             new VariableResolver("modifier", typeof(int))),
         new VariantResolver(new Variant128(1), typeof(int))));
+
+// Compute the component-wise maximum of two extents
+graph.VariableDefinitions.DefineProperty("maxExtents",
+    new MaxResolver(
+        new VariableResolver("extentsA", typeof(Vector3)),
+        new VariableResolver("extentsB", typeof(Vector3))));
 ```
 
 ## Composition
@@ -73,3 +88,4 @@ graph.VariableDefinitions.DefineProperty("effectiveDamage",
 - [Resolvers Overview](README.md)
 - [MinResolver](min-resolver.md)
 - [ClampResolver](clamp-resolver.md)
+- [AbsResolver](abs-resolver.md)

@@ -59,6 +59,30 @@ public class LengthSquaredResolverTests
 
 	[Fact]
 	[Trait("Resolver", "LengthSquared")]
+	public void LengthSquared_resolver_quaternion_value_type_is_float()
+	{
+		var resolver = new LengthSquaredResolver(
+			new VariantResolver(new Variant128(Quaternion.Identity), typeof(Quaternion)));
+
+		resolver.ValueType.Should().Be(typeof(float));
+	}
+
+	[Fact]
+	[Trait("Resolver", "LengthSquared")]
+	public void LengthSquared_resolver_quaternion()
+	{
+		var quaternion = new Quaternion(1.0f, 2.0f, 3.0f, 4.0f);
+
+		var resolver = new LengthSquaredResolver(
+			new VariantResolver(new Variant128(quaternion), typeof(Quaternion)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsFloat().Should().Be(quaternion.LengthSquared());
+	}
+
+	[Fact]
+	[Trait("Resolver", "LengthSquared")]
 	public void LengthSquared_resolver_scalar_type_throws()
 	{
 		Func<LengthSquaredResolver> act = () => new LengthSquaredResolver(

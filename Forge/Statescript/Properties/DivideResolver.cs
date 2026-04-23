@@ -7,8 +7,8 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// <summary>
 /// Resolves the quotient of two nested <see cref="IPropertyResolver"/> operands. Supports all numeric types in
 /// <see cref="Variant128"/> as well as <see cref="Vector2"/>, <see cref="Vector3"/>, and <see cref="Vector4"/>
-/// (component-wise division). <see cref="Quaternion"/> is not supported. When the two operands have different numeric
-/// types, standard numeric promotion rules apply. Vector operands must match exactly.
+/// (component-wise division), and <see cref="Quaternion"/> (quaternion division). When the two operands have
+/// different numeric types, standard numeric promotion rules apply. Vector and quaternion operands must match exactly.
 /// </summary>
 /// <param name="left">The resolver for the left (dividend) operand.</param>
 /// <param name="right">The resolver for the right (divisor) operand.</param>
@@ -22,8 +22,7 @@ public class DivideResolver(IPropertyResolver left, IPropertyResolver right) : I
 	public Type ValueType { get; } = MathTypeUtils.DetermineBinaryResultType(
 		nameof(DivideResolver),
 		left.ValueType,
-		right.ValueType,
-		allowQuaternions: false);
+		right.ValueType);
 
 	/// <inheritdoc/>
 	public Variant128 Resolve(GraphContext graphContext)
@@ -80,6 +79,11 @@ public class DivideResolver(IPropertyResolver left, IPropertyResolver right) : I
 		if (resultType == typeof(Vector4))
 		{
 			return new Variant128(leftValue.AsVector4() / rightValue.AsVector4());
+		}
+
+		if (resultType == typeof(Quaternion))
+		{
+			return new Variant128(Quaternion.Divide(leftValue.AsQuaternion(), rightValue.AsQuaternion()));
 		}
 
 		throw new InvalidOperationException(

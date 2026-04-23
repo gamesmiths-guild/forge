@@ -90,6 +90,22 @@ public class DotResolverTests
 
 	[Fact]
 	[Trait("Resolver", "Dot")]
+	public void Dot_resolver_quaternion()
+	{
+		var left = new Quaternion(1.0f, 2.0f, 3.0f, 4.0f);
+		var right = new Quaternion(5.0f, 6.0f, 7.0f, 8.0f);
+
+		var resolver = new DotResolver(
+			new VariantResolver(new Variant128(left), typeof(Quaternion)),
+			new VariantResolver(new Variant128(right), typeof(Quaternion)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsFloat().Should().Be(Quaternion.Dot(left, right));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Dot")]
 	public void Dot_resolver_mismatched_types_throws()
 	{
 		Func<DotResolver> act = () => new DotResolver(

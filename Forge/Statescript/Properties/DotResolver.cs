@@ -5,9 +5,9 @@ using System.Numerics;
 namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
-/// Resolves the dot product of two vector operands. Returns a <see langword="float"/> for all vector types.
-/// Supports <see cref="Vector2"/>, <see cref="Vector3"/>, and <see cref="Vector4"/>. Both operands must be the same
-/// vector type. Scalar, quaternion, and plane types are not supported.
+/// Resolves the dot product of two operands. Returns a <see langword="float"/> for all supported types. Supports
+/// <see cref="Vector2"/>, <see cref="Vector3"/>, <see cref="Vector4"/>, and <see cref="Quaternion"/>. Both operands
+/// must be the same supported type. Scalar and plane types are not supported.
 /// </summary>
 /// <param name="left">The resolver for the left vector operand.</param>
 /// <param name="right">The resolver for the right vector operand.</param>
@@ -43,6 +43,11 @@ public class DotResolver(IPropertyResolver left, IPropertyResolver right) : IPro
 			return new Variant128(Vector4.Dot(leftValue.AsVector4(), rightValue.AsVector4()));
 		}
 
+		if (_operandType == typeof(Quaternion))
+		{
+			return new Variant128(Quaternion.Dot(leftValue.AsQuaternion(), rightValue.AsQuaternion()));
+		}
+
 		throw new InvalidOperationException(
 			$"DotResolver encountered unexpected operand type '{_operandType}'.");
 	}
@@ -55,10 +60,10 @@ public class DotResolver(IPropertyResolver left, IPropertyResolver right) : IPro
 				$"DotResolver requires matching vector types. Got '{leftType}' and '{rightType}'.");
 		}
 
-		if (!MathTypeUtils.IsVectorType(leftType))
+		if (!MathTypeUtils.IsVectorType(leftType) && leftType != typeof(Quaternion))
 		{
 			throw new ArgumentException(
-				$"DotResolver only supports vector types (Vector2, Vector3, Vector4). Got '{leftType}'.");
+				$"DotResolver only supports Vector2, Vector3, Vector4, and Quaternion. Got '{leftType}'.");
 		}
 
 		return leftType;

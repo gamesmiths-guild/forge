@@ -3,7 +3,7 @@
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.LengthSquaredResolver`
 > **Output Type:** `float`
 
-Resolves the squared length (squared magnitude) of a vector operand. Returns a `float`. This is more efficient than [LengthResolver](length-resolver.md) when only relative comparisons are needed, as it avoids the square root computation. Supports `Vector2`, `Vector3`, and `Vector4`. Scalar, quaternion, and plane types are not supported.
+Resolves the squared length (squared magnitude) of a vector or quaternion operand. Returns a `float`. This is more efficient than [LengthResolver](length-resolver.md) when only relative comparisons are needed, as it avoids the square root computation. Supports `Vector2`, `Vector3`, `Vector4`, and `Quaternion`. Scalar and plane types are not supported.
 
 ## Constructor
 
@@ -22,17 +22,19 @@ new LengthSquaredResolver(operand)
 | `Vector2` | `float` |
 | `Vector3` | `float` |
 | `Vector4` | `float` |
+| `Quaternion` | `float` |
 
 **Invalid types** (throw `ArgumentException` at construction time):
 - Scalar types (`int`, `float`, `double`, etc.).
-- `Quaternion`.
+- `Plane`.
 - Unsupported types (`bool`, `char`).
 
 ## Behavior
 
 - Resolves the operand through its `IPropertyResolver` instance.
-- Calls `.LengthSquared()` on the resolved vector value.
+- Calls `.LengthSquared()` on the resolved vector or quaternion value.
 - Returns `x² + y² + ...` without computing the square root.
+- For quaternions, returns `x² + y² + z² + w²`.
 - Useful for distance comparisons where the actual magnitude is not needed (comparing squared values preserves ordering).
 - Type validation happens at construction time (fail-fast), not at runtime.
 

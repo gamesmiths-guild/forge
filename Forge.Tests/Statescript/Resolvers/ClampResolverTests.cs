@@ -181,12 +181,66 @@ public class ClampResolverTests
 
 	[Fact]
 	[Trait("Resolver", "Clamp")]
-	public void Clamp_resolver_throws_for_vector_operands()
+	public void Clamp_resolver_vector3_value_type_is_vector3()
+	{
+		var resolver = new ClampResolver(
+			new VariantResolver(new Variant128(new Vector3(2.0f, -1.0f, 5.0f)), typeof(Vector3)),
+			new VariantResolver(new Variant128(Vector3.Zero), typeof(Vector3)),
+			new VariantResolver(new Variant128(new Vector3(4.0f, 4.0f, 4.0f)), typeof(Vector3)));
+
+		resolver.ValueType.Should().Be(typeof(Vector3));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Clamp")]
+	public void Clamp_resolver_vector2_clamps_componentwise()
+	{
+		var resolver = new ClampResolver(
+			new VariantResolver(new Variant128(new Vector2(-2.0f, 6.0f)), typeof(Vector2)),
+			new VariantResolver(new Variant128(new Vector2(0.0f, 1.0f)), typeof(Vector2)),
+			new VariantResolver(new Variant128(new Vector2(5.0f, 4.0f)), typeof(Vector2)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsVector2().Should().Be(new Vector2(0.0f, 4.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Clamp")]
+	public void Clamp_resolver_vector3_clamps_componentwise()
+	{
+		var resolver = new ClampResolver(
+			new VariantResolver(new Variant128(new Vector3(-2.0f, 3.0f, 8.0f)), typeof(Vector3)),
+			new VariantResolver(new Variant128(new Vector3(0.0f, 1.0f, 2.0f)), typeof(Vector3)),
+			new VariantResolver(new Variant128(new Vector3(5.0f, 4.0f, 6.0f)), typeof(Vector3)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsVector3().Should().Be(new Vector3(0.0f, 3.0f, 6.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Clamp")]
+	public void Clamp_resolver_vector4_clamps_componentwise()
+	{
+		var resolver = new ClampResolver(
+			new VariantResolver(new Variant128(new Vector4(-2.0f, 3.0f, 8.0f, 0.5f)), typeof(Vector4)),
+			new VariantResolver(new Variant128(new Vector4(0.0f, 1.0f, 2.0f, 1.0f)), typeof(Vector4)),
+			new VariantResolver(new Variant128(new Vector4(5.0f, 4.0f, 6.0f, 2.0f)), typeof(Vector4)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsVector4().Should().Be(new Vector4(0.0f, 3.0f, 6.0f, 1.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Clamp")]
+	public void Clamp_resolver_throws_for_mismatched_vector_operands()
 	{
 #pragma warning disable CA1806
 		Action act = () => new ClampResolver(
 			new VariantResolver(new Variant128(Vector3.One), typeof(Vector3)),
-			new VariantResolver(new Variant128(Vector3.Zero), typeof(Vector3)),
+			new VariantResolver(new Variant128(Vector2.Zero), typeof(Vector2)),
 			new VariantResolver(new Variant128(Vector3.One), typeof(Vector3)));
 #pragma warning restore CA1806
 

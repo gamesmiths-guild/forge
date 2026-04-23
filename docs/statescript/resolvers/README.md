@@ -21,10 +21,10 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
-| [AbsResolver](abs-resolver.md) | *(promoted)* | Computes the absolute value of a signed numeric value. |
+| [AbsResolver](abs-resolver.md) | *(promoted or same vector type)* | Computes the absolute value of a signed numeric value or vector components. |
 | [ACosHResolver](acosh-resolver.md) | `float`/`double` | Computes the inverse hyperbolic cosine. |
 | [ACosResolver](acos-resolver.md) | `float`/`double` | Computes the arc cosine (inverse cosine), returning angle in radians. |
-| [AddResolver](add-resolver.md) | *(promoted)* | Adds two numeric or vector values. |
+| [AddResolver](add-resolver.md) | *(promoted or same vector type)* | Adds two numeric, vector or quaternion values. |
 | [ASinHResolver](asinh-resolver.md) | `float`/`double` | Computes the inverse hyperbolic sine. |
 | [ASinResolver](asin-resolver.md) | `float`/`double` | Computes the arc sine (inverse sine), returning angle in radians. |
 | [ATan2Resolver](atan2-resolver.md) | `float`/`double` | Computes the angle from two coordinates using `ATan2(y, x)`. |
@@ -32,12 +32,12 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [ATanResolver](atan-resolver.md) | `float`/`double` | Computes the arc tangent (inverse tangent), returning angle in radians. |
 | [CbrtResolver](cbrt-resolver.md) | `float`/`double` | Computes the cube root. |
 | [CeilResolver](ceil-resolver.md) | *(same)* | Rounds up to the smallest integer greater than or equal to the operand. |
-| [ClampResolver](clamp-resolver.md) | *(promoted)* | Clamps a numeric value between a minimum and maximum bound. |
+| [ClampResolver](clamp-resolver.md) | *(promoted or same vector type)* | Clamps a numeric value or vector components between minimum and maximum bounds. |
 | [CopySignResolver](copysign-resolver.md) | `float`/`double` | Returns a value with the magnitude of one operand and the sign of another. |
 | [CosHResolver](cosh-resolver.md) | `float`/`double` | Computes the hyperbolic cosine. |
 | [CosResolver](cos-resolver.md) | `float`/`double` | Computes the cosine of an angle in radians. |
 | [DegToRadResolver](degtorad-resolver.md) | `float`/`double` | Converts degrees to radians. |
-| [DivideResolver](divide-resolver.md) | *(promoted)* | Divides two numeric or vector values. |
+| [DivideResolver](divide-resolver.md) | *(promoted or same vector type)* | Divides two numeric values, vectors component-wise, or two quaternions. |
 | [EResolver](e-resolver.md) | `float`/`double` | Returns the mathematical constant `e` (Euler's number). |
 | [ExpResolver](exp-resolver.md) | `float`/`double` | Computes `e` raised to a specified power (`e^x`). |
 | [FloorResolver](floor-resolver.md) | *(same)* | Rounds down to the largest integer less than or equal to the operand. |
@@ -45,10 +45,10 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [Log10Resolver](log10-resolver.md) | `float`/`double` | Computes the base-10 logarithm. |
 | [Log2Resolver](log2-resolver.md) | `float`/`double` | Computes the base-2 logarithm. |
 | [LogResolver](log-resolver.md) | `float`/`double` | Computes the natural logarithm (base `e`). |
-| [MaxResolver](max-resolver.md) | *(promoted)* | Returns the larger of two numeric values. |
-| [MinResolver](min-resolver.md) | *(promoted)* | Returns the smaller of two numeric values. |
+| [MaxResolver](max-resolver.md) | *(promoted or same vector type)* | Returns the larger of two numeric values or the component-wise maximum of two vectors. |
+| [MinResolver](min-resolver.md) | *(promoted or same vector type)* | Returns the smaller of two numeric values or the component-wise minimum of two vectors. |
 | [ModuloResolver](modulo-resolver.md) | *(promoted)* | Computes the remainder of dividing two numeric values. |
-| [MultiplyResolver](multiply-resolver.md) | *(promoted)* | Multiplies two numeric or vector values. |
+| [MultiplyResolver](multiply-resolver.md) | *(promoted or same vector type)* | Multiplies two numeric, vectors component-wise, or two quaternions. |
 | [NegateResolver](negate-resolver.md) | *(promoted)* | Negates a numeric or vector value. |
 | [PiResolver](pi-resolver.md) | `float`/`double` | Returns the mathematical constant π (pi). |
 | [PowResolver](pow-resolver.md) | `float`/`double` | Raises a value to a specified power. |
@@ -58,8 +58,8 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [SignResolver](sign-resolver.md) | `int` | Returns -1, 0, or 1 indicating the sign of a numeric value. |
 | [SinHResolver](sinh-resolver.md) | `float`/`double` | Computes the hyperbolic sine. |
 | [SinResolver](sin-resolver.md) | `float`/`double` | Computes the sine of an angle in radians. |
-| [SqrtResolver](sqrt-resolver.md) | `float`/`double` | Computes the square root of a numeric value. |
-| [SubtractResolver](subtract-resolver.md) | *(promoted)* | Subtracts two numeric or vector values. |
+| [SqrtResolver](sqrt-resolver.md) | `float`/`double`/vector | Computes the square root of a numeric value or component-wise square root of a vector. |
+| [SubtractResolver](subtract-resolver.md) | *(promoted or same vector type)* | Subtracts two numeric, vector or quaternion values. |
 | [TanHResolver](tanh-resolver.md) | `float`/`double` | Computes the hyperbolic tangent. |
 | [TanResolver](tan-resolver.md) | `float`/`double` | Computes the tangent of an angle in radians. |
 | [TruncateResolver](truncate-resolver.md) | *(same)* | Removes the fractional part, rounding toward zero. |
@@ -71,10 +71,10 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [CrossResolver](cross-resolver.md) | `Vector3` | Computes the cross product of two `Vector3` operands. |
 | [DistanceResolver](distance-resolver.md) | `float` | Computes the Euclidean distance between two vector operands. |
 | [DistanceSquaredResolver](distancesquared-resolver.md) | `float` | Computes the squared Euclidean distance between two vector operands. |
-| [DotResolver](dot-resolver.md) | `float` | Computes the dot product of two vector operands. |
-| [LengthResolver](length-resolver.md) | `float` | Computes the length (magnitude) of a vector operand. |
-| [LengthSquaredResolver](lengthsquared-resolver.md) | `float` | Computes the squared length of a vector operand. |
-| [NormalizeResolver](normalize-resolver.md) | vector/quaternion | Computes the normalized (unit-length) form of a vector or quaternion. |
+| [DotResolver](dot-resolver.md) | `float` | Computes the dot product of two vectors or two quaternions. |
+| [LengthResolver](length-resolver.md) | `float` | Computes the length (magnitude) of a vector or quaternion operand. |
+| [LengthSquaredResolver](lengthsquared-resolver.md) | `float` | Computes the squared length of a vector or quaternion operand. |
+| [NormalizeResolver](normalize-resolver.md) | vector/plane/quaternion | Computes the normalized form of a vector, plane, or quaternion. |
 | [ReflectResolver](reflect-resolver.md) | `Vector2`/`Vector3` | Reflects a vector off a surface defined by a normal vector. |
 | [ScaleResolver](scale-resolver.md) | vector | Scales a vector by a float scalar value. |
 | [SlerpResolver](slerp-resolver.md) | `Quaternion` | Spherically interpolates between two quaternion rotations. |

@@ -82,6 +82,31 @@ public class NormalizeResolverTests
 
 	[Fact]
 	[Trait("Resolver", "Normalize")]
+	public void Normalize_resolver_plane_value_type_is_plane()
+	{
+		var resolver = new NormalizeResolver(
+			new VariantResolver(new Variant128(new Plane(new Vector3(0, 2, 0), 4.0f)), typeof(Plane)));
+
+		resolver.ValueType.Should().Be(typeof(Plane));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Normalize")]
+	public void Normalize_resolver_plane_returns_normalized_plane()
+	{
+		var plane = new Plane(new Vector3(0, 2, 0), 4.0f);
+		var expected = Plane.Normalize(plane);
+
+		var resolver = new NormalizeResolver(
+			new VariantResolver(new Variant128(plane), typeof(Plane)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsPlane().Should().Be(expected);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Normalize")]
 	public void Normalize_resolver_scalar_type_throws()
 	{
 		Func<NormalizeResolver> act = () => new NormalizeResolver(

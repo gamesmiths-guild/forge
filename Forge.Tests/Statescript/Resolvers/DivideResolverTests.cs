@@ -218,15 +218,34 @@ public class DivideResolverTests
 
 	[Fact]
 	[Trait("Resolver", "Divide")]
-	public void Divide_resolver_throws_for_quaternion_operands()
+	public void Divide_resolver_quaternion_over_quaternion_value_type_is_quaternion()
 	{
-#pragma warning disable CA1806
-		Action act = () => new DivideResolver(
+		var resolver = new DivideResolver(
 			new VariantResolver(new Variant128(Quaternion.Identity), typeof(Quaternion)),
 			new VariantResolver(new Variant128(Quaternion.Identity), typeof(Quaternion)));
-#pragma warning restore CA1806
 
-		act.Should().Throw<ArgumentException>();
+		resolver.ValueType.Should().Be(typeof(Quaternion));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Divide")]
+	public void Divide_resolver_divides_two_quaternions()
+	{
+		var left = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2.0f);
+		var right = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 4.0f);
+
+		var resolver = new DivideResolver(
+			new VariantResolver(new Variant128(left), typeof(Quaternion)),
+			new VariantResolver(new Variant128(right), typeof(Quaternion)));
+
+		var context = new GraphContext();
+		var expected = Quaternion.Divide(left, right);
+		Quaternion result = resolver.Resolve(context).AsQuaternion();
+
+		result.X.Should().BeApproximately(expected.X, 0.001f);
+		result.Y.Should().BeApproximately(expected.Y, 0.001f);
+		result.Z.Should().BeApproximately(expected.Z, 0.001f);
+		result.W.Should().BeApproximately(expected.W, 0.001f);
 	}
 
 	[Fact]
