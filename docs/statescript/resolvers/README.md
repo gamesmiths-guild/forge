@@ -77,3 +77,4 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [NormalizeResolver](normalize-resolver.md) | vector/quaternion | Computes the normalized (unit-length) form of a vector or quaternion. |
 | [ReflectResolver](reflect-resolver.md) | `Vector2`/`Vector3` | Reflects a vector off a surface defined by a normal vector. |
 | [ScaleResolver](scale-resolver.md) | vector | Scales a vector by a float scalar value. |
+| [SlerpResolver](slerp-resolver.md) | `Quaternion` | Spherically interpolates between two quaternion rotations. |
