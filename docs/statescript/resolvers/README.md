@@ -70,4 +70,6 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 |----------|-------------|-------------|
 | [CrossResolver](cross-resolver.md) | `Vector3` | Computes the cross product of two `Vector3` operands. |
 | [DotResolver](dot-resolver.md) | `float` | Computes the dot product of two vector operands. |
+| [LengthResolver](length-resolver.md) | `float` | Computes the length (magnitude) of a vector operand. |
+| [LengthSquaredResolver](lengthsquared-resolver.md) | `float` | Computes the squared length of a vector operand. |
 | [NormalizeResolver](normalize-resolver.md) | vector/quaternion | Computes the normalized (unit-length) form of a vector or quaternion. |
