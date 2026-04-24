@@ -68,6 +68,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
+| [ConcatenateResolver](concatenate-resolver.md) | `Quaternion` | Concatenates two quaternion rotations. |
 | [CrossResolver](cross-resolver.md) | `Vector3` | Computes the cross product of two `Vector3` operands. |
 | [DistanceResolver](distance-resolver.md) | `float` | Computes the Euclidean distance between two vector operands. |
 | [DistanceSquaredResolver](distancesquared-resolver.md) | `float` | Computes the squared Euclidean distance between two vector operands. |
