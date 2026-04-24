@@ -64,7 +64,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [TanResolver](tan-resolver.md) | `float`/`double` | Computes the tangent of an angle in radians. |
 | [TruncateResolver](truncate-resolver.md) | *(same)* | Removes the fractional part, rounding toward zero. |
 
-## Vector and Quaternion Resolvers
+## Vector, Quaternion and Plane Resolvers
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
@@ -79,6 +79,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [LengthResolver](length-resolver.md) | `float` | Computes the length (magnitude) of a vector or quaternion operand. |
 | [LengthSquaredResolver](lengthsquared-resolver.md) | `float` | Computes the squared length of a vector or quaternion operand. |
 | [NormalizeResolver](normalize-resolver.md) | vector/plane/quaternion | Computes the normalized form of a vector, plane, or quaternion. |
+| [PlaneFromVerticesResolver](planefromvertices-resolver.md) | `Plane` | Creates a plane from three vertices. |
 | [QuaternionFromAxisAngleResolver](quaternionfromaxisangle-resolver.md) | `Quaternion` | Creates a quaternion from an axis and angle. |
 | [QuaternionFromPitchYawRollResolver](quaternionfrompitchyawroll-resolver.md) | `Quaternion` | Creates a quaternion from pitch, yaw, and roll angles. |
 | [ReflectResolver](reflect-resolver.md) | `Vector2`/`Vector3` | Reflects a vector off a surface defined by a normal vector. |
