@@ -72,6 +72,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [DistanceResolver](distance-resolver.md) | `float` | Computes the Euclidean distance between two vector operands. |
 | [DistanceSquaredResolver](distancesquared-resolver.md) | `float` | Computes the squared Euclidean distance between two vector operands. |
 | [DotResolver](dot-resolver.md) | `float` | Computes the dot product of two vectors or two quaternions. |
+| [InverseResolver](inverse-resolver.md) | `Quaternion` | Computes the inverse of a quaternion. |
 | [LengthResolver](length-resolver.md) | `float` | Computes the length (magnitude) of a vector or quaternion operand. |
 | [LengthSquaredResolver](lengthsquared-resolver.md) | `float` | Computes the squared length of a vector or quaternion operand. |
 | [NormalizeResolver](normalize-resolver.md) | vector/plane/quaternion | Computes the normalized form of a vector, plane, or quaternion. |
