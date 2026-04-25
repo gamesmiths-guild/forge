@@ -296,17 +296,135 @@ internal static class GameplayMathUtils
 		return direction * radius;
 	}
 
-	internal static Vector3 QuaternionToPitchYawRoll(Quaternion quaternion)
+	internal static Quaternion QuaternionFromEulerAngles(
+		Vector3 eulerAngles,
+		EulerOrder order = EulerOrder.XYZ)
+	{
+		var pitch = Quaternion.CreateFromAxisAngle(Vector3.UnitX, eulerAngles.X);
+		var yaw = Quaternion.CreateFromAxisAngle(Vector3.UnitY, eulerAngles.Y);
+		var roll = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, eulerAngles.Z);
+
+		Quaternion quaternion = order switch
+		{
+			EulerOrder.XYZ => pitch * yaw * roll,
+			EulerOrder.XZY => pitch * roll * yaw,
+			EulerOrder.YXZ => yaw * pitch * roll,
+			EulerOrder.YZX => yaw * roll * pitch,
+			EulerOrder.ZXY => roll * pitch * yaw,
+			EulerOrder.ZYX => roll * yaw * pitch,
+			_ => throw new ArgumentOutOfRangeException(nameof(order), order, "Unsupported Euler order."),
+		};
+
+		return Quaternion.Normalize(quaternion);
+	}
+
+	internal static Vector3 QuaternionToEulerAngles(
+		Quaternion quaternion,
+		EulerOrder order = EulerOrder.XYZ)
 	{
 		var normalized = Quaternion.Normalize(quaternion);
-		var x = normalized.X;
-		var y = normalized.Y;
-		var z = normalized.Z;
-		var w = normalized.W;
+		var matrix = Matrix4x4.CreateFromQuaternion(normalized);
+		const float singularityThreshold = 0.9999999f;
 
-		var pitch = MathF.Atan2(2.0f * ((w * x) + (y * z)), 1.0f - (2.0f * ((x * x) + (y * y))));
-		var yaw = MathF.Asin(ClampToUnit(2.0f * ((w * y) - (z * x))));
-		var roll = MathF.Atan2(2.0f * ((w * z) + (x * y)), 1.0f - (2.0f * ((y * y) + (z * z))));
+		float pitch;
+		float yaw;
+		float roll;
+
+		switch (order)
+		{
+			case EulerOrder.XYZ:
+				yaw = MathF.Asin(ClampToUnit(matrix.M31));
+				if (MathF.Abs(matrix.M31) < singularityThreshold)
+				{
+					pitch = MathF.Atan2(-matrix.M32, matrix.M33);
+					roll = MathF.Atan2(-matrix.M21, matrix.M11);
+				}
+				else
+				{
+					pitch = MathF.Atan2(matrix.M23, matrix.M22);
+					roll = 0.0f;
+				}
+
+				break;
+
+			case EulerOrder.XZY:
+				roll = MathF.Asin(-ClampToUnit(matrix.M21));
+				if (MathF.Abs(matrix.M21) < singularityThreshold)
+				{
+					pitch = MathF.Atan2(matrix.M23, matrix.M22);
+					yaw = MathF.Atan2(matrix.M31, matrix.M11);
+				}
+				else
+				{
+					pitch = MathF.Atan2(-matrix.M32, matrix.M33);
+					yaw = 0.0f;
+				}
+
+				break;
+
+			case EulerOrder.YXZ:
+				pitch = MathF.Asin(-ClampToUnit(matrix.M32));
+				if (MathF.Abs(matrix.M32) < singularityThreshold)
+				{
+					yaw = MathF.Atan2(matrix.M31, matrix.M33);
+					roll = MathF.Atan2(matrix.M12, matrix.M22);
+				}
+				else
+				{
+					yaw = MathF.Atan2(-matrix.M13, matrix.M11);
+					roll = 0.0f;
+				}
+
+				break;
+
+			case EulerOrder.YZX:
+				roll = MathF.Asin(ClampToUnit(matrix.M12));
+				if (MathF.Abs(matrix.M12) < singularityThreshold)
+				{
+					pitch = MathF.Atan2(-matrix.M32, matrix.M22);
+					yaw = MathF.Atan2(-matrix.M13, matrix.M11);
+				}
+				else
+				{
+					pitch = 0.0f;
+					yaw = MathF.Atan2(matrix.M31, matrix.M33);
+				}
+
+				break;
+
+			case EulerOrder.ZXY:
+				pitch = MathF.Asin(ClampToUnit(matrix.M23));
+				if (MathF.Abs(matrix.M23) < singularityThreshold)
+				{
+					yaw = MathF.Atan2(-matrix.M13, matrix.M33);
+					roll = MathF.Atan2(-matrix.M21, matrix.M22);
+				}
+				else
+				{
+					yaw = 0.0f;
+					roll = MathF.Atan2(matrix.M12, matrix.M11);
+				}
+
+				break;
+
+			case EulerOrder.ZYX:
+				yaw = MathF.Asin(-ClampToUnit(matrix.M13));
+				if (MathF.Abs(matrix.M13) < singularityThreshold)
+				{
+					pitch = MathF.Atan2(matrix.M23, matrix.M33);
+					roll = MathF.Atan2(matrix.M12, matrix.M11);
+				}
+				else
+				{
+					pitch = 0.0f;
+					roll = MathF.Atan2(-matrix.M21, matrix.M22);
+				}
+
+				break;
+
+			default:
+				throw new ArgumentOutOfRangeException(nameof(order), order, "Unsupported Euler order.");
+		}
 
 		return new Vector3(pitch, yaw, roll);
 	}
