@@ -23,17 +23,28 @@ public class ConjugateResolverTests
 	[Trait("Resolver", "Conjugate")]
 	public void Conjugate_resolver_computes_conjugate()
 	{
-		Quaternion quaternion = Quaternion.Identity;
+		var quaternion = Quaternion.CreateFromYawPitchRoll(0.5f, -0.2f, 0.1f);
 		var resolver = new ConjugateResolver(
 			new VariantResolver(new Variant128(quaternion), typeof(Quaternion)));
 
-		var context = new GraphContext();
 		var expected = Quaternion.Conjugate(quaternion);
-		Quaternion result = resolver.Resolve(context).AsQuaternion();
+		Quaternion result = resolver.Resolve(new GraphContext()).AsQuaternion();
 
 		result.X.Should().Be(expected.X);
 		result.Y.Should().Be(expected.Y);
 		result.Z.Should().Be(expected.Z);
 		result.W.Should().Be(expected.W);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Conjugate")]
+	public void Conjugate_resolver_throws_for_non_quaternion_operand()
+	{
+#pragma warning disable CA1806 // Do not ignore method results
+		Action act = () => new ConjugateResolver(
+			new VariantResolver(new Variant128(Vector3.UnitX), typeof(Vector3)));
+#pragma warning restore CA1806 // Do not ignore method results
+
+		act.Should().Throw<ArgumentException>();
 	}
 }

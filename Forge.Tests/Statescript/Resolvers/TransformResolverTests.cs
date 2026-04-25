@@ -72,15 +72,13 @@ public class TransformResolverTests
 	[Trait("Resolver", "Transform")]
 	public void Transform_resolver_vector3()
 	{
-		Vector3 vector = Vector3.One;
-		Quaternion rotation = Quaternion.Identity;
+		Vector3 vector = Vector3.UnitX;
+		var rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 2.0f);
 		var resolver = new TransformResolver(
 			new VariantResolver(new Variant128(vector), typeof(Vector3)),
 			new VariantResolver(new Variant128(rotation), typeof(Quaternion)));
 
-		var context = new GraphContext();
-
-		resolver.Resolve(context).AsVector3().Should().Be(Vector3.Transform(vector, rotation));
+		resolver.Resolve(new GraphContext()).AsVector3().Should().Be(Vector3.Transform(vector, rotation));
 	}
 
 	[Fact]
@@ -102,15 +100,24 @@ public class TransformResolverTests
 	[Trait("Resolver", "Transform")]
 	public void Transform_resolver_plane()
 	{
-		var plane = new Plane(1, 1, 1, 1);
-		Quaternion rotation = Quaternion.Identity;
+		var plane = new Plane(Vector3.UnitY, -2.0f);
+		var rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2.0f);
 		var resolver = new TransformResolver(
 			new VariantResolver(new Variant128(plane), typeof(Plane)),
 			new VariantResolver(new Variant128(rotation), typeof(Quaternion)));
 
-		var context = new GraphContext();
+		resolver.Resolve(new GraphContext()).AsPlane().Should().Be(Plane.Transform(plane, rotation));
+	}
 
-		resolver.Resolve(context).AsPlane().Should().Be(Plane.Transform(plane, rotation));
+	[Fact]
+	[Trait("Resolver", "Transform")]
+	public void Transform_resolver_non_supported_value_type_throws()
+	{
+		Func<TransformResolver> act = () => new TransformResolver(
+			new VariantResolver(new Variant128(1.0f), typeof(float)),
+			new VariantResolver(new Variant128(Quaternion.Identity), typeof(Quaternion)));
+
+		act.Should().Throw<ArgumentException>();
 	}
 
 	[Fact]
