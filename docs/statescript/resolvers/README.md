@@ -90,3 +90,4 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [ScaleResolver](scale-resolver.md) | vector | Scales a vector by a float scalar value. |
 | [SlerpResolver](slerp-resolver.md) | `Quaternion` | Spherically interpolates between two quaternion rotations. |
 | [TransformResolver](transform-resolver.md) | vector/plane | Transforms a vector or plane by a quaternion rotation. |
+| [VectorComponentResolver](vectorcomponent-resolver.md) | `float` | Extracts a single component from a vector. |
