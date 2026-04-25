@@ -68,6 +68,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
+| [AngleResolver](angle-resolver.md) | `float` | Computes the unsigned angle between two vectors or two quaternions. |
 | [ConcatenateResolver](concatenate-resolver.md) | `Quaternion` | Concatenates two quaternion rotations. |
 | [ConjugateResolver](concatenate-resolver.md) | `Quaternion` | Conjugates two quaternion rotations. |
 | [ConjugateResolver](concatenate-resolver.md) | `Quaternion` | Computes the conjugate of a quaternion. |
@@ -88,6 +89,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [QuaternionFromYawPitchRollResolver](quaternionfromyawpitchroll-resolver.md) | `Quaternion` | Creates a quaternion from yaw, pitch, and roll angles. |
 | [ReflectResolver](reflect-resolver.md) | `Vector2`/`Vector3` | Reflects a vector off a surface defined by a normal vector. |
 | [ScaleResolver](scale-resolver.md) | vector | Scales a vector by a float scalar value. |
+| [SignedAngleResolver](signedangle-resolver.md) | `float` | Computes the signed angle between two vectors. |
 | [SlerpResolver](slerp-resolver.md) | `Quaternion` | Spherically interpolates between two quaternion rotations. |
 | [TransformResolver](transform-resolver.md) | vector/plane | Transforms a vector or plane by a quaternion rotation. |
 | [VectorComponentResolver](vectorcomponent-resolver.md) | `float` | Extracts a single component from a vector. |
