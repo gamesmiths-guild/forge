@@ -35,6 +35,24 @@ new CosHResolver(operand)
 - `CosH(0) = 1`. CosH is an even function: `CosH(-x) = CosH(x)`.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
+## Usage
+
+```csharp
+graph.VariableDefinitions.DefineProperty("curveWeight",
+    new CosHResolver(
+        new VariableResolver("curveInput", typeof(double))));
+```
+
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("symmetricCurve",
+    new DivideResolver(
+        new CosHResolver(
+            new VariableResolver("distanceFromCenter", typeof(double))),
+        new VariableResolver("curveScale", typeof(double))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

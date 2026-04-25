@@ -36,6 +36,27 @@ new ASinResolver(operand)
 - Values outside `[-1, 1]` produce `NaN`.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
+## Usage
+
+```csharp
+graph.VariableDefinitions.DefineProperty("elevationAngle",
+    new ASinResolver(
+        new VariableResolver("normalizedHeight", typeof(float))));
+```
+
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("pitchFromDirection",
+    new ASinResolver(
+        new ClampResolver(
+            new VectorComponentResolver(
+                new VariableResolver("forward", typeof(Vector3)),
+                VectorComponent.Y),
+            new VariantResolver(new Variant128(-1.0f), typeof(float)),
+            new VariantResolver(new Variant128(1.0f), typeof(float)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

@@ -49,6 +49,17 @@ graph.VariableDefinitions.DefineProperty("decibels",
                 new VariableResolver("reference", typeof(double))))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("ordersOfMagnitude",
+    new FloorResolver(
+        new Log10Resolver(
+            new MaxResolver(
+                new VariableResolver("value", typeof(double)),
+                new VariantResolver(new Variant128(1.0), typeof(double))))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

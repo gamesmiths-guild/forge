@@ -48,6 +48,18 @@ graph.VariableDefinitions.DefineProperty("bobOffset",
                 new VariableResolver("time", typeof(float))))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("orbitY",
+    new MultiplyResolver(
+        new VariableResolver("radius", typeof(float)),
+        new SinResolver(
+            new MultiplyResolver(
+                new VariableResolver("angularSpeed", typeof(float)),
+                new VariableResolver("time", typeof(float))))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

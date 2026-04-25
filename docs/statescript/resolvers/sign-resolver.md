@@ -43,6 +43,16 @@ graph.VariableDefinitions.DefineProperty("moveDirection",
             new VariableResolver("currentX", typeof(float)))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("turnDirection",
+    new CopySignResolver(
+        new VariableResolver("turnSpeed", typeof(double)),
+        new SignResolver(
+            new VariableResolver("turnError", typeof(double)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

@@ -51,6 +51,16 @@ graph.VariableDefinitions.DefineProperty("smoothValue",
         new VariantResolver(new Variant128(2.0), typeof(double))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("steeringWeight",
+    new MultiplyResolver(
+        new VariableResolver("maxWeight", typeof(double)),
+        new TanHResolver(
+            new VariableResolver("turnError", typeof(double)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

@@ -50,6 +50,15 @@ graph.VariableDefinitions.DefineProperty("difficulty",
                 new VariableResolver("level", typeof(double))))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("expRoundTrip",
+    new LogResolver(
+        new ExpResolver(
+            new VariableResolver("input", typeof(double)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

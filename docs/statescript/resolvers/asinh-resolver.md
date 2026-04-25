@@ -35,6 +35,24 @@ new ASinHResolver(operand)
 - `ASinH(0) = 0`. ASinH is an odd function.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
+## Usage
+
+```csharp
+graph.VariableDefinitions.DefineProperty("compressedValue",
+    new ASinHResolver(
+        new VariableResolver("rawMagnitude", typeof(double))));
+```
+
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("centeredCompression",
+    new ASinHResolver(
+        new SubtractResolver(
+            new VariableResolver("sample", typeof(double)),
+            new VariableResolver("sampleCenter", typeof(double)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

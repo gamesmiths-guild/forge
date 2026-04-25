@@ -40,6 +40,18 @@ graph.VariableDefinitions.DefineProperty("rotation",
         new VariableResolver("roll", typeof(float))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("forward",
+    new TransformResolver(
+        new VariantResolver(new Variant128(Vector3.UnitZ), typeof(Vector3)),
+        new QuaternionFromYawPitchRollResolver(
+            new VariableResolver("yaw", typeof(float)),
+            new VariableResolver("pitch", typeof(float)),
+            new VariableResolver("roll", typeof(float)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

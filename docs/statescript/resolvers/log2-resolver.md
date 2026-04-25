@@ -46,6 +46,17 @@ graph.VariableDefinitions.DefineProperty("bitsNeeded",
             new VariableResolver("numValues", typeof(double)))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("mipLevel",
+    new FloorResolver(
+        new Log2Resolver(
+            new MaxResolver(
+                new VariableResolver("textureSize", typeof(double)),
+                new VariantResolver(new Variant128(1.0), typeof(double))))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

@@ -34,6 +34,14 @@ graph.VariableDefinitions.DefineProperty("naturalExp",
         new VariableResolver("exponent", typeof(double))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("decayBase",
+    new LogResolver(
+        new EResolver()));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

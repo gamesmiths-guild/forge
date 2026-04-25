@@ -46,6 +46,18 @@ graph.VariableDefinitions.DefineProperty("forceX",
             new VariableResolver("angle", typeof(float)))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("orbitX",
+    new MultiplyResolver(
+        new VariableResolver("radius", typeof(float)),
+        new CosResolver(
+            new MultiplyResolver(
+                new VariableResolver("angularSpeed", typeof(float)),
+                new VariableResolver("time", typeof(float))))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

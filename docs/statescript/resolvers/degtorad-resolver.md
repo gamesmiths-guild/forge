@@ -45,6 +45,19 @@ graph.VariableDefinitions.DefineProperty("sinOfAngle",
             new VariableResolver("angleDegrees", typeof(double)))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("headingRotation",
+    new QuaternionFromYawPitchRollResolver(
+        new DegToRadResolver(
+            new VariableResolver("yawDegrees", typeof(float))),
+        new DegToRadResolver(
+            new VariableResolver("pitchDegrees", typeof(float))),
+        new DegToRadResolver(
+            new VariableResolver("rollDegrees", typeof(float)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

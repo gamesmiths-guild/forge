@@ -35,6 +35,26 @@ new TanResolver(operand)
 - `Tan(0) = 0`, `Tan(π/4) = 1`.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
+## Usage
+
+```csharp
+graph.VariableDefinitions.DefineProperty("slopeRatio",
+    new TanResolver(
+        new VariableResolver("inclineAngle", typeof(float))));
+```
+
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("frustumHalfWidth",
+    new MultiplyResolver(
+        new VariableResolver("distance", typeof(double)),
+        new TanResolver(
+            new DivideResolver(
+                new VariableResolver("fieldOfViewRadians", typeof(double)),
+                new VariantResolver(new Variant128(2.0), typeof(double))))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

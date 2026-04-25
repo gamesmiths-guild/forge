@@ -36,6 +36,15 @@ graph.VariableDefinitions.DefineProperty("circleArea",
             new VariantResolver(new Variant128(2.0), typeof(double)))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("fullTurnRadians",
+    new MultiplyResolver(
+        new VariantResolver(new Variant128(2.0), typeof(double)),
+        new PiResolver()));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

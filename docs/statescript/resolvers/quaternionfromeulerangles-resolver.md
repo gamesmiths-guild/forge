@@ -31,6 +31,7 @@ new QuaternionFromEulerAnglesResolver(eulerAngles, order)
 - This default is intentionally different from `QuaternionFromYawPitchRollResolver`, which uses fixed `YXZ` order through `System.Numerics`.
 - Resolves `order` as an `int` and maps it to the `EulerOrder` enum.
 - Returns the created quaternion as a `Variant128`.
+- Throws `ArgumentOutOfRangeException` during resolution if the provided `order` value is not a defined `EulerOrder`.
 
 ## Usage
 
@@ -38,6 +39,16 @@ new QuaternionFromEulerAnglesResolver(eulerAngles, order)
 graph.VariableDefinitions.DefineProperty("rotation",
     new QuaternionFromEulerAnglesResolver(
         new VariableResolver("angles", typeof(Vector3))));
+```
+
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("worldForward",
+    new TransformResolver(
+        new VariantResolver(new Variant128(Vector3.UnitZ), typeof(Vector3)),
+        new QuaternionFromEulerAnglesResolver(
+            new VariableResolver("angles", typeof(Vector3)))));
 ```
 
 ## See Also

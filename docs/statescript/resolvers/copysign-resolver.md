@@ -47,6 +47,17 @@ graph.VariableDefinitions.DefineProperty("directedSpeed",
         new VariableResolver("direction", typeof(float))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("steeringImpulse",
+    new MultiplyResolver(
+        new VariableResolver("turnStrength", typeof(double)),
+        new CopySignResolver(
+            new VariantResolver(new Variant128(1.0), typeof(double)),
+            new VariableResolver("turnError", typeof(double)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

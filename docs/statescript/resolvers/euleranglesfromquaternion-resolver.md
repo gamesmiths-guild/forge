@@ -30,6 +30,7 @@ new EulerAnglesFromQuaternionResolver(quaternion, order)
 - `XYZ` means rotate around X, then Y, then Z.
 - Resolves `order` as an `int` and maps it to the `EulerOrder` enum.
 - Returns a `Vector3` containing pitch, yaw, and roll in radians.
+- Throws `ArgumentOutOfRangeException` during resolution if the provided `order` value is not a defined `EulerOrder`.
 
 ## Usage
 
@@ -37,6 +38,17 @@ new EulerAnglesFromQuaternionResolver(quaternion, order)
 graph.VariableDefinitions.DefineProperty("angles",
     new EulerAnglesFromQuaternionResolver(
         new VariableResolver("rotation", typeof(Quaternion))));
+```
+
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("yawDegrees",
+    new RadToDegResolver(
+        new VectorComponentResolver(
+            new EulerAnglesFromQuaternionResolver(
+                new VariableResolver("rotation", typeof(Quaternion))),
+            VectorComponent.Y)));
 ```
 
 ## See Also
