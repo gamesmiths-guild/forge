@@ -81,6 +81,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [LengthResolver](length-resolver.md) | `float` | Computes the length (magnitude) of a vector or quaternion operand. |
 | [LengthSquaredResolver](lengthsquared-resolver.md) | `float` | Computes the squared length of a vector or quaternion operand. |
 | [LookAtResolver](lookat-resolver.md) | `Quaternion` | Creates a look rotation from one position to another using an up vector. |
+| [MoveTowardsResolver](movetowards-resolver.md) | `float`/`Vector2`/`Vector3`/`Vector4` | Moves a value toward a target by a maximum delta. |
 | [NormalizeResolver](normalize-resolver.md) | vector/plane/quaternion | Computes the normalized form of a vector, plane, or quaternion. |
 | [EulerAnglesFromQuaternionResolver](euleranglesfromquaternion-resolver.md) | `Vector3` | Extracts Euler angles from a quaternion using an optional Euler order. |
 | [PlaneFromVerticesResolver](planefromvertices-resolver.md) | `Plane` | Creates a plane from three vertices. |
@@ -90,6 +91,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [QuaternionFromYawPitchRollResolver](quaternionfromyawpitchroll-resolver.md) | `Quaternion` | Creates a quaternion from yaw, pitch, and roll angles. |
 | [ReflectResolver](reflect-resolver.md) | `Vector2`/`Vector3` | Reflects a vector off a surface defined by a normal vector. |
 | [RejectResolver](reject-resolver.md) | `Vector2`/`Vector3`/`Vector4` | Rejects one vector from another. |
+| [RotateTowardsResolver](rotatetowards-resolver.md) | `Quaternion` | Rotates one quaternion toward another by a maximum angular delta. |
 | [ScaleResolver](scale-resolver.md) | vector | Scales a vector by a float scalar value. |
 | [SignedAngleResolver](signedangle-resolver.md) | `float` | Computes the signed angle between two vectors. |
 | [SlerpResolver](slerp-resolver.md) | `Quaternion` | Spherically interpolates between two quaternion rotations. |
