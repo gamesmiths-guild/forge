@@ -10,8 +10,6 @@ namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
 public class EulerAnglesFromQuaternionResolverTests
 {
-	private const float Tolerance = 0.00001f;
-
 	[Fact]
 	[Trait("Resolver", "EulerAnglesFromQuaternion")]
 	public void EulerAnglesFromQuaternion_resolver_returns_vector3()
