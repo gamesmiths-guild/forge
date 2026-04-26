@@ -81,6 +81,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [InverseResolver](inverse-resolver.md) | `Quaternion` | Computes the inverse of a quaternion. |
 | [LengthResolver](length-resolver.md) | `float` | Computes the length (magnitude) of a vector or quaternion operand. |
 | [LengthSquaredResolver](lengthsquared-resolver.md) | `float` | Computes the squared length of a vector or quaternion operand. |
+| [LookAtResolver](lookat-resolver.md) | `Quaternion` | Creates a look rotation from one position to another using an up vector. |
 | [NormalizeResolver](normalize-resolver.md) | vector/plane/quaternion | Computes the normalized form of a vector, plane, or quaternion. |
 | [EulerAnglesFromQuaternionResolver](euleranglesfromquaternion-resolver.md) | `Vector3` | Extracts Euler angles from a quaternion using an optional Euler order. |
 | [PlaneFromVerticesResolver](planefromvertices-resolver.md) | `Plane` | Creates a plane from three vertices. |
