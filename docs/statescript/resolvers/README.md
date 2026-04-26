@@ -70,8 +70,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 |----------|-------------|-------------|
 | [AngleResolver](angle-resolver.md) | `float` | Computes the unsigned angle between two vectors or two quaternions. |
 | [ConcatenateResolver](concatenate-resolver.md) | `Quaternion` | Concatenates two quaternion rotations. |
-| [ConjugateResolver](concatenate-resolver.md) | `Quaternion` | Conjugates two quaternion rotations. |
-| [ConjugateResolver](concatenate-resolver.md) | `Quaternion` | Computes the conjugate of a quaternion. |
+| [ConjugateResolver](conjugate-resolver.md) | `Quaternion` | Computes the conjugate of a quaternion. |
 | [CrossResolver](cross-resolver.md) | `Vector3` | Computes the cross product of two `Vector3` operands. |
 | [DistanceResolver](distance-resolver.md) | `float` | Computes the Euclidean distance between two vector operands. |
 | [DistanceSquaredResolver](distancesquared-resolver.md) | `float` | Computes the squared Euclidean distance between two vector operands. |
