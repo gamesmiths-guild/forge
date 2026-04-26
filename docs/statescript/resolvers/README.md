@@ -90,6 +90,10 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [QuaternionFromAxisAngleResolver](quaternionfromaxisangle-resolver.md) | `Quaternion` | Creates a quaternion from an axis and angle. |
 | [QuaternionFromEulerAnglesResolver](quaternionfromeulerangles-resolver.md) | `Quaternion` | Creates a quaternion from Euler angles using an optional Euler order. |
 | [QuaternionFromYawPitchRollResolver](quaternionfromyawpitchroll-resolver.md) | `Quaternion` | Creates a quaternion from yaw, pitch, and roll angles. |
+| [RandomDirectionResolver](randomdirection-resolver.md) | `Vector2` | Returns a random normalized 2D direction. |
+| [RandomInsideCircleResolver](randominsidecircle-resolver.md) | `Vector2` | Returns a random point inside the unit circle. |
+| [RandomInsideSphereResolver](randominsidesphere-resolver.md) | `Vector3` | Returns a random point inside the unit sphere. |
+| [RandomOnSphereResolver](randomonsphere-resolver.md) | `Vector3` | Returns a random normalized 3D direction on the unit sphere. |
 | [ReflectResolver](reflect-resolver.md) | `Vector2`/`Vector3` | Reflects a vector off a surface defined by a normal vector. |
 | [RejectResolver](reject-resolver.md) | `Vector2`/`Vector3`/`Vector4` | Rejects one vector from another. |
 | [RotateTowardsResolver](rotatetowards-resolver.md) | `Quaternion` | Rotates one quaternion toward another by a maximum angular delta. |
