@@ -85,7 +85,10 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [MoveTowardsResolver](movetowards-resolver.md) | `float`/`Vector2`/`Vector3`/`Vector4` | Moves a value toward a target by a maximum delta. |
 | [NormalizeResolver](normalize-resolver.md) | vector/plane/quaternion | Computes the normalized form of a vector, plane, or quaternion. |
 | [EulerAnglesFromQuaternionResolver](euleranglesfromquaternion-resolver.md) | `Vector3` | Extracts Euler angles from a quaternion using an optional Euler order. |
+| [PlaneDistanceResolver](planedistance-resolver.md) | `float` | Extracts the distance component of a plane. |
+| [PlaneFromNormalResolver](planefromnormal-resolver.md) | `Plane` | Creates a plane from a normal vector and distance. |
 | [PlaneFromVerticesResolver](planefromvertices-resolver.md) | `Plane` | Creates a plane from three vertices. |
+| [PlaneNormalResolver](planenormal-resolver.md) | `Vector3` | Extracts the normal component of a plane. |
 | [ProjectResolver](project-resolver.md) | `Vector2`/`Vector3`/`Vector4` | Projects one vector onto another. |
 | [QuaternionFromAxisAngleResolver](quaternionfromaxisangle-resolver.md) | `Quaternion` | Creates a quaternion from an axis and angle. |
 | [QuaternionFromEulerAnglesResolver](quaternionfromeulerangles-resolver.md) | `Quaternion` | Creates a quaternion from Euler angles using an optional Euler order. |
