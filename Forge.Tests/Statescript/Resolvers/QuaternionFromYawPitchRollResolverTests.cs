@@ -10,8 +10,6 @@ namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
 public class QuaternionFromYawPitchRollResolverTests
 {
-	private const float Tolerance = 0.00001f;
-
 	[Fact]
 	[Trait("Resolver", "QuaternionFromYawPitchRoll")]
 	public void QuaternionFromYawPitchRoll_resolver_value_type_is_quaternion()
