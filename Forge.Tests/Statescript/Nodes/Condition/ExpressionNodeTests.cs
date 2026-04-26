@@ -282,6 +282,49 @@ public class ExpressionNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClass
 
 	[Fact]
 	[Trait("Graph", "Expression")]
+	public void Expression_condition_node_supports_composed_boolean_resolvers()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("leftTriggerPressed", true);
+		graph.VariableDefinitions.DefineVariable("rightTriggerPressed", false);
+		graph.VariableDefinitions.DefineVariable("isDisabled", false);
+
+		graph.VariableDefinitions.DefineProperty(
+			"shouldActivate",
+			new AndResolver(
+				new XorResolver(
+					new VariableResolver("leftTriggerPressed", typeof(bool)),
+					new VariableResolver("rightTriggerPressed", typeof(bool))),
+				new NotResolver(
+					new VariableResolver("isDisabled", typeof(bool)))));
+
+		ExpressionNode condition = CreateExpressionNode("shouldActivate");
+		var trueAction = new TrackingActionNode();
+		var falseAction = new TrackingActionNode();
+
+		graph.AddNode(condition);
+		graph.AddNode(trueAction);
+		graph.AddNode(falseAction);
+
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			condition.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			condition.OutputPorts[ConditionNode.TruePort],
+			trueAction.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			condition.OutputPorts[ConditionNode.FalsePort],
+			falseAction.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		trueAction.ExecutionCount.Should().Be(1);
+		falseAction.ExecutionCount.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Graph", "Expression")]
 	public void Comparison_resolver_works_with_int_operands()
 	{
 		var graph = new Graph();

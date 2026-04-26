@@ -28,7 +28,7 @@ Evaluates a boolean input property to choose the output. This eliminates the nee
 |-------|-------|------|-------------|
 | 0 | Condition | `bool` | The expression to evaluate. |
 
-The condition can be bound to any resolver producing a `bool`: a [TagResolver](../../resolvers/tag-resolver.md), [ComparisonResolver](../../resolvers/comparison-resolver.md), [VariableResolver](../../resolvers/variable-resolver.md) (reading a bool variable), or a nested chain.
+The condition can be bound to any resolver producing a `bool`: a [TagResolver](../../resolvers/tag-resolver.md), [ComparisonResolver](../../resolvers/comparison-resolver.md), [AndResolver](../../resolvers/and-resolver.md), [OrResolver](../../resolvers/or-resolver.md), [NotResolver](../../resolvers/not-resolver.md), [XorResolver](../../resolvers/xor-resolver.md), [VariableResolver](../../resolvers/variable-resolver.md) (reading a bool variable), or a nested chain.
 
 ## Behavior
 
@@ -39,16 +39,19 @@ The condition can be bound to any resolver producing a `bool`: a [TagResolver](.
 ## Usage
 
 ```csharp
-// Define a comparison property
-graph.VariableDefinitions.DefineProperty("healthAboveHalf",
-    new ComparisonResolver(
-        new AttributeResolver("CombatAttributeSet.Health"),
-        ComparisonOperation.GreaterThan,
-        new VariantResolver(new Variant128(50), typeof(int))));
+// Define a composed boolean property
+graph.VariableDefinitions.DefineProperty("shouldUseStrongEffect",
+    new AndResolver(
+        new ComparisonResolver(
+            new AttributeResolver("CombatAttributeSet.Health"),
+            ComparisonOperation.GreaterThan,
+            new VariantResolver(new Variant128(50), typeof(int))),
+        new NotResolver(
+            new TagResolver(Tag.RequestTag(tagsManager, "status.silenced")))));
 
 // Create and bind the expression node
 var expression = new ExpressionNode();
-expression.BindInput(ExpressionNode.ConditionInput, "healthAboveHalf");
+expression.BindInput(ExpressionNode.ConditionInput, "shouldUseStrongEffect");
 
 graph.AddNode(expression);
 
