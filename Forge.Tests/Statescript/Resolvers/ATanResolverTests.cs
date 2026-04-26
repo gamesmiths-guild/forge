@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -48,7 +49,7 @@ public class ATanResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -61,7 +62,7 @@ public class ATanResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.PI / 4.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.PI / 4.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -73,7 +74,7 @@ public class ATanResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(-Math.PI / 4.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(-Math.PI / 4.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -85,14 +86,14 @@ public class ATanResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsFloat().Should().BeApproximately(MathF.PI / 4.0f, 0.001f);
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(MathF.PI / 4.0f, TestUtils.Tolerance);
 	}
 
 	[Fact]
 	[Trait("Resolver", "ATan")]
 	public void ATan_resolver_supports_nesting()
 	{
-		// ATan(ATan(1.0)) = ATan(π/4) ≈ ATan(0.7854) ≈ 0.6658
+		// ATan(ATan(1.0)) = ATan(π/4) ≈ ATan(0.7854) ≈ 0.66577
 		var inner = new ATanResolver(
 			new VariantResolver(new Variant128(1.0), typeof(double)));
 
@@ -100,7 +101,7 @@ public class ATanResolverTests
 
 		var context = new GraphContext();
 
-		outer.Resolve(context).AsDouble().Should().BeApproximately(0.6658, 0.001);
+		outer.Resolve(context).AsDouble().Should().BeApproximately(0.66577, TestUtils.Tolerance);
 	}
 
 	[Fact]

@@ -36,6 +36,27 @@ new ATanHResolver(operand)
 - Values at `±1` produce `±∞`. Values outside `(-1, 1)` produce `NaN`.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
+## Usage
+
+```csharp
+graph.VariableDefinitions.DefineProperty("inverseBlend",
+    new ATanHResolver(
+        new VariableResolver("blendFactor", typeof(double))));
+```
+
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("biasedInverseBlend",
+    new ATanHResolver(
+        new ClampResolver(
+            new SubtractResolver(
+                new VariableResolver("sample", typeof(double)),
+                new VariableResolver("bias", typeof(double))),
+            new VariantResolver(new Variant128(-0.999), typeof(double)),
+            new VariantResolver(new Variant128(0.999), typeof(double)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

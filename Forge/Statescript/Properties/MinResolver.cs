@@ -1,11 +1,14 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Numerics;
+
 namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
 /// Resolves the minimum of two nested <see cref="IPropertyResolver"/> operands. Supports all numeric types in
-/// <see cref="Variant128"/>. Vector and quaternion types are not supported. When the two operands have different
-/// numeric types, standard numeric promotion rules apply.
+/// <see cref="Variant128"/> as well as <see cref="Vector2"/>, <see cref="Vector3"/>, and <see cref="Vector4"/>.
+/// Quaternion types are not supported. When the two numeric operands have different types, standard numeric promotion
+/// rules apply.
 /// </summary>
 /// <param name="left">The resolver for the left operand.</param>
 /// <param name="right">The resolver for the right operand.</param>
@@ -20,7 +23,7 @@ public class MinResolver(IPropertyResolver left, IPropertyResolver right) : IPro
 		nameof(MinResolver),
 		left.ValueType,
 		right.ValueType,
-		allowVectors: false,
+		allowVectors: true,
 		allowQuaternions: false);
 
 	/// <inheritdoc/>
@@ -68,6 +71,21 @@ public class MinResolver(IPropertyResolver left, IPropertyResolver right) : IPro
 				Math.Min(
 					MathTypeUtils.ResolveAsDecimal(_left.ValueType, leftValue),
 					MathTypeUtils.ResolveAsDecimal(_right.ValueType, rightValue)));
+		}
+
+		if (resultType == typeof(Vector2))
+		{
+			return new Variant128(Vector2.Min(leftValue.AsVector2(), rightValue.AsVector2()));
+		}
+
+		if (resultType == typeof(Vector3))
+		{
+			return new Variant128(Vector3.Min(leftValue.AsVector3(), rightValue.AsVector3()));
+		}
+
+		if (resultType == typeof(Vector4))
+		{
+			return new Variant128(Vector4.Min(leftValue.AsVector4(), rightValue.AsVector4()));
 		}
 
 		throw new InvalidOperationException($"MinResolver encountered unexpected result type '{resultType}'.");

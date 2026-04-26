@@ -51,6 +51,20 @@ graph.VariableDefinitions.DefineProperty("angleToTarget",
             new VariableResolver("currentX", typeof(double)))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("aimAngleDegrees",
+    new RadToDegResolver(
+        new ATan2Resolver(
+            new SubtractResolver(
+                new VariableResolver("targetY", typeof(double)),
+                new VariableResolver("currentY", typeof(double))),
+            new SubtractResolver(
+                new VariableResolver("targetX", typeof(double)),
+                new VariableResolver("currentX", typeof(double))))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

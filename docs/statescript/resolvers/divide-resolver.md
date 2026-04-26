@@ -3,7 +3,7 @@
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.DivideResolver`
 > **Output Type:** *(promoted from operand types)*
 
-Divides the left operand by the right operand. Supports all numeric types in `Variant128` as well as `Vector2`, `Vector3`, and `Vector4` (component-wise division). `Quaternion` is not supported.
+Divides the left operand by the right operand. Supports all numeric types in `Variant128` as well as `Vector2`, `Vector3`, and `Vector4` (component-wise division), and `Quaternion` (quaternion division).
 
 ## Constructor
 
@@ -33,6 +33,7 @@ When both operands have the same type, the result type is determined by promotio
 | `Vector2` | `Vector2` |
 | `Vector3` | `Vector3` |
 | `Vector4` | `Vector4` |
+| `Quaternion` | `Quaternion` |
 
 When operands differ, the wider numeric type wins:
 
@@ -46,8 +47,8 @@ When operands differ, the wider numeric type wins:
 | `int / decimal` | `decimal` |
 
 **Invalid combinations** (throw `ArgumentException` at construction time):
-- `Quaternion` (no standard division operation).
 - Mixing vector types (e.g., `Vector2 / Vector3`).
+- Mixing quaternion with non-quaternion types.
 - Mixing vector with numeric types (e.g., `Vector3 / float`).
 - Unsupported types (`bool`, `char`).
 
@@ -58,6 +59,7 @@ When operands differ, the wider numeric type wins:
 - Performs the division (`left / right`) and returns the result as a `Variant128`.
 - For integer types, division follows C# truncation rules (truncates toward zero).
 - For `Vector2`, `Vector3`, and `Vector4`, division is **component-wise**.
+- For `Quaternion`, division uses quaternion division semantics via `Quaternion.Divide(left, right)`.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
 ## Usage
@@ -72,6 +74,11 @@ graph.VariableDefinitions.DefineProperty("normalizedDirection",
     new DivideResolver(
         new VariableResolver("direction", typeof(Vector3)),
         new VariableResolver("magnitude", typeof(Vector3))));
+
+graph.VariableDefinitions.DefineProperty("relativeRotation",
+    new DivideResolver(
+        new VariableResolver("currentRotation", typeof(Quaternion)),
+        new VariableResolver("baseRotation", typeof(Quaternion))));
 ```
 
 ## Composition

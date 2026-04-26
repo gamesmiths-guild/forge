@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -53,7 +54,7 @@ public class ATan2ResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.PI / 4.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.PI / 4.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -67,7 +68,7 @@ public class ATan2ResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -81,7 +82,7 @@ public class ATan2ResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.PI / 2.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.PI / 2.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -95,7 +96,7 @@ public class ATan2ResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(-3.0 * Math.PI / 4.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(-3.0 * Math.PI / 4.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -108,14 +109,14 @@ public class ATan2ResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsFloat().Should().BeApproximately(MathF.PI / 4.0f, 0.001f);
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(MathF.PI / 4.0f, TestUtils.Tolerance);
 	}
 
 	[Fact]
 	[Trait("Resolver", "ATan2")]
 	public void ATan2_resolver_supports_nesting()
 	{
-		// ATan2(ATan2(1, 1), 1) = ATan2(π/4, 1) ≈ ATan2(0.7854, 1) ≈ 0.6658
+		// ATan2(ATan2(1, 1), 1) = ATan2(π/4, 1) ≈ ATan2(0.7854, 1) ≈ 0.66577
 		var inner = new ATan2Resolver(
 			new VariantResolver(new Variant128(1.0), typeof(double)),
 			new VariantResolver(new Variant128(1.0), typeof(double)));
@@ -126,7 +127,7 @@ public class ATan2ResolverTests
 
 		var context = new GraphContext();
 
-		outer.Resolve(context).AsDouble().Should().BeApproximately(0.6658, 0.001);
+		outer.Resolve(context).AsDouble().Should().BeApproximately(0.66577, TestUtils.Tolerance);
 	}
 
 	[Fact]

@@ -47,6 +47,17 @@ graph.VariableDefinitions.DefineProperty("aimAngleDegrees",
             new VariableResolver("targetX", typeof(double)))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("yawDegrees",
+    new RadToDegResolver(
+        new SignedAngleResolver(
+            new VariantResolver(new Variant128(Vector3.UnitZ), typeof(Vector3)),
+            new VariableResolver("targetDirection", typeof(Vector3)),
+            new VariantResolver(new Variant128(Vector3.UnitY), typeof(Vector3)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

@@ -224,14 +224,48 @@ public class AbsResolverTests
 
 	[Fact]
 	[Trait("Resolver", "Abs")]
-	public void Abs_resolver_throws_for_vector_operand()
+	public void Abs_resolver_vector3_value_type_is_vector3()
 	{
-#pragma warning disable CA1806
-		Action act = () => new AbsResolver(
-			new VariantResolver(new Variant128(Vector3.One), typeof(Vector3)));
-#pragma warning restore CA1806
+		var resolver = new AbsResolver(
+			new VariantResolver(new Variant128(new Vector3(-1.0f, 2.0f, -3.0f)), typeof(Vector3)));
 
-		act.Should().Throw<ArgumentException>();
+		resolver.ValueType.Should().Be(typeof(Vector3));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Abs")]
+	public void Abs_resolver_vector2_returns_componentwise_absolute_value()
+	{
+		var resolver = new AbsResolver(
+			new VariantResolver(new Variant128(new Vector2(-1.0f, 2.0f)), typeof(Vector2)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsVector2().Should().Be(new Vector2(1.0f, 2.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Abs")]
+	public void Abs_resolver_vector3_returns_componentwise_absolute_value()
+	{
+		var resolver = new AbsResolver(
+			new VariantResolver(new Variant128(new Vector3(-1.0f, 2.0f, -3.0f)), typeof(Vector3)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsVector3().Should().Be(new Vector3(1.0f, 2.0f, 3.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Abs")]
+	public void Abs_resolver_vector4_returns_componentwise_absolute_value()
+	{
+		var resolver = new AbsResolver(
+			new VariantResolver(new Variant128(new Vector4(-1.0f, 2.0f, -3.0f, 4.0f)), typeof(Vector4)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsVector4().Should().Be(new Vector4(1.0f, 2.0f, 3.0f, 4.0f));
 	}
 
 	[Fact]

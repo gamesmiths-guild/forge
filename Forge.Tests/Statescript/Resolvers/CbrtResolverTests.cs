@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -48,7 +49,7 @@ public class CbrtResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsFloat().Should().BeApproximately(3.0f, 0.001f);
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(3.0f, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -60,7 +61,7 @@ public class CbrtResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(5.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(5.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -72,7 +73,7 @@ public class CbrtResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(4.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(4.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -85,7 +86,7 @@ public class CbrtResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(-2.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(-2.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -109,14 +110,14 @@ public class CbrtResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsFloat().Should().BeApproximately(1.0f, 0.001f);
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(1.0f, TestUtils.Tolerance);
 	}
 
 	[Fact]
 	[Trait("Resolver", "Cbrt")]
 	public void Cbrt_resolver_supports_nesting()
 	{
-		// Cbrt(Cbrt(729)) = Cbrt(9) ≈ 2.0801 — wait: Cbrt(729)=9, Cbrt(9)≈2.0801
+		// Cbrt(Cbrt(729)) = Cbrt(9) ≈ 2.0801 — wait: Cbrt(729)=9, Cbrt(9)≈2.08008
 		var inner = new CbrtResolver(
 			new VariantResolver(new Variant128(729.0), typeof(double)));
 
@@ -124,7 +125,7 @@ public class CbrtResolverTests
 
 		var context = new GraphContext();
 
-		outer.Resolve(context).AsDouble().Should().BeApproximately(2.0801, 0.001);
+		outer.Resolve(context).AsDouble().Should().BeApproximately(2.08008, TestUtils.Tolerance);
 	}
 
 	[Fact]

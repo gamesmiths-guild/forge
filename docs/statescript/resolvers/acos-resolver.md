@@ -36,6 +36,27 @@ new ACosResolver(operand)
 - Values outside `[-1, 1]` produce `NaN`.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
+## Usage
+
+```csharp
+graph.VariableDefinitions.DefineProperty("slopeAngle",
+    new ACosResolver(
+        new DotResolver(
+            new VariableResolver("surfaceNormal", typeof(Vector3)),
+            new VariantResolver(new Variant128(Vector3.UnitY), typeof(Vector3)))));
+```
+
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("coneHalfAngleRadians",
+    new ACosResolver(
+        new ClampResolver(
+            new VariableResolver("alignment", typeof(float)),
+            new VariantResolver(new Variant128(-1.0f), typeof(float)),
+            new VariantResolver(new Variant128(1.0f), typeof(float)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

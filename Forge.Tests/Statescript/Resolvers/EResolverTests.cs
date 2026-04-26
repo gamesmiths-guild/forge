@@ -3,6 +3,7 @@
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -65,7 +66,7 @@ public class EResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(2.71828, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(2.71828, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -99,6 +100,6 @@ public class EResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(1.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(1.0, TestUtils.Tolerance);
 	}
 }

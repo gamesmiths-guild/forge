@@ -131,7 +131,7 @@ public class RandomResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(99.9, 0.01);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(99.9, TestUtils.Tolerance);
 	}
 
 	[Fact]

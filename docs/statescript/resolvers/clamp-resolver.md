@@ -1,9 +1,9 @@
 # ClampResolver
 
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.ClampResolver`
-> **Output Type:** *(promoted from operand types)*
+> **Output Type:** *(promoted from operand types, or same vector type)*
 
-Clamps a value between a minimum and maximum bound. Supports all numeric types in `Variant128`. Vector and quaternion types are not supported. When operands have different numeric types, standard numeric promotion rules apply across all three operands.
+Clamps a value between a minimum and maximum bound. Supports all numeric types in `Variant128` as well as `Vector2`, `Vector3`, and `Vector4`. Quaternion types are not supported. When operands are numeric, standard numeric promotion rules apply across all three operands. When operands are vectors, all three must be the same vector type and clamping is applied component-wise.
 
 ## Constructor
 
@@ -34,18 +34,28 @@ The result type is determined by promoting all three operand types using standar
 
 When operands differ, the widest numeric type wins.
 
+### Vector Types
+
+| Operand Types | Result Type |
+|---------------|-------------|
+| `Vector2`, `Vector2`, `Vector2` | `Vector2` |
+| `Vector3`, `Vector3`, `Vector3` | `Vector3` |
+| `Vector4`, `Vector4`, `Vector4` | `Vector4` |
+
 **Invalid types** (throw `ArgumentException` at construction time):
-- `Vector2`, `Vector3`, `Vector4`, `Quaternion`.
+- Mismatched vector types.
+- `Quaternion`.
 - Unsupported types (`bool`, `char`).
 
 ## Behavior
 
 - Resolves all three operands through their respective `IPropertyResolver` instances.
 - Converts each operand to the promoted result type.
-- Returns `Math.Clamp(value, min, max)` as a `Variant128`.
+- Returns `Math.Clamp(value, min, max)` for numeric types, or `Vector2.Clamp`, `Vector3.Clamp`, or `Vector4.Clamp` for vector types, as a `Variant128`.
 - If `value` is within `[min, max]`, returns `value` unchanged.
 - If `value < min`, returns `min`.
 - If `value > max`, returns `max`.
+- For vector types, the comparison is performed component-wise.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
 ## Usage
@@ -59,6 +69,13 @@ graph.VariableDefinitions.DefineProperty("currentHealth",
             new VariableResolver("damage", typeof(int))),
         new VariantResolver(new Variant128(0), typeof(int)),
         new VariableResolver("maxHealth", typeof(int))));
+
+// Clamp a position within a bounding box
+graph.VariableDefinitions.DefineProperty("clampedPosition",
+    new ClampResolver(
+        new VariableResolver("position", typeof(Vector3)),
+        new VariableResolver("boundsMin", typeof(Vector3)),
+        new VariableResolver("boundsMax", typeof(Vector3))));
 ```
 
 ## Composition
@@ -79,3 +96,4 @@ graph.VariableDefinitions.DefineProperty("effectiveMultiplier",
 - [Resolvers Overview](README.md)
 - [MinResolver](min-resolver.md)
 - [MaxResolver](max-resolver.md)
+- [ScaleResolver](scale-resolver.md)

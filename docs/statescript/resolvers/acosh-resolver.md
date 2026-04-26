@@ -36,6 +36,26 @@ new ACosHResolver(operand)
 - Values less than `1` produce `NaN`.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
+## Usage
+
+```csharp
+graph.VariableDefinitions.DefineProperty("distanceMetric",
+    new ACosHResolver(
+        new VariableResolver("scaledDistance", typeof(double))));
+```
+
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("normalizedAcosh",
+    new DivideResolver(
+        new ACosHResolver(
+            new AddResolver(
+                new VariantResolver(new Variant128(1.0), typeof(double)),
+                new VariableResolver("metric", typeof(double)))),
+        new VariableResolver("normalizationFactor", typeof(double))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

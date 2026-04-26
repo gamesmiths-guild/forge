@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -49,7 +50,7 @@ public class ASinHResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -62,7 +63,7 @@ public class ASinHResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.8814, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.88137, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -75,7 +76,7 @@ public class ASinHResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(-0.8814, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(-0.88137, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -87,7 +88,7 @@ public class ASinHResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsFloat().Should().BeApproximately(0.8814f, 0.01f);
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(0.88137f, TestUtils.Tolerance);
 	}
 
 	[Fact]

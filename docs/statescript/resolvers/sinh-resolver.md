@@ -35,6 +35,24 @@ new SinHResolver(operand)
 - `SinH(0) = 0`. SinH is an odd function: `SinH(-x) = -SinH(x)`.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
+## Usage
+
+```csharp
+graph.VariableDefinitions.DefineProperty("sinhSample",
+    new SinHResolver(
+        new VariableResolver("curveInput", typeof(double))));
+```
+
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("signedCurve",
+    new MultiplyResolver(
+        new VariableResolver("curveAmplitude", typeof(double)),
+        new SinHResolver(
+            new VariableResolver("curveInput", typeof(double)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

@@ -45,6 +45,16 @@ graph.VariableDefinitions.DefineProperty("sideLength",
         new VariableResolver("volume", typeof(double))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("scaledCubeSide",
+    new MultiplyResolver(
+        new VariableResolver("voxelScale", typeof(double)),
+        new CbrtResolver(
+            new VariableResolver("volume", typeof(double)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

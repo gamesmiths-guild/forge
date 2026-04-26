@@ -35,6 +35,24 @@ new ATanResolver(operand)
 - `ATan(0) = 0`, `ATan(1) = π/4`, `ATan(-1) = -π/4`.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
+## Usage
+
+```csharp
+graph.VariableDefinitions.DefineProperty("bankAngle",
+    new ATanResolver(
+        new VariableResolver("slopeRatio", typeof(float))));
+```
+
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("recoilAngle",
+    new ATanResolver(
+        new DivideResolver(
+            new VariableResolver("verticalImpulse", typeof(double)),
+            new VariableResolver("forwardImpulse", typeof(double)))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)

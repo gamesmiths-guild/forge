@@ -49,6 +49,19 @@ graph.VariableDefinitions.DefineProperty("population",
                 new VariableResolver("time", typeof(double))))));
 ```
 
+## Composition
+
+```csharp
+graph.VariableDefinitions.DefineProperty("dampedValue",
+    new MultiplyResolver(
+        new VariableResolver("initialValue", typeof(double)),
+        new ExpResolver(
+            new NegateResolver(
+                new MultiplyResolver(
+                    new VariableResolver("damping", typeof(double)),
+                    new VariableResolver("time", typeof(double)))))));
+```
+
 ## See Also
 
 - [Resolvers Overview](README.md)
