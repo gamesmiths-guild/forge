@@ -57,7 +57,7 @@ public class DotResolver(IPropertyResolver left, IPropertyResolver right) : IPro
 		if (leftType != rightType)
 		{
 			throw new ArgumentException(
-				$"DotResolver requires matching vector types. Got '{leftType}' and '{rightType}'.");
+				$"DotResolver requires matching operand types. Got '{leftType}' and '{rightType}'.");
 		}
 
 		if (!MathTypeUtils.IsVectorType(leftType) && leftType != typeof(Quaternion))

@@ -47,9 +47,7 @@ graph.VariableDefinitions.DefineProperty("velocityAlongForward",
 graph.VariableDefinitions.DefineProperty("lateralVelocity",
     new RejectResolver(
         new VariableResolver("velocity", typeof(Vector3)),
-        new ProjectResolver(
-            new VariableResolver("velocity", typeof(Vector3)),
-            new VariableResolver("forward", typeof(Vector3)))));
+        new VariableResolver("forward", typeof(Vector3))));
 ```
 
 ## See Also

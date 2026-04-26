@@ -63,4 +63,4 @@ graph.VariableDefinitions.DefineProperty("normalizedPlane",
 - [Resolvers Overview](README.md)
 - [NormalizeResolver](normalize-resolver.md)
 - [QuaternionFromAxisAngleResolver](quaternionfromaxisangle-resolver.md)
-- [QuaternionFromPitchYawRollResolver](quaternionfrompitchyawroll-resolver.md)
+- [QuaternionFromYawPitchRollResolver](quaternionfromyawpitchroll-resolver.md)

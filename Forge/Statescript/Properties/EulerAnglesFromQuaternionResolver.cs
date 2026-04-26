@@ -55,9 +55,9 @@ public class EulerAnglesFromQuaternionResolver(IPropertyResolver quaternion, IPr
 		var orderValue = _order.Resolve(graphContext).AsInt();
 		if (!Enum.IsDefined(typeof(EulerOrder), orderValue))
 		{
-#pragma warning disable CA2208, S3928 // Instantiate argument exceptions correctly
-			throw new ArgumentOutOfRangeException(nameof(_order), orderValue, "Unsupported Euler order.");
-#pragma warning restore CA2208, S3928 // Instantiate argument exceptions correctly
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
+			throw new ArgumentOutOfRangeException("order", orderValue, "Unsupported Euler order.");
+#pragma warning restore CA2208 // Instantiate argument exceptions correctly
 		}
 
 		return (EulerOrder)orderValue;

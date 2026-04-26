@@ -10,8 +10,6 @@ namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
 public class InverseResolverTests
 {
-	private const float Tolerance = 0.00001f;
-
 	[Fact]
 	[Trait("Resolver", "Inverse")]
 	public void Inverse_resolver_value_type_is_quaternion()

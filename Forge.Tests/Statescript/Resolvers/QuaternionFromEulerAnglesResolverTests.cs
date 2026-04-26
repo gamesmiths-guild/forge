@@ -97,6 +97,6 @@ public class QuaternionFromEulerAnglesResolverTests
 
 		Action act = () => resolver.Resolve(new GraphContext());
 
-		act.Should().Throw<ArgumentOutOfRangeException>();
+		act.Should().Throw<ArgumentOutOfRangeException>().Which.ParamName.Should().Be("order");
 	}
 }

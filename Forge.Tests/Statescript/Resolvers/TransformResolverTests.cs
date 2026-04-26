@@ -57,15 +57,14 @@ public class TransformResolverTests
 	[Trait("Resolver", "Transform")]
 	public void Transform_resolver_vector2()
 	{
-		Vector2 vector = Vector2.One;
-		Quaternion rotation = Quaternion.Identity;
+		Vector2 vector = Vector2.UnitX;
+		var rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 2.0f);
 		var resolver = new TransformResolver(
 			new VariantResolver(new Variant128(vector), typeof(Vector2)),
 			new VariantResolver(new Variant128(rotation), typeof(Quaternion)));
 
-		var context = new GraphContext();
-
-		resolver.Resolve(context).AsVector2().Should().Be(Vector2.Transform(vector, rotation));
+		var expected = Vector3.Transform(new Vector3(vector, 0.0f), rotation);
+		resolver.Resolve(new GraphContext()).AsVector2().Should().Be(new Vector2(expected.X, expected.Y));
 	}
 
 	[Fact]

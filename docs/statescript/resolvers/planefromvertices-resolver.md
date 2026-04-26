@@ -55,4 +55,4 @@ graph.VariableDefinitions.DefineProperty("normalizedPlane",
 
 - [Resolvers Overview](README.md)
 - [NormalizeResolver](normalize-resolver.md)
-- [PlaneDotCoordinateResolver](planedotcoordinate-resolver.md)
+- [DotCoordinateResolver](dotcoordinate-resolver.md)

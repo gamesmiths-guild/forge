@@ -53,4 +53,4 @@ graph.VariableDefinitions.DefineProperty("rotatedDirection",
 
 - [Resolvers Overview](README.md)
 - [TransformResolver](transform-resolver.md)
-- [QuaternionFromPitchYawRollResolver](quaternionfrompitchyawroll-resolver.md)
+- [QuaternionFromYawPitchRollResolver](quaternionfromyawpitchroll-resolver.md)
