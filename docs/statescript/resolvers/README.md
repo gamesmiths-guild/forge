@@ -12,12 +12,23 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 |----------|-------------|-------------|
 | [ArrayVariableResolver](array-resolver.md) | *(configured)* | Stores a mutable array of values with indexed access. |
 | [AttributeResolver](attribute-resolver.md) | `int` | Reads the current value of an entity attribute. |
-| [ComparisonResolver](comparison-resolver.md) | `bool` | Compares two values using a comparison operation. |
 | [MagnitudeResolver](magnitude-resolver.md) | `float` | Reads the magnitude from the ability activation context. |
 | [SharedVariableResolver](shared-variable-resolver.md) | *(configured)* | Reads a shared variable from the entity. |
 | [TagResolver](tag-resolver.md) | `bool` | Checks whether the owner entity has a specific tag. |
 | [VariableResolver](variable-resolver.md) | *(configured)* | Reads a graph variable by name. |
 | [VariantResolver](variant-resolver.md) | *(configured)* | Holds a fixed constant value. |
+
+---
+
+## Boolean Expressions
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [AndResolver](and-resolver.md) | `bool` | Returns `true` only when both boolean operands are `true`. |
+| [ComparisonResolver](comparison-resolver.md) | `bool` | Compares two values using a comparison operation. |
+| [NotResolver](not-resolver.md) | `bool` | Returns the logical inverse of a boolean operand. |
+| [OrResolver](or-resolver.md) | `bool` | Returns `true` when either boolean operand is `true`. |
+| [XorResolver](xor-resolver.md) | `bool` | Returns `true` when exactly one boolean operand is `true`. |
 
 ---
 
