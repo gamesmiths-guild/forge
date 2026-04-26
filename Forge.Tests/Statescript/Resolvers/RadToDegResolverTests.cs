@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -60,7 +61,7 @@ public class RadToDegResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(90.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(90.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -72,7 +73,7 @@ public class RadToDegResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(180.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(180.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -84,7 +85,7 @@ public class RadToDegResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(360.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(360.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -96,7 +97,7 @@ public class RadToDegResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(45.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(45.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -108,7 +109,7 @@ public class RadToDegResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(-90.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(-90.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -120,7 +121,7 @@ public class RadToDegResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsFloat().Should().BeApproximately(90.0f, 0.01f);
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(90.0f, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -134,7 +135,7 @@ public class RadToDegResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(45.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(45.0, TestUtils.Tolerance);
 	}
 
 	[Fact]

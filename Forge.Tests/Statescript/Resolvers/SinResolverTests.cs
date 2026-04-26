@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -48,7 +49,7 @@ public class SinResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsFloat().Should().BeApproximately(0.0f, 0.001f);
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(0.0f, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -60,7 +61,7 @@ public class SinResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(1.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(1.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -72,7 +73,7 @@ public class SinResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -85,14 +86,14 @@ public class SinResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsFloat().Should().BeApproximately(0.5f, 0.001f);
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(0.5f, TestUtils.Tolerance);
 	}
 
 	[Fact]
 	[Trait("Resolver", "Sin")]
 	public void Sin_resolver_supports_nesting()
 	{
-		// Sin(Sin(π/2)) = Sin(1.0) ≈ 0.8414
+		// Sin(Sin(π/2)) = Sin(1.0) ≈ 0.84147
 		var inner = new SinResolver(
 			new VariantResolver(new Variant128(Math.PI / 2.0), typeof(double)));
 
@@ -100,7 +101,7 @@ public class SinResolverTests
 
 		var context = new GraphContext();
 
-		outer.Resolve(context).AsDouble().Should().BeApproximately(0.8414, 0.001);
+		outer.Resolve(context).AsDouble().Should().BeApproximately(0.84147, TestUtils.Tolerance);
 	}
 
 	[Fact]

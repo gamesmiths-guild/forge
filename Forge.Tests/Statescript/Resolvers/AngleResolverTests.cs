@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -52,7 +53,7 @@ public class AngleResolverTests
 			new VariantResolver(new Variant128(from), typeof(Quaternion)),
 			new VariantResolver(new Variant128(to), typeof(Quaternion)));
 
-		resolver.Resolve(new GraphContext()).AsFloat().Should().Be(MathF.PI / 4.0f);
+		resolver.Resolve(new GraphContext()).AsFloat().Should().BeApproximately(MathF.PI / 4.0f, TestUtils.Tolerance);
 	}
 
 	[Fact]

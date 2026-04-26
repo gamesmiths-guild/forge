@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -62,20 +63,20 @@ public class ExpResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.E, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.E, TestUtils.Tolerance);
 	}
 
 	[Fact]
 	[Trait("Resolver", "Exp")]
 	public void Exp_resolver_two_returns_e_squared()
 	{
-		// e^2 ≈ 7.389
+		// e^2 ≈ 7.38905
 		var resolver = new ExpResolver(
 			new VariantResolver(new Variant128(2.0), typeof(double)));
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(7.389, 0.01);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(7.38905, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -88,7 +89,7 @@ public class ExpResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(1.0 / Math.E, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(1.0 / Math.E, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -100,7 +101,7 @@ public class ExpResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsFloat().Should().BeApproximately(MathF.E, 0.001f);
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(MathF.E, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -115,7 +116,7 @@ public class ExpResolverTests
 
 		var context = new GraphContext();
 
-		outer.Resolve(context).AsDouble().Should().BeApproximately(Math.E, 0.0001);
+		outer.Resolve(context).AsDouble().Should().BeApproximately(Math.E, TestUtils.Tolerance);
 	}
 
 	[Fact]

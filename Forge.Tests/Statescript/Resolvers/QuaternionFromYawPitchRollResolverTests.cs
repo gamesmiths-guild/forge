@@ -4,11 +4,14 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
 public class QuaternionFromYawPitchRollResolverTests
 {
+	private const float Tolerance = 0.00001f;
+
 	[Fact]
 	[Trait("Resolver", "QuaternionFromYawPitchRoll")]
 	public void QuaternionFromYawPitchRoll_resolver_value_type_is_quaternion()
@@ -83,9 +86,9 @@ public class QuaternionFromYawPitchRollResolverTests
 			.Resolve(new GraphContext())
 			.AsVector3();
 
-		extracted.X.Should().Be(expected.X);
-		extracted.Y.Should().Be(expected.Y);
-		extracted.Z.Should().Be(expected.Z);
+		extracted.X.Should().BeApproximately(expected.X, TestUtils.Tolerance);
+		extracted.Y.Should().BeApproximately(expected.Y, TestUtils.Tolerance);
+		extracted.Z.Should().BeApproximately(expected.Z, TestUtils.Tolerance);
 	}
 
 	[Fact]

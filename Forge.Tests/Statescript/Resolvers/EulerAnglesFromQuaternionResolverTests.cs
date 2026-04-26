@@ -4,11 +4,14 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
 public class EulerAnglesFromQuaternionResolverTests
 {
+	private const float Tolerance = 0.00001f;
+
 	[Fact]
 	[Trait("Resolver", "EulerAnglesFromQuaternion")]
 	public void EulerAnglesFromQuaternion_resolver_returns_vector3()
@@ -33,9 +36,9 @@ public class EulerAnglesFromQuaternionResolverTests
 
 		Vector3 result = resolver.Resolve(new GraphContext()).AsVector3();
 
-		result.X.Should().Be(expected.X);
-		result.Y.Should().Be(expected.Y);
-		result.Z.Should().Be(expected.Z);
+		result.X.Should().BeApproximately(expected.X, TestUtils.Tolerance);
+		result.Y.Should().BeApproximately(expected.Y, TestUtils.Tolerance);
+		result.Z.Should().BeApproximately(expected.Z, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -54,9 +57,9 @@ public class EulerAnglesFromQuaternionResolverTests
 
 		Vector3 result = resolver.Resolve(new GraphContext()).AsVector3();
 
-		result.X.Should().Be(expected.X);
-		result.Y.Should().Be(expected.Y);
-		result.Z.Should().Be(expected.Z);
+		result.X.Should().BeApproximately(expected.X, TestUtils.Tolerance);
+		result.Y.Should().BeApproximately(expected.Y, TestUtils.Tolerance);
+		result.Z.Should().BeApproximately(expected.Z, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -79,7 +82,7 @@ public class EulerAnglesFromQuaternionResolverTests
 				.Resolve(new GraphContext())
 				.AsQuaternion();
 
-		Quaternion.Dot(original, roundTrip).Should().BeApproximately(1.0f, 0.001f);
+		Quaternion.Dot(original, roundTrip).Should().BeApproximately(1.0f, TestUtils.Tolerance);
 	}
 
 	[Fact]

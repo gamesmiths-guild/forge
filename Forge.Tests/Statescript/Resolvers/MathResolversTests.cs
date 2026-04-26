@@ -426,7 +426,7 @@ public class MathResolversTests
 	public void Weighted_average_three_values()
 	{
 		// weightedAvg = (v1*w1 + v2*w2 + v3*w3) / (w1 + w2 + w3)
-		// (80*2.0 + 90*3.0 + 70*1.0) / (2.0 + 3.0 + 1.0) = (160+270+70) / 6 = 500/6 ≈ 83.333
+		// (80*2.0 + 90*3.0 + 70*1.0) / (2.0 + 3.0 + 1.0) = (160+270+70) / 6 = 500/6 ≈ 83.33333
 		var v1w1 = new MultiplyResolver(
 			new VariantResolver(new Variant128(80.0), typeof(double)),
 			new VariantResolver(new Variant128(2.0), typeof(double)));
@@ -453,7 +453,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(83.333, 0.01);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(83.33333, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -522,7 +522,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsFloat().Should().BeApproximately(6.5f, 0.001f);
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(6.5f, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -766,7 +766,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.0, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -785,7 +785,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.6435, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.6435, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -803,7 +803,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(100.0 * Math.E, 0.01);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(100.0 * Math.E, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -821,7 +821,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(20.0, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(20.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -854,7 +854,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(40.0, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(40.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -872,7 +872,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.5, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.5, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -902,7 +902,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(3.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(3.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -938,7 +938,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(1.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(1.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -953,7 +953,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(3.5, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(3.5, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -967,7 +967,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.5, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(0.5, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -982,7 +982,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(45.0, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(45.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -999,7 +999,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.PI * 25.0, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.PI * 25.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -1013,7 +1013,7 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.E * Math.E, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(Math.E * Math.E, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -1077,6 +1077,6 @@ public class MathResolversTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(135.0, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(135.0, TestUtils.Tolerance);
 	}
 }

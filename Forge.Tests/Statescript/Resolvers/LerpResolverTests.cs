@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -160,7 +161,7 @@ public class LerpResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(13.0, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(13.0, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -316,10 +317,10 @@ public class LerpResolverTests
 		var expected = Quaternion.Lerp(a, b, 0.5f);
 		Quaternion result = resolver.Resolve(context).AsQuaternion();
 
-		result.X.Should().BeApproximately(expected.X, 0.001f);
-		result.Y.Should().BeApproximately(expected.Y, 0.001f);
-		result.Z.Should().BeApproximately(expected.Z, 0.001f);
-		result.W.Should().BeApproximately(expected.W, 0.001f);
+		result.X.Should().BeApproximately(expected.X, TestUtils.Tolerance);
+		result.Y.Should().BeApproximately(expected.Y, TestUtils.Tolerance);
+		result.Z.Should().BeApproximately(expected.Z, TestUtils.Tolerance);
+		result.W.Should().BeApproximately(expected.W, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -339,10 +340,10 @@ public class LerpResolverTests
 		var expected = Quaternion.Lerp(a, b, 0.0f);
 		Quaternion result = resolver.Resolve(context).AsQuaternion();
 
-		result.X.Should().BeApproximately(expected.X, 0.001f);
-		result.Y.Should().BeApproximately(expected.Y, 0.001f);
-		result.Z.Should().BeApproximately(expected.Z, 0.001f);
-		result.W.Should().BeApproximately(expected.W, 0.001f);
+		result.X.Should().BeApproximately(expected.X, TestUtils.Tolerance);
+		result.Y.Should().BeApproximately(expected.Y, TestUtils.Tolerance);
+		result.Z.Should().BeApproximately(expected.Z, TestUtils.Tolerance);
+		result.W.Should().BeApproximately(expected.W, TestUtils.Tolerance);
 	}
 
 	[Fact]
@@ -362,10 +363,10 @@ public class LerpResolverTests
 		var expected = Quaternion.Lerp(a, b, 1.0f);
 		Quaternion result = resolver.Resolve(context).AsQuaternion();
 
-		result.X.Should().BeApproximately(expected.X, 0.001f);
-		result.Y.Should().BeApproximately(expected.Y, 0.001f);
-		result.Z.Should().BeApproximately(expected.Z, 0.001f);
-		result.W.Should().BeApproximately(expected.W, 0.001f);
+		result.X.Should().BeApproximately(expected.X, TestUtils.Tolerance);
+		result.Y.Should().BeApproximately(expected.Y, TestUtils.Tolerance);
+		result.Z.Should().BeApproximately(expected.Z, TestUtils.Tolerance);
+		result.W.Should().BeApproximately(expected.W, TestUtils.Tolerance);
 	}
 
 	[Fact]

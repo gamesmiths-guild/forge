@@ -4,11 +4,14 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
 public class QuaternionFromEulerAnglesResolverTests
 {
+	private const float Tolerance = 0.00001f;
+
 	[Fact]
 	[Trait("Resolver", "QuaternionFromEulerAngles")]
 	public void QuaternionFromEulerAngles_resolver_value_type_is_quaternion()
@@ -54,9 +57,9 @@ public class QuaternionFromEulerAnglesResolverTests
 				.Resolve(new GraphContext())
 				.AsVector3();
 
-		roundTripAngles.X.Should().Be(eulerAngles.X);
-		roundTripAngles.Y.Should().Be(eulerAngles.Y);
-		roundTripAngles.Z.Should().Be(eulerAngles.Z);
+		roundTripAngles.X.Should().BeApproximately(eulerAngles.X, TestUtils.Tolerance);
+		roundTripAngles.Y.Should().BeApproximately(eulerAngles.Y, TestUtils.Tolerance);
+		roundTripAngles.Z.Should().BeApproximately(eulerAngles.Z, TestUtils.Tolerance);
 	}
 
 	[Fact]

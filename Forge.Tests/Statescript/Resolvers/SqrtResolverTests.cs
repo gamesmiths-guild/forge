@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -84,7 +85,7 @@ public class SqrtResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(1.41421356, 0.0001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(1.41421356, TestUtils.Tolerance);
 	}
 
 	[Fact]

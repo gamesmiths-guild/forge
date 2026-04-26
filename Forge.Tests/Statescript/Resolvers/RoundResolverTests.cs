@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -283,7 +284,7 @@ public class RoundResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsFloat().Should().BeApproximately(3.14f, 0.001f);
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(3.14f, TestUtils.Tolerance);
 	}
 
 	[Fact]

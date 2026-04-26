@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
@@ -129,7 +130,7 @@ public class PowResolverTests
 
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsDouble().Should().BeApproximately(2.0, 0.001);
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(2.0, TestUtils.Tolerance);
 	}
 
 	[Fact]

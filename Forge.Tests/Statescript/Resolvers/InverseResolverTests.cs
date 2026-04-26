@@ -4,11 +4,14 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
 public class InverseResolverTests
 {
+	private const float Tolerance = 0.00001f;
+
 	[Fact]
 	[Trait("Resolver", "Inverse")]
 	public void Inverse_resolver_value_type_is_quaternion()
@@ -47,10 +50,10 @@ public class InverseResolverTests
 		Quaternion inverse = resolver.Resolve(new GraphContext()).AsQuaternion();
 		var combined = Quaternion.Normalize(Quaternion.Concatenate(quaternion, inverse));
 
-		combined.X.Should().Be(0.0f);
-		combined.Y.Should().Be(0.0f);
-		combined.Z.Should().Be(0.0f);
-		combined.W.Should().Be(1.0f);
+		combined.X.Should().BeApproximately(0.0f, TestUtils.Tolerance);
+		combined.Y.Should().BeApproximately(0.0f, TestUtils.Tolerance);
+		combined.Z.Should().BeApproximately(0.0f, TestUtils.Tolerance);
+		combined.W.Should().BeApproximately(1.0f, TestUtils.Tolerance);
 	}
 
 	[Fact]

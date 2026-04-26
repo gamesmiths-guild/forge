@@ -9,6 +9,8 @@ namespace Gamesmiths.Forge.Tests.Helpers;
 
 public static class TestUtils
 {
+	internal const float Tolerance = 0.00001f;
+
 	public static void TestStackData(
 		IEnumerable<EffectStackInstanceData> stackData,
 		int expectedStackDataCount,
