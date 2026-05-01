@@ -308,17 +308,17 @@ internal sealed class FixedRandom(int nextInt = 0, float nextSingle = 0.0f, doub
 
 	public long NextInt64()
 	{
-		throw new NotImplementedException();
+		return nextInt;
 	}
 
 	public long NextInt64(long maxValue)
 	{
-		throw new NotImplementedException();
+		return nextInt;
 	}
 
 	public long NextInt64(long minValue, long maxValue)
 	{
-		throw new NotImplementedException();
+		return nextInt;
 	}
 
 	public void NextBytes(byte[] buffer)
