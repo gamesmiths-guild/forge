@@ -44,7 +44,7 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 
 			return new Variant128(
 				_maxInclusive
-					? (int)_random.NextInt64(minInt, (long)maxInt + 1)
+					? _random.NextIntInclusive(minInt, maxInt)
 					: _random.NextInt(minInt, maxInt));
 		}
 
@@ -52,19 +52,8 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 		{
 			var minFloat = MathTypeUtils.ResolveAsFloat(_min.ValueType, minValue);
 			var maxFloat = MathTypeUtils.ResolveAsFloat(_max.ValueType, maxValue);
-			var randomValue = _random.NextSingle();
-
-			if (_maxInclusive && randomValue >= 1.0f)
-			{
-				return new Variant128(maxFloat);
-			}
-
-			if (!_maxInclusive && randomValue >= 1.0f)
-			{
-				return new Variant128(BitDecrement(maxFloat));
-			}
-
-			var upperBound = _maxInclusive ? BitIncrement(maxFloat) : maxFloat;
+			var randomValue = _maxInclusive ? _random.NextSingleInclusive() : _random.NextSingle();
+			var upperBound = maxFloat;
 			var result = minFloat + (randomValue * (upperBound - minFloat));
 			return new Variant128(_maxInclusive && result > maxFloat ? maxFloat : result);
 		}
@@ -73,19 +62,8 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 		{
 			var minDouble = MathTypeUtils.ResolveAsDouble(_min.ValueType, minValue);
 			var maxDouble = MathTypeUtils.ResolveAsDouble(_max.ValueType, maxValue);
-			var randomValue = _random.NextDouble();
-
-			if (_maxInclusive && randomValue >= 1.0)
-			{
-				return new Variant128(maxDouble);
-			}
-
-			if (!_maxInclusive && randomValue >= 1.0)
-			{
-				return new Variant128(BitDecrement(maxDouble));
-			}
-
-			var upperBound = _maxInclusive ? BitIncrement(maxDouble) : maxDouble;
+			var randomValue = _maxInclusive ? _random.NextDoubleInclusive() : _random.NextDouble();
+			var upperBound = maxDouble;
 			var result = minDouble + (randomValue * (upperBound - minDouble));
 			return new Variant128(_maxInclusive && result > maxDouble ? maxDouble : result);
 		}
@@ -157,81 +135,5 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 			|| type == typeof(sbyte)
 			|| type == typeof(short)
 			|| type == typeof(ushort);
-	}
-
-	private static float BitIncrement(float value)
-	{
-		if (float.IsNaN(value) || float.IsPositiveInfinity(value))
-		{
-			return value;
-		}
-
-#pragma warning disable S1244 // Floating point numbers should not be tested for equality
-		if (value == 0.0f)
-		{
-			return float.Epsilon;
-		}
-#pragma warning restore S1244 // Floating point numbers should not be tested for equality
-
-		var bits = BitConverter.SingleToInt32Bits(value);
-		bits += value > 0.0f ? 1 : -1;
-		return BitConverter.Int32BitsToSingle(bits);
-	}
-
-	private static double BitIncrement(double value)
-	{
-		if (double.IsNaN(value) || double.IsPositiveInfinity(value))
-		{
-			return value;
-		}
-
-#pragma warning disable S1244 // Floating point numbers should not be tested for equality
-		if (value == 0.0)
-		{
-			return double.Epsilon;
-		}
-#pragma warning restore S1244 // Floating point numbers should not be tested for equality
-
-		var bits = BitConverter.DoubleToInt64Bits(value);
-		bits += value > 0.0 ? 1 : -1;
-		return BitConverter.Int64BitsToDouble(bits);
-	}
-
-	private static float BitDecrement(float value)
-	{
-		if (float.IsNaN(value) || float.IsNegativeInfinity(value))
-		{
-			return value;
-		}
-
-#pragma warning disable S1244 // Floating point numbers should not be tested for equality
-		if (value == 0.0f)
-		{
-			return -float.Epsilon;
-		}
-#pragma warning restore S1244 // Floating point numbers should not be tested for equality
-
-		var bits = BitConverter.SingleToInt32Bits(value);
-		bits += value > 0.0f ? -1 : 1;
-		return BitConverter.Int32BitsToSingle(bits);
-	}
-
-	private static double BitDecrement(double value)
-	{
-		if (double.IsNaN(value) || double.IsNegativeInfinity(value))
-		{
-			return value;
-		}
-
-#pragma warning disable S1244 // Floating point numbers should not be tested for equality
-		if (value == 0.0)
-		{
-			return -double.Epsilon;
-		}
-#pragma warning restore S1244 // Floating point numbers should not be tested for equality
-
-		var bits = BitConverter.DoubleToInt64Bits(value);
-		bits += value > 0.0 ? -1 : 1;
-		return BitConverter.Int64BitsToDouble(bits);
 	}
 }

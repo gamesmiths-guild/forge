@@ -31,16 +31,37 @@ public interface IRandom
 	int NextInt(int minValue, int maxValue);
 
 	/// <summary>
+	/// Returns a random integer that is within a specified inclusive range.
+	/// </summary>
+	/// <param name="minValue">Inclusive min value.</param>
+	/// <param name="maxValue">Inclusive max value.</param>
+	/// <returns>An integer in the range [<paramref name="minValue"/>, <paramref name="maxValue"/>], or
+	/// <paramref name="minValue"/> if the range is invalid.</returns>
+	int NextIntInclusive(int minValue, int maxValue);
+
+	/// <summary>
 	/// Returns a random floating-point number that is greater than or equal to 0.0, and less than 1.0.
 	/// </summary>
 	/// <returns>A single-precision floating-point value in the range [0.0, 1.0), generated randomly.</returns>
 	float NextSingle();
 
 	/// <summary>
+	/// Returns a random floating-point number that is greater than or equal to 0.0, and less than or equal to 1.0.
+	/// </summary>
+	/// <returns>A single-precision floating-point value in the range [0.0, 1.0], generated randomly.</returns>
+	float NextSingleInclusive();
+
+	/// <summary>
 	/// Returns a random floating-point number that is greater than or equal to 0.0, and less than 1.0.
 	/// </summary>
 	/// <returns>A double-precision floating-point value in the range [0.0, 1.0), generated randomly.</returns>
 	double NextDouble();
+
+	/// <summary>
+	/// Returns a random floating-point number that is greater than or equal to 0.0, and less than or equal to 1.0.
+	/// </summary>
+	/// <returns>A double-precision floating-point value in the range [0.0, 1.0], generated randomly.</returns>
+	double NextDoubleInclusive();
 
 	/// <summary>
 	/// Returns a non-negative random integer.
@@ -64,6 +85,15 @@ public interface IRandom
 	/// <returns>A 64-bit integer in the range [<paramref name="minValue"/>, <paramref name="maxValue"/>), or
 	/// <paramref name="minValue"/> if the range is invalid.</returns>
 	long NextInt64(long minValue, long maxValue);
+
+	/// <summary>
+	/// Returns a random integer that is within a specified inclusive range.
+	/// </summary>
+	/// <param name="minValue">Inclusive min value.</param>
+	/// <param name="maxValue">Inclusive max value.</param>
+	/// <returns>A 64-bit integer in the range [<paramref name="minValue"/>, <paramref name="maxValue"/>], or
+	/// <paramref name="minValue"/> if the range is invalid.</returns>
+	long NextInt64Inclusive(long minValue, long maxValue);
 
 	/// <summary>
 	/// Fills the elements of a specified array of bytes with random numbers.

@@ -152,12 +152,27 @@ public class ChanceToApplyComponentTests(TagsAndCuesFixture tagsAndCuesFixture) 
 			throw new NotImplementedException();
 		}
 
+		public int NextIntInclusive(int minValue, int maxValue)
+		{
+			throw new NotImplementedException();
+		}
+
 		public float NextSingle()
 		{
 			return _values.Dequeue();
 		}
 
+		public float NextSingleInclusive()
+		{
+			return _values.Dequeue();
+		}
+
 		public double NextDouble()
+		{
+			throw new NotImplementedException();
+		}
+
+		public double NextDoubleInclusive()
 		{
 			throw new NotImplementedException();
 		}
@@ -173,6 +188,11 @@ public class ChanceToApplyComponentTests(TagsAndCuesFixture tagsAndCuesFixture) 
 		}
 
 		public long NextInt64(long minValue, long maxValue)
+		{
+			throw new NotImplementedException();
+		}
+
+		public long NextInt64Inclusive(long minValue, long maxValue)
 		{
 			throw new NotImplementedException();
 		}

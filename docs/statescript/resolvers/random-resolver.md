@@ -36,9 +36,9 @@ new RandomResolver(random, min, max, maxInclusive)
 ## Behavior
 
 - Resolves both bound operands through their respective `IPropertyResolver` instances.
-- For `int`: defaults to returning a value in `[min, max]`; when `maxInclusive` is `false`, returns a value in `[min, max)`.
-- For `float`: defaults to returning a value in `[min, max]`; when `maxInclusive` is `false`, returns a value in `[min, max)`.
-- For `double`: defaults to returning a value in `[min, max]`; when `maxInclusive` is `false`, returns a value in `[min, max)`.
+- For `int`: defaults to returning a value in `[min, max]` via `IRandom.NextIntInclusive(min, max)`; when `maxInclusive` is `false`, returns a value in `[min, max)` via `IRandom.NextInt(min, max)`.
+- For `float`: defaults to returning a value in `[min, max]` via `IRandom.NextSingleInclusive()`; when `maxInclusive` is `false`, returns a value in `[min, max)` via `IRandom.NextSingle()`.
+- For `double`: defaults to returning a value in `[min, max]` via `IRandom.NextDoubleInclusive()`; when `maxInclusive` is `false`, returns a value in `[min, max)` via `IRandom.NextDouble()`.
 - The `IRandom` instance is injected at construction time, not resolved from `GraphContext`.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
