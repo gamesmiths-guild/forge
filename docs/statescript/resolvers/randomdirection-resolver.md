@@ -19,7 +19,7 @@ new RandomDirectionResolver(random)
 
 - Uses the injected `IRandom` instance each time the resolver is evaluated.
 - Returns a normalized `Vector2` direction.
-- Samples the angle in `[0, 2π)` so the seam direction is not double-counted by treating `0` and `2π` as distinct results.
+- Samples the angle in `[0, 2π)`, with an exclusive upper bound, so `2π` is never returned and the seam direction is not double-counted.
 - Does not read any values from `GraphContext`.
 - Produces a different result on each resolve unless the supplied `IRandom` implementation is deterministic or seeded.
 
