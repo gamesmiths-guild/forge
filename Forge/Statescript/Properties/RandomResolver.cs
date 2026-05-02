@@ -6,8 +6,8 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
 /// Resolves a random value within a range defined by two <see cref="IPropertyResolver"/> operands, using a provided
-/// <see cref="IRandom"/> implementation. The random value is in the range [min, max] by default, or [min, max) when
-/// configured for an exclusive maximum bound. Supports <see langword="int"/>, <see langword="float"/>, and
+/// <see cref="IRandom"/> implementation. The random value is in the range [min, max) by default, or [min, max] when
+/// configured for an inclusive maximum bound. Supports <see langword="int"/>, <see langword="float"/>, and
 /// <see langword="double"/> types. Sub-int operand types (<see langword="byte"/>, <see langword="sbyte"/>,
 /// <see langword="short"/>, <see langword="ushort"/>) are promoted to <see langword="int"/>. Other numeric, vector,
 /// and quaternion types are not supported.
@@ -15,8 +15,8 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// <param name="random">The random provider to use for generating values.</param>
 /// <param name="min">The resolver for the inclusive minimum bound.</param>
 /// <param name="max">The resolver for the maximum bound.</param>
-/// <param name="maxInclusive">Whether the maximum bound is inclusive. Defaults to <see langword="true"/>.</param>
-public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyResolver max, bool maxInclusive = true)
+/// <param name="maxInclusive">Whether the maximum bound is inclusive. Defaults to <see langword="false"/>.</param>
+public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyResolver max, bool maxInclusive = false)
 	: IPropertyResolver
 {
 	private readonly IRandom _random = random;
@@ -52,20 +52,42 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 		{
 			var minFloat = MathTypeUtils.ResolveAsFloat(_min.ValueType, minValue);
 			var maxFloat = MathTypeUtils.ResolveAsFloat(_max.ValueType, maxValue);
+
+			if (maxFloat <= minFloat)
+			{
+				return new Variant128(minFloat);
+			}
+
 			var randomValue = _maxInclusive ? _random.NextSingleInclusive() : _random.NextSingle();
-			var upperBound = maxFloat;
-			var result = minFloat + (randomValue * (upperBound - minFloat));
-			return new Variant128(_maxInclusive && result > maxFloat ? maxFloat : result);
+			var result = minFloat + (randomValue * (maxFloat - minFloat));
+
+			if (_maxInclusive)
+			{
+				result = Math.Clamp(result, minFloat, maxFloat);
+			}
+
+			return new Variant128(result);
 		}
 
 		if (resultType == typeof(double))
 		{
 			var minDouble = MathTypeUtils.ResolveAsDouble(_min.ValueType, minValue);
 			var maxDouble = MathTypeUtils.ResolveAsDouble(_max.ValueType, maxValue);
+
+			if (maxDouble <= minDouble)
+			{
+				return new Variant128(minDouble);
+			}
+
 			var randomValue = _maxInclusive ? _random.NextDoubleInclusive() : _random.NextDouble();
-			var upperBound = maxDouble;
-			var result = minDouble + (randomValue * (upperBound - minDouble));
-			return new Variant128(_maxInclusive && result > maxDouble ? maxDouble : result);
+			var result = minDouble + (randomValue * (maxDouble - minDouble));
+
+			if (_maxInclusive)
+			{
+				result = Math.Clamp(result, minDouble, maxDouble);
+			}
+
+			return new Variant128(result);
 		}
 
 		throw new InvalidOperationException(

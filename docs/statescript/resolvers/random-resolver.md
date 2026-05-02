@@ -3,7 +3,7 @@
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.RandomResolver`
 > **Output Type:** `int`, `float`, or `double`
 
-Generates a random value within a range defined by two operands, using a provided `IRandom` implementation. This design allows users to inject any random provider — standard, seeded, blue noise, or network-synchronized — making the resolver deterministic and testable. By default, the maximum bound is inclusive, but it can be configured to be exclusive.
+Generates a random value within a range defined by two operands, using a provided `IRandom` implementation. This design allows users to inject any random provider — standard, seeded, blue noise, or network-synchronized — making the resolver deterministic and testable. By default, the maximum bound is exclusive, but it can be configured to be inclusive.
 
 ## Constructor
 
@@ -16,7 +16,7 @@ new RandomResolver(random, min, max, maxInclusive)
 | random | `IRandom` | The random provider to use for generating values. |
 | min | `IPropertyResolver` | The resolver for the inclusive minimum bound. |
 | max | `IPropertyResolver` | The resolver for the maximum bound. |
-| maxInclusive | `bool` | Whether the maximum bound is inclusive. Defaults to `true`. |
+| maxInclusive | `bool` | Whether the maximum bound is inclusive. Defaults to `false`. |
 
 ## Type Promotion
 
@@ -36,16 +36,17 @@ new RandomResolver(random, min, max, maxInclusive)
 ## Behavior
 
 - Resolves both bound operands through their respective `IPropertyResolver` instances.
-- For `int`: defaults to returning a value in `[min, max]` via `IRandom.NextIntInclusive(min, max)`; when `maxInclusive` is `false`, returns a value in `[min, max)` via `IRandom.NextInt(min, max)`.
-- For `float`: defaults to returning a value in `[min, max]` via `IRandom.NextSingleInclusive()`; when `maxInclusive` is `false`, returns a value in `[min, max)` via `IRandom.NextSingle()`.
-- For `double`: defaults to returning a value in `[min, max]` via `IRandom.NextDoubleInclusive()`; when `maxInclusive` is `false`, returns a value in `[min, max)` via `IRandom.NextDouble()`.
+- For `int`: defaults to returning a value in `[min, max)` via `IRandom.NextInt(min, max)`; when `maxInclusive` is `true`, returns a value in `[min, max]` via `IRandom.NextIntInclusive(min, max)`.
+- For `float`: defaults to returning a value in `[min, max)` via `IRandom.NextSingle()`; when `maxInclusive` is `true`, returns a value in `[min, max]` via `IRandom.NextSingleInclusive()`.
+- For `double`: defaults to returning a value in `[min, max)` via `IRandom.NextDouble()`; when `maxInclusive` is `true`, returns a value in `[min, max]` via `IRandom.NextDoubleInclusive()`.
+- For `float` and `double`, if `max <= min`, the resolver returns `min` without consuming a random value.
 - The `IRandom` instance is injected at construction time, not resolved from `GraphContext`.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
 ## Usage
 
 ```csharp
-// Random damage in a range
+// Random damage in a default exclusive range
 graph.VariableDefinitions.DefineProperty("damage",
     new AddResolver(
         new VariableResolver("baseDamage", typeof(float)),
@@ -58,7 +59,7 @@ graph.VariableDefinitions.DefineProperty("damage",
 ## Composition
 
 ```csharp
-// Random integer for loot table index
+// Random integer for loot table index in a default exclusive range
 graph.VariableDefinitions.DefineProperty("lootIndex",
     new RandomResolver(
         myRandomProvider,
@@ -67,13 +68,13 @@ graph.VariableDefinitions.DefineProperty("lootIndex",
 ```
 
 ```csharp
-// Exclusive max when using a size/count upper bound
+// Inclusive max when the upper bound should be reachable
 graph.VariableDefinitions.DefineProperty("lootIndex",
     new RandomResolver(
         myRandomProvider,
         new VariantResolver(new Variant128(0), typeof(int)),
         new VariableResolver("lootTableSize", typeof(int)),
-        maxInclusive: false));
+        maxInclusive: true));
 ```
 
 ## See Also

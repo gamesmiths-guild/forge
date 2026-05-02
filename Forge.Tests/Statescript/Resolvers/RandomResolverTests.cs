@@ -60,29 +60,13 @@ public class RandomResolverTests
 
 	[Fact]
 	[Trait("Resolver", "Random")]
-	public void Random_resolver_int_range_uses_next_int()
-	{
-		// FixedRandom.NextInt64(0, 11) returns 7 when max is inclusive.
-		var resolver = new RandomResolver(
-			new FixedRandom(nextInt: 7),
-			new VariantResolver(new Variant128(0), typeof(int)),
-			new VariantResolver(new Variant128(10), typeof(int)));
-
-		var context = new GraphContext();
-
-		resolver.Resolve(context).AsInt().Should().Be(7);
-	}
-
-	[Fact]
-	[Trait("Resolver", "Random")]
-	public void Random_resolver_int_range_can_use_exclusive_max()
+	public void Random_resolver_int_range_uses_exclusive_max_by_default()
 	{
 		var random = new TrackingRandom(nextInts: [9], nextIntsInclusive: [10]);
 		var resolver = new RandomResolver(
 			random,
 			new VariantResolver(new Variant128(0), typeof(int)),
-			new VariantResolver(new Variant128(10), typeof(int)),
-			maxInclusive: false);
+			new VariantResolver(new Variant128(10), typeof(int)));
 
 		var context = new GraphContext();
 
@@ -93,13 +77,14 @@ public class RandomResolverTests
 
 	[Fact]
 	[Trait("Resolver", "Random")]
-	public void Random_resolver_int_range_includes_max_by_default()
+	public void Random_resolver_int_range_can_use_inclusive_max_when_configured()
 	{
 		var random = new TrackingRandom(nextInts: [9], nextIntsInclusive: [10]);
 		var resolver = new RandomResolver(
 			random,
 			new VariantResolver(new Variant128(0), typeof(int)),
-			new VariantResolver(new Variant128(10), typeof(int)));
+		  new VariantResolver(new Variant128(10), typeof(int)),
+			maxInclusive: true);
 
 		var context = new GraphContext();
 
@@ -140,13 +125,31 @@ public class RandomResolverTests
 
 	[Fact]
 	[Trait("Resolver", "Random")]
-	public void Random_resolver_float_range_includes_max_by_default_when_random_is_one()
+	public void Random_resolver_float_range_uses_exclusive_max_by_default()
 	{
 		var random = new TrackingRandom(nextSingles: [0.25f], nextSinglesInclusive: [1.0f]);
 		var resolver = new RandomResolver(
 			random,
 			new VariantResolver(new Variant128(5.0f), typeof(float)),
 			new VariantResolver(new Variant128(15.0f), typeof(float)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsFloat().Should().BeApproximately(7.5f, TestUtils.Tolerance);
+		random.NextSingleCalls.Should().Be(1);
+		random.NextSingleInclusiveCalls.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Random")]
+	public void Random_resolver_float_range_can_use_inclusive_max_when_configured()
+	{
+		var random = new TrackingRandom(nextSingles: [0.25f], nextSinglesInclusive: [1.0f]);
+		var resolver = new RandomResolver(
+			random,
+			new VariantResolver(new Variant128(5.0f), typeof(float)),
+		 new VariantResolver(new Variant128(15.0f), typeof(float)),
+			maxInclusive: true);
 
 		var context = new GraphContext();
 
@@ -206,13 +209,31 @@ public class RandomResolverTests
 
 	[Fact]
 	[Trait("Resolver", "Random")]
-	public void Random_resolver_double_range_includes_max_by_default_when_random_is_one()
+	public void Random_resolver_double_range_uses_exclusive_max_by_default()
 	{
 		var random = new TrackingRandom(nextDoubles: [0.25], nextDoublesInclusive: [1.0]);
 		var resolver = new RandomResolver(
 			random,
 			new VariantResolver(new Variant128(10.0), typeof(double)),
 			new VariantResolver(new Variant128(20.0), typeof(double)));
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().BeApproximately(12.5, TestUtils.Tolerance);
+		random.NextDoubleCalls.Should().Be(1);
+		random.NextDoubleInclusiveCalls.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Random")]
+	public void Random_resolver_double_range_can_use_inclusive_max_when_configured()
+	{
+		var random = new TrackingRandom(nextDoubles: [0.25], nextDoublesInclusive: [1.0]);
+		var resolver = new RandomResolver(
+			random,
+			new VariantResolver(new Variant128(10.0), typeof(double)),
+		 new VariantResolver(new Variant128(20.0), typeof(double)),
+			maxInclusive: true);
 
 		var context = new GraphContext();
 
