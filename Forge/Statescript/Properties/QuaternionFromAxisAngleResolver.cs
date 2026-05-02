@@ -23,7 +23,7 @@ public class QuaternionFromAxisAngleResolver(IPropertyResolver axis, IPropertyRe
 	public Variant128 Resolve(GraphContext graphContext)
 	{
 		Vector3 axisValue = _axis.Resolve(graphContext).AsVector3();
-		var angleValue = _angle.Resolve(graphContext).AsFloat();
+		float angleValue = _angle.Resolve(graphContext).AsFloat();
 		return new Variant128(Quaternion.CreateFromAxisAngle(axisValue, angleValue));
 	}
 

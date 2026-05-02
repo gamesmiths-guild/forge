@@ -968,7 +968,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 
 		var firstTriggered = new ManualResetEventSlim(false);
 		var secondTriggered = new ManualResetEventSlim(false);
-		var isOrderCorrect = false;
+		bool isOrderCorrect = false;
 
 		ResetCues();
 		_testCues[0].OnApplied += () =>
@@ -2672,9 +2672,9 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	{
 		var result = new Modifier[modifiersData.Length];
 
-		for (var i = 0; i < modifiersData.Length; i++)
+		for (int i = 0; i < modifiersData.Length; i++)
 		{
-			var modifierData = (object[])modifiersData[i];
+			object[] modifierData = (object[])modifiersData[i];
 
 			result[i] = new Modifier(
 				(string)modifierData[0],
@@ -2694,9 +2694,9 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	{
 		var result = new Modifier[modifiersData.Length];
 
-		for (var i = 0; i < modifiersData.Length; i++)
+		for (int i = 0; i < modifiersData.Length; i++)
 		{
-			var modifierData = (object[])modifiersData[i];
+			object[] modifierData = (object[])modifiersData[i];
 
 			result[i] = new Modifier(
 				(string)modifierData[0],
@@ -2721,9 +2721,9 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 	{
 		var result = new CueData[cueDataArray.Length];
 
-		for (var i = 0; i < cueDataArray.Length; i++)
+		for (int i = 0; i < cueDataArray.Length; i++)
 		{
-			var cueData = (object[])cueDataArray[i];
+			object[] cueData = (object[])cueDataArray[i];
 
 			result[i] = new CueData(
 				Tag.RequestTag(_tagsManager, $"Test.Cue{(int)cueData[0] + 1}").GetSingleTagContainer(),
@@ -2738,9 +2738,9 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 
 	private void TestCueExecutionData(TestCueExecutionType cueDataType, object[] cueTestDataArray)
 	{
-		for (var i = 0; i < cueTestDataArray.Length; i++)
+		for (int i = 0; i < cueTestDataArray.Length; i++)
 		{
-			var cueTestData = (object[])cueTestDataArray[i];
+			object[] cueTestData = (object[])cueTestDataArray[i];
 			TestCue testCue = _testCues[(int)cueTestData[0]];
 
 			CueExecutionData cueExecutionData = cueDataType switch

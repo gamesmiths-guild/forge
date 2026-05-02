@@ -88,7 +88,7 @@ public class GraphProcessor
 		_updateBuffer.Clear();
 		_updateBuffer.AddRange(GraphContext.ActiveStateNodes);
 
-		for (var i = 0; i < _updateBuffer.Count; i++)
+		for (int i = 0; i < _updateBuffer.Count; i++)
 		{
 			_updateBuffer[i].Update(deltaTime, GraphContext);
 		}

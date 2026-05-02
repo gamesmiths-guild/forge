@@ -97,7 +97,7 @@ public sealed class EntityAttribute
 
 		_channels = new ChannelData[channels];
 
-		for (var i = 0; i < channels; i++)
+		for (int i = 0; i < channels; i++)
 		{
 			_channels[i] = new ChannelData
 			{
@@ -117,7 +117,7 @@ public sealed class EntityAttribute
 	{
 		Validation.Assert(newMinValue <= Max, "MinValue cannot be greater than MaxValue.");
 
-		var oldValue = CurrentValue;
+		int oldValue = CurrentValue;
 
 		Min = newMinValue;
 		BaseValue = Math.Max(BaseValue, Min);
@@ -134,7 +134,7 @@ public sealed class EntityAttribute
 	{
 		Validation.Assert(newMaxValue >= Min, "MaxValue cannot be lower than MinValue.");
 
-		var oldValue = CurrentValue;
+		int oldValue = CurrentValue;
 
 		Max = newMaxValue;
 		BaseValue = Math.Min(BaseValue, Max);
@@ -149,7 +149,7 @@ public sealed class EntityAttribute
 
 	internal void ExecuteOverride(int newValue)
 	{
-		var oldValue = CurrentValue;
+		int oldValue = CurrentValue;
 
 		BaseValue = Math.Clamp(newValue, Min, Max);
 
@@ -163,7 +163,7 @@ public sealed class EntityAttribute
 
 	internal void ExecuteFlatModifier(int value)
 	{
-		var oldValue = CurrentValue;
+		int oldValue = CurrentValue;
 
 		BaseValue = Math.Clamp(BaseValue + value, Min, Max);
 
@@ -177,7 +177,7 @@ public sealed class EntityAttribute
 
 	internal void ExecutePercentModifier(float value)
 	{
-		var oldValue = CurrentValue;
+		int oldValue = CurrentValue;
 
 		BaseValue = Math.Clamp((int)(BaseValue * Math.Round(1 + value, 6)), Min, Max);
 
@@ -193,7 +193,7 @@ public sealed class EntityAttribute
 	{
 		_attributeOverrides.AddFirst(attributeOverrideData);
 
-		var oldValue = CurrentValue;
+		int oldValue = CurrentValue;
 
 		ref ChannelData channelData = ref _channels[attributeOverrideData.Channel];
 		channelData.Override = attributeOverrideData.Magnitude;
@@ -208,8 +208,8 @@ public sealed class EntityAttribute
 
 	internal void ClearOverride(in AttributeOverride attributeOverride)
 	{
-		var oldValue = CurrentValue;
-		var channel = attributeOverride.Channel;
+		int oldValue = CurrentValue;
+		int channel = attributeOverride.Channel;
 
 		_attributeOverrides.Remove(attributeOverride);
 
@@ -233,7 +233,7 @@ public sealed class EntityAttribute
 
 	internal void AddFlatModifier(int value, int channel)
 	{
-		var oldValue = CurrentValue;
+		int oldValue = CurrentValue;
 
 		ref ChannelData channelData = ref _channels[channel];
 		channelData.FlatModifier += value;
@@ -248,7 +248,7 @@ public sealed class EntityAttribute
 
 	internal void AddPercentModifier(float value, int channel)
 	{
-		var oldValue = CurrentValue;
+		int oldValue = CurrentValue;
 
 		ref ChannelData channelData = ref _channels[channel];
 		channelData.PercentModifier += Math.Round(value, 6);
@@ -263,11 +263,11 @@ public sealed class EntityAttribute
 
 	internal float CalculateMagnitudeUpToChannel(int finalChanel)
 	{
-		var evaluatedValue = (float)BaseValue;
+		float evaluatedValue = BaseValue;
 
-		for (var i = 0; i < finalChanel; i++)
+		for (int i = 0; i < finalChanel; i++)
 		{
-			var overrideValue = _channels[i].Override;
+			int? overrideValue = _channels[i].Override;
 
 			if (overrideValue.HasValue)
 			{
@@ -286,34 +286,34 @@ public sealed class EntityAttribute
 		Dictionary<int, float>? pendingPercentBonusByChannel,
 		Dictionary<int, float>? pendingOverrideByChannel)
 	{
-		var evaluatedValue = (float)BaseValue;
+		float evaluatedValue = BaseValue;
 
-		for (var i = 0; i < _channels.Length; i++)
+		for (int i = 0; i < _channels.Length; i++)
 		{
 			if (pendingOverrideByChannel is not null &&
-				pendingOverrideByChannel.TryGetValue(i, out var pendingOverride))
+				pendingOverrideByChannel.TryGetValue(i, out float pendingOverride))
 			{
 				evaluatedValue = pendingOverride;
 				continue;
 			}
 
-			var channelOverride = _channels[i].Override;
+			int? channelOverride = _channels[i].Override;
 			if (channelOverride.HasValue)
 			{
 				evaluatedValue = channelOverride.Value;
 				continue;
 			}
 
-			var flatBonus = _channels[i].FlatModifier;
+			int flatBonus = _channels[i].FlatModifier;
 			if (pendingFlatBonusByChannel is not null &&
-				pendingFlatBonusByChannel.TryGetValue(i, out var pendingFlat))
+				pendingFlatBonusByChannel.TryGetValue(i, out float pendingFlat))
 			{
 				flatBonus += (int)pendingFlat;
 			}
 
-			var percentMultiplier = _channels[i].PercentModifier;
+			double percentMultiplier = _channels[i].PercentModifier;
 			if (pendingPercentBonusByChannel is not null &&
-				pendingPercentBonusByChannel.TryGetValue(i, out var pendingPercent))
+				pendingPercentBonusByChannel.TryGetValue(i, out float pendingPercent))
 			{
 				percentMultiplier += pendingPercent;
 			}
@@ -328,7 +328,7 @@ public sealed class EntityAttribute
 	{
 		if (PendingValueChange != 0)
 		{
-			var cache = PendingValueChange;
+			int cache = PendingValueChange;
 			PendingValueChange = 0;
 			OnValueChanged?.Invoke(this, cache);
 		}
@@ -336,7 +336,7 @@ public sealed class EntityAttribute
 
 	private void UpdateCachedValues()
 	{
-		var evaluatedValue = (float)BaseValue;
+		float evaluatedValue = BaseValue;
 
 		foreach (ChannelData channel in _channels)
 		{

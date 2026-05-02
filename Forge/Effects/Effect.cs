@@ -121,7 +121,7 @@ public class Effect
 		{
 			var allModifiers = new List<ModifierEvaluatedData>(effectEvaluatedData.ModifierCount);
 
-			for (var i = 0; i < effectEvaluatedData.ModifierCount; i++)
+			for (int i = 0; i < effectEvaluatedData.ModifierCount; i++)
 			{
 				allModifiers.Add(effectEvaluatedData.ModifiersEvaluatedData[i]);
 			}

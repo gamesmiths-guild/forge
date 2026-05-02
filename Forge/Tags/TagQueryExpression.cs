@@ -173,12 +173,12 @@ public class TagQueryExpression(TagsManager tagsManager)
 			case TagQueryExpressionType.AllTagsMatchExact:
 			case TagQueryExpressionType.NoTagsMatchExact:
 				// Emit tag set.
-				var numTags = (byte)_tagSet.Count;
+				byte numTags = (byte)_tagSet.Count;
 				tokenStream.Add(numTags);
 
 				foreach (Tag tag in _tagSet)
 				{
-					var tagIndex = tagDictionary.AddUnique(tag);
+					int tagIndex = tagDictionary.AddUnique(tag);
 
 					// Token 255 is reserved for internal use, so 254 is max unique tags.
 					Validation.Assert(tagIndex <= 254, "Stream can't hold more than 254 tags.");
@@ -192,7 +192,7 @@ public class TagQueryExpression(TagsManager tagsManager)
 			case TagQueryExpressionType.AllExpressionsMatch:
 			case TagQueryExpressionType.NoExpressionsMatch:
 				// Emit expression set.
-				var numExpressions = (byte)_expressionSet.Count;
+				byte numExpressions = (byte)_expressionSet.Count;
 				tokenStream.Add(numExpressions);
 
 				foreach (TagQueryExpression expression in _expressionSet)

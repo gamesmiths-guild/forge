@@ -2879,7 +2879,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		var triggerTag = Tag.RequestTag(_tagsManager, "simple.tag");
 
-		var activationCount = 0;
+		int activationCount = 0;
 
 		AbilityData abilityData = new(
 			"Triggered Ability",
@@ -2938,7 +2938,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		var triggerTag = Tag.RequestTag(_tagsManager, "simple.tag");
 
-		var activationCount = 0;
+		int activationCount = 0;
 
 		AbilityData abilityData = new(
 			"Triggered Ability",
@@ -2997,7 +2997,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
 
-		var activationCount = 0;
+		int activationCount = 0;
 
 		AbilityData abilityData = new(
 			"Triggered Ability",
@@ -3055,7 +3055,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
 
-		var activationCount = 0;
+		int activationCount = 0;
 
 		AbilityData abilityData = new(
 			"Triggered Ability",
@@ -3213,7 +3213,7 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	{
 		var cooldownEffectData = new EffectData[cooldownDurations.Length];
 
-		for (var i = 0; i < cooldownDurations.Length; i++)
+		for (int i = 0; i < cooldownDurations.Length; i++)
 		{
 			cooldownEffectData[i] = new EffectData(
 				"Fireball Cooldown",

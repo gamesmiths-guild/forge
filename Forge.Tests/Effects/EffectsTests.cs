@@ -777,7 +777,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		TestUtils.TestAttribute(target, targetAttribute, expectedResults);
 
-		for (var i = 0f; i < simulatedFPS * totalSimulatedTime; i++)
+		for (float i = 0f; i < simulatedFPS * totalSimulatedTime; i++)
 		{
 			target.EffectsManager.UpdateEffects(1f / simulatedFPS);
 		}
@@ -1075,14 +1075,14 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
-		for (var i = 0; i < simulatedFPS * unexpiringPeriodOfTime; i++)
+		for (int i = 0; i < simulatedFPS * unexpiringPeriodOfTime; i++)
 		{
 			target.EffectsManager.UpdateEffects(1f / simulatedFPS);
 		}
 
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
-		for (var i = 0; i < simulatedFPS * expiringPeriodOfTime; i++)
+		for (int i = 0; i < simulatedFPS * expiringPeriodOfTime; i++)
 		{
 			target.EffectsManager.UpdateEffects(1 / simulatedFPS);
 		}
@@ -1135,7 +1135,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		TestUtils.TestAttribute(target, targetAttribute, [secondExpectedResult, secondExpectedResult, 0, 0]);
 
-		for (var i = 0; i < simulatedFPS * secondPeriodOfTime; i++)
+		for (int i = 0; i < simulatedFPS * secondPeriodOfTime; i++)
 		{
 			target.EffectsManager.UpdateEffects(1 / simulatedFPS);
 		}
@@ -1607,7 +1607,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 		TestUtils.TestAttribute(target, targetAttribute, [secondExpectedResult, secondExpectedResult, 0, 0]);
 
-		for (var i = 0; i < simulatedFPS * secondPeriodOfTime; i++)
+		for (int i = 0; i < simulatedFPS * secondPeriodOfTime; i++)
 		{
 			target.EffectsManager.UpdateEffects(1 / simulatedFPS);
 		}
@@ -3182,10 +3182,10 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			effectData,
 			new EffectOwnership(owner, owner));
 
-		var originalCurrentValue = 0;
-		var originalBaseValue = 0;
-		var originalModifier = 0;
-		var originalOverflow = 0;
+		int originalCurrentValue = 0;
+		int originalBaseValue = 0;
+		int originalModifier = 0;
+		int originalOverflow = 0;
 
 		if (target.Attributes.WithKeys()
 			.Any(x => x.FullKey.Equals(targetAttribute, StringComparison.OrdinalIgnoreCase)))
@@ -3884,7 +3884,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			IForgeEntity target,
 			EffectEvaluatedData? effectEvaluatedData)
 		{
-			var value = CaptureAttributeMagnitude(_sourceAttr, effect, target, effectEvaluatedData);
+			int value = CaptureAttributeMagnitude(_sourceAttr, effect, target, effectEvaluatedData);
 			return value * 0.5f; // 2 * 0.5 = 1.0
 		}
 	}

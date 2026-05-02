@@ -20,7 +20,7 @@ public sealed class EventManager
 	/// <param name="data">The event data to raise.</param>
 	public void Raise(in EventData data)
 	{
-		for (var i = 0; i < _nonGeneric.Count; i++)
+		for (int i = 0; i < _nonGeneric.Count; i++)
 		{
 			NonGenericSubscription sub = _nonGeneric[i];
 			if (!data.EventTags.HasTag(sub.EventTag))
@@ -42,7 +42,7 @@ public sealed class EventManager
 		Type key = typeof(TPayload);
 		if (_genericByType.TryGetValue(key, out List<GenericSubscription>? typedList))
 		{
-			for (var i = 0; i < typedList.Count; i++)
+			for (int i = 0; i < typedList.Count; i++)
 			{
 				GenericSubscription sub = typedList[i];
 				if (!data.EventTags.HasTag(sub.EventTag))
@@ -106,7 +106,7 @@ public sealed class EventManager
 	/// <returns><see langword="true"/> if un-subscription was successful; otherwise, <see langword="false"/>.</returns>
 	public bool Unsubscribe(EventSubscriptionToken token)
 	{
-		var removed = _nonGeneric.RemoveAll(x => x.Token == token) > 0;
+		bool removed = _nonGeneric.RemoveAll(x => x.Token == token) > 0;
 
 		List<Type>? keysToRemove = null;
 		foreach (KeyValuePair<Type, List<GenericSubscription>> keyValuePair in _genericByType)
@@ -129,7 +129,7 @@ public sealed class EventManager
 			return removed;
 		}
 
-		for (var i = 0; i < keysToRemove.Count; i++)
+		for (int i = 0; i < keysToRemove.Count; i++)
 		{
 			_genericByType.Remove(keysToRemove[i]);
 		}

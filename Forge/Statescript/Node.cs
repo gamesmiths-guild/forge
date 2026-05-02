@@ -187,7 +187,7 @@ public abstract class Node
 	/// <returns>An enumerable of output port indices that may fire in response.</returns>
 	internal virtual IEnumerable<int> GetReachableOutputPorts(byte inputPortIndex)
 	{
-		for (var i = 0; i < OutputPorts.Length; i++)
+		for (int i = 0; i < OutputPorts.Length; i++)
 		{
 			yield return i;
 		}
@@ -259,7 +259,7 @@ public abstract class Node
 	/// <param name="portIds">The IDs of the output ports to emit the message from.</param>
 	protected virtual void EmitMessage(GraphContext graphContext, params int[] portIds)
 	{
-		foreach (var portId in portIds)
+		foreach (int portId in portIds)
 		{
 			OutputPorts[portId].EmitMessage(graphContext);
 		}

@@ -60,7 +60,7 @@ public class GraphVariableDefinitions
 	public void DefineArrayVariable<T>(StringKey name, params T[] initialValues)
 	{
 		var variants = new Variant128[initialValues.Length];
-		for (var i = 0; i < initialValues.Length; i++)
+		for (int i = 0; i < initialValues.Length; i++)
 		{
 			variants[i] = Variables.CreateVariant(initialValues[i]);
 		}

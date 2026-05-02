@@ -34,10 +34,10 @@ public class ComparisonResolver(
 	/// <inheritdoc/>
 	public Variant128 Resolve(GraphContext graphContext)
 	{
-		var leftValue = ResolveAsDouble(_left, graphContext);
-		var rightValue = ResolveAsDouble(_right, graphContext);
+		double leftValue = ResolveAsDouble(_left, graphContext);
+		double rightValue = ResolveAsDouble(_right, graphContext);
 
-		var result = _operation switch
+		bool result = _operation switch
 		{
 #pragma warning disable S1244 // Floating point numbers should not be tested for equality
 			ComparisonOperation.Equal => leftValue == rightValue,

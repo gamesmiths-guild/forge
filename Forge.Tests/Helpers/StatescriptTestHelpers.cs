@@ -170,7 +170,7 @@ internal sealed class ThresholdConditionNode : ConditionNode
 	{
 		graphContext.GraphVariables.TryGetVar(_variableName, out int value);
 
-		var threshold = _fixedThreshold;
+		int threshold = _fixedThreshold;
 		if (_thresholdVariableName is not null)
 		{
 			graphContext.GraphVariables.TryGetVar(_thresholdVariableName, out threshold);

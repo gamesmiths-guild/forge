@@ -35,11 +35,11 @@ public readonly record struct Curve(CurveKey[] Keys) : ICurve
 			return _keys[^1].Value;
 		}
 
-		for (var i = 0; i < _keys.Length - 1; i++)
+		for (int i = 0; i < _keys.Length - 1; i++)
 		{
 			if (value >= _keys[i].Time && value <= _keys[i + 1].Time)
 			{
-				var t = (value - _keys[i].Time) / (_keys[i + 1].Time - _keys[i].Time);
+				float t = (value - _keys[i].Time) / (_keys[i + 1].Time - _keys[i].Time);
 				return _keys[i].Value + (t * (_keys[i + 1].Value - _keys[i].Value));
 			}
 		}

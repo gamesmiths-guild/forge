@@ -259,7 +259,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			// Create component instances for instant effects to ensure stateful components
 			IEffectComponent[] definitions = effect.EffectData.EffectComponents;
 			var componentInstances = new IEffectComponent[definitions.Length];
-			for (var i = 0; i < definitions.Length; i++)
+			for (int i = 0; i < definitions.Length; i++)
 			{
 				componentInstances[i] = definitions[i].CreateInstance();
 			}
@@ -282,7 +282,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		if (stackableEffect is not null)
 		{
-			var successfulApplication = stackableEffect.AddStack(effect);
+			bool successfulApplication = stackableEffect.AddStack(effect);
 
 			if (successfulApplication)
 			{
@@ -303,7 +303,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		var activeEffect = new ActiveEffect(effect, Owner, applicationContext);
 		_activeEffects.Add(activeEffect);
 
-		var remainActive = true;
+		bool remainActive = true;
 
 		foreach (IEffectComponent component in activeEffect.ComponentInstances)
 		{
@@ -320,7 +320,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		EffectEvaluatedData effectEvaluatedData = activeEffect.EffectEvaluatedData;
 
-		var triggerApplyCuesEarly = effect.EffectData.PeriodicData.HasValue
+		bool triggerApplyCuesEarly = effect.EffectData.PeriodicData.HasValue
 			&& effect.EffectData.PeriodicData.Value.ExecuteOnApplication
 			&& remainActive;
 

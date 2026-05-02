@@ -265,7 +265,7 @@ public struct Variant128
 	/// <returns>The byte array representation of the stored value.</returns>
 	public byte[] ToBytes()
 	{
-		var result = new byte[16];
+		byte[] result = new byte[16];
 #pragma warning disable CS9191 // Suppress "in" argument
 		MemoryMarshal.Write(result.AsSpan(), ref _quaternion);
 #pragma warning restore CS9191

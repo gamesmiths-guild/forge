@@ -25,8 +25,8 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 		var entity = new TestEntity(tagsManager, cuesManager);
 		var damageTag = Tag.RequestTag(tagsManager, "simple.tag");
 
-		var receivedDamage = 0f;
-		var eventFired = false;
+		float receivedDamage = 0f;
+		bool eventFired = false;
 
 		entity.Events.Subscribe(damageTag, x =>
 		{
@@ -57,9 +57,9 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 		var entity = new TestEntity(tagsManager, cuesManager);
 		var damageTag = Tag.RequestTag(tagsManager, "simple.tag");
 
-		var value = 0;
+		int value = 0;
 		DamageType damageType = DamageType.Physical;
-		var isCritical = false;
+		bool isCritical = false;
 
 		// Subscribe with generic type
 		entity.Events.Subscribe<DamageInfo>(damageTag, x =>
@@ -89,7 +89,7 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 	{
 		var events = new EventManager();
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
-		var eventFired = false;
+		bool eventFired = false;
 
 		events.Subscribe(eventTag, _ => eventFired = true);
 
@@ -107,7 +107,7 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 	{
 		var events = new EventManager();
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
-		var capturedPayload = string.Empty;
+		string capturedPayload = string.Empty;
 
 		events.Subscribe<string>(eventTag, x => capturedPayload = x.Payload);
 
@@ -187,14 +187,14 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 	{
 		var events = new EventManager();
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
-		var callCount = 0;
+		int callCount = 0;
 
 		EventSubscriptionToken token = events.Subscribe(eventTag, _ => callCount++);
 
 		events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
 		callCount.Should().Be(1);
 
-		var unsubscribed = events.Unsubscribe(token);
+		bool unsubscribed = events.Unsubscribe(token);
 		unsubscribed.Should().BeTrue();
 
 		events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
@@ -207,14 +207,14 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 	{
 		var events = new EventManager();
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
-		var callCount = 0;
+		int callCount = 0;
 
 		EventSubscriptionToken token = events.Subscribe<int>(eventTag, _ => callCount++);
 
 		events.Raise(new EventData<int> { EventTags = eventTag.GetSingleTagContainer()!, Payload = 1 });
 		callCount.Should().Be(1);
 
-		var unsubscribed = events.Unsubscribe(token);
+		bool unsubscribed = events.Unsubscribe(token);
 		unsubscribed.Should().BeTrue();
 
 		events.Raise(new EventData<int> { EventTags = eventTag.GetSingleTagContainer()!, Payload = 2 });
@@ -228,7 +228,7 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 		var events = new EventManager();
 		var invalidToken = new EventSubscriptionToken(Guid.NewGuid());
 
-		var result = events.Unsubscribe(invalidToken);
+		bool result = events.Unsubscribe(invalidToken);
 
 		result.Should().BeFalse();
 	}
@@ -252,9 +252,9 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 	{
 		var events = new EventManager();
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
-		var handler1Called = false;
-		var handler2Called = false;
-		var handler3Called = false;
+		bool handler1Called = false;
+		bool handler2Called = false;
+		bool handler3Called = false;
 
 		events.Subscribe(eventTag, _ => handler1Called = true);
 		events.Subscribe(eventTag, _ => handler2Called = true);
@@ -274,8 +274,8 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 		var events = new EventManager();
 		var redTag = Tag.RequestTag(_tagsManager, "color.red");
 		var blueTag = Tag.RequestTag(_tagsManager, "color.blue");
-		var redCalled = false;
-		var blueCalled = false;
+		bool redCalled = false;
+		bool blueCalled = false;
 
 		events.Subscribe(redTag, _ => redCalled = true);
 		events.Subscribe(blueTag, _ => blueCalled = true);
@@ -292,8 +292,8 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 	{
 		var events = new EventManager();
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
-		var handler1Count = 0;
-		var handler2Count = 0;
+		int handler1Count = 0;
+		int handler2Count = 0;
 
 		EventSubscriptionToken token1 = events.Subscribe(eventTag, _ => handler1Count++);
 		events.Subscribe(eventTag, _ => handler2Count++);
@@ -316,7 +316,7 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 		var events = new EventManager();
 		var colorTag = Tag.RequestTag(_tagsManager, "color");
 		var redTag = Tag.RequestTag(_tagsManager, "color.red");
-		var colorEventReceived = false;
+		bool colorEventReceived = false;
 
 		events.Subscribe(colorTag, _ => colorEventReceived = true);
 
@@ -333,7 +333,7 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 		var events = new EventManager();
 		var colorTag = Tag.RequestTag(_tagsManager, "color");
 		var redTag = Tag.RequestTag(_tagsManager, "color.red");
-		var redEventReceived = false;
+		bool redEventReceived = false;
 
 		events.Subscribe(redTag, _ => redEventReceived = true);
 
@@ -386,7 +386,7 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 		var events = new EventManager();
 		var itemTag = Tag.RequestTag(_tagsManager, "item");
 		var swordTag = Tag.RequestTag(_tagsManager, "item.equipment.weapon.sword");
-		var itemEventReceived = false;
+		bool itemEventReceived = false;
 
 		events.Subscribe(itemTag, _ => itemEventReceived = true);
 
@@ -402,8 +402,8 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 		var events = new EventManager();
 		var redTag = Tag.RequestTag(_tagsManager, "color.red");
 		var enemyTag = Tag.RequestTag(_tagsManager, "enemy.undead.zombie");
-		var redCalled = false;
-		var enemyCalled = false;
+		bool redCalled = false;
+		bool enemyCalled = false;
 
 		events.Subscribe(redTag, _ => redCalled = true);
 		events.Subscribe(enemyTag, _ => enemyCalled = true);
@@ -424,7 +424,7 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 		var colorTag = Tag.RequestTag(_tagsManager, "color");
 		var redTag = Tag.RequestTag(_tagsManager, "color.red");
 		var blueTag = Tag.RequestTag(_tagsManager, "color.blue");
-		var callCount = 0;
+		int callCount = 0;
 
 		// Subscribe to parent tag
 		events.Subscribe(colorTag, _ => callCount++);
@@ -443,8 +443,8 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 	{
 		var events = new EventManager();
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
-		var nonGenericCalled = false;
-		var genericCalled = false;
+		bool nonGenericCalled = false;
+		bool genericCalled = false;
 
 		events.Subscribe(eventTag, _ => nonGenericCalled = true);
 		events.Subscribe<int>(eventTag, _ => genericCalled = true);
@@ -462,8 +462,8 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 	{
 		var events = new EventManager();
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
-		var nonGenericCalled = false;
-		var genericCalled = false;
+		bool nonGenericCalled = false;
+		bool genericCalled = false;
 
 		events.Subscribe(eventTag, _ => nonGenericCalled = true);
 		events.Subscribe<int>(eventTag, _ => genericCalled = true);
@@ -481,8 +481,8 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 	{
 		var events = new EventManager();
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
-		var intCalled = false;
-		var stringCalled = false;
+		bool intCalled = false;
+		bool stringCalled = false;
 
 		events.Subscribe<int>(eventTag, _ => intCalled = true);
 		events.Subscribe<string>(eventTag, _ => stringCalled = true);

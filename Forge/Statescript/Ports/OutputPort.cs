@@ -80,7 +80,7 @@ public class OutputPort : Port
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
 
-		for (var i = 0; i < ports.Length; i++)
+		for (int i = 0; i < ports.Length; i++)
 		{
 			ports[i].ReceiveMessage(graphContext);
 		}
@@ -92,7 +92,7 @@ public class OutputPort : Port
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
 
-		for (var i = 0; i < ports.Length; i++)
+		for (int i = 0; i < ports.Length; i++)
 		{
 			ports[i].ReceiveDisableSubgraphMessage(graphContext);
 		}

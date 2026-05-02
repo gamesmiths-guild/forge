@@ -51,7 +51,7 @@ public class TagContainerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 	{
 		var tagSet = new HashSet<Tag>();
 
-		foreach (var tagKey in tagKeys)
+		foreach (string tagKey in tagKeys)
 		{
 			tagSet.Add(Tag.RequestTag(_tagsManager, tagKey));
 		}
@@ -61,7 +61,7 @@ public class TagContainerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 		container.IsEmpty.Should().BeFalse();
 		container.Count.Should().Be(tagSet.Count);
 
-		foreach (var tagKey in tagKeys)
+		foreach (string tagKey in tagKeys)
 		{
 			var tag = Tag.RequestTag(_tagsManager, tagKey);
 			container.HasTag(tag).Should().BeTrue();
@@ -90,7 +90,7 @@ public class TagContainerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 	{
 		TagContainer container = _tagsManager.RequestTagContainer(tagKeys);
 
-		TagContainer.NetSerialize(_tagsManager, container, out var containerStream);
+		TagContainer.NetSerialize(_tagsManager, container, out byte[]? containerStream);
 
 		containerStream[0].Should().Be(0);
 		containerStream.Should().HaveCount((tagKeys.Length * 2) + 2);
@@ -104,7 +104,7 @@ public class TagContainerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 	{
 		var tagContainer = new TagContainer(_tagsManager);
 
-		TagContainer.NetSerialize(_tagsManager, tagContainer, out var containerStream)
+		TagContainer.NetSerialize(_tagsManager, tagContainer, out byte[]? containerStream)
 			.Should()
 			.BeTrue();
 
@@ -1079,7 +1079,7 @@ public class TagContainerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 				break;
 		}
 
-		foreach (var tagKey in queryTagKeys)
+		foreach (string tagKey in queryTagKeys)
 		{
 			var tag = Tag.RequestTag(_tagsManager, tagKey);
 			queryExpression.AddTag(tag);

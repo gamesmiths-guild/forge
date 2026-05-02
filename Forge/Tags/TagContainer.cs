@@ -128,7 +128,7 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 		var containerStream = new List<byte>();
 
 		// The first bit indicates an empty container, which is often replicated.
-		var isEmpty = (container.InternalTags.Count == 0) ? (byte)1 : (byte)0;
+		byte isEmpty = (container.InternalTags.Count == 0) ? (byte)1 : (byte)0;
 		containerStream.Add(isEmpty);
 
 		// Early return if it's empty.
@@ -155,8 +155,8 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 			return false;
 		}
 
-		var numTags = (byte)container.InternalTags.Count;
-		var maxSize = (1 << tagsManager.NumBitsForContainerSize) - 1;
+		byte numTags = (byte)container.InternalTags.Count;
+		int maxSize = (1 << tagsManager.NumBitsForContainerSize) - 1;
 
 		if (numTags > maxSize)
 		{
@@ -168,11 +168,11 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 
 		foreach (Tag tag in container.InternalTags)
 		{
-			Tag.NetSerialize(tagsManager, tag, out var index);
+			Tag.NetSerialize(tagsManager, tag, out ushort index);
 
 			// Read net index from buffer. This is just a practical example, use a BitStream reader here instead.
-			var netIndex = new ushort[] { index };
-			var netIndexStream = new byte[2];
+			ushort[] netIndex = [index];
+			byte[] netIndexStream = new byte[2];
 			Buffer.BlockCopy(netIndex, 0, netIndexStream, 0, 2);
 
 			containerStream.AddRange(netIndexStream);
@@ -206,12 +206,12 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 			return true;
 		}
 
-		var numTags = stream[1];
+		byte numTags = stream[1];
 		deserializedContainer.InternalTags.EnsureCapacity(numTags);
 
-		for (var i = 0; i < numTags; i++)
+		for (int i = 0; i < numTags; i++)
 		{
-			var tagStream = new byte[2];
+			byte[] tagStream = new byte[2];
 			Array.Copy(stream, 2 + (2 * i), tagStream, 0, 2);
 
 			if (Tag.NetDeserialize(tagsManager, tagStream, out Tag deserializedTag))
@@ -544,7 +544,7 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 
 	internal void RemoveTagsExact(TagContainer otherContainer)
 	{
-		var changed = false;
+		bool changed = false;
 
 		foreach (Tag tag in otherContainer)
 		{

@@ -51,7 +51,7 @@ public class TagsAndCuesFixture
 
 		CuesManager = new CuesManager();
 
-		for (var i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
 		{
 			var testCue = new TestCue();
 			CuesManager.RegisterCue(Tag.RequestTag(TagsManager, $"test.cue{i + 1}"), testCue);

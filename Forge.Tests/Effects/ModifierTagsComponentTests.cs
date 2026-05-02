@@ -248,7 +248,7 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
-		for (var i = 0; i < stacks - 1; i++)
+		for (int i = 0; i < stacks - 1; i++)
 		{
 			entity.EffectsManager.RemoveEffect(activeEffectHandle!);
 			entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();

@@ -270,7 +270,7 @@ public class GraphProcessorTests
 			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
 		var processor = new GraphProcessor(graph);
-		var completed = false;
+		bool completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
@@ -458,7 +458,7 @@ public class GraphProcessorTests
 			exitNode.InputPorts[ExitNode.InputPort]));
 
 		var processor = new GraphProcessor(graph);
-		var completed = false;
+		bool completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
@@ -490,7 +490,7 @@ public class GraphProcessorTests
 			exitNode.InputPorts[ExitNode.InputPort]));
 
 		var processor = new GraphProcessor(graph);
-		var completed = false;
+		bool completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
@@ -525,7 +525,7 @@ public class GraphProcessorTests
 			exitNode.InputPorts[ExitNode.InputPort]));
 
 		var processor = new GraphProcessor(graph);
-		var completed = false;
+		bool completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
@@ -550,7 +550,7 @@ public class GraphProcessorTests
 			actionNode.InputPorts[ActionNode.InputPort]));
 
 		var processor = new GraphProcessor(graph);
-		var completed = false;
+		bool completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
@@ -573,7 +573,7 @@ public class GraphProcessorTests
 			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
 		var processor = new GraphProcessor(graph);
-		var completed = false;
+		bool completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
@@ -608,7 +608,7 @@ public class GraphProcessorTests
 			longTimer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
 		var processor = new GraphProcessor(graph);
-		var completed = false;
+		bool completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
 
@@ -638,7 +638,7 @@ public class GraphProcessorTests
 			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
 
 		var processor = new GraphProcessor(graph);
-		var completedCount = 0;
+		int completedCount = 0;
 		processor.OnGraphCompleted = () => completedCount++;
 		processor.StartGraph();
 
@@ -658,7 +658,7 @@ public class GraphProcessorTests
 	{
 		var graph = new Graph();
 		var processor = new GraphProcessor(graph);
-		var completed = false;
+		bool completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 
 		processor.StartGraph();

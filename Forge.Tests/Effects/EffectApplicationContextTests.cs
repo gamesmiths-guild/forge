@@ -211,7 +211,7 @@ public class EffectApplicationContextTests(TagsAndCuesFixture tagsAndCuesFixture
 	{
 		var context = new EffectApplicationContext<DamageContext>(new DamageContext(50f, true, ["Leg"]));
 
-		var result = context.TryGetData(out DamageContext? data);
+		bool result = context.TryGetData(out DamageContext? data);
 
 		result.Should().BeTrue();
 		data.Should().NotBeNull();
@@ -226,7 +226,7 @@ public class EffectApplicationContextTests(TagsAndCuesFixture tagsAndCuesFixture
 	{
 		var context = new EffectApplicationContext<DamageContext>(new DamageContext(50f, true, ["Leg"]));
 
-		var result = context.TryGetData(out HealingContext? data);
+		bool result = context.TryGetData(out HealingContext? data);
 
 		result.Should().BeFalse();
 		data.Should().BeNull();
@@ -383,7 +383,7 @@ public class EffectApplicationContextTests(TagsAndCuesFixture tagsAndCuesFixture
 			}
 
 			// Apply damage for each hit location
-			var totalDamage = damageContext!.Damage * damageContext.HitLocations.Length;
+			float totalDamage = damageContext!.Damage * damageContext.HitLocations.Length;
 
 			return
 			[

@@ -137,7 +137,7 @@ public sealed class CuesManager
 
 		foreach (CueData cueData in effectData.Cues)
 		{
-			var magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
+			int magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
 
 			if (cueData.CueTags is null)
 			{
@@ -188,7 +188,7 @@ public sealed class CuesManager
 
 		foreach (CueData cueData in effectData.Cues)
 		{
-			var magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
+			int magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
 
 			if (cueData.CueTags is null)
 			{
@@ -221,7 +221,7 @@ public sealed class CuesManager
 
 		foreach (CueData cueData in effectData.Cues)
 		{
-			var magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
+			int magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
 
 			if (cueData.CueTags is null)
 			{

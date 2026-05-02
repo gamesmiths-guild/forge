@@ -26,7 +26,7 @@ public readonly record struct Modifier(
 			return false;
 		}
 
-		var magnitude = Magnitude.GetMagnitude(effect, target, level);
+		float magnitude = Magnitude.GetMagnitude(effect, target, level);
 
 		EntityAttribute attribute = target.Attributes[Attribute];
 

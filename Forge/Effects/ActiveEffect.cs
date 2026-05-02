@@ -61,7 +61,7 @@ internal sealed class ActiveEffect
 		// Create component instances for this specific effect application
 		IEffectComponent[] definitions = effect.EffectData.EffectComponents;
 		ComponentInstances = new IEffectComponent[definitions.Length];
-		for (var i = 0; i < definitions.Length; i++)
+		for (int i = 0; i < definitions.Length; i++)
 		{
 			ComponentInstances[i] = definitions[i].CreateInstance();
 		}
@@ -88,7 +88,7 @@ internal sealed class ActiveEffect
 				effect.EffectData.DurationData.DurationMagnitude!.Value.SetByCallerFloat!.Value.Tag);
 		}
 
-		for (var i = 0; i < EffectEvaluatedData.Effect.EffectData.Modifiers.Length; i++)
+		for (int i = 0; i < EffectEvaluatedData.Effect.EffectData.Modifiers.Length; i++)
 		{
 			SetByCallerFloat? setByCallerFloat =
 				EffectEvaluatedData.Effect.EffectData.Modifiers[i].Magnitude.SetByCallerFloat;
@@ -175,11 +175,11 @@ internal sealed class ActiveEffect
 			stacks > 0,
 			"Number of stacks should be higher than 1.");
 
-		var hasChanges = false;
-		var resetStacks = false;
+		bool hasChanges = false;
+		bool resetStacks = false;
 
 		StackingData stackingData = EffectData.StackingData.Value;
-		var evaluatedLevel = EffectEvaluatedData.Level;
+		int evaluatedLevel = EffectEvaluatedData.Level;
 
 		// We have to evaluate level before checking the stack count since the level could change.
 		if (stackingData.LevelDenialPolicy.HasValue)
@@ -223,7 +223,7 @@ internal sealed class ActiveEffect
 			}
 		}
 
-		var stackLimit = stackingData.StackLimit.GetValue(evaluatedLevel);
+		int stackLimit = stackingData.StackLimit.GetValue(evaluatedLevel);
 
 		if (StackCount == stackLimit &&
 			stackingData.OverflowPolicy == StackOverflowPolicy.DenyApplication)
@@ -267,7 +267,7 @@ internal sealed class ActiveEffect
 		// In some cases we can even skip re-application.
 		if (resetStacks)
 		{
-			var initialStack = stackingData.InitialStack.GetValue(evaluatedLevel);
+			int initialStack = stackingData.InitialStack.GetValue(evaluatedLevel);
 
 			if (StackCount != initialStack)
 			{
@@ -312,7 +312,7 @@ internal sealed class ActiveEffect
 
 	internal void RemoveStack()
 	{
-		var removed = StackCount == 1;
+		bool removed = StackCount == 1;
 
 		if (removed)
 		{
@@ -348,7 +348,7 @@ internal sealed class ActiveEffect
 						if (StackCount > 0)
 #pragma warning restore S2589 // Boolean expressions should not be gratuitous
 						{
-							var periodicDelta = Math.Min(-RemainingDuration, EffectEvaluatedData.Duration);
+							double periodicDelta = Math.Min(-RemainingDuration, EffectEvaluatedData.Duration);
 							ExecutePeriodicEffects(periodicDelta);
 							RemainingDuration += EffectEvaluatedData.Duration;
 						}
@@ -453,12 +453,12 @@ internal sealed class ActiveEffect
 			switch (modifier.ModifierOperation)
 			{
 				case ModifierOperation.FlatBonus:
-					var flatMagnitude = unapply ? -(int)modifier.Magnitude : (int)modifier.Magnitude;
+					int flatMagnitude = unapply ? -(int)modifier.Magnitude : (int)modifier.Magnitude;
 					modifier.Attribute.AddFlatModifier(flatMagnitude, modifier.Channel);
 					break;
 
 				case ModifierOperation.PercentBonus:
-					var percentMagnitude = unapply ? -modifier.Magnitude : modifier.Magnitude;
+					float percentMagnitude = unapply ? -modifier.Magnitude : modifier.Magnitude;
 					modifier.Attribute.AddPercentModifier(percentMagnitude, modifier.Channel);
 					break;
 
@@ -494,7 +494,7 @@ internal sealed class ActiveEffect
 			return;
 		}
 
-		var updatedDuration = EffectEvaluatedData.EvaluateDuration(EffectData.DurationData);
+		float updatedDuration = EffectEvaluatedData.EvaluateDuration(EffectData.DurationData);
 
 		if (EffectEvaluatedData.Duration > updatedDuration + Epsilon
 			|| EffectEvaluatedData.Duration < updatedDuration - Epsilon)

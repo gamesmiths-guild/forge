@@ -19,10 +19,10 @@ using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Effects.Stacking;
 using Gamesmiths.Forge.Events;
+using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests;
 using Gamesmiths.Forge.Tests.Core;
-using Gamesmiths.Forge.Statescript;
 using static Gamesmiths.Forge.Tests.Samples.QuickStartTests;
 
 namespace Gamesmiths.Forge.Tests.Samples;

@@ -31,15 +31,15 @@ public class CopySignResolver(IPropertyResolver magnitude, IPropertyResolver sig
 
 		if (resultType == typeof(float))
 		{
-			var mag = MathTypeUtils.ResolveAsFloat(_magnitude.ValueType, magnitudeValue);
-			var sgn = MathTypeUtils.ResolveAsFloat(_sign.ValueType, signValue);
+			float mag = MathTypeUtils.ResolveAsFloat(_magnitude.ValueType, magnitudeValue);
+			float sgn = MathTypeUtils.ResolveAsFloat(_sign.ValueType, signValue);
 			return new Variant128(CopySignFloat(mag, sgn));
 		}
 
 		if (resultType == typeof(double))
 		{
-			var mag = MathTypeUtils.ResolveAsDouble(_magnitude.ValueType, magnitudeValue);
-			var sgn = MathTypeUtils.ResolveAsDouble(_sign.ValueType, signValue);
+			double mag = MathTypeUtils.ResolveAsDouble(_magnitude.ValueType, magnitudeValue);
+			double sgn = MathTypeUtils.ResolveAsDouble(_sign.ValueType, signValue);
 			return new Variant128(CopySignDouble(mag, sgn));
 		}
 
@@ -50,16 +50,16 @@ public class CopySignResolver(IPropertyResolver magnitude, IPropertyResolver sig
 	private static float CopySignFloat(float magnitude, float sign)
 	{
 		const int signMask = unchecked((int)0x80000000);
-		var magnitudeBits = BitConverter.SingleToInt32Bits(magnitude);
-		var signBits = BitConverter.SingleToInt32Bits(sign);
+		int magnitudeBits = BitConverter.SingleToInt32Bits(magnitude);
+		int signBits = BitConverter.SingleToInt32Bits(sign);
 		return BitConverter.Int32BitsToSingle((magnitudeBits & ~signMask) | (signBits & signMask));
 	}
 
 	private static double CopySignDouble(double magnitude, double sign)
 	{
 		const long signMask = unchecked((long)0x8000000000000000);
-		var magnitudeBits = BitConverter.DoubleToInt64Bits(magnitude);
-		var signBits = BitConverter.DoubleToInt64Bits(sign);
+		long magnitudeBits = BitConverter.DoubleToInt64Bits(magnitude);
+		long signBits = BitConverter.DoubleToInt64Bits(sign);
 		return BitConverter.Int64BitsToDouble((magnitudeBits & ~signMask) | (signBits & signMask));
 	}
 }
