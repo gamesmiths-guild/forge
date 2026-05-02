@@ -83,7 +83,7 @@ public class RandomResolverTests
 		var resolver = new RandomResolver(
 			random,
 			new VariantResolver(new Variant128(0), typeof(int)),
-		  new VariantResolver(new Variant128(10), typeof(int)),
+			new VariantResolver(new Variant128(10), typeof(int)),
 			maxInclusive: true);
 
 		var context = new GraphContext();
@@ -148,7 +148,7 @@ public class RandomResolverTests
 		var resolver = new RandomResolver(
 			random,
 			new VariantResolver(new Variant128(5.0f), typeof(float)),
-		 new VariantResolver(new Variant128(15.0f), typeof(float)),
+			new VariantResolver(new Variant128(15.0f), typeof(float)),
 			maxInclusive: true);
 
 		var context = new GraphContext();
@@ -268,7 +268,7 @@ public class RandomResolverTests
 		var resolver = new RandomResolver(
 			random,
 			new VariantResolver(new Variant128(10.0), typeof(double)),
-		 new VariantResolver(new Variant128(20.0), typeof(double)),
+			new VariantResolver(new Variant128(20.0), typeof(double)),
 			maxInclusive: true);
 
 		var context = new GraphContext();
