@@ -6,22 +6,26 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
 /// Resolves a random value within a range defined by two <see cref="IPropertyResolver"/> operands, using a provided
-/// <see cref="IRandom"/> implementation. The random value is in the range [min, max) for both integer and
-/// floating-point types. Supports <see langword="int"/>, <see langword="float"/>, and <see langword="double"/>
-/// types. Sub-int operand types (<see langword="byte"/>, <see langword="sbyte"/>, <see langword="short"/>,
-/// <see langword="ushort"/>) are promoted to <see langword="int"/>. Other numeric, vector, and quaternion types are
-/// not supported.
+/// <see cref="IRandom"/> implementation. The random value is in the range [min, max) by default, or [min, max] when
+/// configured for an inclusive maximum bound. Supports <see langword="int"/>, <see langword="float"/>, and
+/// <see langword="double"/> types. Sub-int operand types (<see langword="byte"/>, <see langword="sbyte"/>,
+/// <see langword="short"/>, <see langword="ushort"/>) are promoted to <see langword="int"/>. Other numeric, vector,
+/// and quaternion types are not supported.
 /// </summary>
 /// <param name="random">The random provider to use for generating values.</param>
 /// <param name="min">The resolver for the inclusive minimum bound.</param>
-/// <param name="max">The resolver for the exclusive maximum bound.</param>
-public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyResolver max) : IPropertyResolver
+/// <param name="max">The resolver for the maximum bound.</param>
+/// <param name="maxInclusive">Whether the maximum bound is inclusive. Defaults to <see langword="false"/>.</param>
+public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyResolver max, bool maxInclusive = false)
+	: IPropertyResolver
 {
 	private readonly IRandom _random = random;
 
 	private readonly IPropertyResolver _min = min;
 
 	private readonly IPropertyResolver _max = max;
+
+	private readonly bool _maxInclusive = maxInclusive;
 
 	/// <inheritdoc/>
 	public Type ValueType { get; } = DetermineResultType(min.ValueType, max.ValueType);
@@ -35,24 +39,55 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 
 		if (resultType == typeof(int))
 		{
+			var minInt = MathTypeUtils.ResolveAsInt(_min.ValueType, minValue);
+			var maxInt = MathTypeUtils.ResolveAsInt(_max.ValueType, maxValue);
+
 			return new Variant128(
-				_random.NextInt(
-					MathTypeUtils.ResolveAsInt(_min.ValueType, minValue),
-					MathTypeUtils.ResolveAsInt(_max.ValueType, maxValue)));
+				_maxInclusive
+					? _random.NextIntInclusive(minInt, maxInt)
+					: _random.NextInt(minInt, maxInt));
 		}
 
 		if (resultType == typeof(float))
 		{
 			var minFloat = MathTypeUtils.ResolveAsFloat(_min.ValueType, minValue);
 			var maxFloat = MathTypeUtils.ResolveAsFloat(_max.ValueType, maxValue);
-			return new Variant128(minFloat + (_random.NextSingle() * (maxFloat - minFloat)));
+
+			if (maxFloat <= minFloat)
+			{
+				return new Variant128(minFloat);
+			}
+
+			var randomValue = _maxInclusive ? _random.NextSingleInclusive() : _random.NextSingle();
+			var result = minFloat + (randomValue * (maxFloat - minFloat));
+
+			if (_maxInclusive)
+			{
+				result = Math.Clamp(result, minFloat, maxFloat);
+			}
+
+			return new Variant128(result);
 		}
 
 		if (resultType == typeof(double))
 		{
 			var minDouble = MathTypeUtils.ResolveAsDouble(_min.ValueType, minValue);
 			var maxDouble = MathTypeUtils.ResolveAsDouble(_max.ValueType, maxValue);
-			return new Variant128(minDouble + (_random.NextDouble() * (maxDouble - minDouble)));
+
+			if (maxDouble <= minDouble)
+			{
+				return new Variant128(minDouble);
+			}
+
+			var randomValue = _maxInclusive ? _random.NextDoubleInclusive() : _random.NextDouble();
+			var result = minDouble + (randomValue * (maxDouble - minDouble));
+
+			if (_maxInclusive)
+			{
+				result = Math.Clamp(result, minDouble, maxDouble);
+			}
+
+			return new Variant128(result);
 		}
 
 		throw new InvalidOperationException(

@@ -296,7 +296,17 @@ internal sealed class FixedRandom(int nextInt = 0, float nextSingle = 0.0f, doub
 		return nextInt;
 	}
 
+	public int NextIntInclusive(int minValue, int maxValue)
+	{
+		return nextInt;
+	}
+
 	public float NextSingle()
+	{
+		return nextSingle;
+	}
+
+	public float NextSingleInclusive()
 	{
 		return nextSingle;
 	}
@@ -304,6 +314,115 @@ internal sealed class FixedRandom(int nextInt = 0, float nextSingle = 0.0f, doub
 	public double NextDouble()
 	{
 		return nextDouble;
+	}
+
+	public double NextDoubleInclusive()
+	{
+		return nextDouble;
+	}
+
+	public long NextInt64()
+	{
+		return nextInt;
+	}
+
+	public long NextInt64(long maxValue)
+	{
+		return nextInt;
+	}
+
+	public long NextInt64(long minValue, long maxValue)
+	{
+		return nextInt;
+	}
+
+	public long NextInt64Inclusive(long minValue, long maxValue)
+	{
+		return nextInt;
+	}
+
+	public void NextBytes(byte[] buffer)
+	{
+		throw new NotImplementedException();
+	}
+
+	public void NextBytes(Span<byte> buffer)
+	{
+		throw new NotImplementedException();
+	}
+}
+
+internal sealed class TrackingRandom(
+	IEnumerable<int>? nextInts = null,
+	IEnumerable<int>? nextIntsInclusive = null,
+	IEnumerable<float>? nextSingles = null,
+	IEnumerable<float>? nextSinglesInclusive = null,
+	IEnumerable<double>? nextDoubles = null,
+	IEnumerable<double>? nextDoublesInclusive = null) : IRandom
+{
+	private readonly Queue<int> _nextInts = new(nextInts ?? []);
+	private readonly Queue<int> _nextIntsInclusive = new(nextIntsInclusive ?? []);
+	private readonly Queue<float> _nextSingles = new(nextSingles ?? []);
+	private readonly Queue<float> _nextSinglesInclusive = new(nextSinglesInclusive ?? []);
+	private readonly Queue<double> _nextDoubles = new(nextDoubles ?? []);
+	private readonly Queue<double> _nextDoublesInclusive = new(nextDoublesInclusive ?? []);
+
+	public int NextIntCalls { get; private set; }
+
+	public int NextIntInclusiveCalls { get; private set; }
+
+	public int NextSingleCalls { get; private set; }
+
+	public int NextSingleInclusiveCalls { get; private set; }
+
+	public int NextDoubleCalls { get; private set; }
+
+	public int NextDoubleInclusiveCalls { get; private set; }
+
+	public int NextInt()
+	{
+		throw new NotImplementedException();
+	}
+
+	public int NextInt(int maxValue)
+	{
+		throw new NotImplementedException();
+	}
+
+	public int NextInt(int minValue, int maxValue)
+	{
+		NextIntCalls++;
+		return _nextInts.Dequeue();
+	}
+
+	public int NextIntInclusive(int minValue, int maxValue)
+	{
+		NextIntInclusiveCalls++;
+		return _nextIntsInclusive.Dequeue();
+	}
+
+	public float NextSingle()
+	{
+		NextSingleCalls++;
+		return _nextSingles.Dequeue();
+	}
+
+	public float NextSingleInclusive()
+	{
+		NextSingleInclusiveCalls++;
+		return _nextSinglesInclusive.Dequeue();
+	}
+
+	public double NextDouble()
+	{
+		NextDoubleCalls++;
+		return _nextDoubles.Dequeue();
+	}
+
+	public double NextDoubleInclusive()
+	{
+		NextDoubleInclusiveCalls++;
+		return _nextDoublesInclusive.Dequeue();
 	}
 
 	public long NextInt64()
@@ -317,6 +436,11 @@ internal sealed class FixedRandom(int nextInt = 0, float nextSingle = 0.0f, doub
 	}
 
 	public long NextInt64(long minValue, long maxValue)
+	{
+		throw new NotImplementedException();
+	}
+
+	public long NextInt64Inclusive(long minValue, long maxValue)
 	{
 		throw new NotImplementedException();
 	}

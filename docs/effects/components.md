@@ -386,17 +386,21 @@ public interface IRandom
     int NextInt();
     int NextInt(int maxValue);
     int NextInt(int minValue, int maxValue);
+    int NextIntInclusive(int minValue, int maxValue);
     float NextSingle();
+    float NextSingleInclusive();
     double NextDouble();
+    double NextDoubleInclusive();
     long NextInt64();
     long NextInt64(long maxValue);
     long NextInt64(long minValue, long maxValue);
+    long NextInt64Inclusive(long minValue, long maxValue);
     void NextBytes(byte[] buffer);
     void NextBytes(Span<byte> buffer);
 }
 ```
 
-The component specifically uses the `NextSingle()` method, which returns a random floating-point number between 0.0 (inclusive) and 1.0 (exclusive). This allows for a consistent random number generation implementation that can be swapped or mocked for testing.
+The component specifically uses the `NextSingle()` method, which returns a random floating-point number between 0.0 (inclusive) and 1.0 (exclusive). The interface also exposes explicit inclusive methods for APIs that need closed ranges without relying on helper conversions. This allows for a consistent random number generation implementation that can be swapped or mocked for testing.
 
 #### Usage Example
 
