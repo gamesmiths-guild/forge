@@ -166,11 +166,61 @@ public class PowResolverTests
 
 	[Fact]
 	[Trait("Resolver", "Pow")]
-	public void Pow_resolver_throws_for_vector_operands()
+	public void Pow_resolver_vector3_operands_value_type_is_vector3()
+	{
+		var resolver = new PowResolver(
+			new VariantResolver(new Variant128(new Vector3(2.0f, 3.0f, 4.0f)), typeof(Vector3)),
+			new VariantResolver(new Variant128(new Vector3(3.0f, 2.0f, 0.5f)), typeof(Vector3)));
+
+		resolver.ValueType.Should().Be(typeof(Vector3));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_vector2_computes_componentwise_power()
+	{
+		var resolver = new PowResolver(
+			new VariantResolver(new Variant128(new Vector2(4.0f, 9.0f)), typeof(Vector2)),
+			new VariantResolver(new Variant128(new Vector2(0.5f, 0.5f)), typeof(Vector2)));
+
+		var context = new GraphContext();
+
+		TestUtils.BeApproximately(resolver.Resolve(context).AsVector2(), new Vector2(2.0f, 3.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_vector3_computes_componentwise_power()
+	{
+		var resolver = new PowResolver(
+			new VariantResolver(new Variant128(new Vector3(2.0f, 3.0f, 4.0f)), typeof(Vector3)),
+			new VariantResolver(new Variant128(new Vector3(3.0f, 2.0f, 0.5f)), typeof(Vector3)));
+
+		var context = new GraphContext();
+
+		TestUtils.BeApproximately(resolver.Resolve(context).AsVector3(), new Vector3(8.0f, 9.0f, 2.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_vector4_computes_componentwise_power()
+	{
+		var resolver = new PowResolver(
+			new VariantResolver(new Variant128(new Vector4(1.0f, 4.0f, 9.0f, 16.0f)), typeof(Vector4)),
+			new VariantResolver(new Variant128(new Vector4(2.0f, 0.5f, 0.5f, 0.5f)), typeof(Vector4)));
+
+		var context = new GraphContext();
+
+		TestUtils.BeApproximately(resolver.Resolve(context).AsVector4(), new Vector4(1.0f, 2.0f, 3.0f, 4.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_throws_for_mismatched_vector_operands()
 	{
 #pragma warning disable CA1806
 		Action act = () => new PowResolver(
-			new VariantResolver(new Variant128(Vector3.One), typeof(Vector3)),
+			new VariantResolver(new Variant128(Vector2.One), typeof(Vector2)),
 			new VariantResolver(new Variant128(Vector3.One), typeof(Vector3)));
 #pragma warning restore CA1806
 
