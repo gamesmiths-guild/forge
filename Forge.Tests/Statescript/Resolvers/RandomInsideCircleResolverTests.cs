@@ -48,4 +48,31 @@ public class RandomInsideCircleResolverTests
 		result.X.Should().BeApproximately(0.0f, TestUtils.Tolerance);
 		result.Y.Should().BeApproximately(0.5f, TestUtils.Tolerance);
 	}
+
+	[Fact]
+	[Trait("Resolver", "RandomInsideCircle")]
+	public void RandomInsideCircle_resolver_can_reach_circle_boundary()
+	{
+		var random = new TrackingRandom(nextSingles: [0.999f], nextSinglesInclusive: [1.0f]);
+		var resolver = new RandomInsideCircleResolver(random);
+		Vector2 result = resolver.Resolve(new GraphContext()).AsVector2();
+
+		result.Length().Should().Be(1.0f);
+		random.NextSingleCalls.Should().Be(1);
+		random.NextSingleInclusiveCalls.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Resolver", "RandomInsideCircle")]
+	public void RandomInsideCircle_resolver_uses_exclusive_angle_and_inclusive_radius_sampling()
+	{
+		var random = new TrackingRandom(nextSingles: [0.25f], nextSinglesInclusive: [1.0f]);
+		var resolver = new RandomInsideCircleResolver(random);
+		Vector2 result = resolver.Resolve(new GraphContext()).AsVector2();
+
+		result.X.Should().BeApproximately(0.0f, TestUtils.Tolerance);
+		result.Y.Should().BeApproximately(1.0f, TestUtils.Tolerance);
+		random.NextSingleCalls.Should().Be(1);
+		random.NextSingleInclusiveCalls.Should().Be(1);
+	}
 }

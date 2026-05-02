@@ -18,7 +18,8 @@ new RandomInsideSphereResolver(random)
 ## Behavior
 
 - Uses the injected `IRandom` instance each time the resolver is evaluated.
-- Returns a `Vector3` whose magnitude is less than or equal to `1`.
+- Returns a `Vector3` whose magnitude is less than or equal to `1`, with the unit-sphere boundary included by default.
+- Samples the axial and radial terms inclusively where appropriate, but keeps the seam angle exclusive so `0` and `2π` do not represent the same direction twice.
 - Does not read any values from `GraphContext`.
 - Produces a different sample on each resolve unless the supplied `IRandom` implementation is deterministic or seeded.
 
