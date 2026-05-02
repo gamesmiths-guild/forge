@@ -1,9 +1,9 @@
 # DegToRadResolver
 
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.DegToRadResolver`
-> **Output Type:** `float` or `double`
+> **Output Type:** `float`, `double`, `Vector2`, `Vector3`, or `Vector4`
 
-Converts an angle from degrees to radians. Computes `degrees * (π / 180)`. Supports `float` and `double` types. Integer operand types are promoted to `double`. Decimal, vector, and quaternion types are not supported.
+Converts an angle from degrees to radians. Computes `degrees * (π / 180)`. Supports `float` and `double` types, as well as `Vector2`, `Vector3`, and `Vector4` for component-wise conversion. Integer operand types are promoted to `double`. Decimal and quaternion types are not supported.
 
 ## Constructor
 
@@ -22,16 +22,20 @@ new DegToRadResolver(operand)
 | `float` | `float` |
 | `double` | `double` |
 | Any integer type | `double` |
+| `Vector2` | `Vector2` |
+| `Vector3` | `Vector3` |
+| `Vector4` | `Vector4` |
 
 **Invalid types** (throw `ArgumentException` at construction time):
 - `decimal` (use `double` instead).
-- `Vector2`, `Vector3`, `Vector4`, `Quaternion`.
+- `Quaternion`.
 - Unsupported types (`bool`, `char`).
 
 ## Behavior
 
 - Resolves the operand through its `IPropertyResolver` instance.
 - Multiplies the value by `π / 180` and returns the result as a `Variant128`.
+- For vector types, conversion is applied component-wise.
 - `DegToRad(0) = 0`, `DegToRad(90) = π/2`, `DegToRad(180) = π`, `DegToRad(360) = 2π`.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
@@ -56,6 +60,10 @@ graph.VariableDefinitions.DefineProperty("headingRotation",
             new VariableResolver("pitchDegrees", typeof(float))),
         new DegToRadResolver(
             new VariableResolver("rollDegrees", typeof(float)))));
+
+graph.VariableDefinitions.DefineProperty("eulerRadians",
+    new DegToRadResolver(
+        new VariableResolver("eulerDegrees", typeof(Vector3))));
 ```
 
 ## See Also
