@@ -153,11 +153,11 @@ public sealed class GraphContext
 	/// <returns><see langword="true"/> if the name was resolved, <see langword="false"/> otherwise.</returns>
 	public bool TryResolveArray(StringKey name, [NotNullWhen(true)] out Variant128[]? values)
 	{
-		var length = GraphVariables.GetArrayLength(name);
+		int length = GraphVariables.GetArrayLength(name);
 		if (length >= 0)
 		{
 			values = new Variant128[length];
-			for (var i = 0; i < length; i++)
+			for (int i = 0; i < length; i++)
 			{
 				GraphVariables.TryGetArrayVariant(name, i, out values[i]);
 			}

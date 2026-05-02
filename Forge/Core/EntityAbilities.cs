@@ -112,12 +112,12 @@ public class EntityAbilities(IForgeEntity owner)
 			return false;
 		}
 
-		var anyActivated = false;
+		bool anyActivated = false;
 		failureFlags =
 				[.. Enumerable.Repeat(AbilityActivationFailures.TargetTagNotPresent, GrantedAbilities.Count)];
 
 		AbilityHandle[] array = [.. GrantedAbilities];
-		for (var i = 0; i < array.Length; i++)
+		for (int i = 0; i < array.Length; i++)
 		{
 			AbilityHandle? handle = array[i];
 			Ability? ability = handle?.Ability;
@@ -198,7 +198,7 @@ public class EntityAbilities(IForgeEntity owner)
 			// If the ability was fully inhibited, this permanent grant should re-enable it.
 			existingAbility.IsInhibited = false;
 
-			var shouldOverride =
+			bool shouldOverride =
 				(levelOverridePolicy.HasFlag(LevelComparison.Higher) && abilityLevel > existingAbility.Level) ||
 				(levelOverridePolicy.HasFlag(LevelComparison.Lower) && abilityLevel < existingAbility.Level) ||
 				(levelOverridePolicy.HasFlag(LevelComparison.Equal) && abilityLevel == existingAbility.Level);
@@ -249,7 +249,7 @@ public class EntityAbilities(IForgeEntity owner)
 			// If the ability was fully inhibited, this new grant may need to re-enable it.
 			existingAbility.IsInhibited = CheckIsInhibited();
 
-			var shouldOverride =
+			bool shouldOverride =
 				(levelOverridePolicy.HasFlag(LevelComparison.Higher) && abilityLevel > existingAbility.Level) ||
 				(levelOverridePolicy.HasFlag(LevelComparison.Lower) && abilityLevel < existingAbility.Level) ||
 				(levelOverridePolicy.HasFlag(LevelComparison.Equal) && abilityLevel == existingAbility.Level);

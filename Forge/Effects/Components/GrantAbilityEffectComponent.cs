@@ -65,7 +65,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 			return;
 		}
 
-		for (var i = 0; i < _grantAbilityConfigs.Length; i++)
+		for (int i = 0; i < _grantAbilityConfigs.Length; i++)
 		{
 			if (_grantAbilityConfigs[i].TryActivateOnGrant)
 			{
@@ -96,7 +96,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 
 			if (!_isInhibited)
 			{
-				for (var i = 0; i < _grantAbilityConfigs.Length; i++)
+				for (int i = 0; i < _grantAbilityConfigs.Length; i++)
 				{
 					if (_grantAbilityConfigs[i].TryActivateOnEnable)
 					{
@@ -109,7 +109,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 
 	private void GrantAbilitiesPermanently(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
 	{
-		for (var i = 0; i < _grantAbilityConfigs.Length; i++)
+		for (int i = 0; i < _grantAbilityConfigs.Length; i++)
 		{
 			GrantAbilityConfig config = _grantAbilityConfigs[i];
 
@@ -123,7 +123,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 		_hasGrantedAbilities = true;
 
 		// Try to activate on grant for permanent abilities
-		for (var i = 0; i < _grantAbilityConfigs.Length; i++)
+		for (int i = 0; i < _grantAbilityConfigs.Length; i++)
 		{
 			if (_grantAbilityConfigs[i].TryActivateOnGrant)
 			{
@@ -134,7 +134,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 
 	private void GrantAbilities(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
-		for (var i = 0; i < _grantAbilityConfigs.Length; i++)
+		for (int i = 0; i < _grantAbilityConfigs.Length; i++)
 		{
 			GrantAbilityConfig config = _grantAbilityConfigs[i];
 
@@ -157,7 +157,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 
 	private void RemoveGrantedAbilities(IForgeEntity target)
 	{
-		for (var i = 0; i < _grantedAbilities.Length; i++)
+		for (int i = 0; i < _grantedAbilities.Length; i++)
 		{
 			AbilityHandle ability = _grantedAbilities[i];
 			target.Abilities.RemoveGrantedAbility(ability, _grantSources[i]);
@@ -168,7 +168,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 
 	private void InhibitGrantedAbilities(IForgeEntity target)
 	{
-		for (var i = 0; i < _grantedAbilities.Length; i++)
+		for (int i = 0; i < _grantedAbilities.Length; i++)
 		{
 			AbilityHandle ability = _grantedAbilities[i];
 			target.Abilities.InhibitGrantedAbility(ability, _grantSources[i]);

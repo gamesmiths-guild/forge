@@ -22,7 +22,7 @@ public class PlaneFromNormalResolver(IPropertyResolver normal, IPropertyResolver
 	public Variant128 Resolve(GraphContext graphContext)
 	{
 		Vector3 normalValue = _normal.Resolve(graphContext).AsVector3();
-		var distanceValue = _distance.Resolve(graphContext).AsFloat();
+		float distanceValue = _distance.Resolve(graphContext).AsFloat();
 		return new Variant128(new Plane(normalValue, distanceValue));
 	}
 

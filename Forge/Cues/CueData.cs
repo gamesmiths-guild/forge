@@ -32,7 +32,7 @@ public readonly record struct CueData(
 	/// <returns>The normalized magnitude, a value between 0f and 1f.</returns>
 	public float NormalizedMagnitude(int magnitude)
 	{
-		var range = MaxValue - MinValue;
+		int range = MaxValue - MinValue;
 		if (range <= 0.01f)
 		{
 			return 1;

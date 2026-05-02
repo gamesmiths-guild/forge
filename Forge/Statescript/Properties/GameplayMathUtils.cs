@@ -13,7 +13,7 @@ internal static class GameplayMathUtils
 
 	internal static Vector2 Project(Vector2 value, Vector2 onto)
 	{
-		var denominator = Vector2.Dot(onto, onto);
+		float denominator = Vector2.Dot(onto, onto);
 		if (denominator <= float.Epsilon)
 		{
 			return Vector2.Zero;
@@ -24,7 +24,7 @@ internal static class GameplayMathUtils
 
 	internal static Vector3 Project(Vector3 value, Vector3 onto)
 	{
-		var denominator = Vector3.Dot(onto, onto);
+		float denominator = Vector3.Dot(onto, onto);
 		if (denominator <= float.Epsilon)
 		{
 			return Vector3.Zero;
@@ -35,7 +35,7 @@ internal static class GameplayMathUtils
 
 	internal static Vector4 Project(Vector4 value, Vector4 onto)
 	{
-		var denominator = Vector4.Dot(onto, onto);
+		float denominator = Vector4.Dot(onto, onto);
 		if (denominator <= float.Epsilon)
 		{
 			return Vector4.Zero;
@@ -46,7 +46,7 @@ internal static class GameplayMathUtils
 
 	internal static float Angle(Vector2 from, Vector2 to)
 	{
-		var denominator = from.Length() * to.Length();
+		float denominator = from.Length() * to.Length();
 		if (denominator <= float.Epsilon)
 		{
 			return 0.0f;
@@ -57,7 +57,7 @@ internal static class GameplayMathUtils
 
 	internal static float Angle(Vector3 from, Vector3 to)
 	{
-		var denominator = from.Length() * to.Length();
+		float denominator = from.Length() * to.Length();
 		if (denominator <= float.Epsilon)
 		{
 			return 0.0f;
@@ -70,14 +70,14 @@ internal static class GameplayMathUtils
 	{
 		var normalizedFrom = Quaternion.Normalize(from);
 		var normalizedTo = Quaternion.Normalize(to);
-		var dot = MathF.Abs(Quaternion.Dot(normalizedFrom, normalizedTo));
+		float dot = MathF.Abs(Quaternion.Dot(normalizedFrom, normalizedTo));
 		return 2.0f * MathF.Acos(ClampToUnit(dot));
 	}
 
 	internal static float SignedAngle(Vector2 from, Vector2 to)
 	{
-		var cross = (from.X * to.Y) - (from.Y * to.X);
-		var dot = Vector2.Dot(from, to);
+		float cross = (from.X * to.Y) - (from.Y * to.X);
+		float dot = Vector2.Dot(from, to);
 		return MathF.Atan2(cross, dot);
 	}
 
@@ -94,7 +94,7 @@ internal static class GameplayMathUtils
 			return current;
 		}
 
-		var delta = target - current;
+		float delta = target - current;
 		if (MathF.Abs(delta) <= maxDelta)
 		{
 			return target;
@@ -111,7 +111,7 @@ internal static class GameplayMathUtils
 		}
 
 		Vector2 delta = target - current;
-		var distance = delta.Length();
+		float distance = delta.Length();
 		if (distance <= maxDelta || distance <= float.Epsilon)
 		{
 			return target;
@@ -128,7 +128,7 @@ internal static class GameplayMathUtils
 		}
 
 		Vector3 delta = target - current;
-		var distance = delta.Length();
+		float distance = delta.Length();
 		if (distance <= maxDelta || distance <= float.Epsilon)
 		{
 			return target;
@@ -145,7 +145,7 @@ internal static class GameplayMathUtils
 		}
 
 		Vector4 delta = target - current;
-		var distance = delta.Length();
+		float distance = delta.Length();
 		if (distance <= maxDelta || distance <= float.Epsilon)
 		{
 			return target;
@@ -161,7 +161,7 @@ internal static class GameplayMathUtils
 			return Vector2.Zero;
 		}
 
-		var length = value.Length();
+		float length = value.Length();
 		if (length <= maxLength || length <= float.Epsilon)
 		{
 			return value;
@@ -177,7 +177,7 @@ internal static class GameplayMathUtils
 			return Vector3.Zero;
 		}
 
-		var length = value.Length();
+		float length = value.Length();
 		if (length <= maxLength || length <= float.Epsilon)
 		{
 			return value;
@@ -193,7 +193,7 @@ internal static class GameplayMathUtils
 			return Vector4.Zero;
 		}
 
-		var length = value.Length();
+		float length = value.Length();
 		if (length <= maxLength || length <= float.Epsilon)
 		{
 			return value;
@@ -216,7 +216,7 @@ internal static class GameplayMathUtils
 			normalizedTarget = -normalizedTarget;
 		}
 
-		var angle = QuaternionAngle(normalizedCurrent, normalizedTarget);
+		float angle = QuaternionAngle(normalizedCurrent, normalizedTarget);
 		if (angle <= maxRadiansDelta || angle <= float.Epsilon)
 		{
 			return normalizedTarget;
@@ -270,29 +270,29 @@ internal static class GameplayMathUtils
 
 	internal static Vector2 RandomInsideCircle(Core.IRandom random)
 	{
-		var angle = random.NextSingle() * (2.0f * MathF.PI);
-		var radius = MathF.Sqrt(random.NextSingleInclusive());
+		float angle = random.NextSingle() * (2.0f * MathF.PI);
+		float radius = MathF.Sqrt(random.NextSingleInclusive());
 		return new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
 	}
 
 	internal static Vector2 RandomDirection(Core.IRandom random)
 	{
-		var angle = random.NextSingle() * (2.0f * MathF.PI);
+		float angle = random.NextSingle() * (2.0f * MathF.PI);
 		return new Vector2(MathF.Cos(angle), MathF.Sin(angle));
 	}
 
 	internal static Vector3 RandomOnSphere(Core.IRandom random)
 	{
-		var z = 1.0f - (2.0f * random.NextSingleInclusive());
-		var angle = random.NextSingle() * (2.0f * MathF.PI);
-		var radius = MathF.Sqrt(MathF.Max(0.0f, 1.0f - (z * z)));
+		float z = 1.0f - (2.0f * random.NextSingleInclusive());
+		float angle = random.NextSingle() * (2.0f * MathF.PI);
+		float radius = MathF.Sqrt(MathF.Max(0.0f, 1.0f - (z * z)));
 		return new Vector3(radius * MathF.Cos(angle), radius * MathF.Sin(angle), z);
 	}
 
 	internal static Vector3 RandomInsideSphere(Core.IRandom random)
 	{
 		Vector3 direction = RandomOnSphere(random);
-		var radius = MathF.Pow(random.NextSingleInclusive(), 1.0f / 3.0f);
+		float radius = MathF.Pow(random.NextSingleInclusive(), 1.0f / 3.0f);
 		return direction * radius;
 	}
 

@@ -39,8 +39,8 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 
 		if (resultType == typeof(int))
 		{
-			var minInt = MathTypeUtils.ResolveAsInt(_min.ValueType, minValue);
-			var maxInt = MathTypeUtils.ResolveAsInt(_max.ValueType, maxValue);
+			int minInt = MathTypeUtils.ResolveAsInt(_min.ValueType, minValue);
+			int maxInt = MathTypeUtils.ResolveAsInt(_max.ValueType, maxValue);
 
 			return new Variant128(
 				_maxInclusive
@@ -50,16 +50,16 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 
 		if (resultType == typeof(float))
 		{
-			var minFloat = MathTypeUtils.ResolveAsFloat(_min.ValueType, minValue);
-			var maxFloat = MathTypeUtils.ResolveAsFloat(_max.ValueType, maxValue);
+			float minFloat = MathTypeUtils.ResolveAsFloat(_min.ValueType, minValue);
+			float maxFloat = MathTypeUtils.ResolveAsFloat(_max.ValueType, maxValue);
 
 			if (maxFloat <= minFloat)
 			{
 				return new Variant128(minFloat);
 			}
 
-			var randomValue = _maxInclusive ? _random.NextSingleInclusive() : _random.NextSingle();
-			var result = minFloat + (randomValue * (maxFloat - minFloat));
+			float randomValue = _maxInclusive ? _random.NextSingleInclusive() : _random.NextSingle();
+			float result = minFloat + (randomValue * (maxFloat - minFloat));
 
 			if (_maxInclusive)
 			{
@@ -71,16 +71,16 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 
 		if (resultType == typeof(double))
 		{
-			var minDouble = MathTypeUtils.ResolveAsDouble(_min.ValueType, minValue);
-			var maxDouble = MathTypeUtils.ResolveAsDouble(_max.ValueType, maxValue);
+			double minDouble = MathTypeUtils.ResolveAsDouble(_min.ValueType, minValue);
+			double maxDouble = MathTypeUtils.ResolveAsDouble(_max.ValueType, maxValue);
 
 			if (maxDouble <= minDouble)
 			{
 				return new Variant128(minDouble);
 			}
 
-			var randomValue = _maxInclusive ? _random.NextDoubleInclusive() : _random.NextDouble();
-			var result = minDouble + (randomValue * (maxDouble - minDouble));
+			double randomValue = _maxInclusive ? _random.NextDoubleInclusive() : _random.NextDouble();
+			double result = minDouble + (randomValue * (maxDouble - minDouble));
 
 			if (_maxInclusive)
 			{

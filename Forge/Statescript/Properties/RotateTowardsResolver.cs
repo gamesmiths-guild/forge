@@ -28,7 +28,7 @@ public class RotateTowardsResolver(
 	{
 		Quaternion currentValue = _current.Resolve(graphContext).AsQuaternion();
 		Quaternion targetValue = _target.Resolve(graphContext).AsQuaternion();
-		var deltaValue = _maxRadiansDelta.Resolve(graphContext).AsFloat();
+		float deltaValue = _maxRadiansDelta.Resolve(graphContext).AsFloat();
 		return new Variant128(GameplayMathUtils.RotateTowards(currentValue, targetValue, deltaValue));
 	}
 

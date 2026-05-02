@@ -125,7 +125,7 @@ public readonly record struct ModifierMagnitude
 				if (SetByCallerFloat.Value.Snapshot && effectEvaluatedData is not null)
 				{
 					if (effectEvaluatedData.SnapshotSetByCallers.TryGetValue(
-						SetByCallerFloat.Value.Tag, out var snapshotValue))
+						SetByCallerFloat.Value.Tag, out float snapshotValue))
 					{
 						return snapshotValue;
 					}

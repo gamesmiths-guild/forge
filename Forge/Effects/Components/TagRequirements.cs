@@ -29,9 +29,9 @@ public readonly record struct TagRequirements(
 	/// <returns><see langword="true"/> if the requirements are met; <see langword="false"/> otherwise.</returns>
 	public bool RequirementsMet(in TagContainer targetContainer)
 	{
-		var hasRequired = RequiredTags is null || targetContainer.HasAll(RequiredTags);
-		var hasIgnored = IgnoreTags is not null && targetContainer.HasAny(IgnoreTags);
-		var matchQuery = TagQuery?.IsEmpty != false || TagQuery.Matches(targetContainer);
+		bool hasRequired = RequiredTags is null || targetContainer.HasAll(RequiredTags);
+		bool hasIgnored = IgnoreTags is not null && targetContainer.HasAny(IgnoreTags);
+		bool matchQuery = TagQuery?.IsEmpty != false || TagQuery.Matches(targetContainer);
 
 		return hasRequired && !hasIgnored && matchQuery;
 	}

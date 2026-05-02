@@ -79,7 +79,7 @@ internal sealed class Ability
 			_cooldownEffects = new Effect[abilityData.CooldownEffects.Length];
 			_activeCooldownHandles = new ActiveEffectHandle[abilityData.CooldownEffects.Length];
 
-			for (var i = 0; i < abilityData.CooldownEffects.Length; i++)
+			for (int i = 0; i < abilityData.CooldownEffects.Length; i++)
 			{
 				_cooldownEffects[i] = new Effect(
 					abilityData.CooldownEffects[i],
@@ -179,7 +179,7 @@ internal sealed class Ability
 				&& _activeCooldownHandles.Length == _cooldownEffects.Length,
 				"Active cooldown handles array should have been properly initialized.");
 
-			for (var i = 0; i < _cooldownEffects.Length; i++)
+			for (int i = 0; i < _cooldownEffects.Length; i++)
 			{
 				Effect effect = _cooldownEffects[i];
 				_activeCooldownHandles[i] = Owner.EffectsManager.ApplyEffect(effect);
@@ -338,7 +338,7 @@ internal sealed class Ability
 
 	internal bool CanActivate(IForgeEntity? abilityTarget, out AbilityActivationFailures failureFlags)
 	{
-		var canActivate = true;
+		bool canActivate = true;
 		failureFlags = AbilityActivationFailures.None;
 
 		if (IsInhibited)
@@ -422,7 +422,7 @@ internal sealed class Ability
 
 		if (_activeCooldownHandles is not null)
 		{
-			for (var i = 0; i < _activeCooldownHandles.Length; i++)
+			for (int i = 0; i < _activeCooldownHandles.Length; i++)
 			{
 				ActiveEffectHandle? effectHandle = _activeCooldownHandles[i];
 				if (effectHandle?.ActiveEffect is not null)
@@ -430,8 +430,8 @@ internal sealed class Ability
 					ActiveEffect activeEffect = effectHandle.ActiveEffect;
 
 					TagContainer cooldownTags = activeEffect.Effect.CachedGrantedTags!;
-					var totalTime = activeEffect.EffectEvaluatedData.Duration;
-					var remainingTime = (float)activeEffect.RemainingDuration;
+					float totalTime = activeEffect.EffectEvaluatedData.Duration;
+					float remainingTime = (float)activeEffect.RemainingDuration;
 
 					cooldownData[i] = new CooldownData(cooldownTags, totalTime, remainingTime);
 				}
@@ -443,7 +443,7 @@ internal sealed class Ability
 						effectData.EffectComponents.OfType<ModifierTagsEffectComponent>().First();
 					TagContainer cooldownTags = modifierTagsComponent.TagsToAdd;
 
-					var totalTime = effectData.DurationData.DurationMagnitude!.Value.GetMagnitude(
+					float totalTime = effectData.DurationData.DurationMagnitude!.Value.GetMagnitude(
 						_cooldownEffects[i], Owner, Level);
 
 					cooldownData[i] = new CooldownData(cooldownTags, totalTime, 0f);
@@ -458,7 +458,7 @@ internal sealed class Ability
 	{
 		if (_activeCooldownHandles is not null)
 		{
-			for (var i = 0; i < _activeCooldownHandles.Length; i++)
+			for (int i = 0; i < _activeCooldownHandles.Length; i++)
 			{
 				ActiveEffectHandle? effectHandle = _activeCooldownHandles[i];
 				if (effectHandle?.ActiveEffect is not null)
@@ -489,13 +489,13 @@ internal sealed class Ability
 
 		foreach (ModifierEvaluatedData modifierEvaluatedData in allModifiersEvaluatedData)
 		{
-			if (!costByAttribute.TryGetValue(modifierEvaluatedData.Attribute.Key, out var value))
+			if (!costByAttribute.TryGetValue(modifierEvaluatedData.Attribute.Key, out float value))
 			{
 				value = 0f;
 				costByAttribute[modifierEvaluatedData.Attribute.Key] = value;
 			}
 
-			var baseValue = modifierEvaluatedData.Attribute.BaseValue
+			float baseValue = modifierEvaluatedData.Attribute.BaseValue
 				+ value;
 
 			switch (modifierEvaluatedData.ModifierOperation)

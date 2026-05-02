@@ -158,7 +158,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	public void PerEntity_retrigger_invokes_previous_OnEnded_before_new_OnStarted()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var endedBeforeNew = false;
+		bool endedBeforeNew = false;
 		TrackingBehavior? previous = null;
 
 		AbilityData data = CreateAbilityData(
@@ -243,7 +243,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 			instancingPolicy: AbilityInstancingPolicy.PerExecution,
 			cooldownSeconds: 2f,
 			costMagnitude: -5f);
-		var baseBefore = entity.Attributes["TestAttributeSet.Attribute90"].BaseValue;
+		int baseBefore = entity.Attributes["TestAttributeSet.Attribute90"].BaseValue;
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
@@ -654,7 +654,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	public void Event_triggered_ability_multiple_events_with_PerExecution()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var activationCount = 0;
+		int activationCount = 0;
 		var eventTag = Tag.RequestTag(_tagsManager, "color.dark.green");
 
 		AbilityData data = CreateAbilityData(
@@ -721,7 +721,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	public void Event_triggered_ability_receives_magnitude_from_event()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var capturedMagnitude = 0f;
+		float capturedMagnitude = 0f;
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
 
 		AbilityData data = CreateAbilityData(
@@ -750,7 +750,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	public void Typed_event_triggered_ability_receives_both_magnitude_and_data()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var capturedMagnitude = 0f;
+		float capturedMagnitude = 0f;
 		TestEventPayload? capturedData = null;
 		var eventTag = Tag.RequestTag(_tagsManager, "tag");
 

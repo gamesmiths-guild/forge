@@ -94,7 +94,7 @@ public class StringKeyTests
 	public void Handles_very_long_strings_correctly()
 	{
 		// 10,000 'a's
-		var longString = new string('a', 10000);
+		string longString = new('a', 10000);
 		var key = new StringKey(longString);
 		key.ToString().Should().Be(longString.ToLowerInvariant());
 	}
@@ -302,7 +302,7 @@ public class StringKeyTests
 	public void Equals_returns_false_when_compared_with_null()
 	{
 		var key = new StringKey("testKey");
-		var equalsResult = key.Equals((StringKey?)null);
+		bool equalsResult = key.Equals((StringKey?)null);
 		equalsResult.Should().BeFalse();
 	}
 
@@ -312,7 +312,7 @@ public class StringKeyTests
 	{
 		var key = new StringKey("testKey");
 		const int differentTypeObject = 123;
-		var equalsResult = key.Equals(differentTypeObject);
+		bool equalsResult = key.Equals(differentTypeObject);
 		equalsResult.Should().BeFalse();
 	}
 
@@ -410,7 +410,7 @@ public class StringKeyTests
 		var key2 = new StringKey(keyName2);
 
 		// Depending on the expected ordering, adjust the assertions
-		var comparison = string.Compare(
+		int comparison = string.Compare(
 			keyName1.Trim().ToLowerInvariant(),
 			keyName2.Trim().ToLowerInvariant(),
 			StringComparison.OrdinalIgnoreCase);
@@ -494,9 +494,9 @@ public class StringKeyTests
 	public void ToString_returns_the_same_value_across_multiple_calls()
 	{
 		var key = new StringKey("immutableKey");
-		var firstCall = key.ToString();
-		var secondCall = key.ToString();
-		var thirdCall = key.ToString();
+		string firstCall = key.ToString();
+		string secondCall = key.ToString();
+		string thirdCall = key.ToString();
 
 		firstCall.Should().Be(secondCall);
 		secondCall.Should().Be(thirdCall);
@@ -509,11 +509,11 @@ public class StringKeyTests
 		var key = new StringKey("concurrentKey");
 		const int numberOfTasks = 100;
 		var tasks = new Task[numberOfTasks];
-		var results = new bool[numberOfTasks];
+		bool[] results = new bool[numberOfTasks];
 
-		for (var i = 0; i < numberOfTasks; i++)
+		for (int i = 0; i < numberOfTasks; i++)
 		{
-			var taskIndex = i;
+			int taskIndex = i;
 			tasks[taskIndex] = Task.Run(() =>
 			{
 				results[taskIndex] = key.ToString() == "concurrentkey";

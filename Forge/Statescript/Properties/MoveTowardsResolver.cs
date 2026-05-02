@@ -26,7 +26,7 @@ public class MoveTowardsResolver(IPropertyResolver current, IPropertyResolver ta
 	{
 		Variant128 currentValue = _current.Resolve(graphContext);
 		Variant128 targetValue = _target.Resolve(graphContext);
-		var maxDeltaValue = _maxDelta.Resolve(graphContext).AsFloat();
+		float maxDeltaValue = _maxDelta.Resolve(graphContext).AsFloat();
 		Type resultType = ValueType;
 
 		if (resultType == typeof(float))

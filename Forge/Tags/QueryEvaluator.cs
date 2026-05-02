@@ -25,9 +25,9 @@ internal sealed class QueryEvaluator(TagQuery query)
 	{
 		_curStreamIdx = 0;
 
-		var returnValue = false;
+		bool returnValue = false;
 
-		var hasRootExpression = GetToken();
+		byte hasRootExpression = GetToken();
 		if (!_readError && hasRootExpression != 0)
 		{
 			returnValue = EvaluateExpression(container);
@@ -87,8 +87,8 @@ internal sealed class QueryEvaluator(TagQuery query)
 
 	private bool EvaluateAnyTagsMatch(TagContainer tags, bool exactMatch, bool skip)
 	{
-		var shortCircuit = skip;
-		var result = false;
+		bool shortCircuit = skip;
+		bool result = false;
 
 		// Parse tag set.
 		int numTags = GetToken();
@@ -97,7 +97,7 @@ internal sealed class QueryEvaluator(TagQuery query)
 			return false;
 		}
 
-		for (var i = 0; i < numTags; ++i)
+		for (int i = 0; i < numTags; ++i)
 		{
 			int tagIndex = GetToken();
 			if (_readError)
@@ -109,7 +109,7 @@ internal sealed class QueryEvaluator(TagQuery query)
 			{
 				Tag tag = _query.GetTagFromIndex(tagIndex);
 
-				var hasTag = HasTag(tags, tag, exactMatch);
+				bool hasTag = HasTag(tags, tag, exactMatch);
 
 				if (hasTag)
 				{
@@ -125,10 +125,10 @@ internal sealed class QueryEvaluator(TagQuery query)
 
 	private bool EvaluateAllTagsMatch(TagContainer tags, bool exactMatch, bool skip)
 	{
-		var shortCircuit = skip;
+		bool shortCircuit = skip;
 
 		// Assume true until proven otherwise.
-		var result = true;
+		bool result = true;
 
 		// Parse tag set.
 		int numTags = GetToken();
@@ -137,7 +137,7 @@ internal sealed class QueryEvaluator(TagQuery query)
 			return false;
 		}
 
-		for (var i = 0; i < numTags; ++i)
+		for (int i = 0; i < numTags; ++i)
 		{
 			int tagIndex = GetToken();
 			if (_readError)
@@ -149,7 +149,7 @@ internal sealed class QueryEvaluator(TagQuery query)
 			{
 				Tag tag = _query.GetTagFromIndex(tagIndex);
 
-				var hasTag = HasTag(tags, tag, exactMatch);
+				bool hasTag = HasTag(tags, tag, exactMatch);
 
 				if (!hasTag)
 				{
@@ -165,10 +165,10 @@ internal sealed class QueryEvaluator(TagQuery query)
 
 	private bool EvaluateNoTagsMatch(TagContainer tags, bool exactMatch, bool skip)
 	{
-		var shortCircuit = skip;
+		bool shortCircuit = skip;
 
 		// Assume true until proven otherwise.
-		var result = true;
+		bool result = true;
 
 		// Parse tag set.
 		int numTags = GetToken();
@@ -177,7 +177,7 @@ internal sealed class QueryEvaluator(TagQuery query)
 			return false;
 		}
 
-		for (var i = 0; i < numTags; ++i)
+		for (int i = 0; i < numTags; ++i)
 		{
 			int tagIndex = GetToken();
 			if (_readError)
@@ -189,7 +189,7 @@ internal sealed class QueryEvaluator(TagQuery query)
 			{
 				Tag tag = _query.GetTagFromIndex(tagIndex);
 
-				var hasTag = HasTag(tags, tag, exactMatch);
+				bool hasTag = HasTag(tags, tag, exactMatch);
 
 				if (hasTag)
 				{
@@ -205,10 +205,10 @@ internal sealed class QueryEvaluator(TagQuery query)
 
 	private bool EvaluateAnyExpressionsMatch(TagContainer tags, bool skip)
 	{
-		var shortCircuit = skip;
+		bool shortCircuit = skip;
 
 		// Assume false until proven otherwise.
-		var result = false;
+		bool result = false;
 
 		// Parse expression set.
 		int numExpressions = GetToken();
@@ -217,9 +217,9 @@ internal sealed class QueryEvaluator(TagQuery query)
 			return false;
 		}
 
-		for (var i = 0; i < numExpressions; ++i)
+		for (int i = 0; i < numExpressions; ++i)
 		{
-			var expressionResult = EvaluateExpression(tags, shortCircuit);
+			bool expressionResult = EvaluateExpression(tags, shortCircuit);
 
 			if (!shortCircuit && expressionResult)
 			{
@@ -234,10 +234,10 @@ internal sealed class QueryEvaluator(TagQuery query)
 
 	private bool EvaluateAllExpressionsMatch(TagContainer tags, bool skip)
 	{
-		var shortCircuit = skip;
+		bool shortCircuit = skip;
 
 		// Assume true until proven otherwise.
-		var result = true;
+		bool result = true;
 
 		// Parse expression set.
 		int numExpressions = GetToken();
@@ -246,9 +246,9 @@ internal sealed class QueryEvaluator(TagQuery query)
 			return false;
 		}
 
-		for (var i = 0; i < numExpressions; ++i)
+		for (int i = 0; i < numExpressions; ++i)
 		{
-			var expressionResult = EvaluateExpression(tags, shortCircuit);
+			bool expressionResult = EvaluateExpression(tags, shortCircuit);
 
 			if (!shortCircuit && !expressionResult)
 			{
@@ -263,10 +263,10 @@ internal sealed class QueryEvaluator(TagQuery query)
 
 	private bool EvaluateNoExpressionsMatch(TagContainer tags, bool skip)
 	{
-		var shortCircuit = skip;
+		bool shortCircuit = skip;
 
 		// Assume true until proven otherwise.
-		var result = true;
+		bool result = true;
 
 		// Parse expression set.
 		int numExpressions = GetToken();
@@ -275,9 +275,9 @@ internal sealed class QueryEvaluator(TagQuery query)
 			return false;
 		}
 
-		for (var i = 0; i < numExpressions; ++i)
+		for (int i = 0; i < numExpressions; ++i)
 		{
-			var expressionResult = EvaluateExpression(tags, shortCircuit);
+			bool expressionResult = EvaluateExpression(tags, shortCircuit);
 
 			if (!shortCircuit && expressionResult)
 			{

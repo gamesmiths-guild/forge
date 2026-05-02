@@ -294,7 +294,7 @@ public class TagsManagerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 		var tagsManager = new TagsManager(managerTags);
 
 		// Normalize line endings to be consistent across environments
-		var normalizedOutput = output.Replace("\n", Environment.NewLine);
+		string normalizedOutput = output.Replace("\n", Environment.NewLine);
 
 		tagsManager.ToString().Should().Be(normalizedOutput);
 	}
@@ -306,7 +306,7 @@ public class TagsManagerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 	{
 		var tagSet = new HashSet<Tag>();
 
-		foreach (var tagKey in tagKeys)
+		foreach (string tagKey in tagKeys)
 		{
 			var tag = Tag.RequestTag(tagsManager, tagKey);
 

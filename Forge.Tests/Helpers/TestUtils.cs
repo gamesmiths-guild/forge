@@ -20,9 +20,9 @@ public static class TestUtils
 	{
 		stackData.Should().HaveCount(expectedStackDataCount);
 
-		for (var i = 0; i < expectedStackDataCount; i++)
+		for (int i = 0; i < expectedStackDataCount; i++)
 		{
-			var expectedData = (int[])expectedStackData[i];
+			int[] expectedData = (int[])expectedStackData[i];
 
 			stackData.ElementAt(i).StackCount.Should().Be(expectedData[0]);
 			stackData.ElementAt(i).EffectLevel.Should().Be(expectedData[1]);
@@ -66,7 +66,7 @@ public static class TestUtils
 
 		var tags = new HashSet<Tag>();
 
-		foreach (var key in keys)
+		foreach (string key in keys)
 		{
 			tags.Add(Tag.RequestTag(tagsManager, key));
 		}

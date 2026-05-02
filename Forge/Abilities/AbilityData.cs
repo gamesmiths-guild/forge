@@ -182,7 +182,7 @@ public readonly record struct AbilityData
 	{
 		if (CooldownEffects is not null)
 		{
-			for (var i = 0; i < CooldownEffects.Length; i++)
+			for (int i = 0; i < CooldownEffects.Length; i++)
 			{
 				Validation.Assert(
 					Array.TrueForAll(

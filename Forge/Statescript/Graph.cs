@@ -87,7 +87,7 @@ public class Graph
 	{
 		FinalizeNodePorts(EntryNode);
 
-		for (var i = 0; i < Nodes.Count; i++)
+		for (int i = 0; i < Nodes.Count; i++)
 		{
 			FinalizeNodePorts(Nodes[i]);
 		}
@@ -95,7 +95,7 @@ public class Graph
 
 	private static void FinalizeNodePorts(Node node)
 	{
-		for (var i = 0; i < node.OutputPorts.Length; i++)
+		for (int i = 0; i < node.OutputPorts.Length; i++)
 		{
 			node.OutputPorts[i].FinalizeConnections();
 		}
@@ -115,7 +115,7 @@ public class Graph
 			return;
 		}
 
-		var targetInputIndex = newConnection.InputPort.Index;
+		byte targetInputIndex = newConnection.InputPort.Index;
 
 		// The visited set tracks (NodeId, EntryMode) where EntryMode is either a specific input port index (for message
 		// propagation) or DisableSubgraphEntry (for disable-subgraph cascades).
@@ -174,7 +174,7 @@ public class Graph
 		byte targetInputIndex,
 		Connection newConnection)
 	{
-		foreach (var outputIndex in current.GetReachableOutputPorts(inputIndex))
+		foreach (int outputIndex in current.GetReachableOutputPorts(inputIndex))
 		{
 			if (outputIndex < 0 || outputIndex >= current.OutputPorts.Length)
 			{
@@ -183,7 +183,7 @@ public class Graph
 
 			OutputPort outputPort = current.OutputPorts[outputIndex];
 
-			for (var connectionIndex = 0; connectionIndex < outputPort.ConnectionCount; connectionIndex++)
+			for (int connectionIndex = 0; connectionIndex < outputPort.ConnectionCount; connectionIndex++)
 			{
 				InputPort connectedInput = outputPort.GetConnectedPort(connectionIndex);
 				Node? nextNode = connectedInput.OwnerNode;
@@ -196,7 +196,7 @@ public class Graph
 				// SubgraphPorts that appear in GetReachableOutputPorts use EmitMessage (regular message), not
 				// EmitDisableSubgraphMessage. The caller (HandleMessage) calls OutputPorts[SubgraphPort].EmitMessage()
 				// which triggers ReceiveMessage on the target.
-				var nextEntryMode = connectedInput.Index;
+				byte nextEntryMode = connectedInput.Index;
 
 				if (IsLoopDetected(nextNode, nextEntryMode, targetNode, targetInputIndex))
 				{
@@ -217,7 +217,7 @@ public class Graph
 		byte targetInputIndex,
 		Connection newConnection)
 	{
-		foreach (var outputIndex in messagePortIndices)
+		foreach (int outputIndex in messagePortIndices)
 		{
 			if (outputIndex < 0 || outputIndex >= current.OutputPorts.Length)
 			{
@@ -226,7 +226,7 @@ public class Graph
 
 			OutputPort outputPort = current.OutputPorts[outputIndex];
 
-			for (var connectionIndex = 0; connectionIndex < outputPort.ConnectionCount; connectionIndex++)
+			for (int connectionIndex = 0; connectionIndex < outputPort.ConnectionCount; connectionIndex++)
 			{
 				InputPort connectedInput = outputPort.GetConnectedPort(connectionIndex);
 				Node? nextNode = connectedInput.OwnerNode;
@@ -236,7 +236,7 @@ public class Graph
 					continue;
 				}
 
-				var nextEntryMode = connectedInput.Index;
+				byte nextEntryMode = connectedInput.Index;
 
 				if (IsLoopDetected(nextNode, nextEntryMode, targetNode, targetInputIndex))
 				{
@@ -256,11 +256,11 @@ public class Graph
 		byte targetInputIndex,
 		Connection newConnection)
 	{
-		for (var outputIndex = 0; outputIndex < current.OutputPorts.Length; outputIndex++)
+		for (int outputIndex = 0; outputIndex < current.OutputPorts.Length; outputIndex++)
 		{
 			OutputPort outputPort = current.OutputPorts[outputIndex];
 
-			for (var connectionIndex = 0; connectionIndex < outputPort.ConnectionCount; connectionIndex++)
+			for (int connectionIndex = 0; connectionIndex < outputPort.ConnectionCount; connectionIndex++)
 			{
 				InputPort connectedInput = outputPort.GetConnectedPort(connectionIndex);
 				Node? nextNode = connectedInput.OwnerNode;

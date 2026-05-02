@@ -26,9 +26,9 @@ public class QuaternionFromYawPitchRollResolver(IPropertyResolver yaw, IProperty
 	/// <inheritdoc/>
 	public Variant128 Resolve(GraphContext graphContext)
 	{
-		var yawValue = _yaw.Resolve(graphContext).AsFloat();
-		var pitchValue = _pitch.Resolve(graphContext).AsFloat();
-		var rollValue = _roll.Resolve(graphContext).AsFloat();
+		float yawValue = _yaw.Resolve(graphContext).AsFloat();
+		float pitchValue = _pitch.Resolve(graphContext).AsFloat();
+		float rollValue = _roll.Resolve(graphContext).AsFloat();
 		return new Variant128(Quaternion.CreateFromYawPitchRoll(yawValue, pitchValue, rollValue));
 	}
 

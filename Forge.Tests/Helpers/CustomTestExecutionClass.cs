@@ -62,19 +62,19 @@ public class CustomTestExecutionClass : CustomExecution
 	{
 		var result = new List<ModifierEvaluatedData>();
 
-		var sourceAttribute1value = CaptureAttributeMagnitude(
+		int sourceAttribute1value = CaptureAttributeMagnitude(
 			SourceAttribute1,
 			effect,
 			target,
 			effectEvaluatedData);
 
-		var sourceAttribute2value = CaptureAttributeMagnitude(
+		int sourceAttribute2value = CaptureAttributeMagnitude(
 			SourceAttribute2,
 			effect,
 			target,
 			effectEvaluatedData);
 
-		var targetAttribute1value = CaptureAttributeMagnitude(
+		int targetAttribute1value = CaptureAttributeMagnitude(
 			TargetAttribute1,
 			effect,
 			target,

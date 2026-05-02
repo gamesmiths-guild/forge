@@ -2,7 +2,6 @@
 
 using System.Numerics;
 using FluentAssertions;
-using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tests.Helpers;

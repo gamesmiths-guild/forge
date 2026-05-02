@@ -48,7 +48,7 @@ public sealed class TagsManager
 	{
 		RootNode = new TagNode(this);
 
-		foreach (var tag in tags)
+		foreach (string tag in tags)
 		{
 			AddTagToTree(tag);
 		}
@@ -102,7 +102,7 @@ public sealed class TagsManager
 	/// <returns>The number of parent tags for the given <see cref="Tag"/>.</returns>
 	public int GetNumberOfTagNodes(Tag tag)
 	{
-		var count = 0;
+		int count = 0;
 
 		TagNode? tagNode = FindTagNode(tag);
 		while (tagNode is not null)
@@ -147,7 +147,7 @@ public sealed class TagsManager
 	{
 		TagContainer tagContainer = new(this);
 
-		foreach (var tagString in tags)
+		foreach (string tagString in tags)
 		{
 			Tag requestedTag = RequestTag(tagString, errorIfNotFound);
 
@@ -226,7 +226,7 @@ public sealed class TagsManager
 			return false;
 		}
 
-		var isValid = true;
+		bool isValid = true;
 		var errorStringBuilder = new StringBuilder();
 
 		while (fixedString.StartsWith('.'))
@@ -424,7 +424,7 @@ public sealed class TagsManager
 		StringKey originalTagKey = tagKey;
 		var fullTagString = new StringBuilder(tagKey);
 
-		if (Validation.Enabled && !IsValidTagKey(fullTagString.ToString(), out var _, out var outFixedString))
+		if (Validation.Enabled && !IsValidTagKey(fullTagString.ToString(), out string _, out string? outFixedString))
 		{
 			if (string.IsNullOrEmpty(outFixedString))
 			{
@@ -435,14 +435,14 @@ public sealed class TagsManager
 			originalTagKey = fullTagString.ToString();
 		}
 
-		var subTags = fullTagString.ToString().Split('.');
+		string[] subTags = fullTagString.ToString().Split('.');
 
 		fullTagString.Clear();
-		var numSubTags = subTags.Length;
+		int numSubTags = subTags.Length;
 
-		for (var i = 0; i < numSubTags; i++)
+		for (int i = 0; i < numSubTags; i++)
 		{
-			var isExplicitTag = i == (numSubTags - 1);
+			bool isExplicitTag = i == (numSubTags - 1);
 			StringKey shortTagKey = subTags[i];
 			StringKey fullTagKey;
 
@@ -465,7 +465,7 @@ public sealed class TagsManager
 			}
 
 			List<TagNode> childTags = currentNode.ChildTags;
-			var insertionIdx = InsertTagIntoNodeArray(shortTagKey, fullTagKey, currentNode, childTags, isExplicitTag);
+			int insertionIdx = InsertTagIntoNodeArray(shortTagKey, fullTagKey, currentNode, childTags, isExplicitTag);
 
 			currentNode = childTags[insertionIdx];
 		}
@@ -482,7 +482,7 @@ public sealed class TagsManager
 		int? whereToInsert = null;
 
 		// See if the tag is already in the array.
-		var lowerBoundIndex = 0;
+		int lowerBoundIndex = 0;
 		if (nodeArray.Count > 0)
 		{
 			lowerBoundIndex = nodeArray.FindIndex(x =>

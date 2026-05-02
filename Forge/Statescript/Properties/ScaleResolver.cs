@@ -25,7 +25,7 @@ public class ScaleResolver(IPropertyResolver vector, IPropertyResolver scalar) :
 	public Variant128 Resolve(GraphContext graphContext)
 	{
 		Variant128 vectorValue = _vector.Resolve(graphContext);
-		var scalarValue = _scalar.Resolve(graphContext).AsFloat();
+		float scalarValue = _scalar.Resolve(graphContext).AsFloat();
 		Type resultType = ValueType;
 
 		if (resultType == typeof(Vector2))

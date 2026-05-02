@@ -95,7 +95,7 @@ public abstract class StateNode<T> : Node
 			yield return OnDeactivatePort;
 			yield return SubgraphPort;
 
-			for (var i = SubgraphPort + 1; i < OutputPorts.Length; i++)
+			for (int i = SubgraphPort + 1; i < OutputPorts.Length; i++)
 			{
 				yield return i;
 			}
@@ -107,7 +107,7 @@ public abstract class StateNode<T> : Node
 			yield return OnDeactivatePort;
 			yield return OnAbortPort;
 
-			for (var i = 0; i < SubgraphPorts.Length; i++)
+			for (int i = 0; i < SubgraphPorts.Length; i++)
 			{
 				yield return SubgraphPorts[i].Index;
 			}
@@ -204,7 +204,7 @@ public abstract class StateNode<T> : Node
 
 		DeactivateNode(graphContext);
 
-		for (var i = 0; i < eventPortIds.Length; i++)
+		for (int i = 0; i < eventPortIds.Length; i++)
 		{
 			Validation.Assert(
 				eventPortIds[i] > OnAbortPort,
@@ -296,7 +296,7 @@ public abstract class StateNode<T> : Node
 	{
 		if (nodeContext.DeferredEmitMessageData.Count > 0)
 		{
-			foreach (var emitEvent in nodeContext.DeferredEmitMessageData)
+			foreach (int emitEvent in nodeContext.DeferredEmitMessageData)
 			{
 				OutputPorts[emitEvent].EmitMessage(graphContext);
 			}

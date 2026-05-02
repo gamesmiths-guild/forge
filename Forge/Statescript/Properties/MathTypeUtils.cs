@@ -56,8 +56,8 @@ internal static class MathTypeUtils
 			return PromoteNumericTypes(leftType, rightType);
 		}
 
-		var leftIsVectorLike = IsVectorOrQuaternionType(leftType);
-		var rightIsVectorLike = IsVectorOrQuaternionType(rightType);
+		bool leftIsVectorLike = IsVectorOrQuaternionType(leftType);
+		bool rightIsVectorLike = IsVectorOrQuaternionType(rightType);
 
 		if (leftIsVectorLike || rightIsVectorLike)
 		{
@@ -156,8 +156,8 @@ internal static class MathTypeUtils
 
 	internal static Type PromoteNumericTypes(Type leftType, Type rightType)
 	{
-		var leftRank = GetNumericRank(leftType);
-		var rightRank = GetNumericRank(rightType);
+		int leftRank = GetNumericRank(leftType);
+		int rightRank = GetNumericRank(rightType);
 
 		return leftRank >= rightRank ? RankToType(leftRank) : RankToType(rightRank);
 	}

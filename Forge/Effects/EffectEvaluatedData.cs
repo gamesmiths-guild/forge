@@ -185,7 +185,7 @@ public sealed class EffectEvaluatedData
 			return 1;
 		}
 
-		var evaluatedDuration = periodicData.Value.Period.GetValue(Level);
+		float evaluatedDuration = periodicData.Value.Period.GetValue(Level);
 
 		if (evaluatedDuration <= 0)
 		{
@@ -207,8 +207,8 @@ public sealed class EffectEvaluatedData
 				continue;
 			}
 
-			var baseMagnitude = modifier.Magnitude.GetMagnitude(Effect, Target, Level, this);
-			var finalMagnitude = ApplyStackPolicy(baseMagnitude);
+			float baseMagnitude = modifier.Magnitude.GetMagnitude(Effect, Target, Level, this);
+			float finalMagnitude = ApplyStackPolicy(baseMagnitude);
 
 			modifiersEvaluatedData.Add(
 				new ModifierEvaluatedData(
@@ -294,7 +294,7 @@ public sealed class EffectEvaluatedData
 
 	private float ApplyStackPolicy(float baseMagnitude)
 	{
-		var stackMultiplier = Stack;
+		int stackMultiplier = Stack;
 		if (Effect.EffectData.StackingData.HasValue &&
 			Effect.EffectData.StackingData.Value.MagnitudePolicy == StackMagnitudePolicy.DontStack)
 		{

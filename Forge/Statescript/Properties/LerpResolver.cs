@@ -35,17 +35,17 @@ public class LerpResolver(IPropertyResolver a, IPropertyResolver b, IPropertyRes
 
 		if (resultType == typeof(float))
 		{
-			var floatA = MathTypeUtils.ResolveAsFloat(_a.ValueType, aValue);
-			var floatB = MathTypeUtils.ResolveAsFloat(_b.ValueType, bValue);
-			var floatT = MathTypeUtils.ResolveAsFloat(_t.ValueType, tValue);
+			float floatA = MathTypeUtils.ResolveAsFloat(_a.ValueType, aValue);
+			float floatB = MathTypeUtils.ResolveAsFloat(_b.ValueType, bValue);
+			float floatT = MathTypeUtils.ResolveAsFloat(_t.ValueType, tValue);
 			return new Variant128(floatA + ((floatB - floatA) * floatT));
 		}
 
 		if (resultType == typeof(double))
 		{
-			var doubleA = MathTypeUtils.ResolveAsDouble(_a.ValueType, aValue);
-			var doubleB = MathTypeUtils.ResolveAsDouble(_b.ValueType, bValue);
-			var doubleT = MathTypeUtils.ResolveAsDouble(_t.ValueType, tValue);
+			double doubleA = MathTypeUtils.ResolveAsDouble(_a.ValueType, aValue);
+			double doubleB = MathTypeUtils.ResolveAsDouble(_b.ValueType, bValue);
+			double doubleT = MathTypeUtils.ResolveAsDouble(_t.ValueType, tValue);
 			return new Variant128(doubleA + ((doubleB - doubleA) * doubleT));
 		}
 

@@ -100,7 +100,7 @@ public readonly struct Tag : IEquatable<Tag>
 	public static bool NetDeserialize(TagsManager tagsManager, byte[] stream, out Tag tag)
 	{
 		// Read netIndex from buffer. This is just a practical example, use a BitStream reader here instead.
-		var netIndex = new ushort[stream.Length / 2];
+		ushort[] netIndex = new ushort[stream.Length / 2];
 		Buffer.BlockCopy(stream, 0, netIndex, 0, stream.Length);
 
 		StringKey tagKey = tagsManager.GetTagKeyFromNetIndex(netIndex[0]);
@@ -230,12 +230,12 @@ public readonly struct Tag : IEquatable<Tag>
 		// Tags should follow the order of the Tag node's ParentTags, starting with the immediate parent.
 		StringKey rawTag = TagKey;
 
-		var dotIndex = rawTag.ToString().LastIndexOf('.');
+		int dotIndex = rawTag.ToString().LastIndexOf('.');
 
 		while (dotIndex != -1)
 		{
 			// Remove everything after the last dot.
-			var parent = rawTag.ToString()[..dotIndex];
+			string parent = rawTag.ToString()[..dotIndex];
 
 			dotIndex = parent.LastIndexOf('.');
 

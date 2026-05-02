@@ -24,7 +24,7 @@ public readonly record struct ScalableInt(int BaseValue, ICurve? ScalingCurve = 
 			return BaseValue;
 		}
 
-		var scalingFactor = ScalingCurve.Evaluate(time);
+		float scalingFactor = ScalingCurve.Evaluate(time);
 		return (int)(BaseValue * scalingFactor);
 	}
 }

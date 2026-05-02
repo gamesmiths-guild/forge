@@ -206,7 +206,7 @@ public class RandomResolverTests
 			maxInclusive: false);
 
 		var context = new GraphContext();
-		var result = resolver.Resolve(context).AsFloat();
+		float result = resolver.Resolve(context).AsFloat();
 
 		result.Should().BeApproximately(7.5f, TestUtils.Tolerance);
 		random.NextSingleCalls.Should().Be(1);
@@ -326,7 +326,7 @@ public class RandomResolverTests
 			maxInclusive: false);
 
 		var context = new GraphContext();
-		var result = resolver.Resolve(context).AsDouble();
+		double result = resolver.Resolve(context).AsDouble();
 
 		result.Should().BeApproximately(12.5, TestUtils.Tolerance);
 		random.NextDoubleCalls.Should().Be(1);

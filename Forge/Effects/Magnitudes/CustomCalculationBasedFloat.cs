@@ -34,9 +34,9 @@ public readonly record struct CustomCalculationBasedFloat(
 		int level,
 		EffectEvaluatedData? effectEvaluatedData)
 	{
-		var baseMagnitude = MagnitudeCalculatorClass.CalculateBaseMagnitude(effect, target, effectEvaluatedData);
+		float baseMagnitude = MagnitudeCalculatorClass.CalculateBaseMagnitude(effect, target, effectEvaluatedData);
 
-		var finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + baseMagnitude))
+		float finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + baseMagnitude))
 			+ PostMultiplyAdditiveValue.GetValue(level);
 
 		if (LookupCurve is not null)

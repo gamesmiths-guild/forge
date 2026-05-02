@@ -25,8 +25,8 @@ public class AndResolver(IPropertyResolver left, IPropertyResolver right) : IPro
 	/// <inheritdoc/>
 	public Variant128 Resolve(GraphContext graphContext)
 	{
-		var leftValue = _left.Resolve(graphContext).AsBool();
-		var rightValue = _right.Resolve(graphContext).AsBool();
+		bool leftValue = _left.Resolve(graphContext).AsBool();
+		bool rightValue = _right.Resolve(graphContext).AsBool();
 
 		return new Variant128(leftValue && rightValue);
 	}

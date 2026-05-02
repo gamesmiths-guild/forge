@@ -35,7 +35,7 @@ public class RejectResolverTests
 	[Trait("Resolver", "Reject")]
 	public void Reject_resolver_returns_original_vector_when_value_is_perpendicular()
 	{
-		var value = Vector3.UnitY;
+		Vector3 value = Vector3.UnitY;
 		var resolver = new RejectResolver(
 			new VariantResolver(new Variant128(value), typeof(Vector3)),
 			new VariantResolver(new Variant128(Vector3.UnitX), typeof(Vector3)));

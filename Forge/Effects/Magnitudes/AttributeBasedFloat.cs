@@ -55,7 +55,7 @@ public readonly record struct AttributeBasedFloat(
 				break;
 		}
 
-		var finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + magnitude))
+		float finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + magnitude))
 			+ PostMultiplyAdditiveValue.GetValue(level);
 
 		if (LookupCurve is not null)
@@ -88,12 +88,12 @@ public readonly record struct AttributeBasedFloat(
 			AttributeCalculationType,
 			FinalChannel);
 
-		if (snapshotAttributes.TryGetValue(key, out var cachedValue))
+		if (snapshotAttributes.TryGetValue(key, out float cachedValue))
 		{
 			return cachedValue;
 		}
 
-		var currentValue = CaptureNow(attribute);
+		int currentValue = CaptureNow(attribute);
 		snapshotAttributes[key] = currentValue;
 		return currentValue;
 	}

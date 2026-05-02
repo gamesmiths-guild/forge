@@ -52,7 +52,7 @@ public class EulerAnglesFromQuaternionResolver(IPropertyResolver quaternion, IPr
 			return EulerOrder.XYZ;
 		}
 
-		var orderValue = _order.Resolve(graphContext).AsInt();
+		int orderValue = _order.Resolve(graphContext).AsInt();
 		if (!Enum.IsDefined(typeof(EulerOrder), orderValue))
 		{
 #pragma warning disable CA2208 // Instantiate argument exceptions correctly

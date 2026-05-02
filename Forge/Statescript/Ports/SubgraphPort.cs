@@ -23,7 +23,7 @@ public class SubgraphPort : OutputPort
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
 
-		for (var i = 0; i < ports.Length; i++)
+		for (int i = 0; i < ports.Length; i++)
 		{
 			ports[i].ReceiveDisableSubgraphMessage(graphContext);
 		}

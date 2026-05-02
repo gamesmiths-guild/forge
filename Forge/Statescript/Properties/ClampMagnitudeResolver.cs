@@ -21,7 +21,7 @@ public class ClampMagnitudeResolver(IPropertyResolver value, IPropertyResolver m
 	public Variant128 Resolve(GraphContext graphContext)
 	{
 		Variant128 valueResult = _value.Resolve(graphContext);
-		var maxLengthValue = _maxLength.Resolve(graphContext).AsFloat();
+		float maxLengthValue = _maxLength.Resolve(graphContext).AsFloat();
 		Type resultType = ValueType;
 
 		if (resultType == typeof(Vector2))

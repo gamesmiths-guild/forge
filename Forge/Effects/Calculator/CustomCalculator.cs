@@ -54,7 +54,7 @@ public abstract class CustomCalculator
 			return 0;
 		}
 
-		var capturedValue = (int)CaptureAttributeSnapshotAware(
+		int capturedValue = (int)CaptureAttributeSnapshotAware(
 			capturedAttribute,
 			calculationType,
 			finalChannel,
@@ -96,7 +96,7 @@ public abstract class CustomCalculator
 			{
 				case ModifierOperation.FlatBonus:
 					pendingFlatBonusByChannel ??= [];
-					if (!pendingFlatBonusByChannel.TryGetValue(modifier.Channel, out var flatValue))
+					if (!pendingFlatBonusByChannel.TryGetValue(modifier.Channel, out float flatValue))
 					{
 						flatValue = 0f;
 					}
@@ -106,7 +106,7 @@ public abstract class CustomCalculator
 
 				case ModifierOperation.PercentBonus:
 					pendingPercentBonusByChannel ??= [];
-					if (!pendingPercentBonusByChannel.TryGetValue(modifier.Channel, out var percentValue))
+					if (!pendingPercentBonusByChannel.TryGetValue(modifier.Channel, out float percentValue))
 					{
 						percentValue = 0f;
 					}
@@ -129,7 +129,7 @@ public abstract class CustomCalculator
 		}
 
 		EntityAttribute entityAttribute = captureTarget.Attributes[attribute];
-		var newValue = (int)entityAttribute.CalculateValueWithPendingModifiers(
+		int newValue = (int)entityAttribute.CalculateValueWithPendingModifiers(
 			pendingFlatBonusByChannel,
 			pendingPercentBonusByChannel,
 			pendingOverrideByChannel);
@@ -162,12 +162,12 @@ public abstract class CustomCalculator
 			calculationType,
 			finalChannel);
 
-		if (effectEvaluatedData.SnapshotAttributes.TryGetValue(key, out var cachedValue))
+		if (effectEvaluatedData.SnapshotAttributes.TryGetValue(key, out float cachedValue))
 		{
 			return cachedValue;
 		}
 
-		var currentValue = CaptureMagnitudeValue(attribute, calculationType, finalChannel);
+		int currentValue = CaptureMagnitudeValue(attribute, calculationType, finalChannel);
 		effectEvaluatedData.SnapshotAttributes[key] = currentValue;
 		return currentValue;
 	}

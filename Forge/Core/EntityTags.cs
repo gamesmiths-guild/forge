@@ -72,7 +72,7 @@ public class EntityTags
 	{
 		foreach (Tag removedTag in BaseTags.RemoveTag(tag))
 		{
-			if (!_modifierTagCounts.TryGetValue(removedTag, out var count) || count == 0)
+			if (!_modifierTagCounts.TryGetValue(removedTag, out int count) || count == 0)
 			{
 				CombinedTags.RemoveTag(removedTag);
 			}
@@ -83,7 +83,7 @@ public class EntityTags
 	{
 		foreach (Tag removedTag in BaseTags.RemoveTags(tags))
 		{
-			if (!_modifierTagCounts.TryGetValue(removedTag, out var count) || count == 0)
+			if (!_modifierTagCounts.TryGetValue(removedTag, out int count) || count == 0)
 			{
 				CombinedTags.RemoveTag(removedTag);
 			}
@@ -92,7 +92,7 @@ public class EntityTags
 
 	internal void AddModifierTag(Tag tag)
 	{
-		if (_modifierTagCounts.TryGetValue(tag, out var modifierTagCount))
+		if (_modifierTagCounts.TryGetValue(tag, out int modifierTagCount))
 		{
 			_modifierTagCounts[tag] = ++modifierTagCount;
 
@@ -122,7 +122,7 @@ public class EntityTags
 
 	internal void RemoveModifierTag(Tag tag)
 	{
-		if (!_modifierTagCounts.TryGetValue(tag, out var modifierTagCount))
+		if (!_modifierTagCounts.TryGetValue(tag, out int modifierTagCount))
 		{
 			return;
 		}

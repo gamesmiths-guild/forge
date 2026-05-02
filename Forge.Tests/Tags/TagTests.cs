@@ -89,7 +89,7 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 	{
 		var tag = Tag.RequestTag(_tagsManager, tagKey);
 
-		Tag.NetSerialize(_tagsManager, tag, out var tagNetIndex).Should().BeTrue();
+		Tag.NetSerialize(_tagsManager, tag, out ushort tagNetIndex).Should().BeTrue();
 
 		tagNetIndex.Should().Be(netIndex);
 	}
@@ -100,7 +100,7 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 	{
 		var tag = Tag.RequestTag(_tagsManager, "foo.bar", false);
 
-		Tag.NetSerialize(_tagsManager, tag, out var tagNetIndex).Should().BeTrue();
+		Tag.NetSerialize(_tagsManager, tag, out ushort tagNetIndex).Should().BeTrue();
 
 		tagNetIndex.Should().Be(_tagsManager.InvalidTagNetIndex);
 	}
@@ -109,7 +109,7 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 	[Trait("Serialization", "Serialize")]
 	public void Empty_StringKey_serializes_successfully_with_InvalidTagNetIndex()
 	{
-		Tag.NetSerialize(_tagsManager, Tag.Empty, out var tagNetIndex).Should().BeTrue();
+		Tag.NetSerialize(_tagsManager, Tag.Empty, out ushort tagNetIndex).Should().BeTrue();
 
 		tagNetIndex.Should().Be(_tagsManager.InvalidTagNetIndex);
 	}
@@ -178,7 +178,7 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 	[InlineData("item equipment weapon axe", "item_equipment_weapon_axe")]
 	public void Returns_a_corrected_key_when_passing_an_invalid_one(string tagKey, string fixedKey)
 	{
-		Tag.IsValidKey(tagKey, out _, out var outFixedString).Should().BeFalse();
+		Tag.IsValidKey(tagKey, out _, out string? outFixedString).Should().BeFalse();
 		outFixedString.Should().Be(fixedKey);
 	}
 
@@ -267,7 +267,7 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 
 		var parents = new HashSet<Tag>([tag]);
 
-		foreach (var parentTagKey in ExtractTagParents(tagKey))
+		foreach (string parentTagKey in ExtractTagParents(tagKey))
 		{
 			parents.Add(Tag.RequestTag(_tagsManager, parentTagKey));
 		}
@@ -309,7 +309,7 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 
 		List<string> parentTagKeys = ExtractTagParents(tagKey);
 
-		foreach (var parentTagKey in parentTagKeys)
+		foreach (string parentTagKey in parentTagKeys)
 		{
 			directParent.Should().Contain(Tag.RequestTag(_tagsManager, parentTagKey));
 		}
@@ -845,7 +845,7 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 
 		while (tagKey.Contains('.'))
 		{
-			var lastDotIndex = tagKey.LastIndexOf('.');
+			int lastDotIndex = tagKey.LastIndexOf('.');
 
 			if (lastDotIndex >= 0)
 			{
@@ -862,7 +862,7 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 	{
 		var set = new HashSet<Tag>();
 
-		foreach (var key in keys)
+		foreach (string key in keys)
 		{
 			var tag = Tag.RequestTag(_tagsManager, key, errorIfNotFound);
 

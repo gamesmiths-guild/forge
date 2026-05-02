@@ -1114,7 +1114,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 				owner,
 				owner));
 
-		var eventCount = 0;
+		int eventCount = 0;
 		float lastMagnitude = 0;
 
 		target.Events.Subscribe(eventTag, x =>
@@ -1187,7 +1187,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 				owner,
 				owner));
 
-		var eventCount = 0;
+		int eventCount = 0;
 		float lastMagnitude = 0;
 
 		target.Events.Subscribe(eventTag, x =>
@@ -1215,15 +1215,10 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		lastMagnitude.Should().Be(2);
 	}
 
-	private sealed class EventFiringExecution : CustomExecution
+	private sealed class EventFiringExecution(Tag eventTag) : CustomExecution
 	{
-		private readonly Tag _eventTag;
+		private readonly Tag _eventTag = eventTag;
 		private int _fireCount;
-
-		public EventFiringExecution(Tag eventTag)
-		{
-			_eventTag = eventTag;
-		}
 
 		public override ModifierEvaluatedData[] EvaluateExecution(
 			Effect effect,
@@ -1271,7 +1266,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 			IForgeEntity target,
 			EffectEvaluatedData? effectEvaluatedData)
 		{
-			var capturedMagnitude = CaptureAttributeMagnitude(
+			int capturedMagnitude = CaptureAttributeMagnitude(
 				Attribute1,
 				effect,
 				target,
