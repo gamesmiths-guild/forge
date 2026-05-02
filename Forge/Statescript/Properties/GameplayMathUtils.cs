@@ -271,7 +271,7 @@ internal static class GameplayMathUtils
 	internal static Vector2 RandomInsideCircle(Core.IRandom random)
 	{
 		var angle = random.NextSingle() * (2.0f * MathF.PI);
-		var radius = MathF.Sqrt(random.NextSingle());
+		var radius = MathF.Sqrt(random.NextSingleInclusive());
 		return new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
 	}
 
@@ -283,7 +283,7 @@ internal static class GameplayMathUtils
 
 	internal static Vector3 RandomOnSphere(Core.IRandom random)
 	{
-		var z = 1.0f - (2.0f * random.NextSingle());
+		var z = 1.0f - (2.0f * random.NextSingleInclusive());
 		var angle = random.NextSingle() * (2.0f * MathF.PI);
 		var radius = MathF.Sqrt(MathF.Max(0.0f, 1.0f - (z * z)));
 		return new Vector3(radius * MathF.Cos(angle), radius * MathF.Sin(angle), z);
@@ -292,7 +292,7 @@ internal static class GameplayMathUtils
 	internal static Vector3 RandomInsideSphere(Core.IRandom random)
 	{
 		Vector3 direction = RandomOnSphere(random);
-		var radius = MathF.Pow(random.NextSingle(), 1.0f / 3.0f);
+		var radius = MathF.Pow(random.NextSingleInclusive(), 1.0f / 3.0f);
 		return direction * radius;
 	}
 

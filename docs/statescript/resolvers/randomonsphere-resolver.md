@@ -18,7 +18,8 @@ new RandomOnSphereResolver(random)
 ## Behavior
 
 - Uses the injected `IRandom` instance each time the resolver is evaluated.
-- Returns a normalized `Vector3` direction on the unit sphere surface.
+- Returns a normalized `Vector3` direction on the unit sphere surface, with the poles included by default.
+- Samples the seam angle in `[0, 2π)` so `0` and `2π` are not counted twice as the same direction.
 - Does not read any values from `GraphContext`.
 - Produces a different result on each resolve unless the supplied `IRandom` implementation is deterministic or seeded.
 

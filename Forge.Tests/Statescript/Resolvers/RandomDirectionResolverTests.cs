@@ -50,4 +50,29 @@ public class RandomDirectionResolverTests
 		result.X.Should().BeApproximately(0.0f, TestUtils.Tolerance);
 		result.Y.Should().BeApproximately(1.0f, TestUtils.Tolerance);
 	}
+
+	[Fact]
+	[Trait("Resolver", "RandomDirection")]
+	public void RandomDirection_resolver_can_return_positive_x_boundary_when_random_is_near_one()
+	{
+		var resolver = new RandomDirectionResolver(new FixedRandom(nextSingle: 0.99999994f));
+		Vector2 result = resolver.Resolve(new GraphContext()).AsVector2();
+
+		result.X.Should().BeApproximately(1.0f, TestUtils.Tolerance);
+		result.Y.Should().BeApproximately(0.0f, TestUtils.Tolerance);
+	}
+
+	[Fact]
+	[Trait("Resolver", "RandomDirection")]
+	public void RandomDirection_resolver_uses_exclusive_angle_sampling()
+	{
+		var random = new TrackingRandom(nextSingles: [0.25f], nextSinglesInclusive: [1.0f]);
+		var resolver = new RandomDirectionResolver(random);
+		Vector2 result = resolver.Resolve(new GraphContext()).AsVector2();
+
+		result.X.Should().BeApproximately(0.0f, TestUtils.Tolerance);
+		result.Y.Should().BeApproximately(1.0f, TestUtils.Tolerance);
+		random.NextSingleCalls.Should().Be(1);
+		random.NextSingleInclusiveCalls.Should().Be(0);
+	}
 }

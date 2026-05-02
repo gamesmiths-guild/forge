@@ -160,6 +160,42 @@ public class RandomResolverTests
 
 	[Fact]
 	[Trait("Resolver", "Random")]
+	public void Random_resolver_float_range_returns_min_when_bounds_are_reversed()
+	{
+		var random = new TrackingRandom(nextSingles: [0.25f], nextSinglesInclusive: [1.0f]);
+		var resolver = new RandomResolver(
+			random,
+			new VariantResolver(new Variant128(15.0f), typeof(float)),
+			new VariantResolver(new Variant128(5.0f), typeof(float)),
+			maxInclusive: true);
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsFloat().Should().Be(15.0f);
+		random.NextSingleCalls.Should().Be(0);
+		random.NextSingleInclusiveCalls.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Random")]
+	public void Random_resolver_float_range_returns_min_when_bounds_are_equal()
+	{
+		var random = new TrackingRandom(nextSingles: [0.25f], nextSinglesInclusive: [1.0f]);
+		var resolver = new RandomResolver(
+			random,
+			new VariantResolver(new Variant128(5.0f), typeof(float)),
+			new VariantResolver(new Variant128(5.0f), typeof(float)),
+			maxInclusive: true);
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsFloat().Should().Be(5.0f);
+		random.NextSingleCalls.Should().Be(0);
+		random.NextSingleInclusiveCalls.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Random")]
 	public void Random_resolver_float_range_uses_exclusive_random_method_when_configured()
 	{
 		var random = new TrackingRandom(nextSingles: [0.25f], nextSinglesInclusive: [0.75f]);
@@ -240,6 +276,42 @@ public class RandomResolverTests
 		resolver.Resolve(context).AsDouble().Should().Be(20.0);
 		random.NextDoubleCalls.Should().Be(0);
 		random.NextDoubleInclusiveCalls.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Random")]
+	public void Random_resolver_double_range_returns_min_when_bounds_are_reversed()
+	{
+		var random = new TrackingRandom(nextDoubles: [0.25], nextDoublesInclusive: [1.0]);
+		var resolver = new RandomResolver(
+			random,
+			new VariantResolver(new Variant128(20.0), typeof(double)),
+			new VariantResolver(new Variant128(10.0), typeof(double)),
+			maxInclusive: true);
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(20.0);
+		random.NextDoubleCalls.Should().Be(0);
+		random.NextDoubleInclusiveCalls.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Random")]
+	public void Random_resolver_double_range_returns_min_when_bounds_are_equal()
+	{
+		var random = new TrackingRandom(nextDoubles: [0.25], nextDoublesInclusive: [1.0]);
+		var resolver = new RandomResolver(
+			random,
+			new VariantResolver(new Variant128(10.0), typeof(double)),
+			new VariantResolver(new Variant128(10.0), typeof(double)),
+			maxInclusive: true);
+
+		var context = new GraphContext();
+
+		resolver.Resolve(context).AsDouble().Should().Be(10.0);
+		random.NextDoubleCalls.Should().Be(0);
+		random.NextDoubleInclusiveCalls.Should().Be(0);
 	}
 
 	[Fact]

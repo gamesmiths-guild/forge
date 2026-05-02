@@ -18,7 +18,8 @@ new RandomInsideCircleResolver(random)
 ## Behavior
 
 - Uses the injected `IRandom` instance each time the resolver is evaluated.
-- Returns a `Vector2` whose magnitude is less than or equal to `1`.
+- Returns a `Vector2` whose magnitude is less than or equal to `1`, with the unit-circle boundary included by default.
+- Samples the angle with an exclusive `[0, 2π)` range so `0` and `2π` are not double-counted as the same direction.
 - Does not read any values from `GraphContext`.
 - Produces a different sample on each resolve unless the supplied `IRandom` implementation is deterministic or seeded.
 

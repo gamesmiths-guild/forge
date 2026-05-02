@@ -49,4 +49,34 @@ public class RandomInsideSphereResolverTests
 		result.Y.Should().BeApproximately(0.5455618f, TestUtils.Tolerance);
 		result.Z.Should().BeApproximately(0.31498027f, TestUtils.Tolerance);
 	}
+
+	[Theory]
+	[Trait("Resolver", "RandomInsideSphere")]
+	[InlineData(1.0f, 1.0f)]
+	[InlineData(0.5f, 1.0f)]
+	public void RandomInsideSphere_resolver_can_reach_sphere_boundary(float random1, float random2)
+	{
+		var random = new TrackingRandom(nextSingles: [0.999f], nextSinglesInclusive: [random1, random2]);
+		var resolver = new RandomInsideSphereResolver(random);
+		Vector3 result = resolver.Resolve(new GraphContext()).AsVector3();
+
+		result.Length().Should().Be(1.0f);
+		random.NextSingleCalls.Should().Be(1);
+		random.NextSingleInclusiveCalls.Should().Be(2);
+	}
+
+	[Fact]
+	[Trait("Resolver", "RandomInsideSphere")]
+	public void RandomInsideSphere_resolver_uses_exclusive_angle_and_inclusive_surface_radius_sampling()
+	{
+		var random = new TrackingRandom(nextSingles: [0.0f, 0.25f], nextSinglesInclusive: [1.0f, 1.0f]);
+		var resolver = new RandomInsideSphereResolver(random);
+		Vector3 result = resolver.Resolve(new GraphContext()).AsVector3();
+
+		result.X.Should().BeApproximately(0.0f, TestUtils.Tolerance);
+		result.Y.Should().BeApproximately(0.0f, TestUtils.Tolerance);
+		result.Z.Should().BeApproximately(-1.0f, TestUtils.Tolerance);
+		random.NextSingleCalls.Should().Be(1);
+		random.NextSingleInclusiveCalls.Should().Be(2);
+	}
 }
