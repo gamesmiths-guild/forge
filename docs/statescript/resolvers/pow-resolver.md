@@ -1,9 +1,9 @@
 # PowResolver
 
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.PowResolver`
-> **Output Type:** `float` or `double`
+> **Output Type:** `float`, `double`, `Vector2`, `Vector3`, or `Vector4`
 
-Raises a base value to a specified exponent. Supports `float` and `double` types. Integer operand types are promoted to `double`. Decimal, vector, and quaternion types are not supported.
+Raises a base value to a specified exponent. Supports `float` and `double` types, as well as `Vector2`, `Vector3`, and `Vector4` for component-wise exponentiation. Integer operand types are promoted to `double`. Decimal and quaternion types are not supported. Vector operands must be the same type.
 
 ## Constructor
 
@@ -23,16 +23,20 @@ new PowResolver(baseOperand, exponent)
 | Both `float` | `float` |
 | Any `double` | `double` |
 | Any integer type | `double` |
+| `Vector2`, `Vector2` | `Vector2` |
+| `Vector3`, `Vector3` | `Vector3` |
+| `Vector4`, `Vector4` | `Vector4` |
 
 **Invalid types** (throw `ArgumentException` at construction time):
 - `decimal` (use `double` instead).
-- `Vector2`, `Vector3`, `Vector4`, `Quaternion`.
+- Mixed vector types, scalar/vector mixes, and `Quaternion`.
 - Unsupported types (`bool`, `char`).
 
 ## Behavior
 
 - Resolves both operands through their respective `IPropertyResolver` instances.
-- Computes `Math.Pow(base, exponent)` (or `MathF.Pow` for `float`) and returns the result as a `Variant128`.
+- Computes `Math.Pow(base, exponent)` (or `MathF.Pow` for `float`) for scalar types.
+- For vector types, computes the power component-wise using `MathF.Pow` for each corresponding component.
 - Any exponent of `0` returns `1`.
 - Any exponent of `1` returns the base value.
 - Fractional exponents compute roots (e.g., `Pow(4, 0.5) = 2`).
@@ -53,14 +57,11 @@ graph.VariableDefinitions.DefineProperty("scaledDamage",
 ## Composition
 
 ```csharp
-// Experience curve: xpRequired = baseXP * Pow(level, growthExponent)
+// Weight each distance component independently before summing
 graph.VariableDefinitions.DefineProperty("xpRequired",
-    new FloorResolver(
-        new MultiplyResolver(
-            new VariableResolver("baseXP", typeof(double)),
-            new PowResolver(
-                new VariableResolver("level", typeof(double)),
-                new VariableResolver("growthExponent", typeof(double))))));
+    new PowResolver(
+        new VariableResolver("distanceByAxis", typeof(Vector3)),
+        new VariantResolver(new Variant128(new Vector3(2.0f, 2.0f, 1.0f)), typeof(Vector3))));
 ```
 
 ## See Also

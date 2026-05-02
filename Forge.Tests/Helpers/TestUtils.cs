@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
@@ -72,5 +73,26 @@ public static class TestUtils
 		}
 
 		return tags;
+	}
+
+	public static void BeApproximately(Vector2 actual, Vector2 expected)
+	{
+		actual.X.Should().BeApproximately(expected.X, Tolerance);
+		actual.Y.Should().BeApproximately(expected.Y, Tolerance);
+	}
+
+	public static void BeApproximately(Vector3 actual, Vector3 expected)
+	{
+		actual.X.Should().BeApproximately(expected.X, Tolerance);
+		actual.Y.Should().BeApproximately(expected.Y, Tolerance);
+		actual.Z.Should().BeApproximately(expected.Z, Tolerance);
+	}
+
+	public static void BeApproximately(Vector4 actual, Vector4 expected)
+	{
+		actual.X.Should().BeApproximately(expected.X, Tolerance);
+		actual.Y.Should().BeApproximately(expected.Y, Tolerance);
+		actual.Z.Should().BeApproximately(expected.Z, Tolerance);
+		actual.W.Should().BeApproximately(expected.W, Tolerance);
 	}
 }
