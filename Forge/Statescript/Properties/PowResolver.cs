@@ -84,7 +84,8 @@ public class PowResolver(IPropertyResolver baseOperand, IPropertyResolver expone
 			if (MathTypeUtils.IsVectorOrQuaternionType(exponentType))
 			{
 				throw new ArgumentException(
-					$"PowResolver requires a scalar numeric exponent when the base is a vector. Got base '{baseType}' and exponent '{exponentType}'.");
+					"PowResolver requires a scalar numeric exponent when the base is a vector. Got base" +
+					$" '{baseType}' and exponent '{exponentType}'.");
 			}
 
 			if (!MathTypeUtils.IsNumericType(exponentType))
@@ -104,7 +105,8 @@ public class PowResolver(IPropertyResolver baseOperand, IPropertyResolver expone
 		if (MathTypeUtils.IsVectorOrQuaternionType(exponentType))
 		{
 			throw new ArgumentException(
-				$"PowResolver does not support scalar bases with vector or quaternion exponents. Got base '{baseType}' and exponent '{exponentType}'.");
+				"PowResolver does not support scalar bases with vector or quaternion exponents. Got base " +
+				$"'{baseType}' and exponent '{exponentType}'.");
 		}
 
 		return MathTypeUtils.DetermineFloatingPointBinaryResultType(
