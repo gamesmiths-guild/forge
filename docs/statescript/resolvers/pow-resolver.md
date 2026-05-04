@@ -1,9 +1,9 @@
 # PowResolver
 
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.PowResolver`
-> **Output Type:** `float` or `double`
+> **Output Type:** `float`, `double`, `Vector2`, `Vector3`, or `Vector4`
 
-Raises a base value to a specified exponent. Supports `float` and `double` types. Integer operand types are promoted to `double`. Decimal, vector, and quaternion types are not supported.
+Raises a base value to a specified exponent. Supports `float` and `double` types, as well as `Vector2`, `Vector3`, and `Vector4` for component-wise exponentiation. Integer operand types are promoted to `double`. For vector bases, the exponent must be a scalar numeric value applied uniformly to all components. Decimal and quaternion types are not supported.
 
 ## Constructor
 
@@ -23,16 +23,23 @@ new PowResolver(baseOperand, exponent)
 | Both `float` | `float` |
 | Any `double` | `double` |
 | Any integer type | `double` |
+| `Vector2`, scalar numeric | `Vector2` |
+| `Vector3`, scalar numeric | `Vector3` |
+| `Vector4`, scalar numeric | `Vector4` |
 
 **Invalid types** (throw `ArgumentException` at construction time):
 - `decimal` (use `double` instead).
-- `Vector2`, `Vector3`, `Vector4`, `Quaternion`.
+- `Quaternion` (not supported).
+- Any vector type as exponent (e.g., `Vector2`/`Vector3`).
+- Any scalar/vector mix where the exponent is a vector (e.g., `float`/`Vector2`).
+- Unsupported non-numeric exponent types for vectors.
 - Unsupported types (`bool`, `char`).
 
 ## Behavior
 
 - Resolves both operands through their respective `IPropertyResolver` instances.
-- Computes `Math.Pow(base, exponent)` (or `MathF.Pow` for `float`) and returns the result as a `Variant128`.
+- Computes `Math.Pow(base, exponent)` (or `MathF.Pow` for `float`) for scalar types.
+- For vector types, computes the power component-wise using `MathF.Pow` with one shared scalar exponent applied to each component.
 - Any exponent of `0` returns `1`.
 - Any exponent of `1` returns the base value.
 - Fractional exponents compute roots (e.g., `Pow(4, 0.5) = 2`).
@@ -53,14 +60,11 @@ graph.VariableDefinitions.DefineProperty("scaledDamage",
 ## Composition
 
 ```csharp
-// Experience curve: xpRequired = baseXP * Pow(level, growthExponent)
-graph.VariableDefinitions.DefineProperty("xpRequired",
-    new FloorResolver(
-        new MultiplyResolver(
-            new VariableResolver("baseXP", typeof(double)),
-            new PowResolver(
-                new VariableResolver("level", typeof(double)),
-                new VariableResolver("growthExponent", typeof(double))))));
+// Apply component-wise exponentiation to scale each distance axis independently
+graph.VariableDefinitions.DefineProperty("scaledDistances",
+    new PowResolver(
+        new VariableResolver("distanceByAxis", typeof(Vector3)),
+        new VariantResolver(new Variant128(2.0f), typeof(float))));
 ```
 
 ## See Also

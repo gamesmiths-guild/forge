@@ -152,11 +152,60 @@ public class RadToDegResolverTests
 
 	[Fact]
 	[Trait("Resolver", "RadToDeg")]
-	public void RadToDeg_resolver_throws_for_vector_operand()
+	public void RadToDeg_resolver_vector3_value_type_is_vector3()
+	{
+		var resolver = new RadToDegResolver(
+			new VariantResolver(
+				new Variant128(new Vector3(MathF.PI / 2.0f, MathF.PI, 2.0f * MathF.PI)), typeof(Vector3)));
+
+		resolver.ValueType.Should().Be(typeof(Vector3));
+	}
+
+	[Fact]
+	[Trait("Resolver", "RadToDeg")]
+	public void RadToDeg_resolver_vector2_computes_componentwise_conversion()
+	{
+		var resolver = new RadToDegResolver(
+			new VariantResolver(new Variant128(new Vector2(MathF.PI / 4.0f, MathF.PI / 2.0f)), typeof(Vector2)));
+
+		var context = new GraphContext();
+
+		TestUtils.BeApproximately(resolver.Resolve(context).AsVector2(), new Vector2(45.0f, 90.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "RadToDeg")]
+	public void RadToDeg_resolver_vector3_computes_componentwise_conversion()
+	{
+		var resolver = new RadToDegResolver(
+			new VariantResolver(
+				new Variant128(new Vector3(MathF.PI / 2.0f, MathF.PI, 2.0f * MathF.PI)), typeof(Vector3)));
+
+		var context = new GraphContext();
+
+		TestUtils.BeApproximately(resolver.Resolve(context).AsVector3(), new Vector3(90.0f, 180.0f, 360.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "RadToDeg")]
+	public void RadToDeg_resolver_vector4_computes_componentwise_conversion()
+	{
+		var resolver = new RadToDegResolver(
+			new VariantResolver(
+				new Variant128(new Vector4(0.0f, MathF.PI / 2.0f, MathF.PI, 2.0f * MathF.PI)), typeof(Vector4)));
+
+		var context = new GraphContext();
+
+		TestUtils.BeApproximately(resolver.Resolve(context).AsVector4(), new Vector4(0.0f, 90.0f, 180.0f, 360.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "RadToDeg")]
+	public void RadToDeg_resolver_throws_for_quaternion_operand()
 	{
 #pragma warning disable CA1806
 		Action act = () => new RadToDegResolver(
-			new VariantResolver(new Variant128(Vector3.One), typeof(Vector3)));
+			new VariantResolver(new Variant128(Quaternion.Identity), typeof(Quaternion)));
 #pragma warning restore CA1806
 
 		act.Should().Throw<ArgumentException>();

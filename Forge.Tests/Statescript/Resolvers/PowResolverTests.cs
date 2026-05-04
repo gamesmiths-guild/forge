@@ -166,15 +166,134 @@ public class PowResolverTests
 
 	[Fact]
 	[Trait("Resolver", "Pow")]
-	public void Pow_resolver_throws_for_vector_operands()
+	public void Pow_resolver_vector3_operands_value_type_is_vector3()
+	{
+		var resolver = new PowResolver(
+			new VariantResolver(new Variant128(new Vector3(2.0f, 3.0f, 4.0f)), typeof(Vector3)),
+			new VariantResolver(new Variant128(2.0f), typeof(float)));
+
+		resolver.ValueType.Should().Be(typeof(Vector3));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_vector_base_with_double_exponent_value_type_is_vector3()
+	{
+		var resolver = new PowResolver(
+			new VariantResolver(new Variant128(new Vector3(2.0f, 3.0f, 4.0f)), typeof(Vector3)),
+			new VariantResolver(new Variant128(2.0), typeof(double)));
+
+		resolver.ValueType.Should().Be(typeof(Vector3));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_vector2_computes_componentwise_power()
+	{
+		var resolver = new PowResolver(
+			new VariantResolver(new Variant128(new Vector2(4.0f, 9.0f)), typeof(Vector2)),
+			new VariantResolver(new Variant128(2.0f), typeof(float)));
+
+		var context = new GraphContext();
+
+		TestUtils.BeApproximately(resolver.Resolve(context).AsVector2(), new Vector2(16.0f, 81.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_vector3_computes_componentwise_power()
+	{
+		var resolver = new PowResolver(
+			new VariantResolver(new Variant128(new Vector3(2.0f, 3.0f, 4.0f)), typeof(Vector3)),
+			new VariantResolver(new Variant128(2f), typeof(float)));
+
+		var context = new GraphContext();
+
+		TestUtils.BeApproximately(resolver.Resolve(context).AsVector3(), new Vector3(4.0f, 9.0f, 16.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_vector4_computes_componentwise_power()
+	{
+		var resolver = new PowResolver(
+			new VariantResolver(new Variant128(new Vector4(1.0f, 4.0f, 9.0f, 16.0f)), typeof(Vector4)),
+			new VariantResolver(new Variant128(2.0f), typeof(float)));
+
+		var context = new GraphContext();
+
+		TestUtils.BeApproximately(resolver.Resolve(context).AsVector4(), new Vector4(1.0f, 16.0f, 81.0f, 256.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_vector_base_with_double_exponent_computes_componentwise_power()
+	{
+		var resolver = new PowResolver(
+			new VariantResolver(new Variant128(new Vector3(4.0f, 9.0f, 16.0f)), typeof(Vector3)),
+			new VariantResolver(new Variant128(0.5), typeof(double)));
+
+		var context = new GraphContext();
+
+		TestUtils.BeApproximately(resolver.Resolve(context).AsVector3(), new Vector3(2.0f, 3.0f, 4.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_vector_base_with_int_exponent_computes_componentwise_power()
+	{
+		var resolver = new PowResolver(
+			new VariantResolver(new Variant128(new Vector3(2.0f, 3.0f, 4.0f)), typeof(Vector3)),
+			new VariantResolver(new Variant128(2), typeof(int)));
+
+		var context = new GraphContext();
+
+		TestUtils.BeApproximately(resolver.Resolve(context).AsVector3(), new Vector3(4.0f, 9.0f, 16.0f));
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_throws_for_mismatched_vector_operands()
 	{
 #pragma warning disable CA1806
 		Action act = () => new PowResolver(
-			new VariantResolver(new Variant128(Vector3.One), typeof(Vector3)),
+			new VariantResolver(new Variant128(Vector2.One), typeof(Vector2)),
 			new VariantResolver(new Variant128(Vector3.One), typeof(Vector3)));
 #pragma warning restore CA1806
 
-		act.Should().Throw<ArgumentException>();
+		act.Should()
+			.Throw<ArgumentException>()
+			.WithMessage("*requires a scalar numeric exponent when the base is a vector*");
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_throws_for_vector_exponent()
+	{
+#pragma warning disable CA1806
+		Action act = () => new PowResolver(
+			new VariantResolver(new Variant128(new Vector3(2.0f, 3.0f, 4.0f)), typeof(Vector3)),
+			new VariantResolver(new Variant128(new Vector3(2.0f, 2.0f, 2.0f)), typeof(Vector3)));
+#pragma warning restore CA1806
+
+		act.Should()
+			.Throw<ArgumentException>()
+			.WithMessage("*requires a scalar numeric exponent when the base is a vector*");
+	}
+
+	[Fact]
+	[Trait("Resolver", "Pow")]
+	public void Pow_resolver_throws_for_scalar_base_with_vector_exponent()
+	{
+#pragma warning disable CA1806
+		Action act = () => new PowResolver(
+			new VariantResolver(new Variant128(2.0f), typeof(float)),
+			new VariantResolver(new Variant128(new Vector3(2.0f, 3.0f, 4.0f)), typeof(Vector3)));
+#pragma warning restore CA1806
+
+		act.Should()
+			.Throw<ArgumentException>()
+			.WithMessage("*does not support scalar bases with vector or quaternion exponents*");
 	}
 
 	[Fact]
