@@ -31,7 +31,7 @@ public class VectorComponentResolver(IPropertyResolver vector, VectorComponent c
 				VectorComponent.X => value.AsVector2().X,
 				VectorComponent.Y => value.AsVector2().Y,
 				_ => throw new InvalidOperationException(
-									$"VectorComponentResolver component '{_component}' is invalid for Vector2."),
+					$"VectorComponentResolver component '{_component}' is invalid for Vector2."),
 			}),
 			not null when _vectorType == typeof(Vector3) => new Variant128(_component switch
 			{

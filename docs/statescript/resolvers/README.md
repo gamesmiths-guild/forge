@@ -110,6 +110,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [ScaleResolver](scale-resolver.md) | `Vector2`/`Vector3`/`Vector4` | Scales a vector by a float scalar value. |
 | [SignedAngleResolver](signedangle-resolver.md) | `float` | Computes the signed angle between two vectors. |
 | [VectorComponentResolver](vectorcomponent-resolver.md) | `float` | Extracts a single component from a vector. |
+| [VectorFromValuesResolver](vectorfromvalues-resolver.md) | `Vector2`/`Vector3`/`Vector4` | Creates a vector from float component resolver values. |
 
 ---
 
