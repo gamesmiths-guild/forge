@@ -8,9 +8,9 @@ Creates a vector from component resolver values. Use this when each axis value i
 ## Constructor
 
 ```csharp
-new VectorFromComponentsValue(x, y)
-new VectorFromComponentsValue(x, y, z)
-new VectorFromComponentsValue(x, y, z, w)
+new VectorFromValuesResolver(x, y)
+new VectorFromValuesResolver(x, y, z)
+new VectorFromValuesResolver(x, y, z, w)
 ```
 
 | Parameter | Type | Description |
@@ -31,7 +31,7 @@ new VectorFromComponentsValue(x, y, z, w)
 
 ```csharp
 graph.VariableDefinitions.DefineProperty("velocity",
-    new VectorFromComponentsValue(
+    new VectorFromValuesResolver(
         new VariableResolver("velocityX", typeof(float)),
         new VariableResolver("velocityY", typeof(float)),
         new VariantResolver(new Variant128(0.0f), typeof(float))));
@@ -41,7 +41,7 @@ graph.VariableDefinitions.DefineProperty("velocity",
 
 ```csharp
 graph.VariableDefinitions.DefineProperty("offset",
-    new VectorFromComponentsValue(
+    new VectorFromValuesResolver(
         new MultiplyResolver(
             new VariableResolver("speed", typeof(float)),
             new VariableResolver("directionX", typeof(float))),
