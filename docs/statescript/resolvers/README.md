@@ -74,7 +74,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [DegToRadResolver](degtorad-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4` | Converts degrees to radians. |
 | [DivideResolver](divide-resolver.md) | *(promoted or same vector type)* | Divides two numeric values, vectors component-wise, or two quaternions. |
 | [FloorResolver](floor-resolver.md) | *(same)* | Rounds down to the largest integer less than or equal to the operand. |
-| [LerpResolver](lerp-resolver.md) | `float`/`double`/`vector2`/`vector3`/`vector4`/`quaternion` | Linearly interpolates between two values (scalar, vector, or quaternion). |
+| [LerpResolver](lerp-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4`/`Quaternion` | Linearly interpolates between two values (scalar, vector, or quaternion). |
 | [MaxResolver](max-resolver.md) | *(promoted or same vector type)* | Returns the larger of two numeric values or the component-wise maximum of two vectors. |
 | [MinResolver](min-resolver.md) | *(promoted or same vector type)* | Returns the smaller of two numeric values or the component-wise minimum of two vectors. |
 | [ModuloResolver](modulo-resolver.md) | *(promoted)* | Computes the remainder of dividing two numeric values. |
@@ -83,7 +83,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [PowResolver](pow-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4` | Raises a value to a specified power. |
 | [RadToDegResolver](radtodeg-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4` | Converts radians to degrees. |
 | [RoundResolver](round-resolver.md) | *(same)* | Rounds to a specified number of digits with configurable rounding mode. |
-| [SqrtResolver](sqrt-resolver.md) | `float`/`double`/`vector2`/`vector3`/`vector4` | Computes the square root of a numeric value or component-wise square root of a vector. |
+| [SqrtResolver](sqrt-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4` | Computes the square root of a numeric value or component-wise square root of a vector. |
 | [SubtractResolver](subtract-resolver.md) | *(promoted or same vector type)* | Subtracts two numeric, vector or quaternion values. |
 | [TruncateResolver](truncate-resolver.md) | *(same)* | Removes the fractional part, rounding toward zero. |
 
@@ -103,7 +103,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [DotResolver](dot-resolver.md) | `float` | Computes the dot product of two vectors or two quaternions. |
 | [LengthResolver](length-resolver.md) | `float` | Computes the length (magnitude) of a vector or quaternion operand. |
 | [LengthSquaredResolver](lengthsquared-resolver.md) | `float` | Computes the squared length of a vector or quaternion operand. |
-| [NormalizeResolver](normalize-resolver.md) | `vector2`/`vector3`/`vector4`/`plane`/`quaternion` | Computes the normalized form of a vector, plane, or quaternion. |
+| [NormalizeResolver](normalize-resolver.md) | `Vector2`/`Vector3`/`Vector4`/`Plane`/`Quaternion` | Computes the normalized form of a vector, plane, or quaternion. |
 | [ProjectResolver](project-resolver.md) | `Vector2`/`Vector3`/`Vector4` | Projects one vector onto another. |
 | [ReflectResolver](reflect-resolver.md) | `Vector2`/`Vector3` | Reflects a vector off a surface defined by a normal vector. |
 | [RejectResolver](reject-resolver.md) | `Vector2`/`Vector3`/`Vector4` | Rejects one vector from another. |

@@ -47,31 +47,31 @@ public class PowResolver(IPropertyResolver baseOperand, IPropertyResolver expone
 		if (resultType == typeof(Vector2))
 		{
 			Vector2 baseVector = baseValue.AsVector2();
-			Vector2 exponentVector = expValue.AsVector2();
+			float exp = (float)MathTypeUtils.ResolveAsDouble(_exponent.ValueType, expValue);
 			return new Variant128(new Vector2(
-				MathF.Pow(baseVector.X, exponentVector.X),
-				MathF.Pow(baseVector.Y, exponentVector.Y)));
+				MathF.Pow(baseVector.X, exp),
+				MathF.Pow(baseVector.Y, exp)));
 		}
 
 		if (resultType == typeof(Vector3))
 		{
 			Vector3 baseVector = baseValue.AsVector3();
-			Vector3 exponentVector = expValue.AsVector3();
+			float exp = (float)MathTypeUtils.ResolveAsDouble(_exponent.ValueType, expValue);
 			return new Variant128(new Vector3(
-				MathF.Pow(baseVector.X, exponentVector.X),
-				MathF.Pow(baseVector.Y, exponentVector.Y),
-				MathF.Pow(baseVector.Z, exponentVector.Z)));
+				MathF.Pow(baseVector.X, exp),
+				MathF.Pow(baseVector.Y, exp),
+				MathF.Pow(baseVector.Z, exp)));
 		}
 
 		if (resultType == typeof(Vector4))
 		{
 			Vector4 baseVector = baseValue.AsVector4();
-			Vector4 exponentVector = expValue.AsVector4();
+			float exp = (float)MathTypeUtils.ResolveAsDouble(_exponent.ValueType, expValue);
 			return new Variant128(new Vector4(
-				MathF.Pow(baseVector.X, exponentVector.X),
-				MathF.Pow(baseVector.Y, exponentVector.Y),
-				MathF.Pow(baseVector.Z, exponentVector.Z),
-				MathF.Pow(baseVector.W, exponentVector.W)));
+				MathF.Pow(baseVector.X, exp),
+				MathF.Pow(baseVector.Y, exp),
+				MathF.Pow(baseVector.Z, exp),
+				MathF.Pow(baseVector.W, exp)));
 		}
 
 		throw new InvalidOperationException($"PowResolver encountered unexpected result type '{resultType}'.");
@@ -79,9 +79,32 @@ public class PowResolver(IPropertyResolver baseOperand, IPropertyResolver expone
 
 	private static Type DetermineResultType(Type baseType, Type exponentType)
 	{
-		if (baseType == exponentType && MathTypeUtils.IsVectorType(baseType))
+		if (MathTypeUtils.IsVectorType(baseType))
 		{
+			if (MathTypeUtils.IsVectorOrQuaternionType(exponentType))
+			{
+				throw new ArgumentException(
+					$"PowResolver requires a scalar numeric exponent when the base is a vector. Got base '{baseType}' and exponent '{exponentType}'.");
+			}
+
+			if (!MathTypeUtils.IsNumericType(exponentType))
+			{
+				throw new ArgumentException(
+					$"PowResolver does not support exponent type '{exponentType}'.");
+			}
+
+			if (exponentType == typeof(decimal))
+			{
+				throw new ArgumentException("PowResolver does not support decimal operands. Use double instead.");
+			}
+
 			return baseType;
+		}
+
+		if (MathTypeUtils.IsVectorOrQuaternionType(exponentType))
+		{
+			throw new ArgumentException(
+				$"PowResolver does not support scalar bases with vector or quaternion exponents. Got base '{baseType}' and exponent '{exponentType}'.");
 		}
 
 		return MathTypeUtils.DetermineFloatingPointBinaryResultType(
