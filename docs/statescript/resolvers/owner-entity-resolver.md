@@ -1,7 +1,7 @@
 # OwnerEntityResolver
 
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.OwnerEntityResolver`
-> **Output Type:** `IForgeEntity`
+> **Output Type:** `IForgeEntity?`
 
 Resolves the owner entity from the current `AbilityBehaviorContext`.
 

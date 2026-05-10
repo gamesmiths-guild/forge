@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Gamesmiths.Forge.Core;
 
@@ -207,10 +208,10 @@ public class Variables
 				$"Cannot set '{name}': no reference variable with this name exists.");
 		}
 
-		if (!stored.ValueType.IsAssignableFrom(typeof(T)))
+		if (value is not null && !stored.ValueType.IsInstanceOfType(value))
 		{
 			throw new InvalidOperationException(
-				$"Cannot set '{name}' with value type {typeof(T)}: variable expects values assignable to " +
+				$"Cannot set '{name}' with value type {value.GetType()}: variable expects values assignable to " +
 				$"{stored.ValueType}.");
 		}
 
@@ -402,6 +403,7 @@ public class Variables
 	/// <param name="value">The value to set.</param>
 	/// <exception cref="InvalidOperationException">Thrown if no variable with this name exists or if the declared type
 	/// of the variable is not compatible with the value type.</exception>
+	/// <exception cref="ArgumentOutOfRangeException">Thrown if the index is out of range.</exception>
 	public void SetReferenceArrayElement<T>(StringKey name, int index, T? value)
 		where T : class
 	{
@@ -411,10 +413,18 @@ public class Variables
 				$"Cannot set reference array element for '{name}': no array variable with this name exists.");
 		}
 
-		if (!stored.ElementType.IsAssignableFrom(typeof(T)))
+		if ((uint)index >= (uint)stored.Values.Count)
+		{
+			throw new ArgumentOutOfRangeException(
+				nameof(index),
+				index,
+				$"Index {index} is out of range for array '{name}' with length {stored.Values.Count}.");
+		}
+
+		if (value is not null && !stored.ElementType.IsInstanceOfType(value))
 		{
 			throw new InvalidOperationException(
-				$"Cannot set '{name}' with element type {typeof(T)}: array expects values assignable to " +
+				$"Cannot set '{name}' with element type {value.GetType()}: array expects values assignable to " +
 				$"{stored.ElementType}.");
 		}
 

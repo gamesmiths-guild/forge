@@ -1,7 +1,7 @@
 # EntityArrayVariableResolver
 
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.EntityArrayVariableResolver`
-> **Output Type:** `IForgeEntity[]`
+> **Output Type:** `IForgeEntity?[]`
 
 Reads an entity-reference array from graph or shared reference variables. This is a typed convenience wrapper around
 `ReferenceArrayVariableResolver<IForgeEntity>`.
@@ -20,7 +20,7 @@ new EntityArrayVariableResolver(variableName, scope)
 
 ## Behavior
 
-- Reads an `IForgeEntity[]` reference array from `Variables`.
+- Reads an `IForgeEntity?[]` reference array from `Variables`.
 - Supports both graph-local and shared variable scopes.
 - Returns an empty array if the variable does not exist or no shared variable bag is available.
 
