@@ -100,18 +100,6 @@ public readonly record struct AttributeBasedFloat(
 
 	private int CaptureNow(EntityAttribute attribute)
 	{
-		return AttributeCalculationType switch
-		{
-			AttributeCalculationType.CurrentValue => attribute.CurrentValue,
-			AttributeCalculationType.BaseValue => attribute.BaseValue,
-			AttributeCalculationType.Modifier => attribute.Modifier,
-			AttributeCalculationType.Overflow => attribute.Overflow,
-			AttributeCalculationType.ValidModifier => attribute.ValidModifier,
-			AttributeCalculationType.Min => attribute.Min,
-			AttributeCalculationType.Max => attribute.Max,
-			AttributeCalculationType.MagnitudeEvaluatedUpToChannel =>
-				(int)attribute.CalculateMagnitudeUpToChannel(FinalChannel),
-			_ => 0,
-		};
+		return AttributeCalculationType.ResolveValue(attribute, FinalChannel);
 	}
 }

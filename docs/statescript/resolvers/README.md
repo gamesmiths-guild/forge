@@ -12,7 +12,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 |----------|-------------|-------------|
 | [ActivationDataResolver](activation-data-resolver.md) | *(configured)* | Reads a field or property from typed activation data. |
 | [ArrayVariableResolver](array-resolver.md) | *(configured)* | Stores a mutable array of values with indexed access. |
-| [AttributeResolver](attribute-resolver.md) | `int` | Reads the current value of an entity attribute. |
+| [AttributeResolver](attribute-resolver.md) | `int` | Reads a selected value from an entity attribute. |
 | [MagnitudeResolver](magnitude-resolver.md) | `float` | Reads the magnitude from the ability activation context. |
 | [SharedVariableResolver](shared-variable-resolver.md) | *(configured)* | Reads a shared variable from the entity. |
 | [TagResolver](tag-resolver.md) | `bool` | Checks whether the owner entity has a specific tag. |

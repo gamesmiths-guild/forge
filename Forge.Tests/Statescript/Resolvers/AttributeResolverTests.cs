@@ -1,7 +1,12 @@
 // Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Duration;
+using Gamesmiths.Forge.Effects.Magnitudes;
+using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
@@ -18,7 +23,7 @@ public class AttributeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 
 	[Fact]
 	[Trait("Resolver", "Attribute")]
-	public void Attribute_resolver_returns_current_value_of_existing_attribute()
+	public void Attribute_resolver_returns_current_value_of_existing_attribute_by_default()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
 		var resolver = new AttributeResolver("TestAttributeSet.Attribute5");
@@ -28,6 +33,49 @@ public class AttributeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		Variant128 result = resolver.Resolve(context);
 
 		result.AsInt().Should().Be(5);
+	}
+
+	[Theory]
+	[Trait("Resolver", "Attribute")]
+	[InlineData(AttributeCalculationType.CurrentValue, 99)]
+	[InlineData(AttributeCalculationType.BaseValue, 5)]
+	[InlineData(AttributeCalculationType.Modifier, 200)]
+	[InlineData(AttributeCalculationType.Overflow, 106)]
+	[InlineData(AttributeCalculationType.ValidModifier, 94)]
+	[InlineData(AttributeCalculationType.Min, 0)]
+	[InlineData(AttributeCalculationType.Max, 99)]
+	public void Attribute_resolver_reads_selected_attribute_values(
+		AttributeCalculationType attributeCalculationType,
+		int expectedValue)
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		ApplyFlatModifier(entity, "TestAttributeSet.Attribute5", 200);
+		var resolver = new AttributeResolver("TestAttributeSet.Attribute5", attributeCalculationType);
+
+		GraphContext context = CreateAbilityGraphContext(entity);
+
+		Variant128 result = resolver.Resolve(context);
+
+		result.AsInt().Should().Be(expectedValue);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Attribute")]
+	public void Attribute_resolver_reads_magnitude_evaluated_up_to_channel()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		ApplyFlatModifier(entity, "TestAttributeSet.Attribute5", 10, channel: 0);
+		ApplyFlatModifier(entity, "TestAttributeSet.Attribute5", 20, channel: 1);
+		var resolver = new AttributeResolver(
+			"TestAttributeSet.Attribute5",
+			AttributeCalculationType.MagnitudeEvaluatedUpToChannel,
+			finalChannel: 1);
+
+		GraphContext context = CreateAbilityGraphContext(entity);
+
+		Variant128 result = resolver.Resolve(context);
+
+		result.AsInt().Should().Be(15);
 	}
 
 	[Fact]
@@ -68,15 +116,33 @@ public class AttributeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 
 	[Fact]
 	[Trait("Resolver", "Attribute")]
-	public void Attribute_resolver_reads_different_attributes()
+	public void Attribute_resolver_throws_for_negative_final_channel()
 	{
-		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var resolver1 = new AttributeResolver("TestAttributeSet.Attribute1");
-		var resolver90 = new AttributeResolver("TestAttributeSet.Attribute90");
+		Func<AttributeResolver> createResolver = () => new AttributeResolver(
+			"TestAttributeSet.Attribute5",
+			AttributeCalculationType.MagnitudeEvaluatedUpToChannel,
+			finalChannel: -1);
 
-		GraphContext context = CreateAbilityGraphContext(entity);
+		createResolver.Should().Throw<ArgumentOutOfRangeException>();
+	}
 
-		resolver1.Resolve(context).AsInt().Should().Be(1);
-		resolver90.Resolve(context).AsInt().Should().Be(90);
+	private static void ApplyFlatModifier(TestEntity entity, StringKey attributeKey, int value, int channel = 0)
+	{
+		var effectData = new EffectData(
+			"AttributeResolverTestModifier",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					attributeKey,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						scalableFloatMagnitude: new ScalableFloat(value)),
+					channel)
+			]);
+
+		var effect = new Effect(effectData, new EffectOwnership(null, null));
+
+		_ = entity.EffectsManager.ApplyEffect(effect);
 	}
 }
