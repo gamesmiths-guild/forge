@@ -42,7 +42,7 @@ graph.VariableDefinitions.DefineProperty("shouldFlipState",
             new VariableResolver("currentPhase", typeof(int)),
             ComparisonOperation.Equal,
             new VariantResolver(new Variant128(1), typeof(int))),
-        new TagResolver(Tag.RequestTag(tagsManager, "state.inverted"))));
+        new TagQueryResolver(Tag.RequestTag(tagsManager, "state.inverted"))));
 ```
 
 ## See Also

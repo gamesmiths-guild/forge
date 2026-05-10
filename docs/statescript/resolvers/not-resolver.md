@@ -28,7 +28,7 @@ new NotResolver(operand)
 ```csharp
 graph.VariableDefinitions.DefineProperty("isNotStunned",
     new NotResolver(
-        new TagResolver(Tag.RequestTag(tagsManager, "status.stunned"))));
+        new TagQueryResolver(Tag.RequestTag(tagsManager, "status.stunned"))));
 ```
 
 ## Composition
@@ -37,7 +37,7 @@ graph.VariableDefinitions.DefineProperty("isNotStunned",
 graph.VariableDefinitions.DefineProperty("canInteract",
     new AndResolver(
         new NotResolver(
-            new TagResolver(Tag.RequestTag(tagsManager, "status.disabled"))),
+            new TagQueryResolver(Tag.RequestTag(tagsManager, "status.disabled"))),
         new ComparisonResolver(
             new VariableResolver("distanceToTarget", typeof(float)),
             ComparisonOperation.LessThanOrEqual,

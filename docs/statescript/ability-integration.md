@@ -141,7 +141,7 @@ Through `AbilityBehaviorContext`, nodes have access to:
 Several built-in [property resolvers](variables.md#built-in-resolvers) read from the activation context:
 
 - **`AttributeResolver`**: Reads an attribute from the owner entity.
-- **`TagResolver`**: Checks if the owner entity has a specific tag.
+- **`TagQueryResolver`**: Evaluates a tag query against the owner entity's combined tags.
 - **`MagnitudeResolver`**: Reads the activation magnitude.
 
 These resolvers gracefully return default values when the graph runs without an ability context (e.g., standalone graph execution).
@@ -250,7 +250,7 @@ Use property resolvers with `ExpressionNode` to branch based on runtime state:
 
 ```csharp
 graph.VariableDefinitions.DefineProperty("isEnraged",
-    new TagResolver(Tag.RequestTag(tagsManager, "status.enraged")));
+    new TagQueryResolver(Tag.RequestTag(tagsManager, "status.enraged")));
 
 var expression = new ExpressionNode();
 expression.BindInput(ExpressionNode.ConditionInput, "isEnraged");
@@ -314,6 +314,6 @@ var abilityData = new AbilityData(
 
 1. **Remember to Commit**: Usually you want to place a `CommitAbility` action node early in the graph to apply costs and cooldowns, but you may want to test conditions first. Make sure to commit at some point to activate cooldowns and deduct costs.
 2. **Use Subgraphs for Cleanup**: Connect ongoing effects and state to Subgraph ports so they are automatically cleaned up when the parent deactivates or the ability is canceled.
-3. **Leverage Property Resolvers**: Use `AttributeResolver`, `TagResolver`, and `ComparisonResolver` for data-driven conditions instead of writing custom condition nodes.
+3. **Leverage Property Resolvers**: Use `AttributeResolver`, `TagQueryResolver`, and `ComparisonResolver` for data-driven conditions instead of writing custom condition nodes.
 4. **Use Shared Variables for Cross-Ability State**: When multiple abilities need to communicate and [Attributes](../attributes.md) or [Tags](../tags.md) are not sufficient, use entity-level shared variables rather than external state.
 5. **Keep Graphs Focused**: Each graph should represent one ability behavior. Share logic through custom node classes rather than making graphs overly complex.

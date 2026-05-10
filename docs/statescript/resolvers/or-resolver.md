@@ -33,7 +33,7 @@ graph.VariableDefinitions.DefineProperty("shouldRetreat",
             new AttributeResolver("CombatAttributeSet.Health"),
             ComparisonOperation.LessThanOrEqual,
             new VariantResolver(new Variant128(20), typeof(int))),
-        new TagResolver(Tag.RequestTag(tagsManager, "status.fleeing"))));
+        new TagQueryResolver(Tag.RequestTag(tagsManager, "status.fleeing"))));
 ```
 
 ## Composition
@@ -41,9 +41,9 @@ graph.VariableDefinitions.DefineProperty("shouldRetreat",
 ```csharp
 graph.VariableDefinitions.DefineProperty("canBypassLock",
     new OrResolver(
-        new TagResolver(Tag.RequestTag(tagsManager, "key.master")),
+        new TagQueryResolver(Tag.RequestTag(tagsManager, "key.master")),
         new AndResolver(
-            new TagResolver(Tag.RequestTag(tagsManager, "skill.lockpicking")),
+            new TagQueryResolver(Tag.RequestTag(tagsManager, "skill.lockpicking")),
             new ComparisonResolver(
                 new VariableResolver("lockpickLevel", typeof(int)),
                 ComparisonOperation.GreaterThanOrEqual,

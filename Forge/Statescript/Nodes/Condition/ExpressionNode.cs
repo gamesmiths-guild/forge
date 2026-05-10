@@ -4,7 +4,7 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 
 /// <summary>
 /// A concrete <see cref="ConditionNode"/> that evaluates a <see langword="bool"/> graph property to determine which
-/// output port to activate. The property can be a simple variable, a <see cref="Properties.TagResolver"/>, a
+/// output port to activate. The property can be a simple variable, a <see cref="Properties.TagQueryResolver"/>, a
 /// <see cref="Properties.ComparisonResolver"/>, or any arbitrarily nested <see cref="Properties.IPropertyResolver"/>
 /// chain that produces a <see langword="bool"/>.
 /// </summary>

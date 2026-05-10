@@ -15,7 +15,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [AttributeResolver](attribute-resolver.md) | `int` | Reads a selected value from an entity attribute. |
 | [MagnitudeResolver](magnitude-resolver.md) | `float` | Reads the magnitude from the ability activation context. |
 | [SharedVariableResolver](shared-variable-resolver.md) | *(configured)* | Reads a shared variable from the entity. |
-| [TagResolver](tag-resolver.md) | `bool` | Checks whether the owner entity has a specific tag. |
+| [TagQueryResolver](tag-query-resolver.md) | `bool` | Evaluates a tag query against the owner entity's combined tags. |
 | [VariableResolver](variable-resolver.md) | *(configured)* | Reads a graph variable by name. |
 | [VariantResolver](variant-resolver.md) | *(configured)* | Holds a fixed constant value. |
 
