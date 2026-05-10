@@ -3,30 +3,52 @@
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.AttributeResolver`
 > **Output Type:** `int`
 
-Reads the `CurrentValue` of a specific entity attribute. Requires the graph to be driven by an ability (accesses the owner entity from `AbilityBehaviorContext` stored in `GraphContext.ActivationContext`).
+Reads a selected value from a specific entity attribute. Requires the graph to be driven by an ability (accesses the owner entity from `AbilityBehaviorContext` stored in `GraphContext.ActivationContext`).
 
-## Constructor
+## Constructors
 
 ```csharp
 new AttributeResolver(attributeKey)
+new AttributeResolver(attributeKey, attributeCalculationType)
+new AttributeResolver(attributeKey, attributeCalculationType, finalChannel)
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | attributeKey | `StringKey` | The fully qualified attribute key (e.g., `"CombatAttributeSet.Health"`). |
+| attributeCalculationType | `AttributeCalculationType` | Which value to read from the attribute. Defaults to `CurrentValue`. |
+| finalChannel | `int` | Only used with `AttributeCalculationType.MagnitudeEvaluatedUpToChannel`. |
 
 ## Behavior
 
 - Retrieves the owner entity from the `AbilityBehaviorContext` in the graph's activation context.
 - Looks up the attribute by key on the owner entity's `Attributes` collection.
-- Returns the attribute's `CurrentValue` as an `int`.
+- Returns the selected attribute value as an `int`.
 - Returns `0` (default `Variant128`) if no activation context is available or the attribute doesn't exist.
+
+### Supported `AttributeCalculationType` values
+
+- `CurrentValue`
+- `BaseValue`
+- `Modifier`
+- `Overflow`
+- `ValidModifier`
+- `Min`
+- `Max`
+- `MagnitudeEvaluatedUpToChannel` (requires `finalChannel`)
 
 ## Usage
 
 ```csharp
 graph.VariableDefinitions.DefineProperty("ownerHealth",
     new AttributeResolver("CombatAttributeSet.Health"));
+```
+
+```csharp
+graph.VariableDefinitions.DefineProperty("healthOverflow",
+    new AttributeResolver(
+        "CombatAttributeSet.Health",
+        AttributeCalculationType.Overflow));
 ```
 
 ## Composition
@@ -44,4 +66,4 @@ graph.VariableDefinitions.DefineProperty("healthAbove50",
 
 - [Resolvers Overview](README.md)
 - [ComparisonResolver](comparison-resolver.md)
-- [TagResolver](tag-resolver.md)
+- [TagQueryResolver](tag-query-resolver.md)
