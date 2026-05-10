@@ -183,6 +183,94 @@ public sealed class GraphContext
 	}
 
 	/// <summary>
+	/// Resolves a named reference value by first checking reference variables and then falling back to read-only
+	/// reference property definitions on the graph.
+	/// </summary>
+	/// <typeparam name="T">The reference type to interpret the value as.</typeparam>
+	/// <param name="name">The name of the variable or property.</param>
+	/// <param name="value">The resolved value if found.</param>
+	/// <returns><see langword="true"/> if the name was resolved and type-compatible; <see langword="false"/> otherwise.
+	/// </returns>
+	public bool TryResolveReference<T>(StringKey name, out T? value)
+		where T : class
+	{
+		if (GraphVariables.TryGetReference(name, out value))
+		{
+			return true;
+		}
+
+		if (Processor is null)
+		{
+			value = null;
+			return false;
+		}
+
+		foreach (ReferencePropertyDefinition definition in Processor.Graph.VariableDefinitions.ReferencePropertyDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				if (!typeof(T).IsAssignableFrom(definition.Resolver.ValueType))
+				{
+					value = null;
+					return false;
+				}
+
+				value = (T?)definition.Resolver.Resolve(this);
+				return true;
+			}
+		}
+
+		value = null;
+		return false;
+	}
+
+	/// <summary>
+	/// Resolves a named reference array by first checking reference array variables and then falling back to read-only
+	/// reference array property definitions on the graph.
+	/// </summary>
+	/// <typeparam name="T">The element type to interpret the array as.</typeparam>
+	/// <param name="name">The name of the array variable or property.</param>
+	/// <param name="values">The resolved array if found.</param>
+	/// <returns><see langword="true"/> if the name was resolved and type-compatible; <see langword="false"/> otherwise.
+	/// </returns>
+	public bool TryResolveReferenceArray<T>(StringKey name, out T?[]? values)
+		where T : class
+	{
+		if (GraphVariables.TryGetReferenceArray(name, out values))
+		{
+			return true;
+		}
+
+		if (Processor is not null)
+		{
+			foreach (ReferenceArrayPropertyDefinition definition in
+				Processor.Graph.VariableDefinitions.ReferenceArrayPropertyDefinitions)
+			{
+				if (definition.Name == name)
+				{
+					if (!typeof(T).IsAssignableFrom(definition.Resolver.ElementType))
+					{
+						values = null;
+						return false;
+					}
+
+					object?[] resolved = definition.Resolver.ResolveArray(this);
+					values = new T?[resolved.Length];
+					for (int i = 0; i < resolved.Length; i++)
+					{
+						values[i] = (T?)resolved[i];
+					}
+
+					return true;
+				}
+			}
+		}
+
+		values = null;
+		return false;
+	}
+
+	/// <summary>
 	/// Gets the node context of type T for the specified node ID. The context is guaranteed to exist because the
 	/// framework creates it automatically when the node first receives a message, before any user code runs.
 	/// </summary>

@@ -19,9 +19,19 @@ public class GraphVariableDefinitions
 	public List<VariableDefinition> VariableDefinitions { get; } = [];
 
 	/// <summary>
+	/// Gets the list of reference variable definitions for the graph.
+	/// </summary>
+	public List<ReferenceVariableDefinition> ReferenceVariableDefinitions { get; } = [];
+
+	/// <summary>
 	/// Gets the list of array variable definitions for the graph.
 	/// </summary>
 	public List<ArrayVariableDefinition> ArrayVariableDefinitions { get; } = [];
+
+	/// <summary>
+	/// Gets the list of reference array variable definitions for the graph.
+	/// </summary>
+	public List<ReferenceArrayVariableDefinition> ReferenceArrayVariableDefinitions { get; } = [];
 
 	/// <summary>
 	/// Gets the list of property definitions for the graph. Properties are read-only computed values resolved on demand
@@ -30,10 +40,20 @@ public class GraphVariableDefinitions
 	public List<PropertyDefinition> PropertyDefinitions { get; } = [];
 
 	/// <summary>
+	/// Gets the list of reference property definitions for the graph.
+	/// </summary>
+	public List<ReferencePropertyDefinition> ReferencePropertyDefinitions { get; } = [];
+
+	/// <summary>
 	/// Gets the list of array property definitions for the graph. Array properties are read-only computed values that
 	/// resolve to arrays (e.g., a list of entity IDs within a radius).
 	/// </summary>
 	public List<ArrayPropertyDefinition> ArrayPropertyDefinitions { get; } = [];
+
+	/// <summary>
+	/// Gets the list of reference array property definitions for the graph.
+	/// </summary>
+	public List<ReferenceArrayPropertyDefinition> ReferenceArrayPropertyDefinitions { get; } = [];
 
 	/// <summary>
 	/// Adds a mutable variable definition with the specified name and initial value.
@@ -47,6 +67,18 @@ public class GraphVariableDefinitions
 	{
 		Variant128 variant = Variables.CreateVariant(initialValue);
 		VariableDefinitions.Add(new VariableDefinition(name, variant, typeof(T)));
+	}
+
+	/// <summary>
+	/// Adds a mutable reference variable definition with the specified name and initial value.
+	/// </summary>
+	/// <typeparam name="T">The reference type of the initial value.</typeparam>
+	/// <param name="name">The name of the variable.</param>
+	/// <param name="initialValue">The initial value of the variable.</param>
+	public void DefineReferenceVariable<T>(StringKey name, T? initialValue = null)
+		where T : class
+	{
+		ReferenceVariableDefinitions.Add(new ReferenceVariableDefinition(name, initialValue, typeof(T)));
 	}
 
 	/// <summary>
@@ -69,6 +101,19 @@ public class GraphVariableDefinitions
 	}
 
 	/// <summary>
+	/// Adds a mutable reference array variable definition with the specified name and initial values.
+	/// </summary>
+	/// <typeparam name="T">The reference type of each element.</typeparam>
+	/// <param name="name">The name of the array variable.</param>
+	/// <param name="initialValues">The initial values for the array elements.</param>
+	public void DefineReferenceArrayVariable<T>(StringKey name, params T?[] initialValues)
+		where T : class
+	{
+		ReferenceArrayVariableDefinitions.Add(
+			new ReferenceArrayVariableDefinition(name, [.. initialValues.Cast<object?>()], typeof(T)));
+	}
+
+	/// <summary>
 	/// Adds a read-only property definition with the specified name and resolver.
 	/// </summary>
 	/// <param name="name">The name of the property.</param>
@@ -76,6 +121,16 @@ public class GraphVariableDefinitions
 	public void DefineProperty(StringKey name, IPropertyResolver resolver)
 	{
 		PropertyDefinitions.Add(new PropertyDefinition(name, resolver));
+	}
+
+	/// <summary>
+	/// Adds a read-only reference property definition with the specified name and resolver.
+	/// </summary>
+	/// <param name="name">The name of the property.</param>
+	/// <param name="resolver">The resolver used to compute the property's value at runtime.</param>
+	public void DefineReferenceProperty(StringKey name, IReferenceResolver resolver)
+	{
+		ReferencePropertyDefinitions.Add(new ReferencePropertyDefinition(name, resolver));
 	}
 
 	/// <summary>
@@ -89,6 +144,16 @@ public class GraphVariableDefinitions
 	}
 
 	/// <summary>
+	/// Adds a read-only reference array property definition with the specified name and resolver.
+	/// </summary>
+	/// <param name="name">The name of the array property.</param>
+	/// <param name="resolver">The resolver used to compute the property's array value at runtime.</param>
+	public void DefineReferenceArrayProperty(StringKey name, IReferenceArrayResolver resolver)
+	{
+		ReferenceArrayPropertyDefinitions.Add(new ReferenceArrayPropertyDefinition(name, resolver));
+	}
+
+	/// <summary>
 	/// Validates that the variable or property with the specified name produces a value assignable to the expected
 	/// type. This should be called at graph construction time to catch type mismatches early.
 	/// </summary>
@@ -99,6 +164,14 @@ public class GraphVariableDefinitions
 	public bool ValidatePropertyType(StringKey name, Type expectedType)
 	{
 		foreach (PropertyDefinition definition in PropertyDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				return expectedType.IsAssignableFrom(definition.Resolver.ValueType);
+			}
+		}
+
+		foreach (ReferencePropertyDefinition definition in ReferencePropertyDefinitions)
 		{
 			if (definition.Name == name)
 			{
@@ -120,6 +193,19 @@ public class GraphVariableDefinitions
 			}
 		}
 
+		foreach (ReferenceArrayPropertyDefinition definition in ReferenceArrayPropertyDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				if (expectedType.IsArray && expectedType.GetElementType() is Type elementType)
+				{
+					return elementType.IsAssignableFrom(definition.Resolver.ElementType);
+				}
+
+				return false;
+			}
+		}
+
 		foreach (VariableDefinition definition in VariableDefinitions)
 		{
 			if (definition.Name == name)
@@ -128,7 +214,28 @@ public class GraphVariableDefinitions
 			}
 		}
 
+		foreach (ReferenceVariableDefinition definition in ReferenceVariableDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				return expectedType.IsAssignableFrom(definition.ValueType);
+			}
+		}
+
 		foreach (ArrayVariableDefinition definition in ArrayVariableDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				if (expectedType.IsArray && expectedType.GetElementType() is Type elementType)
+				{
+					return elementType.IsAssignableFrom(definition.ElementType);
+				}
+
+				return false;
+			}
+		}
+
+		foreach (ReferenceArrayVariableDefinition definition in ReferenceArrayVariableDefinitions)
 		{
 			if (definition.Name == name)
 			{
@@ -153,12 +260,26 @@ public class GraphVariableDefinitions
 public readonly record struct ArrayPropertyDefinition(StringKey Name, IArrayPropertyResolver Resolver);
 
 /// <summary>
+/// Represents a named reference array property definition with a resolver.
+/// </summary>
+/// <param name="Name">The name of the array property.</param>
+/// <param name="Resolver">The resolver used to provide the property's array value at runtime.</param>
+public readonly record struct ReferenceArrayPropertyDefinition(StringKey Name, IReferenceArrayResolver Resolver);
+
+/// <summary>
 /// Represents the definition of a graph property, including its name and the resolver used to compute its value at
 /// runtime. This is immutable definition data that belongs to the graph.
 /// </summary>
 /// <param name="Name">The name of the property, used as the lookup key at runtime.</param>
 /// <param name="Resolver">The resolver used to provide the property's value at runtime.</param>
 public readonly record struct PropertyDefinition(StringKey Name, IPropertyResolver Resolver);
+
+/// <summary>
+/// Represents the definition of a graph reference property, including its name and resolver.
+/// </summary>
+/// <param name="Name">The name of the property, used as the lookup key at runtime.</param>
+/// <param name="Resolver">The resolver used to provide the property's value at runtime.</param>
+public readonly record struct ReferencePropertyDefinition(StringKey Name, IReferenceResolver Resolver);
 
 /// <summary>
 /// Represents a named variable definition with an initial value.
@@ -169,9 +290,25 @@ public readonly record struct PropertyDefinition(StringKey Name, IPropertyResolv
 public readonly record struct VariableDefinition(StringKey Name, Variant128 InitialValue, Type ValueType);
 
 /// <summary>
+/// Represents a named reference variable definition with an initial value.
+/// </summary>
+/// <param name="Name">The name of the variable.</param>
+/// <param name="InitialValue">The initial value of the variable.</param>
+/// <param name="ValueType">The type of the variable's value.</param>
+public readonly record struct ReferenceVariableDefinition(StringKey Name, object? InitialValue, Type ValueType);
+
+/// <summary>
 /// Represents a named array variable definition with initial values.
 /// </summary>
 /// <param name="Name">The name of the array variable.</param>
 /// <param name="InitialValues">The initial values for the array elements.</param>
 /// <param name="ElementType">The type of each element in the array.</param>
 public readonly record struct ArrayVariableDefinition(StringKey Name, Variant128[] InitialValues, Type ElementType);
+
+/// <summary>
+/// Represents a named reference array variable definition with initial values.
+/// </summary>
+/// <param name="Name">The name of the array variable.</param>
+/// <param name="InitialValues">The initial values for the array elements.</param>
+/// <param name="ElementType">The type of each element in the array.</param>
+public readonly record struct ReferenceArrayVariableDefinition(StringKey Name, object?[] InitialValues, Type ElementType);
