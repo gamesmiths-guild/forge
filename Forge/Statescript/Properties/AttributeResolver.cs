@@ -1,32 +1,35 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Magnitudes;
 
 namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
-/// Resolves a property value by reading a selected value from a specific attribute on the ability owner's entity.
+/// Resolves a property value by reading a selected value from a specific attribute on a resolved entity.
 /// </summary>
 /// <remarks>
-/// <para>This resolver requires the graph to be driven by an ability. It retrieves the owner entity from the
-/// <see cref="AbilityBehaviorContext"/> stored in the graph's <see cref="GraphContext.ActivationContext"/>.</para>
-/// <para>If the graph has no activation context, the activation context is not an <see cref="AbilityBehaviorContext"/>,
-/// or the owner does not have the specified attribute, the resolver returns a default <see cref="Variant128"/>
-/// (zero).</para>
+/// <para>By default, this resolver targets the owner entity through <see cref="OwnerEntityResolver"/>.</para>
+/// <para>If the selected entity is not available or does not have the specified attribute, the resolver returns a
+/// default <see cref="Variant128"/> (zero).</para>
 /// </remarks>
-/// <param name="attributeKey">The fully qualified attribute key (e.g., "CombatAttributeSet.Health").</param>
-/// <param name="attributeCalculationType">Which value to read from the attribute. Defaults to
-/// <see cref="AttributeCalculationType.CurrentValue"/>.</param>
-/// <param name="finalChannel">Only used when <paramref name="attributeCalculationType"/> is
-/// <see cref="AttributeCalculationType.MagnitudeEvaluatedUpToChannel"/>.</param>
+/// <param name="attributeKey">The fully qualified attribute key.</param>
+/// <param name="entityResolver">The entity resolver that selects which entity to inspect.</param>
+/// <param name="attributeCalculationType">Which value to read from the attribute.</param>
+/// <param name="finalChannel">The final channel for channel-limited evaluation.</param>
 public class AttributeResolver(
 	StringKey attributeKey,
+	IEntityResolver entityResolver,
 	AttributeCalculationType attributeCalculationType = AttributeCalculationType.CurrentValue,
 	int finalChannel = 0) : IPropertyResolver
 {
+	private static readonly IEntityResolver _defaultEntityResolver = new OwnerEntityResolver();
+
 	private readonly StringKey _attributeKey = attributeKey;
+
+	private readonly IEntityResolver _entityResolver = entityResolver
+		?? throw new ArgumentNullException(nameof(entityResolver));
+
 	private readonly AttributeCalculationType _attributeCalculationType = attributeCalculationType;
 
 	private readonly int _finalChannel = finalChannel >= 0
@@ -36,22 +39,51 @@ public class AttributeResolver(
 	/// <inheritdoc/>
 	public Type ValueType => typeof(int);
 
+	/// <summary>
+	/// Initializes a new instance of the <see cref="AttributeResolver"/> class targeting the owner entity.
+	/// </summary>
+	/// <param name="attributeKey">The fully qualified attribute key.</param>
+	public AttributeResolver(StringKey attributeKey)
+		: this(attributeKey, _defaultEntityResolver)
+	{
+	}
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="AttributeResolver"/> class targeting the owner entity.
+	/// </summary>
+	/// <param name="attributeKey">The fully qualified attribute key.</param>
+	/// <param name="attributeCalculationType">Which value to read from the attribute.</param>
+	public AttributeResolver(StringKey attributeKey, AttributeCalculationType attributeCalculationType)
+		: this(attributeKey, _defaultEntityResolver, attributeCalculationType)
+	{
+	}
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="AttributeResolver"/> class targeting the owner entity.
+	/// </summary>
+	/// <param name="attributeKey">The fully qualified attribute key.</param>
+	/// <param name="attributeCalculationType">Which value to read from the attribute.</param>
+	/// <param name="finalChannel">The final channel for channel-limited evaluation.</param>
+	public AttributeResolver(
+		StringKey attributeKey,
+		AttributeCalculationType attributeCalculationType,
+		int finalChannel)
+		: this(attributeKey, _defaultEntityResolver, attributeCalculationType, finalChannel)
+	{
+	}
+
 	/// <inheritdoc/>
 	public Variant128 Resolve(GraphContext graphContext)
 	{
-		if (!graphContext.TryGetActivationContext(out AbilityBehaviorContext? abilityContext))
-		{
-			return default;
-		}
-
-		if (!abilityContext.Owner.Attributes.ContainsAttribute(_attributeKey))
+		IForgeEntity? entity = _entityResolver.Resolve(graphContext);
+		if (entity?.Attributes.ContainsAttribute(_attributeKey) != true)
 		{
 			return default;
 		}
 
 		return new Variant128(
 			_attributeCalculationType.ResolveValue(
-				abilityContext.Owner.Attributes[_attributeKey],
+				entity.Attributes[_attributeKey],
 				_finalChannel));
 	}
 }

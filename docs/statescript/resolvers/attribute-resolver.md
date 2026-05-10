@@ -3,7 +3,7 @@
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.AttributeResolver`
 > **Output Type:** `int`
 
-Reads a selected value from a specific entity attribute. Requires the graph to be driven by an ability (accesses the owner entity from `AbilityBehaviorContext` stored in `GraphContext.ActivationContext`).
+Reads a selected value from a specific entity attribute. By default it inspects the owner entity, but it can also target any entity provided by an `IEntityResolver`.
 
 ## Constructors
 
@@ -11,20 +11,24 @@ Reads a selected value from a specific entity attribute. Requires the graph to b
 new AttributeResolver(attributeKey)
 new AttributeResolver(attributeKey, attributeCalculationType)
 new AttributeResolver(attributeKey, attributeCalculationType, finalChannel)
+new AttributeResolver(attributeKey, entityResolver)
+new AttributeResolver(attributeKey, entityResolver, attributeCalculationType)
+new AttributeResolver(attributeKey, entityResolver, attributeCalculationType, finalChannel)
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | attributeKey | `StringKey` | The fully qualified attribute key (e.g., `"CombatAttributeSet.Health"`). |
+| entityResolver | `IEntityResolver` | Selects which entity to inspect. Defaults to `OwnerEntityResolver`. |
 | attributeCalculationType | `AttributeCalculationType` | Which value to read from the attribute. Defaults to `CurrentValue`. |
 | finalChannel | `int` | Only used with `AttributeCalculationType.MagnitudeEvaluatedUpToChannel`. |
 
 ## Behavior
 
-- Retrieves the owner entity from the `AbilityBehaviorContext` in the graph's activation context.
-- Looks up the attribute by key on the owner entity's `Attributes` collection.
+- Resolves an entity using the configured `IEntityResolver`.
+- Looks up the attribute by key on that entity's `Attributes` collection.
 - Returns the selected attribute value as an `int`.
-- Returns `0` (default `Variant128`) if no activation context is available or the attribute doesn't exist.
+- Returns `0` (default `Variant128`) if the entity cannot be resolved or the attribute doesn't exist.
 
 ### Supported `AttributeCalculationType` values
 
@@ -51,6 +55,24 @@ graph.VariableDefinitions.DefineProperty("healthOverflow",
         AttributeCalculationType.Overflow));
 ```
 
+## Dynamic Entity Example
+
+```csharp
+graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("selectedEntity");
+
+graph.VariableDefinitions.DefineProperty("selectedHealth",
+    new AttributeResolver(
+        "CombatAttributeSet.Health",
+        new EntityVariableResolver("selectedEntity")));
+```
+
+```csharp
+graph.VariableDefinitions.DefineProperty("targetHealth",
+    new AttributeResolver(
+        "CombatAttributeSet.Health",
+        new TargetEntityResolver()));
+```
+
 ## Composition
 
 ```csharp
@@ -66,4 +88,7 @@ graph.VariableDefinitions.DefineProperty("healthAbove50",
 
 - [Resolvers Overview](README.md)
 - [ComparisonResolver](comparison-resolver.md)
+- [EntityVariableResolver](entity-variable-resolver.md)
+- [OwnerEntityResolver](owner-entity-resolver.md)
+- [TargetEntityResolver](target-entity-resolver.md)
 - [TagQueryResolver](tag-query-resolver.md)

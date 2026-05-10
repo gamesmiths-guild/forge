@@ -1,21 +1,22 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Abilities;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
-/// Resolves a property value by evaluating a <see cref="TagQuery"/> against one of the ability owner's tag containers.
+/// Resolves a property value by evaluating a <see cref="TagQuery"/> against one of a resolved entity's tag containers.
 /// </summary>
 /// <remarks>
-/// <para>This resolver requires the graph to be driven by an ability. It retrieves the owner entity from the
-/// <see cref="AbilityBehaviorContext"/> stored in the graph's <see cref="GraphContext.ActivationContext"/>.</para>
-/// <para>If the graph has no activation context or the activation context is not an
-/// <see cref="AbilityBehaviorContext"/>, the resolver always returns <see langword="false"/>.</para>
+/// <para>By default, this resolver targets the owner entity through <see cref="OwnerEntityResolver"/>.</para>
+/// <para>If the selected entity is not available, the resolver returns <see langword="false"/>.</para>
 /// </remarks>
 public class TagQueryResolver : IPropertyResolver
 {
+	private static readonly IEntityResolver _defaultEntityResolver = new OwnerEntityResolver();
+
+	private readonly IEntityResolver _entityResolver;
 	private readonly TagQuery _query;
 	private readonly TagQuerySource _tagQuerySource;
 
@@ -26,15 +27,47 @@ public class TagQueryResolver : IPropertyResolver
 	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class from a prebuilt query.
 	/// </summary>
 	/// <param name="query">The query to evaluate against the selected tag container.</param>
+	public TagQueryResolver(TagQuery query)
+		: this(query, _defaultEntityResolver)
+	{
+	}
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class from a prebuilt query.
+	/// </summary>
+	/// <param name="query">The query to evaluate against the selected tag container.</param>
+	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to all tags.</param>
+	public TagQueryResolver(TagQuery query, TagQuerySource tagQuerySource)
+		: this(query, _defaultEntityResolver, tagQuerySource)
+	{
+	}
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class from a prebuilt query.
+	/// </summary>
+	/// <param name="query">The query to evaluate against the selected tag container.</param>
+	/// <param name="entityResolver">The entity resolver that selects which entity to inspect.</param>
 	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to all tags.</param>
 	public TagQueryResolver(
 		TagQuery query,
+		IEntityResolver entityResolver,
 		TagQuerySource tagQuerySource = TagQuerySource.AllTags)
 	{
 		EnsureNotNull(query, nameof(query));
+		EnsureNotNull(entityResolver, nameof(entityResolver));
 
+		_entityResolver = entityResolver;
 		_query = query;
 		_tagQuerySource = tagQuerySource;
+	}
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class from a query expression.
+	/// </summary>
+	/// <param name="queryExpression">The expression used to build the tag query.</param>
+	public TagQueryResolver(TagQueryExpression queryExpression)
+		: this(queryExpression, _defaultEntityResolver)
+	{
 	}
 
 	/// <summary>
@@ -44,8 +77,31 @@ public class TagQueryResolver : IPropertyResolver
 	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to all tags.</param>
 	public TagQueryResolver(
 		TagQueryExpression queryExpression,
+		TagQuerySource tagQuerySource)
+		: this(queryExpression, _defaultEntityResolver, tagQuerySource)
+	{
+	}
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class from a query expression.
+	/// </summary>
+	/// <param name="queryExpression">The expression used to build the tag query.</param>
+	/// <param name="entityResolver">The entity resolver that selects which entity to inspect.</param>
+	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to all tags.</param>
+	public TagQueryResolver(
+		TagQueryExpression queryExpression,
+		IEntityResolver entityResolver,
 		TagQuerySource tagQuerySource = TagQuerySource.AllTags)
-		: this(BuildQuery(queryExpression), tagQuerySource)
+		: this(BuildQuery(queryExpression), entityResolver, tagQuerySource)
+	{
+	}
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class for the common single-tag match case.
+	/// </summary>
+	/// <param name="tag">The tag to match against the selected tag container.</param>
+	public TagQueryResolver(Tag tag)
+		: this(tag, _defaultEntityResolver)
 	{
 	}
 
@@ -56,20 +112,35 @@ public class TagQueryResolver : IPropertyResolver
 	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to all tags.</param>
 	public TagQueryResolver(
 		Tag tag,
+		TagQuerySource tagQuerySource)
+		: this(tag, _defaultEntityResolver, tagQuerySource)
+	{
+	}
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class for the common single-tag match case.
+	/// </summary>
+	/// <param name="tag">The tag to match against the selected tag container.</param>
+	/// <param name="entityResolver">The entity resolver that selects which entity to inspect.</param>
+	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to all tags.</param>
+	public TagQueryResolver(
+		Tag tag,
+		IEntityResolver entityResolver,
 		TagQuerySource tagQuerySource = TagQuerySource.AllTags)
-		: this(TagQuery.MakeQueryMatchTag(tag), tagQuerySource)
+		: this(TagQuery.MakeQueryMatchTag(tag), entityResolver, tagQuerySource)
 	{
 	}
 
 	/// <inheritdoc/>
 	public Variant128 Resolve(GraphContext graphContext)
 	{
-		if (!graphContext.TryGetActivationContext(out AbilityBehaviorContext? abilityContext))
+		IForgeEntity? entity = _entityResolver.Resolve(graphContext);
+		if (entity is null)
 		{
 			return new Variant128(false);
 		}
 
-		return new Variant128(_query.Matches(GetTagContainer(_tagQuerySource, abilityContext.Owner.Tags)));
+		return new Variant128(_query.Matches(GetTagContainer(_tagQuerySource, entity.Tags)));
 	}
 
 	private static TagQuery BuildQuery(TagQueryExpression queryExpression)
@@ -81,7 +152,7 @@ public class TagQueryResolver : IPropertyResolver
 
 	private static TagContainer GetTagContainer(
 		TagQuerySource tagQuerySource,
-		Core.EntityTags entityTags)
+		EntityTags entityTags)
 	{
 		return tagQuerySource switch
 		{
