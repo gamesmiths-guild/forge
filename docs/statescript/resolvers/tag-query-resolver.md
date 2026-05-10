@@ -3,14 +3,17 @@
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.TagQueryResolver`
 > **Output Type:** `bool`
 
-Evaluates a `TagQuery` against the owner entity's combined tags. This is the primary built-in resolver for tag-based conditions and supports both simple single-tag checks and more expressive nested query logic.
+Evaluates a `TagQuery` against one of the owner entity's tag containers. This is the primary built-in resolver for tag-based conditions and supports both simple single-tag checks and more expressive nested query logic.
 
 ## Constructors
 
 ```csharp
 new TagQueryResolver(query)
+new TagQueryResolver(query, tagQuerySource)
 new TagQueryResolver(queryExpression)
+new TagQueryResolver(queryExpression, tagQuerySource)
 new TagQueryResolver(tag)
+new TagQueryResolver(tag, tagQuerySource)
 ```
 
 | Parameter | Type | Description |
@@ -18,11 +21,15 @@ new TagQueryResolver(tag)
 | query | `TagQuery` | A prebuilt tag query to evaluate. |
 | queryExpression | `TagQueryExpression` | A fluent tag-query expression that will be compiled into a `TagQuery`. |
 | tag | `Tag` | Convenience overload for the common single-tag match case. |
+| tagQuerySource | `TagQuerySource` | Chooses whether to evaluate against `CombinedTags` (default), `BaseTags`, or `ModifierTags`. |
 
 ## Behavior
 
 - Retrieves the owner entity from the `AbilityBehaviorContext` in the graph's activation context.
-- Evaluates the configured `TagQuery` against `abilityContext.Owner.Tags.CombinedTags`.
+- Evaluates the configured `TagQuery` against one of:
+  - `abilityContext.Owner.Tags.CombinedTags` (default)
+  - `abilityContext.Owner.Tags.BaseTags`
+  - `abilityContext.Owner.Tags.ModifierTags`
 - Returns `true` if the query matches, `false` otherwise.
 - Returns `false` if no activation context is available.
 
@@ -31,6 +38,15 @@ new TagQueryResolver(tag)
 ```csharp
 graph.VariableDefinitions.DefineProperty("isEnraged",
     new TagQueryResolver(Tag.RequestTag(tagsManager, "status.enraged")));
+```
+
+## Source Selection Example
+
+```csharp
+graph.VariableDefinitions.DefineProperty("hasTemporaryStun",
+    new TagQueryResolver(
+        Tag.RequestTag(tagsManager, "status.stunned"),
+        TagQuerySource.ModifierTags));
 ```
 
 ## Complex Query Example

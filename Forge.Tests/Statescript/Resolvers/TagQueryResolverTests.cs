@@ -2,6 +2,9 @@
 
 using FluentAssertions;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Components;
+using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
@@ -87,6 +90,89 @@ public class TagQueryResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 
 	[Fact]
 	[Trait("Resolver", "TagQuery")]
+	public void Tag_query_resolver_can_target_base_tags_only()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		ApplyModifierTags(entity, "item.equipment.weapon.axe");
+		var resolver = new TagQueryResolver(
+			Tag.RequestTag(_tagsManager, "enemy.undead"),
+			TagQuerySource.BaseTags);
+
+		GraphContext context = CreateAbilityGraphContext(entity);
+
+		Variant128 result = resolver.Resolve(context);
+
+		result.AsBool().Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Resolver", "TagQuery")]
+	public void Tag_query_resolver_does_not_match_modifier_only_tag_when_targeting_base_tags()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		ApplyModifierTags(entity, "item.equipment.weapon.axe");
+		var resolver = new TagQueryResolver(
+			Tag.RequestTag(_tagsManager, "item.equipment.weapon.axe"),
+			TagQuerySource.BaseTags);
+
+		GraphContext context = CreateAbilityGraphContext(entity);
+
+		Variant128 result = resolver.Resolve(context);
+
+		result.AsBool().Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Resolver", "TagQuery")]
+	public void Tag_query_resolver_can_target_modifier_tags_only()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		ApplyModifierTags(entity, "item.equipment.weapon.axe");
+		var resolver = new TagQueryResolver(
+			Tag.RequestTag(_tagsManager, "item.equipment.weapon.axe"),
+			TagQuerySource.ModifierTags);
+
+		GraphContext context = CreateAbilityGraphContext(entity);
+
+		Variant128 result = resolver.Resolve(context);
+
+		result.AsBool().Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Resolver", "TagQuery")]
+	public void Tag_query_resolver_does_not_match_base_only_tag_when_targeting_modifier_tags()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		ApplyModifierTags(entity, "item.equipment.weapon.axe");
+		var resolver = new TagQueryResolver(
+			Tag.RequestTag(_tagsManager, "enemy.undead"),
+			TagQuerySource.ModifierTags);
+
+		GraphContext context = CreateAbilityGraphContext(entity);
+
+		Variant128 result = resolver.Resolve(context);
+
+		result.AsBool().Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Resolver", "TagQuery")]
+	public void Tag_query_resolver_matches_modifier_only_tag_with_default_combined_source()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		ApplyModifierTags(entity, "item.equipment.weapon.axe");
+		var resolver = new TagQueryResolver(Tag.RequestTag(_tagsManager, "item.equipment.weapon.axe"));
+
+		GraphContext context = CreateAbilityGraphContext(entity);
+
+		Variant128 result = resolver.Resolve(context);
+
+		result.AsBool().Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Resolver", "TagQuery")]
 	public void Tag_query_resolver_supports_nested_query_expressions()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
@@ -132,5 +218,17 @@ public class TagQueryResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		Variant128 result = resolver.Resolve(context);
 
 		result.AsBool().Should().BeFalse();
+	}
+
+	private void ApplyModifierTags(TestEntity entity, params string[] tagKeys)
+	{
+		var effectData = new EffectData(
+			"TagQueryResolverTestModifierTags",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [new ModifierTagsEffectComponent(_tagsManager.RequestTagContainer(tagKeys))]);
+
+		var effect = new Effect(effectData, new EffectOwnership(entity, entity));
+
+		_ = entity.EffectsManager.ApplyEffect(effect);
 	}
 }

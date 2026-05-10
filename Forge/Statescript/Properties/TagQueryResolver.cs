@@ -6,7 +6,7 @@ using Gamesmiths.Forge.Tags;
 namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
-/// Resolves a property value by evaluating a <see cref="TagQuery"/> against the ability owner's combined tags.
+/// Resolves a property value by evaluating a <see cref="TagQuery"/> against one of the ability owner's tag containers.
 /// </summary>
 /// <remarks>
 /// <para>This resolver requires the graph to be driven by an ability. It retrieves the owner entity from the
@@ -17,6 +17,7 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 public class TagQueryResolver : IPropertyResolver
 {
 	private readonly TagQuery _query;
+	private readonly TagQuerySource _tagQuerySource;
 
 	/// <inheritdoc/>
 	public Type ValueType => typeof(bool);
@@ -24,29 +25,39 @@ public class TagQueryResolver : IPropertyResolver
 	/// <summary>
 	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class from a prebuilt query.
 	/// </summary>
-	/// <param name="query">The query to evaluate against the owner's combined tags.</param>
-	public TagQueryResolver(TagQuery query)
+	/// <param name="query">The query to evaluate against the selected tag container.</param>
+	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to combined tags.</param>
+	public TagQueryResolver(
+		TagQuery query,
+		TagQuerySource tagQuerySource = TagQuerySource.CombinedTags)
 	{
 		EnsureNotNull(query, nameof(query));
 
 		_query = query;
+		_tagQuerySource = tagQuerySource;
 	}
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class from a query expression.
 	/// </summary>
 	/// <param name="queryExpression">The expression used to build the tag query.</param>
-	public TagQueryResolver(TagQueryExpression queryExpression)
-		: this(BuildQuery(queryExpression))
+	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to combined tags.</param>
+	public TagQueryResolver(
+		TagQueryExpression queryExpression,
+		TagQuerySource tagQuerySource = TagQuerySource.CombinedTags)
+		: this(BuildQuery(queryExpression), tagQuerySource)
 	{
 	}
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class for the common single-tag match case.
 	/// </summary>
-	/// <param name="tag">The tag to match against the owner's combined tags.</param>
-	public TagQueryResolver(Tag tag)
-		: this(TagQuery.MakeQueryMatchTag(tag))
+	/// <param name="tag">The tag to match against the selected tag container.</param>
+	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to combined tags.</param>
+	public TagQueryResolver(
+		Tag tag,
+		TagQuerySource tagQuerySource = TagQuerySource.CombinedTags)
+		: this(TagQuery.MakeQueryMatchTag(tag), tagQuerySource)
 	{
 	}
 
@@ -58,7 +69,7 @@ public class TagQueryResolver : IPropertyResolver
 			return new Variant128(false);
 		}
 
-		return new Variant128(_query.Matches(abilityContext.Owner.Tags.CombinedTags));
+		return new Variant128(_query.Matches(GetTagContainer(_tagQuerySource, abilityContext.Owner.Tags)));
 	}
 
 	private static TagQuery BuildQuery(TagQueryExpression queryExpression)
@@ -66,6 +77,22 @@ public class TagQueryResolver : IPropertyResolver
 		EnsureNotNull(queryExpression, nameof(queryExpression));
 
 		return TagQuery.BuildQuery(queryExpression);
+	}
+
+	private static TagContainer GetTagContainer(
+		TagQuerySource tagQuerySource,
+		Core.EntityTags entityTags)
+	{
+		return tagQuerySource switch
+		{
+			TagQuerySource.CombinedTags => entityTags.CombinedTags,
+			TagQuerySource.BaseTags => entityTags.BaseTags,
+			TagQuerySource.ModifierTags => entityTags.ModifierTags,
+			_ => throw new ArgumentOutOfRangeException(
+				nameof(tagQuerySource),
+				tagQuerySource,
+				$"Unsupported {nameof(TagQuerySource)} value."),
+		};
 	}
 
 	private static void EnsureNotNull<T>(T value, string paramName)
