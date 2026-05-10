@@ -27,7 +27,7 @@ public class EntityTags
 	/// <summary>
 	/// Gets a container with all tags (base + modifier) from the entity.
 	/// </summary>
-	public TagContainer CombinedTags { get; }
+	public TagContainer AllTags { get; }
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="EntityTags"/> class.
@@ -36,10 +36,10 @@ public class EntityTags
 	public EntityTags(TagContainer baseTags)
 	{
 		BaseTags = baseTags;
-		CombinedTags = new TagContainer(baseTags.TagsManager);
+		AllTags = new TagContainer(baseTags.TagsManager);
 		ModifierTags = new TagContainer(baseTags.TagsManager);
 
-		CombinedTags.AppendTags(BaseTags);
+		AllTags.AppendTags(BaseTags);
 	}
 
 	internal void AddBaseTag(Tag tag)
@@ -50,9 +50,9 @@ public class EntityTags
 		}
 
 		BaseTags.AddTagFast(tag);
-		CombinedTags.AddTagFast(tag);
+		AllTags.AddTagFast(tag);
 
-		OnTagsChanged?.Invoke(CombinedTags);
+		OnTagsChanged?.Invoke(AllTags);
 	}
 
 	internal void AddBaseTags(TagContainer tags)
@@ -63,9 +63,9 @@ public class EntityTags
 		}
 
 		BaseTags.AppendTags(tags);
-		CombinedTags.AppendTags(tags);
+		AllTags.AppendTags(tags);
 
-		OnTagsChanged?.Invoke(CombinedTags);
+		OnTagsChanged?.Invoke(AllTags);
 	}
 
 	internal void RemoveBaseTag(Tag tag)
@@ -74,7 +74,7 @@ public class EntityTags
 		{
 			if (!_modifierTagCounts.TryGetValue(removedTag, out int count) || count == 0)
 			{
-				CombinedTags.RemoveTag(removedTag);
+				AllTags.RemoveTag(removedTag);
 			}
 		}
 	}
@@ -85,7 +85,7 @@ public class EntityTags
 		{
 			if (!_modifierTagCounts.TryGetValue(removedTag, out int count) || count == 0)
 			{
-				CombinedTags.RemoveTag(removedTag);
+				AllTags.RemoveTag(removedTag);
 			}
 		}
 	}
@@ -107,9 +107,9 @@ public class EntityTags
 		}
 
 		ModifierTags.AddTagFast(tag);
-		CombinedTags.AddTagFast(tag);
+		AllTags.AddTagFast(tag);
 
-		OnTagsChanged?.Invoke(CombinedTags);
+		OnTagsChanged?.Invoke(AllTags);
 	}
 
 	internal void AddModifierTags(TagContainer tags)
@@ -137,10 +137,10 @@ public class EntityTags
 
 			if (!BaseTags.HasTagExact(tag))
 			{
-				CombinedTags.RemoveTagExact(tag);
+				AllTags.RemoveTagExact(tag);
 			}
 
-			OnTagsChanged?.Invoke(CombinedTags);
+			OnTagsChanged?.Invoke(AllTags);
 		}
 	}
 

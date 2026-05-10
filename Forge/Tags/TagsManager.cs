@@ -74,7 +74,7 @@ public sealed class TagsManager
 	/// </remarks>
 	/// <param name="explicitTagsOnly">Whether to include only explicit tags or not.</param>
 	/// <returns>A <see cref="TagContainer"/> with all registered tags.</returns>
-	public TagContainer RequestAllTags(bool explicitTagsOnly)
+	public TagContainer RequestRegisteredTags(bool explicitTagsOnly)
 	{
 		TagContainer tagContainer = new(this);
 

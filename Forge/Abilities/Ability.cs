@@ -361,7 +361,7 @@ internal sealed class Ability
 		{
 			foreach (Effect effect in _cooldownEffects)
 			{
-				if (effect?.CachedGrantedTags is not null && Owner.Tags.CombinedTags.HasAny(effect.CachedGrantedTags))
+				if (effect?.CachedGrantedTags is not null && Owner.Tags.AllTags.HasAny(effect.CachedGrantedTags))
 				{
 					failureFlags |= AbilityActivationFailures.Cooldown;
 					canActivate = false;
@@ -378,9 +378,9 @@ internal sealed class Ability
 		}
 
 		// Check tags condition.
-		TagContainer ownerTags = Owner.Tags.CombinedTags;
-		TagContainer? sourceTags = SourceEntity?.Tags.CombinedTags;
-		TagContainer? targetTags = abilityTarget?.Tags.CombinedTags;
+		TagContainer ownerTags = Owner.Tags.AllTags;
+		TagContainer? sourceTags = SourceEntity?.Tags.AllTags;
+		TagContainer? targetTags = abilityTarget?.Tags.AllTags;
 
 		// Owner tags.
 		if (FailsRequiredTags(AbilityData.ActivationRequiredTags, ownerTags)
@@ -407,7 +407,7 @@ internal sealed class Ability
 		}
 
 		// Check ability tags against BlockAbilitiesWithTag
-		if (_abilityTags?.HasAny(Owner.Abilities.BlockedAbilityTags.CombinedTags) == true)
+		if (_abilityTags?.HasAny(Owner.Abilities.BlockedAbilityTags.AllTags) == true)
 		{
 			failureFlags |= AbilityActivationFailures.BlockedByTags;
 			canActivate = false;

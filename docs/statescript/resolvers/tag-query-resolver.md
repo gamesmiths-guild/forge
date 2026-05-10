@@ -21,13 +21,13 @@ new TagQueryResolver(tag, tagQuerySource)
 | query | `TagQuery` | A prebuilt tag query to evaluate. |
 | queryExpression | `TagQueryExpression` | A fluent tag-query expression that will be compiled into a `TagQuery`. |
 | tag | `Tag` | Convenience overload for the common single-tag match case. |
-| tagQuerySource | `TagQuerySource` | Chooses whether to evaluate against `CombinedTags` (default), `BaseTags`, or `ModifierTags`. |
+| tagQuerySource | `TagQuerySource` | Chooses whether to evaluate against `AllTags` (default), `BaseTags`, or `ModifierTags`. |
 
 ## Behavior
 
 - Retrieves the owner entity from the `AbilityBehaviorContext` in the graph's activation context.
 - Evaluates the configured `TagQuery` against one of:
-  - `abilityContext.Owner.Tags.CombinedTags` (default)
+  - `abilityContext.Owner.Tags.AllTags` (default)
   - `abilityContext.Owner.Tags.BaseTags`
   - `abilityContext.Owner.Tags.ModifierTags`
 - Returns `true` if the query matches, `false` otherwise.

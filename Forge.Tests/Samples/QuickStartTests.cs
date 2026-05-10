@@ -65,8 +65,8 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		var warriorTag = Tag.RequestTag(tagsManager, "class.warrior");
 
 		// Check if the player has specific tags
-		var isPlayer = player.Tags.CombinedTags.HasTag(playerTag);
-		var isWarrior = player.Tags.CombinedTags.HasTag(warriorTag);
+		var isPlayer = player.Tags.AllTags.HasTag(playerTag);
+		var isWarrior = player.Tags.AllTags.HasTag(warriorTag);
 
 		isPlayer.Should().BeTrue();
 		isWarrior.Should().BeTrue();
@@ -442,7 +442,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		ActiveEffectHandle? stunHandle = player.EffectsManager.ApplyEffect(stunEffect);
 
 		// Check if player is stunned
-		bool isStunned = player.Tags.CombinedTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
+		bool isStunned = player.Tags.AllTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
 		int currentSpeed = player.Attributes["PlayerAttributeSet.Speed"].CurrentValue;
 
 		stunHandle.Should().NotBeNull();
@@ -556,11 +556,11 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		player.EffectsManager.ApplyEffect(thresholdAttack);
 
 		// Check if the stun was applied (will be true if health was 90 or less after damage)
-		bool isStunned = player.Tags.CombinedTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
+		bool isStunned = player.Tags.AllTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
 		isStunned.Should().BeFalse();
 
 		player.EffectsManager.ApplyEffect(thresholdAttack);
-		isStunned = player.Tags.CombinedTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
+		isStunned = player.Tags.AllTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
 		isStunned.Should().BeTrue();
 	}
 

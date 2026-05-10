@@ -8,9 +8,9 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 public enum TagQuerySource : byte
 {
 	/// <summary>
-	/// Evaluates against the entity's combined tag view, including base and modifier tags.
+	/// Evaluates against the entity's full tag view, including base and modifier tags.
 	/// </summary>
-	CombinedTags = 0,
+	AllTags = 0,
 
 	/// <summary>
 	/// Evaluates against the entity's immutable base tags only.

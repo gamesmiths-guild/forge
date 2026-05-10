@@ -1990,11 +1990,11 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
-		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
+		entity.Tags.AllTags.HasAll(ownedTags).Should().BeTrue();
 		handle.IsActive.Should().BeTrue();
 
 		handle.Cancel();
-		entity.Tags.CombinedTags.HasAny(ownedTags).Should().BeFalse();
+		entity.Tags.AllTags.HasAny(ownedTags).Should().BeFalse();
 	}
 
 	[Fact]
@@ -2028,10 +2028,10 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
-		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
+		entity.Tags.AllTags.HasAll(ownedTags).Should().BeTrue();
 
 		handle.Cancel();
-		entity.Tags.CombinedTags.HasAny(ownedTags).Should().BeFalse();
+		entity.Tags.AllTags.HasAny(ownedTags).Should().BeFalse();
 	}
 
 	[Fact]
