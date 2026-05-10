@@ -91,11 +91,13 @@ var behavior = new GraphAbilityBehavior(graph);
 For typed activation data:
 
 ```csharp
-var behavior = new GraphAbilityBehavior<DashData>(graph, (data, variables) =>
-{
-    variables.SetVar(new StringKey("Distance"), data.Distance);
-    variables.SetVar(new StringKey("Speed"), data.Speed);
-});
+graph.VariableDefinitions.DefineProperty("Distance",
+    new ActivationDataResolver(typeof(DashData), nameof(DashData.Distance)));
+
+graph.VariableDefinitions.DefineProperty("Speed",
+    new ActivationDataResolver(typeof(DashData), nameof(DashData.Speed)));
+
+var behavior = new GraphAbilityBehavior<DashData>(graph);
 ```
 
 For full details, see [Ability Integration](ability-integration.md).
