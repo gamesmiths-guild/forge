@@ -1,6 +1,6 @@
 # Property Resolvers
 
-Property resolvers provide **read-only computed values** that nodes can bind to as input properties. Each resolver implements `IPropertyResolver` and returns a `Variant128` given a `GraphContext`.
+Property resolvers provide **read-only computed values** that nodes can bind to as input properties. Scalar resolvers implement `IPropertyResolver`, while array resolvers use `IArrayPropertyResolver` or typed reference-array helpers.
 
 For an overview of the Statescript system, see the [Statescript overview](../README.md). For how resolvers fit into the broader data flow, see [Variables and Data](../variables.md). For creating your own resolvers, see [Custom Resolvers](../custom-resolvers.md).
 
@@ -11,12 +11,11 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
 | [ActivationDataResolver](activation-data-resolver.md) | *(configured)* | Reads a field or property from typed activation data. |
-| [ArrayVariableResolver](array-resolver.md) | *(configured)* | Stores a mutable array of values with indexed access. |
+| [ArrayVariableResolver](array-resolver.md) | *(configured array)* | Reads an array variable from graph or shared scope. |
 | [AttributeResolver](attribute-resolver.md) | `int` | Reads a selected value from an entity attribute. |
 | [MagnitudeResolver](magnitude-resolver.md) | `float` | Reads the magnitude from the ability activation context. |
-| [SharedVariableResolver](shared-variable-resolver.md) | *(configured)* | Reads a shared variable from the entity. |
 | [TagQueryResolver](tag-query-resolver.md) | `bool` | Evaluates a tag query against a selected entity's tags. |
-| [VariableResolver](variable-resolver.md) | *(configured)* | Reads a graph variable by name. |
+| [VariableResolver](variable-resolver.md) | *(configured)* | Reads a graph or shared variable by name. |
 | [VariantResolver](variant-resolver.md) | *(configured)* | Holds a fixed constant value. |
 
 ---

@@ -1,94 +1,75 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
+using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
-/// A mutable property resolver that stores an array of <see cref="Variant128"/> values. This enables graph variables
-/// that hold multiple values, such as a list of entity IDs returned by a query node or an array of projectile
-/// positions.
+/// Resolves an array variable from either the graph or shared runtime <see cref="Variables"/> bag.
 /// </summary>
 /// <remarks>
-/// <para>The <see cref="Resolve"/> method returns the first element of the array (or a default <see cref="Variant128"/>
-/// if the array is empty). Use <see cref="GetElement"/> and <see cref="SetElement"/> for indexed access.</para>
-/// <para>At graph initialization time, a fresh copy of the array is created for each execution instance so that
-/// multiple processors sharing the same graph have independent array state.</para>
+/// Use <see cref="VariableScope.Graph"/> for per-graph-instance array variables and <see cref="VariableScope.Shared"/>
+/// for entity-level shared arrays. If the referenced array does not exist, this resolver returns an empty array.
 /// </remarks>
-/// <param name="initialValues">The initial values for the array elements.</param>
+/// <param name="variableName">The name of the array variable to read.</param>
 /// <param name="elementType">The type of each element in the array.</param>
-public class ArrayVariableResolver(Variant128[] initialValues, Type elementType) : IPropertyResolver
+/// <param name="scope">Which variable bag to read from. Defaults to <see cref="VariableScope.Graph"/>.</param>
+public class ArrayVariableResolver(
+	StringKey variableName,
+	Type elementType,
+	VariableScope scope = VariableScope.Graph) : IArrayPropertyResolver
 {
-	private readonly List<Variant128> _values = [.. initialValues];
+	private readonly StringKey _variableName = variableName;
+	private readonly VariableScope _scope = scope;
 
 	/// <inheritdoc/>
-	public Type ValueType { get; } = elementType;
-
-	/// <summary>
-	/// Gets the number of elements in the array.
-	/// </summary>
-	public int Length => _values.Count;
-
-	/// <summary>
-	/// Gets a read-only view of the current array values.
-	/// </summary>
-	public ReadOnlyCollection<Variant128> Values => _values.AsReadOnly();
+	public Type ElementType { get; } = elementType;
 
 	/// <inheritdoc/>
-	/// <remarks>
-	/// Returns the first element of the array, or a default <see cref="Variant128"/> if the array is empty.
-	/// </remarks>
-	public Variant128 Resolve(GraphContext graphContext)
+	public Variant128[] ResolveArray(GraphContext graphContext)
 	{
-		return _values.Count > 0 ? _values[0] : default;
+		if (!TryGetVariables(graphContext, out Variables? variables))
+		{
+			return [];
+		}
+
+		int length = variables.GetArrayLength(_variableName);
+		if (length < 0)
+		{
+			return [];
+		}
+
+		var values = new Variant128[length];
+		for (int i = 0; i < length; i++)
+		{
+			_ = variables.TryGetArrayVariant(_variableName, i, out values[i]);
+		}
+
+		return values;
 	}
 
-	/// <summary>
-	/// Gets the value at the specified index.
-	/// </summary>
-	/// <param name="index">The zero-based index of the element to get.</param>
-	/// <returns>The value at the specified index.</returns>
-	/// <exception cref="ArgumentOutOfRangeException">Thrown if the index is out of range.</exception>
-	public Variant128 GetElement(int index)
+	private bool TryGetVariables(
+		GraphContext graphContext,
+		[NotNullWhen(true)] out Variables? variables)
 	{
-		return _values[index];
-	}
+		switch (_scope)
+		{
+			case VariableScope.Graph:
+				variables = graphContext.GraphVariables;
+				return true;
 
-	/// <summary>
-	/// Sets the value at the specified index.
-	/// </summary>
-	/// <param name="index">The zero-based index of the element to set.</param>
-	/// <param name="value">The value to set.</param>
-	/// <exception cref="ArgumentOutOfRangeException">Thrown if the index is out of range.</exception>
-	public void SetElement(int index, Variant128 value)
-	{
-		_values[index] = value;
-	}
+			case VariableScope.Shared:
+				variables = graphContext.SharedVariables;
+				return variables is not null;
 
-	/// <summary>
-	/// Appends a value to the end of the array.
-	/// </summary>
-	/// <param name="value">The value to add.</param>
-	public void Add(Variant128 value)
-	{
-		_values.Add(value);
-	}
-
-	/// <summary>
-	/// Removes the element at the specified index.
-	/// </summary>
-	/// <param name="index">The zero-based index of the element to remove.</param>
-	/// <exception cref="ArgumentOutOfRangeException">Thrown if the index is out of range.</exception>
-	public void RemoveAt(int index)
-	{
-		_values.RemoveAt(index);
-	}
-
-	/// <summary>
-	/// Removes all elements from the array.
-	/// </summary>
-	public void Clear()
-	{
-		_values.Clear();
+			default:
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
+				throw new ArgumentOutOfRangeException(
+					nameof(scope),
+					_scope,
+					$"Unsupported {nameof(VariableScope)} value.");
+#pragma warning restore CA2208 // Instantiate argument exceptions correctly
+		}
 	}
 }

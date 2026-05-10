@@ -39,8 +39,8 @@ public class GraphProcessor
 	/// Initializes a new instance of the <see cref="GraphProcessor"/> class.
 	/// </summary>
 	/// <param name="graph">The graph to be executed by this processor.</param>
-	/// <param name="sharedVariables">Optional shared variables for this graph execution. When set, property resolvers
-	/// such as <see cref="Properties.SharedVariableResolver"/> can read entity-level shared state.</param>
+	/// <param name="sharedVariables">Optional shared variables for this graph execution. When set, scope-aware variable
+	/// resolvers such as <see cref="Properties.VariableResolver"/> can read entity-level shared state.</param>
 	public GraphProcessor(Graph graph, Variables? sharedVariables = null)
 	{
 		Graph = graph;
