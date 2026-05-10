@@ -63,22 +63,24 @@ If you're using `GraphAbilityBehavior` through the standard Abilities system, th
 
 ## Typed Activation Data
 
-For abilities that receive strongly-typed activation data, use `GraphAbilityBehavior<TData>`. It accepts a **data binder** delegate that maps fields from the activation data into graph variables before the graph starts:
+For abilities that receive strongly-typed activation data, use `GraphAbilityBehavior<TData>`.
+
+When your graph only needs to read supported scalar or math types directly from the activation payload, bind them through `ActivationDataResolver`:
 
 ```csharp
 public record struct DashData(float Distance, float Speed);
 
 var graph = new Graph();
-graph.VariableDefinitions.DefineVariable("distance", 0.0f);
-graph.VariableDefinitions.DefineVariable("speed", 0.0f);
+
+graph.VariableDefinitions.DefineProperty("distance",
+    new ActivationDataResolver(typeof(DashData), nameof(DashData.Distance)));
+
+graph.VariableDefinitions.DefineProperty("speed",
+    new ActivationDataResolver(typeof(DashData), nameof(DashData.Speed)));
 
 // ... build graph nodes ...
 
-var behavior = new GraphAbilityBehavior<DashData>(graph, (data, variables) =>
-{
-    variables.SetVar("distance", data.Distance);
-    variables.SetVar("speed", data.Speed);
-});
+var behavior = new GraphAbilityBehavior<DashData>(graph);
 
 var abilityData = new AbilityData(
     "Dash",
@@ -89,6 +91,16 @@ When activated with typed data:
 
 ```csharp
 handle.Activate(new DashData(10.0f, 5.0f), out AbilityActivationFailures failures);
+```
+
+If you need to rename fields, precompute values, or convert unsupported payload types into graph-friendly values, use the data-binder overload instead:
+
+```csharp
+var behavior = new GraphAbilityBehavior<DashData>(graph, (data, variables) =>
+{
+    variables.SetVar("distance", data.Distance);
+    variables.SetVar("speed", data.Speed);
+});
 ```
 
 The data binder runs after variables are initialized from definitions but before the Entry node fires, ensuring nodes can read the activation data from their first message.

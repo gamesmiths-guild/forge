@@ -84,6 +84,39 @@ internal static class ResolverTestContextFactory
 		return captureNode.CapturedGraphContext;
 	}
 
+	public static GraphContext CreateAbilityGraphContext<TData>(TestEntity entity, TData activationData, float magnitude = 0f)
+	{
+		var graph = new Graph();
+		var captureNode = new CaptureGraphContextNode();
+
+		graph.AddNode(captureNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			captureNode.InputPorts[ActionNode.InputPort]));
+
+		var behavior = new GraphAbilityBehavior<TData>(graph);
+
+		AbilityData abilityData = CreateAbilityData("TypedResolverTest", () => behavior);
+		AbilityHandle? handle = Grant(entity, abilityData) ?? throw new InvalidOperationException(
+			"Failed to grant the typed resolver test ability and create an ability graph context.");
+
+		if (!handle.Activate(activationData, out _, magnitude: magnitude))
+		{
+			throw new InvalidOperationException(
+				"Failed to activate the typed resolver test ability while creating an ability graph context." +
+				$" Activation data type: {typeof(TData)}, magnitude: {magnitude}.");
+		}
+
+		if (captureNode.CapturedGraphContext is null)
+		{
+			throw new InvalidOperationException(
+				"The typed resolver test ability activated, but no graph context was captured by " +
+				"CaptureGraphContextNode.");
+		}
+
+		return captureNode.CapturedGraphContext;
+	}
+
 	private static AbilityHandle? Grant(TestEntity target, AbilityData data)
 	{
 		var grantConfig = new GrantAbilityConfig(

@@ -56,7 +56,7 @@ processor.StartGraph(variables =>
 });
 ```
 
-This is used by `GraphAbilityBehavior<TData>` to inject typed activation data into graph variables.
+This is used by `GraphAbilityBehavior<TData>` when you choose to inject typed activation data into graph variables through its optional data binder.
 
 ## Shared Variables
 
@@ -128,7 +128,7 @@ This means a graph variable can "shadow" a property definition with the same nam
 
 ### Built-in Resolvers
 
-Forge ships with several built-in resolvers for common data sources: entity attributes, gameplay tags, variable lookups, comparisons, constants, and activation magnitudes. For a full reference of each built-in resolver with constructor parameters, behavior details, and usage examples, see the [Property Resolvers](resolvers/README.md) documentation.
+Forge ships with several built-in resolvers for common data sources: entity attributes, gameplay tags, variable lookups, typed activation data, comparisons, constants, and activation magnitudes. For a full reference of each built-in resolver with constructor parameters, behavior details, and usage examples, see the [Property Resolvers](resolvers/README.md) documentation.
 
 ### Array Property Resolvers
 
