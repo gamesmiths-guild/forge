@@ -70,7 +70,7 @@ entity.SharedVariables.DefineVariable("comboCounter", 0);
 entity.SharedVariables.DefineVariable("abilityLock", false);
 ```
 
-When a graph runs as an ability behavior, `GraphAbilityBehavior` automatically sets `GraphContext.SharedVariables` to the owner entity's `SharedVariables`. Nodes and resolvers can then read and write shared state.
+When a graph runs as an ability behavior, `GraphAbilityBehavior` automatically sets `GraphContext.SharedVariables` to the owner entity's `SharedVariables`. Nodes and scope-aware resolvers such as `VariableResolver(..., VariableScope.Shared)` and `ArrayVariableResolver(..., VariableScope.Shared)` can then read and write shared state.
 
 **Example use cases:**
 
@@ -177,7 +177,7 @@ bool valid = graph.VariableDefinitions.ValidatePropertyType("duration", typeof(d
 |                  |                                       |
 |          +-------v-------+                               |
 |          |   Resolvers   |  Attribute, Tag, Comparison,  |
-|          |               |  Variable, Shared, Magnitude, |
+|          |               |  Variable, Magnitude,         |
 |          |               |  Variant                      |
 |          +-------+-------+                               |
 |                  |                                       |
