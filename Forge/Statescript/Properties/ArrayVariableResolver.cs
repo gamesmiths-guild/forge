@@ -64,7 +64,12 @@ public class ArrayVariableResolver(
 				return variables is not null;
 
 			default:
-				throw new InvalidOperationException($"Unsupported {nameof(VariableScope)} value: {_scope}.");
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
+				throw new ArgumentOutOfRangeException(
+					nameof(scope),
+					_scope,
+					$"Unsupported {nameof(VariableScope)} value.");
+#pragma warning restore CA2208 // Instantiate argument exceptions correctly
 		}
 	}
 }
