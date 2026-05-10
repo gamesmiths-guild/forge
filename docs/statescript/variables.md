@@ -108,7 +108,7 @@ graph.VariableDefinitions.DefineProperty("ownerHealth",
     new AttributeResolver("CombatAttributeSet.Health"));
 
 graph.VariableDefinitions.DefineProperty("isEnraged",
-    new TagResolver(Tag.RequestTag(tagsManager, "status.enraged")));
+    new TagQueryResolver(Tag.RequestTag(tagsManager, "status.enraged")));
 
 graph.VariableDefinitions.DefineProperty("healthBelowHalf",
     new ComparisonResolver(

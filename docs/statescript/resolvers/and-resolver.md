@@ -28,7 +28,7 @@ new AndResolver(left, right)
 ```csharp
 graph.VariableDefinitions.DefineProperty("canAttack",
     new AndResolver(
-        new TagResolver(Tag.RequestTag(tagsManager, "state.ready")),
+        new TagQueryResolver(Tag.RequestTag(tagsManager, "state.ready")),
         new ComparisonResolver(
             new AttributeResolver("CombatAttributeSet.Stamina"),
             ComparisonOperation.GreaterThan,
@@ -45,7 +45,7 @@ graph.VariableDefinitions.DefineProperty("shouldUseHeavyAttack",
             ComparisonOperation.GreaterThanOrEqual,
             new VariantResolver(new Variant128(3), typeof(int))),
         new NotResolver(
-            new TagResolver(Tag.RequestTag(tagsManager, "status.silenced")))));
+            new TagQueryResolver(Tag.RequestTag(tagsManager, "status.silenced")))));
 ```
 
 ## See Also

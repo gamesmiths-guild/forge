@@ -28,7 +28,7 @@ Evaluates a boolean input property to choose the output. This eliminates the nee
 |-------|-------|------|-------------|
 | 0 | Condition | `bool` | The expression to evaluate. |
 
-The condition can be bound to any resolver producing a `bool`: a [TagResolver](../../resolvers/tag-resolver.md), [ComparisonResolver](../../resolvers/comparison-resolver.md), [AndResolver](../../resolvers/and-resolver.md), [OrResolver](../../resolvers/or-resolver.md), [NotResolver](../../resolvers/not-resolver.md), [XorResolver](../../resolvers/xor-resolver.md), [VariableResolver](../../resolvers/variable-resolver.md) (reading a bool variable), or a nested chain.
+The condition can be bound to any resolver producing a `bool`: a [TagQueryResolver](../../resolvers/tag-query-resolver.md), [ComparisonResolver](../../resolvers/comparison-resolver.md), [AndResolver](../../resolvers/and-resolver.md), [OrResolver](../../resolvers/or-resolver.md), [NotResolver](../../resolvers/not-resolver.md), [XorResolver](../../resolvers/xor-resolver.md), [VariableResolver](../../resolvers/variable-resolver.md) (reading a bool variable), or a nested chain.
 
 ## Behavior
 
@@ -47,7 +47,7 @@ graph.VariableDefinitions.DefineProperty("shouldUseStrongEffect",
             ComparisonOperation.GreaterThan,
             new VariantResolver(new Variant128(50), typeof(int))),
         new NotResolver(
-            new TagResolver(Tag.RequestTag(tagsManager, "status.silenced")))));
+            new TagQueryResolver(Tag.RequestTag(tagsManager, "status.silenced")))));
 
 // Create and bind the expression node
 var expression = new ExpressionNode();
@@ -71,4 +71,4 @@ graph.AddConnection(new Connection(
 
 - [Condition Nodes Overview](README.md)
 - [ComparisonResolver](../../resolvers/comparison-resolver.md)
-- [TagResolver](../../resolvers/tag-resolver.md)
+- [TagQueryResolver](../../resolvers/tag-query-resolver.md)
