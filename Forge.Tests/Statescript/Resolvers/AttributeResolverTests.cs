@@ -61,6 +61,42 @@ public class AttributeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 
 	[Fact]
 	[Trait("Resolver", "Attribute")]
+	public void Attribute_resolver_can_read_from_entity_variable_without_activation_context()
+	{
+		var selectedEntity = new TestEntity(_tagsManager, _cuesManager);
+		var context = new GraphContext();
+		var resolver = new AttributeResolver(
+			"TestAttributeSet.Attribute5",
+			new EntityVariableResolver("selectedEntity"));
+
+		ApplyFlatModifier(selectedEntity, "TestAttributeSet.Attribute5", 10);
+		context.GraphVariables.DefineReferenceVariable<IForgeEntity>("selectedEntity", selectedEntity);
+
+		Variant128 result = resolver.Resolve(context);
+
+		result.AsInt().Should().Be(15);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Attribute")]
+	public void Attribute_resolver_can_read_from_target_entity()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		var node = new ResolvePropertyNode(
+			new AttributeResolver(
+				"TestAttributeSet.Attribute5",
+				new TargetEntityResolver()));
+
+		ApplyFlatModifier(target, "TestAttributeSet.Attribute5", 10);
+
+		ExecuteAbilityGraph(owner, node, target, source: null);
+
+		node.LastResolvedValue.AsInt().Should().Be(15);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Attribute")]
 	public void Attribute_resolver_reads_magnitude_evaluated_up_to_channel()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);

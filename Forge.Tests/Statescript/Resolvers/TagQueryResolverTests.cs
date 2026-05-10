@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Components;
@@ -169,6 +170,44 @@ public class TagQueryResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		Variant128 result = resolver.Resolve(context);
 
 		result.AsBool().Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Resolver", "TagQuery")]
+	public void Tag_query_resolver_can_read_selected_entity_from_variable_without_activation_context()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var context = new GraphContext();
+		var resolver = new TagQueryResolver(
+			Tag.RequestTag(_tagsManager, "item.equipment.weapon.axe"),
+			new EntityVariableResolver("selectedEntity"),
+			TagQuerySource.ModifierTags);
+
+		ApplyModifierTags(entity, "item.equipment.weapon.axe");
+		context.GraphVariables.DefineReferenceVariable<IForgeEntity>("selectedEntity", entity);
+
+		Variant128 result = resolver.Resolve(context);
+
+		result.AsBool().Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Resolver", "TagQuery")]
+	public void Tag_query_resolver_can_read_target_entity()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		var node = new ResolvePropertyNode(
+			new TagQueryResolver(
+				Tag.RequestTag(_tagsManager, "item.equipment.weapon.axe"),
+				new TargetEntityResolver(),
+				TagQuerySource.ModifierTags));
+
+		ApplyModifierTags(target, "item.equipment.weapon.axe");
+
+		ExecuteAbilityGraph(owner, node, target, source: null);
+
+		node.LastResolvedValue.AsBool().Should().BeTrue();
 	}
 
 	[Fact]

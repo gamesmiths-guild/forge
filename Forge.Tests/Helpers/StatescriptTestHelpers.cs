@@ -54,6 +54,15 @@ internal static class ResolverTestContextFactory
 {
 	public static GraphContext CreateAbilityGraphContext(TestEntity entity, float magnitude = 0f)
 	{
+		return CreateAbilityGraphContext(entity, target: null, source: null, magnitude: magnitude);
+	}
+
+	public static GraphContext CreateAbilityGraphContext(
+		TestEntity owner,
+		TestEntity? target,
+		TestEntity? source,
+		float magnitude = 0f)
+	{
 		var graph = new Graph();
 		var captureNode = new CaptureGraphContextNode();
 
@@ -65,10 +74,11 @@ internal static class ResolverTestContextFactory
 		var behavior = new GraphAbilityBehavior(graph);
 
 		AbilityData abilityData = CreateAbilityData("ResolverTest", () => behavior);
-		AbilityHandle? handle = Grant(entity, abilityData) ?? throw new InvalidOperationException(
+		AbilityHandle handle = Grant(owner, abilityData, source)
+			?? throw new InvalidOperationException(
 				"Failed to grant the resolver test ability and create an ability graph context.");
 
-		if (!handle.Activate(out _, magnitude: magnitude))
+		if (!handle.Activate(out _, target, magnitude))
 		{
 			throw new InvalidOperationException(
 				"Failed to activate the resolver test ability while creating an ability graph context." +
@@ -117,7 +127,37 @@ internal static class ResolverTestContextFactory
 		return captureNode.CapturedGraphContext;
 	}
 
+	public static void ExecuteAbilityGraph(
+		TestEntity owner,
+		ActionNode actionNode,
+		TestEntity? target = null,
+		TestEntity? source = null,
+		float magnitude = 0f)
+	{
+		var graph = new Graph();
+
+		graph.AddNode(actionNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			actionNode.InputPorts[ActionNode.InputPort]));
+
+		var behavior = new GraphAbilityBehavior(graph);
+		AbilityData abilityData = CreateAbilityData("ResolverExecutionTest", () => behavior);
+		AbilityHandle handle = Grant(owner, abilityData, source)
+			?? throw new InvalidOperationException("Failed to grant the resolver execution test ability.");
+
+		if (!handle.Activate(out _, target, magnitude))
+		{
+			throw new InvalidOperationException("Failed to activate the resolver execution test ability.");
+		}
+	}
+
 	private static AbilityHandle? Grant(TestEntity target, AbilityData data)
+	{
+		return Grant(target, data, sourceEntity: null);
+	}
+
+	private static AbilityHandle? Grant(TestEntity target, AbilityData data, IForgeEntity? sourceEntity)
 	{
 		var grantConfig = new GrantAbilityConfig(
 			data,
@@ -128,15 +168,10 @@ internal static class ResolverTestContextFactory
 			false,
 			LevelComparison.Higher);
 
-		var effectData = new EffectData(
-			"Grant",
-			new DurationData(DurationType.Infinite),
-			effectComponents: [new GrantAbilityEffectComponent([grantConfig])]);
-
-		var grantEffect = new Effect(effectData, new EffectOwnership(null, null));
+		Effect grantEffect = CreateGrantEffect("Grant", grantConfig, sourceEntity);
 		_ = target.EffectsManager.ApplyEffect(grantEffect);
 
-		target.Abilities.TryGetAbility(data, out AbilityHandle? handle);
+		target.Abilities.TryGetAbility(data, out AbilityHandle? handle, sourceEntity);
 
 		if (handle is null)
 		{
@@ -145,6 +180,16 @@ internal static class ResolverTestContextFactory
 		}
 
 		return handle;
+	}
+
+	private static Effect CreateGrantEffect(string name, GrantAbilityConfig config, IForgeEntity? sourceEntity)
+	{
+		var effectData = new EffectData(
+			name,
+			new DurationData(DurationType.Infinite),
+			effectComponents: [new GrantAbilityEffectComponent([config])]);
+
+		return new Effect(effectData, new EffectOwnership(null, sourceEntity));
 	}
 
 	private static AbilityData CreateAbilityData(string name, Func<IAbilityBehavior> behaviorFactory)
@@ -309,6 +354,65 @@ internal sealed class ReadArrayPropertyNode : ActionNode
 		}
 
 		LastReadArray = resolved;
+	}
+}
+
+internal sealed class ReadReferencePropertyNode<T> : ActionNode
+	where T : class
+{
+	public T? LastReadValue { get; private set; }
+
+	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
+	{
+		inputProperties.Add(new InputProperty("Value", typeof(T)));
+	}
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		graphContext.TryResolveReference(InputProperties[0].BoundName, out T? value);
+		LastReadValue = value;
+	}
+}
+
+internal sealed class ReadReferenceArrayPropertyNode<T> : ActionNode
+	where T : class
+{
+	public T?[]? LastReadArray { get; private set; }
+
+	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
+	{
+		inputProperties.Add(new InputProperty("Array", typeof(T[])));
+	}
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		graphContext.TryResolveReferenceArray(InputProperties[0].BoundName, out T?[]? values);
+		LastReadArray = values;
+	}
+}
+
+internal sealed class ResolvePropertyNode(IPropertyResolver resolver) : ActionNode
+{
+	private readonly IPropertyResolver _resolver = resolver;
+
+	public Variant128 LastResolvedValue { get; private set; }
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		LastResolvedValue = _resolver.Resolve(graphContext);
+	}
+}
+
+internal sealed class ResolveReferenceResolverNode<T>(IReferenceResolver<T> resolver) : ActionNode
+	where T : class
+{
+	private readonly IReferenceResolver<T> _resolver = resolver;
+
+	public T? LastResolvedValue { get; private set; }
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		LastResolvedValue = _resolver.Resolve(graphContext);
 	}
 }
 
