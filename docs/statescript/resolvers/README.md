@@ -15,9 +15,24 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [AttributeResolver](attribute-resolver.md) | `int` | Reads a selected value from an entity attribute. |
 | [MagnitudeResolver](magnitude-resolver.md) | `float` | Reads the magnitude from the ability activation context. |
 | [SharedVariableResolver](shared-variable-resolver.md) | *(configured)* | Reads a shared variable from the entity. |
-| [TagQueryResolver](tag-query-resolver.md) | `bool` | Evaluates a tag query against the owner entity's tags. |
+| [TagQueryResolver](tag-query-resolver.md) | `bool` | Evaluates a tag query against a selected entity's tags. |
 | [VariableResolver](variable-resolver.md) | *(configured)* | Reads a graph variable by name. |
 | [VariantResolver](variant-resolver.md) | *(configured)* | Holds a fixed constant value. |
+
+---
+
+## Entity Resolvers
+
+Entity resolvers are typed reference resolvers used by APIs such as `AttributeResolver` and `TagQueryResolver`. They do
+not produce `Variant128` values directly, so they are configured as nested inputs to other resolvers rather than as
+regular node-bindable properties.
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [EntityVariableResolver](entity-variable-resolver.md) | `IForgeEntity?` | Reads an entity reference from graph or shared reference variables. |
+| [OwnerEntityResolver](owner-entity-resolver.md) | `IForgeEntity` | Resolves the owner entity from the current ability activation. |
+| [SourceEntityResolver](source-entity-resolver.md) | `IForgeEntity?` | Resolves the source entity that granted the current ability. |
+| [TargetEntityResolver](target-entity-resolver.md) | `IForgeEntity?` | Resolves the current ability target. |
 
 ---
 
