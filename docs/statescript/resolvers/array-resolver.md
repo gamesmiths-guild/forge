@@ -1,59 +1,50 @@
 # ArrayVariableResolver
 
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.ArrayVariableResolver`
-> **Output Type:** *(configured at construction time)*
+> **Output Type:** *(configured array element type)*
 
-A mutable property resolver that stores an array of `Variant128` values. This enables graph variables that hold multiple values, such as a list of entity IDs returned by a query node or an array of projectile positions.
+Resolves an array variable by name from either graph-local or shared scope.
 
 ## Constructor
 
 ```csharp
-new ArrayVariableResolver(initialValues, elementType)
+new ArrayVariableResolver(variableName, elementType)
+new ArrayVariableResolver(variableName, elementType, scope)
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| initialValues | `Variant128[]` | The initial values for the array elements. |
+| variableName | `StringKey` | The name of the array variable to read at runtime. |
 | elementType | `Type` | The type of each element in the array (e.g., `typeof(int)`, `typeof(float)`). |
+| scope | `VariableScope` | Which variable bag to read from: `Graph` (default) or `Shared`. |
 
 ## Behavior
 
-- `Resolve` returns the **first element** of the array, or a default `Variant128` (zero) if the array is empty.
-- Supports indexed access via `GetElement(index)` and `SetElement(index, value)`.
-- Supports mutation via `Add(value)`, `RemoveAt(index)`, and `Clear()`.
-- At graph initialization time, a fresh copy of the array is created for each execution instance so that multiple processors sharing the same graph have independent array state.
+- Reads an array variable from either `GraphContext.GraphVariables` or `GraphContext.SharedVariables`.
+- Returns the current array contents as `Variant128[]`.
+- Returns an empty array if the named variable does not exist.
+- Reflects runtime changes made to the underlying variable bag.
 
 ## Usage
 
 ```csharp
-// Define an array variable
-var resolver = new ArrayVariableResolver(
-    [new Variant128(10), new Variant128(20), new Variant128(30)],
-    typeof(int));
+var graph = new Graph();
+graph.VariableDefinitions.DefineArrayVariable("targets", 10, 20, 30);
 
-// Indexed access
-Variant128 second = resolver.GetElement(1); // 20
-
-// Mutation
-resolver.SetElement(1, new Variant128(99));
-resolver.Add(new Variant128(40));
-resolver.RemoveAt(0);
-resolver.Clear();
+graph.VariableDefinitions.DefineArrayProperty("selectedTargets",
+    new ArrayVariableResolver("targets", typeof(int)));
 ```
 
 ## Composition
 
 ```csharp
-// Compare the first element of an array against a threshold
-graph.VariableDefinitions.DefineProperty("firstEnemyClose",
-    new ComparisonResolver(
-        myArrayResolver,
-        ComparisonOperation.LessThan,
-        new VariantResolver(new Variant128(10.0f), typeof(float))));
+graph.VariableDefinitions.DefineArrayProperty("sharedTargets",
+    new ArrayVariableResolver("targets", typeof(int), VariableScope.Shared));
 ```
 
 ## See Also
-
+ 
 - [Resolvers Overview](README.md)
+- [EntityArrayVariableResolver](entity-array-variable-resolver.md)
 - [VariableResolver](variable-resolver.md)
-- [VariantResolver](variant-resolver.md)
+- [Variables and Data](../variables.md)

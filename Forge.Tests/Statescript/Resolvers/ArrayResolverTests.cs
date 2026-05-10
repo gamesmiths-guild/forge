@@ -11,103 +11,88 @@ public class ArrayResolverTests
 {
 	[Fact]
 	[Trait("Resolver", "Array")]
-	public void Array_resolver_returns_first_element_on_resolve()
+	public void Array_resolver_reads_graph_array_variable()
 	{
-		var resolver = new ArrayVariableResolver(
-			[new Variant128(10), new Variant128(20), new Variant128(30)],
-			typeof(int));
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineArrayVariable("targets", 10, 20, 30);
+		var context = new GraphContext();
+		context.GraphVariables.InitializeFrom(graph.VariableDefinitions);
+		var resolver = new ArrayVariableResolver("targets", typeof(int));
 
+		Variant128[] result = resolver.ResolveArray(context);
+
+		result.Should().HaveCount(3);
+		result[0].AsInt().Should().Be(10);
+		result[1].AsInt().Should().Be(20);
+		result[2].AsInt().Should().Be(30);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Array")]
+	public void Array_resolver_reads_shared_array_variable()
+	{
+		var sharedVariables = new Variables();
+		sharedVariables.DefineArrayVariable(
+			"targets",
+			[new Variant128(10), new Variant128(20), new Variant128(30)]);
+		var resolver = new ArrayVariableResolver("targets", typeof(int), VariableScope.Shared);
+		var context = new GraphContext { SharedVariables = sharedVariables };
+
+		Variant128[] result = resolver.ResolveArray(context);
+
+		result.Should().HaveCount(3);
+		result[0].AsInt().Should().Be(10);
+		result[1].AsInt().Should().Be(20);
+		result[2].AsInt().Should().Be(30);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Array")]
+	public void Array_resolver_returns_empty_array_when_shared_variables_is_null()
+	{
+		var resolver = new ArrayVariableResolver("targets", typeof(int), VariableScope.Shared);
 		var context = new GraphContext();
 
-		resolver.Resolve(context).AsInt().Should().Be(10);
+		resolver.ResolveArray(context).Should().BeEmpty();
 	}
 
 	[Fact]
 	[Trait("Resolver", "Array")]
-	public void Array_resolver_returns_default_when_empty()
+	public void Array_resolver_returns_empty_array_for_missing_variable()
 	{
-		var resolver = new ArrayVariableResolver([], typeof(int));
-
+		var graph = new Graph();
 		var context = new GraphContext();
+		context.GraphVariables.InitializeFrom(graph.VariableDefinitions);
+		var resolver = new ArrayVariableResolver("missing", typeof(int));
 
-		resolver.Resolve(context).AsInt().Should().Be(0);
+		resolver.ResolveArray(context).Should().BeEmpty();
 	}
 
 	[Fact]
 	[Trait("Resolver", "Array")]
-	public void Array_resolver_get_element_returns_correct_value()
+	public void Array_resolver_reflects_runtime_array_changes()
 	{
-		var resolver = new ArrayVariableResolver(
-			[new Variant128(10), new Variant128(20), new Variant128(30)],
-			typeof(int));
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineArrayVariable("targets", 10, 20);
+		var context = new GraphContext();
+		context.GraphVariables.InitializeFrom(graph.VariableDefinitions);
+		var resolver = new ArrayVariableResolver("targets", typeof(int));
 
-		resolver.GetElement(0).AsInt().Should().Be(10);
-		resolver.GetElement(1).AsInt().Should().Be(20);
-		resolver.GetElement(2).AsInt().Should().Be(30);
+		context.GraphVariables.SetArrayElement("targets", 1, 99);
+
+		Variant128[] result = resolver.ResolveArray(context);
+
+		result.Should().HaveCount(2);
+		result[1].AsInt().Should().Be(99);
 	}
 
 	[Fact]
 	[Trait("Resolver", "Array")]
-	public void Array_resolver_set_element_updates_value()
+	public void Array_resolver_reports_correct_element_type()
 	{
-		var resolver = new ArrayVariableResolver(
-			[new Variant128(10), new Variant128(20)],
-			typeof(int));
+		var resolver = new ArrayVariableResolver("anything", typeof(double));
 
-		resolver.SetElement(1, new Variant128(99));
-
-		resolver.GetElement(1).AsInt().Should().Be(99);
-	}
-
-	[Fact]
-	[Trait("Resolver", "Array")]
-	public void Array_resolver_add_appends_element()
-	{
-		var resolver = new ArrayVariableResolver(
-			[new Variant128(10)],
-			typeof(int));
-
-		resolver.Add(new Variant128(20));
-
-		resolver.Length.Should().Be(2);
-		resolver.GetElement(1).AsInt().Should().Be(20);
-	}
-
-	[Fact]
-	[Trait("Resolver", "Array")]
-	public void Array_resolver_remove_at_removes_element()
-	{
-		var resolver = new ArrayVariableResolver(
-			[new Variant128(10), new Variant128(20), new Variant128(30)],
-			typeof(int));
-
-		resolver.RemoveAt(1);
-
-		resolver.Length.Should().Be(2);
-		resolver.GetElement(0).AsInt().Should().Be(10);
-		resolver.GetElement(1).AsInt().Should().Be(30);
-	}
-
-	[Fact]
-	[Trait("Resolver", "Array")]
-	public void Array_resolver_clear_removes_all_elements()
-	{
-		var resolver = new ArrayVariableResolver(
-			[new Variant128(10), new Variant128(20)],
-			typeof(int));
-
-		resolver.Clear();
-
-		resolver.Length.Should().Be(0);
-	}
-
-	[Fact]
-	[Trait("Resolver", "Array")]
-	public void Array_resolver_reports_correct_value_type()
-	{
-		var resolver = new ArrayVariableResolver([], typeof(double));
-
-		resolver.ValueType.Should().Be(typeof(double));
+		resolver.ElementType.Should().Be(typeof(double));
 	}
 
 	[Fact]
