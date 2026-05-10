@@ -312,7 +312,7 @@ public class MyDamageCalculator : CustomModifierMagnitudeCalculator
         float baseDamage = strength * 0.7f + agility * 0.3f;
 
         // Add game-specific conditions
-        if (target.Tags.CombinedTags.HasTag("status.vulnerable"))
+        if (target.Tags.AllTags.HasTag("status.vulnerable"))
         {
             baseDamage *= 1.5f;
         }

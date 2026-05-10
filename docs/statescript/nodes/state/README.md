@@ -68,7 +68,7 @@ public class WaitForTagNode : StateNode<WaitForTagNodeContext>
             return;
         }
 
-        if (abilityContext.Owner.Tags.CombinedTags.HasTag(_tag))
+        if (abilityContext.Owner.Tags.AllTags.HasTag(_tag))
         {
             DeactivateNode(graphContext);
         }

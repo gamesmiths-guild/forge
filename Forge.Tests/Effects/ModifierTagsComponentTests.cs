@@ -37,15 +37,15 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		var validationContainer = new TagContainer(_tagsManager, validationTags);
 
 		entity.EffectsManager.ApplyEffect(effect);
-		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		entity.EffectsManager.UpdateEffects(duration / 2);
-		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		entity.EffectsManager.UpdateEffects(duration / 2);
-		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
 
@@ -72,27 +72,27 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		entity.EffectsManager.ApplyEffect(effect1);
 
-		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		entity.EffectsManager.UpdateEffects(duration / 2);
 
-		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		entity.EffectsManager.ApplyEffect(effect2);
 
-		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		entity.EffectsManager.UpdateEffects(duration / 2);
 
-		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		entity.EffectsManager.UpdateEffects(duration / 2);
 
-		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
 
@@ -118,15 +118,15 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
 
-		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		entity.EffectsManager.UpdateEffects(60f);
-		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		entity.EffectsManager.RemoveEffect(activeEffectHandle!);
-		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
 
@@ -150,15 +150,15 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		var validationContainer = new TagContainer(_tagsManager, validationTags);
 
 		entity.EffectsManager.ApplyEffect(effect);
-		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		entity.EffectsManager.UpdateEffects(duration);
-		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 
 		entity.EffectsManager.ApplyEffect(effect);
-		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 	}
 
@@ -205,21 +205,21 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 		entity.EffectsManager.ApplyEffect(effect1);
 		entity.EffectsManager.ApplyEffect(effect2);
 
-		entity.Tags.CombinedTags.HasAllExact(baseTagsContainer).Should().BeTrue();
-		entity.Tags.CombinedTags.HasAllExact(effect1TagsContainer).Should().BeTrue();
-		entity.Tags.CombinedTags.HasAllExact(effect2TagsContainer).Should().BeTrue();
+		entity.Tags.AllTags.HasAllExact(baseTagsContainer).Should().BeTrue();
+		entity.Tags.AllTags.HasAllExact(effect1TagsContainer).Should().BeTrue();
+		entity.Tags.AllTags.HasAllExact(effect2TagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.HasAllExact(effect1TagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.HasAllExact(effect2TagsContainer).Should().BeTrue();
 
 		entity.EffectsManager.UpdateEffects(effect1SmallerDuration);
 
-		entity.Tags.CombinedTags.HasAllExact(baseTagsContainer).Should().BeTrue();
-		entity.Tags.CombinedTags.HasAllExact(effect2TagsContainer).Should().BeTrue();
+		entity.Tags.AllTags.HasAllExact(baseTagsContainer).Should().BeTrue();
+		entity.Tags.AllTags.HasAllExact(effect2TagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.HasAllExact(effect2TagsContainer).Should().BeTrue();
 
 		entity.EffectsManager.UpdateEffects(effect2BiggerDuration - effect1SmallerDuration);
 
-		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
 
@@ -245,18 +245,18 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
 
-		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		for (int i = 0; i < stacks - 1; i++)
 		{
 			entity.EffectsManager.RemoveEffect(activeEffectHandle!);
-			entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+			entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 			entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 		}
 
 		entity.EffectsManager.RemoveEffect(activeEffectHandle!);
-		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
 
@@ -282,11 +282,11 @@ public class ModifierTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		ActiveEffectHandle? activeEffectHandle = entity.EffectsManager.ApplyEffect(effect);
 
-		entity.Tags.CombinedTags.Equals(validationContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(validationContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.Equals(modifierTagsContainer).Should().BeTrue();
 
 		entity.EffectsManager.RemoveEffect(activeEffectHandle!, true);
-		entity.Tags.CombinedTags.Equals(baseTagsContainer).Should().BeTrue();
+		entity.Tags.AllTags.Equals(baseTagsContainer).Should().BeTrue();
 		entity.Tags.ModifierTags.IsEmpty.Should().BeTrue();
 	}
 

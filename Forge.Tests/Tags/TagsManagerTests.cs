@@ -64,13 +64,13 @@ public class TagsManagerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 	}
 
 	[Theory]
-	[Trait("RequestAllTags", "Explicit tags only")]
+	[Trait("RequestRegisteredTags", "Explicit tags only")]
 	[MemberData(nameof(TagsData))]
-	public void Request_all_tags_with_explicit_tags_only_are_valid(string[] managerTags)
+	public void Request_registered_tags_with_explicit_tags_only_are_valid(string[] managerTags)
 	{
 		var tagsManager = new TagsManager(managerTags);
 
-		TagContainer allTagsContainer = tagsManager.RequestAllTags(true);
+		TagContainer allTagsContainer = tagsManager.RequestRegisteredTags(true);
 
 		TagContainer validationContainer = ConstructContainer(tagsManager, managerTags);
 
@@ -78,13 +78,13 @@ public class TagsManagerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 	}
 
 	[Theory]
-	[Trait("RequestAllTags", "All tags")]
+	[Trait("RequestRegisteredTags", "All tags")]
 	[MemberData(nameof(TagsData))]
-	public void Request_all_tags_with_all_tags_are_valid(string[] managerTags)
+	public void Request_registered_tags_with_all_tags_are_valid(string[] managerTags)
 	{
 		var tagsManager = new TagsManager(managerTags);
 
-		TagContainer allTagsContainer = tagsManager.RequestAllTags(false);
+		TagContainer allTagsContainer = tagsManager.RequestRegisteredTags(false);
 
 		TagContainer validationContainer = ConstructContainer(tagsManager, managerTags, false);
 

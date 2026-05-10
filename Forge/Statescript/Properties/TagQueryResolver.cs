@@ -26,10 +26,10 @@ public class TagQueryResolver : IPropertyResolver
 	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class from a prebuilt query.
 	/// </summary>
 	/// <param name="query">The query to evaluate against the selected tag container.</param>
-	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to combined tags.</param>
+	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to all tags.</param>
 	public TagQueryResolver(
 		TagQuery query,
-		TagQuerySource tagQuerySource = TagQuerySource.CombinedTags)
+		TagQuerySource tagQuerySource = TagQuerySource.AllTags)
 	{
 		EnsureNotNull(query, nameof(query));
 
@@ -41,10 +41,10 @@ public class TagQueryResolver : IPropertyResolver
 	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class from a query expression.
 	/// </summary>
 	/// <param name="queryExpression">The expression used to build the tag query.</param>
-	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to combined tags.</param>
+	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to all tags.</param>
 	public TagQueryResolver(
 		TagQueryExpression queryExpression,
-		TagQuerySource tagQuerySource = TagQuerySource.CombinedTags)
+		TagQuerySource tagQuerySource = TagQuerySource.AllTags)
 		: this(BuildQuery(queryExpression), tagQuerySource)
 	{
 	}
@@ -53,10 +53,10 @@ public class TagQueryResolver : IPropertyResolver
 	/// Initializes a new instance of the <see cref="TagQueryResolver"/> class for the common single-tag match case.
 	/// </summary>
 	/// <param name="tag">The tag to match against the selected tag container.</param>
-	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to combined tags.</param>
+	/// <param name="tagQuerySource">Which tag container to evaluate against. Defaults to all tags.</param>
 	public TagQueryResolver(
 		Tag tag,
-		TagQuerySource tagQuerySource = TagQuerySource.CombinedTags)
+		TagQuerySource tagQuerySource = TagQuerySource.AllTags)
 		: this(TagQuery.MakeQueryMatchTag(tag), tagQuerySource)
 	{
 	}
@@ -85,7 +85,7 @@ public class TagQueryResolver : IPropertyResolver
 	{
 		return tagQuerySource switch
 		{
-			TagQuerySource.CombinedTags => entityTags.CombinedTags,
+			TagQuerySource.AllTags => entityTags.AllTags,
 			TagQuerySource.BaseTags => entityTags.BaseTags,
 			TagQuerySource.ModifierTags => entityTags.ModifierTags,
 			_ => throw new ArgumentOutOfRangeException(

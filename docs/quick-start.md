@@ -101,7 +101,7 @@ var speed = player.Attributes["PlayerAttributeSet.Speed"].CurrentValue; // 5
 
 Tags allow you to classify entities and define conditions for effects. Base tags are immutable and assignable only at creation time.
 
-You should generally do checks against the `CombinedTags` property since it includes both the `BaseTags` and `ModifierTags`.
+You should generally do checks against the `AllTags` property since it includes both the `BaseTags` and `ModifierTags`.
 
 ```csharp
 // Tags must be requested through the static method Tag.RequestTag
@@ -109,8 +109,8 @@ var playerTag = Tag.RequestTag(tagsManager, "character.player");
 var warriorTag = Tag.RequestTag(tagsManager, "class.warrior");
 
 // Check if the player has specific tags
-bool isPlayer = player.Tags.CombinedTags.HasTag(playerTag);
-bool isWarrior = player.Tags.CombinedTags.HasTag(warriorTag);
+bool isPlayer = player.Tags.AllTags.HasTag(playerTag);
+bool isWarrior = player.Tags.AllTags.HasTag(warriorTag);
 ```
 
 ---
@@ -465,7 +465,7 @@ var stunEffect = new Effect(stunEffectData, new EffectOwnership(player, player))
 ActiveEffectHandle? stunHandle = player.EffectsManager.ApplyEffect(stunEffect);
 
 // Check if player is stunned
-bool isStunned = player.Tags.CombinedTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
+bool isStunned = player.Tags.AllTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
 int currentSpeed = player.Attributes["PlayerAttributeSet.Speed"].CurrentValue;
 Console.WriteLine($"Player stunned: {isStunned}, Speed: {currentSpeed}");
 ```
@@ -564,7 +564,7 @@ player.EffectsManager.ApplyEffect(thresholdAttack);
 player.EffectsManager.ApplyEffect(thresholdAttack);
 
 // Check if the stun was applied (will be true if health was 90 or less after damage)
-bool isStunned = player.Tags.CombinedTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
+bool isStunned = player.Tags.AllTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
 ```
 
 ---

@@ -143,14 +143,14 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		handle!.Activate(out _).Should().BeTrue();
 		handle!.Activate(out _).Should().BeTrue();
 
-		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
+		entity.Tags.AllTags.HasAll(ownedTags).Should().BeTrue();
 
 		behaviors[0].End();
-		entity.Tags.CombinedTags.HasAll(ownedTags).Should().BeTrue();
+		entity.Tags.AllTags.HasAll(ownedTags).Should().BeTrue();
 
 		behaviors[1].End();
 		behaviors[2].End();
-		entity.Tags.CombinedTags.HasAny(ownedTags).Should().BeFalse();
+		entity.Tags.AllTags.HasAny(ownedTags).Should().BeFalse();
 	}
 
 	[Fact]

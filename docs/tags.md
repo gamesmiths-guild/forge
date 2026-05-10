@@ -132,13 +132,13 @@ var tagsManager = new TagsManager([
   ]);
   ```
 
-- **RequestAllTags**: Get a container with all registered tags.
+- **RequestRegisteredTags**: Get a container with all registered tags.
   ```csharp
   // Get all explicit tags (leaf nodes only)
-  TagContainer allTags = tagsManager.RequestAllTags(true);
+  TagContainer allTags = tagsManager.RequestRegisteredTags(true);
 
   // Get all tags including parent/intermediate tags
-  TagContainer absolutelyAllTags = tagsManager.RequestAllTags(false);
+  TagContainer absolutelyAllTags = tagsManager.RequestRegisteredTags(false);
   ```
 
 - **RequestTagParents**: Get a container with a tag and its parents.
@@ -260,13 +260,13 @@ var entityTags = new EntityTags(originalTags);
 
 - **BaseTags**: Permanent tags assigned to the entity (typically during creation).
 - **ModifierTags**: Temporary tags applied through effects with reference counting.
-- **CombinedTags**: Unified view of both `BaseTags` and `ModifierTags` for queries.
+- **AllTags**: Unified view of both `BaseTags` and `ModifierTags` for queries.
 
-Typically, game code should use `CombinedTags` for tag checks:
+Typically, game code should use `AllTags` for tag checks:
 
 ```csharp
 // Check if entity has a tag (correctly checks both base and modifier tags)
-bool isStunned = entity.Tags.CombinedTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
+bool isStunned = entity.Tags.AllTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
 ```
 
 **Note:** While the `EntityTags` class provides methods for adding and removing tags, these are internal. Tags should be modified through proper channels: base tags during entity initialization and modifier tags through the [Effects system](effects/README.md).
@@ -312,7 +312,7 @@ complexQuery.Build(
                         .AddTag("color.green")));
 
 // Test against a container
-bool matches = complexQuery.Matches(entityTags.CombinedTags);
+bool matches = complexQuery.Matches(entityTags.AllTags);
 ```
 
 ### Query Expression Types
@@ -358,7 +358,7 @@ targetingQuery.Build(
 // Check potential targets
 foreach (var target in potentialTargets)
 {
-    if (targetingQuery.Matches(target.Tags.CombinedTags))
+    if (targetingQuery.Matches(target.Tags.AllTags))
     {
         validTargets.Add(target);
     }
@@ -375,7 +375,7 @@ Tags are often used with other Forge systems:
 cuesManager.RegisterCue(Tag.RequestTag(tagsManager, "cues.damage.fire"), new FireDamageCueHandler());
 
 // Apply gameplay effects based on tags
-if (entity.Tags.CombinedTags.HasTag(Tag.RequestTag(tagsManager, "status.vulnerable.fire")))
+if (entity.Tags.AllTags.HasTag(Tag.RequestTag(tagsManager, "status.vulnerable.fire")))
 {
     // Apply enhanced fire damage
 }
@@ -488,5 +488,5 @@ During the effect's lifetime, the tag is added to `ModifierTags` with a referenc
    - `status.*` for character statuses.
    - `ability.*` for ability-related tags.
 
-6. **Use `CombinedTags` for Checks**:
-   - When checking if an entity has a tag, use `entity.Tags.CombinedTags` rather than accessing `BaseTags` or `ModifierTags` directly.
+6. **Use `AllTags` for Checks**:
+   - When checking if an entity has a tag, use `entity.Tags.AllTags` rather than accessing `BaseTags` or `ModifierTags` directly.

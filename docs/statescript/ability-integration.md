@@ -141,7 +141,7 @@ Through `AbilityBehaviorContext`, nodes have access to:
 Several built-in [property resolvers](variables.md#built-in-resolvers) read from the activation context:
 
 - **`AttributeResolver`**: Reads an attribute from the owner entity.
-- **`TagQueryResolver`**: Evaluates a tag query against the owner entity's combined tags.
+- **`TagQueryResolver`**: Evaluates a tag query against the owner entity's tags.
 - **`MagnitudeResolver`**: Reads the activation magnitude.
 
 These resolvers gracefully return default values when the graph runs without an ability context (e.g., standalone graph execution).

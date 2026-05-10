@@ -45,7 +45,7 @@ public class TargetTagRequirementsEffectComponent(
 	/// <inheritdoc/>
 	public bool CanApplyEffect(in IForgeEntity target, in Effect effect)
 	{
-		TagContainer tags = target.Tags.CombinedTags;
+		TagContainer tags = target.Tags.AllTags;
 
 		if (ApplicationTagRequirements.HasValue
 			&& !ApplicationTagRequirements.Value.IsEmpty
@@ -93,7 +93,7 @@ public class TargetTagRequirementsEffectComponent(
 		target.Tags.OnTagsChanged += _handler;
 
 		return OngoingTagRequirements?.IsEmpty != false
-			|| OngoingTagRequirements.Value.RequirementsMet(target.Tags.CombinedTags);
+			|| OngoingTagRequirements.Value.RequirementsMet(target.Tags.AllTags);
 	}
 
 	/// <inheritdoc/>
