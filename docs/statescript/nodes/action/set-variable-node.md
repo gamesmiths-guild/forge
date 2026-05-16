@@ -3,7 +3,7 @@
 > **Type:** Action Node
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.SetVariableNode`
 
-Reads a value from an input property and writes it to a graph or shared variable. This is the primary way to copy data between variables or write computed values.
+Reads a value from an input property and writes it to an existing graph or shared variable. This is the primary way to copy data between variables or write computed values.
 
 ## Ports
 
@@ -35,11 +35,18 @@ Reads a value from an input property and writes it to a graph or shared variable
 
 ## Behavior
 
-1. The node resolves the source input property as a raw `Variant128`.
-2. If the source cannot be resolved, the node does nothing (the target variable is not modified).
-3. The resolved value is written to the bound output variable.
-4. If the output scope is `Shared`, the value is written to `GraphContext.SharedVariables`; otherwise, it is written to `GraphContext.GraphVariables`.
-5. The output port emits a message.
+1. The node selects the target variable bag from the bound output scope (`GraphContext.GraphVariables` or `GraphContext.SharedVariables`).
+2. It inspects the bound target variable to determine its storage kind: `Variant128`, `Variant128[]`, reference value, or reference array.
+3. That target binding is cached for the current graph execution and reused on later `Execute` calls while the node writes to the same variable bag.
+4. The source input is resolved using the API that matches the target kind.
+5. If the source cannot be resolved, the node does nothing (the target variable is not modified).
+6. The resolved value is written to the bound output variable, preserving the target variable's declared kind.
+7. The output port emits a message.
+
+## Notes
+
+- The target variable must already exist in the selected scope. `SetVariableNode` does not create missing target variables.
+- The declared target variable kind controls how the source is read and written. This lets the same node work with value variables, arrays, reference variables, and reference arrays.
 
 ## Usage
 
