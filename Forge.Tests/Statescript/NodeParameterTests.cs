@@ -46,11 +46,11 @@ public class NodeParameterTests
 
 		node.InputProperties.Should().ContainSingle();
 		node.InputProperties[0].Label.Should().Be("Source");
-		node.InputProperties[0].ExpectedType.Should().Be(typeof(Variant128));
+		node.InputProperties[0].ExpectedType.Should().Be(typeof(object));
 
 		node.OutputVariables.Should().ContainSingle();
 		node.OutputVariables[0].Label.Should().Be("Target");
-		node.OutputVariables[0].ValueType.Should().Be(typeof(Variant128));
+		node.OutputVariables[0].ValueType.Should().Be(typeof(object));
 		node.OutputVariables[0].Scope.Should().Be(VariableScope.Graph);
 	}
 

@@ -189,6 +189,36 @@ public class SetVariableNodeTests
 
 	[Fact]
 	[Trait("Graph", "SetVariable")]
+	public void Set_variable_node_copies_value_arrays_from_source_to_target()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineArrayVariable("source", 1, 2, 3);
+		graph.VariableDefinitions.DefineArrayVariable("target", 0);
+
+		SetVariableNode setNode = CreateSetVariableNode("source", "target");
+		var readNode = new ReadArrayPropertyNode();
+		readNode.BindInput(0, "target");
+
+		graph.AddNode(setNode);
+		graph.AddNode(readNode);
+
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			setNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			setNode.OutputPorts[ActionNode.OutputPort],
+			readNode.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		readNode.LastReadArray.Should().BeEquivalentTo(
+			[new Variant128(1), new Variant128(2), new Variant128(3)],
+			options => options.WithStrictOrdering());
+	}
+
+	[Fact]
+	[Trait("Graph", "SetVariable")]
 	public void Set_variable_node_copies_reference_values_from_source_to_target()
 	{
 		TestEntity entity = CreateTestEntity();

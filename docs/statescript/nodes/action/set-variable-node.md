@@ -25,13 +25,13 @@ Reads a value from an input property and writes it to an existing graph or share
 
 | Index | Label | Type | Description |
 |-------|-------|------|-------------|
-| 0 | Source | `Variant128` | The value to read. |
+| 0 | Source | `object` | The value to read. The effective source type is determined by the bound target variable. |
 
 **Output Variables:**
 
 | Index | Label | Type | Description |
 |-------|-------|------|-------------|
-| 0 | Target | `Variant128` | The variable to write to. Scope (Graph or Shared) is configured via `BindOutput`. |
+| 0 | Target | `object` | The variable to write to. Scope (Graph or Shared) is configured via `BindOutput`, and the bound variable's declared kind determines how the copy is performed. |
 
 ## Behavior
 

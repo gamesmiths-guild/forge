@@ -334,10 +334,16 @@ public class Variables
 	/// <param name="name">The name of the array variable.</param>
 	/// <param name="elementType">The declared element type for the array.</param>
 	/// <param name="values">The initial values for the array variable.</param>
-	/// <exception cref="InvalidOperationException">Thrown if any element is not assignable to
-	/// <paramref name="elementType"/>.</exception>
+	/// <exception cref="InvalidOperationException">Thrown if <paramref name="elementType"/> is a value type or if any
+	/// element is not assignable to <paramref name="elementType"/>.</exception>
 	public void DefineReferenceArrayVariable(StringKey name, Type elementType, IEnumerable<object?> values)
 	{
+		if (elementType.IsValueType)
+		{
+			throw new InvalidOperationException(
+				$"Cannot define reference array variable '{name}' with value-type element type {elementType}.");
+		}
+
 		List<object?> materializedValues = [.. values];
 
 		for (int i = 0; i < materializedValues.Count; i++)

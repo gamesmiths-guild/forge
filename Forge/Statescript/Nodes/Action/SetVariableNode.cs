@@ -40,8 +40,8 @@ public class SetVariableNode : ActionNode
 	/// <inheritdoc/>
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
 	{
-		inputProperties.Add(new InputProperty("Source", typeof(Variant128)));
-		outputVariables.Add(new OutputVariable("Target", typeof(Variant128)));
+		inputProperties.Add(new InputProperty("Source", typeof(object)));
+		outputVariables.Add(new OutputVariable("Target", typeof(object)));
 	}
 
 	/// <inheritdoc/>
