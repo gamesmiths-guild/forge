@@ -1,9 +1,12 @@
 // Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
+using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Action;
+using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
 using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
@@ -186,6 +189,126 @@ public class SetVariableNodeTests
 
 	[Fact]
 	[Trait("Graph", "SetVariable")]
+	public void Set_variable_node_copies_reference_values_from_source_to_target()
+	{
+		TestEntity entity = CreateTestEntity();
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("source", entity);
+		graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("target");
+
+		SetVariableNode setNode = CreateSetVariableNode("source", "target");
+		var readNode = new ReadReferencePropertyNode<IForgeEntity>();
+		readNode.BindInput(0, "target");
+
+		graph.AddNode(setNode);
+		graph.AddNode(readNode);
+
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			setNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			setNode.OutputPorts[ActionNode.OutputPort],
+			readNode.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		readNode.LastReadValue.Should().BeSameAs(entity);
+	}
+
+	[Fact]
+	[Trait("Graph", "SetVariable")]
+	public void Set_variable_node_copies_reference_arrays_from_source_to_target()
+	{
+		TestEntity entity1 = CreateTestEntity();
+		TestEntity entity2 = CreateTestEntity();
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineReferenceArrayVariable<IForgeEntity>("source", entity1, entity2);
+		graph.VariableDefinitions.DefineReferenceArrayVariable<IForgeEntity>("target");
+
+		SetVariableNode setNode = CreateSetVariableNode("source", "target");
+		var readNode = new ReadReferenceArrayPropertyNode<IForgeEntity>();
+		readNode.BindInput(0, "target");
+
+		graph.AddNode(setNode);
+		graph.AddNode(readNode);
+
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			setNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			setNode.OutputPorts[ActionNode.OutputPort],
+			readNode.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		readNode.LastReadArray.Should().Equal(entity1, entity2);
+	}
+
+	[Fact]
+	[Trait("Graph", "SetVariable")]
+	public void Set_variable_node_writes_reference_values_to_shared_variables()
+	{
+		TestEntity entity = CreateTestEntity();
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("source", entity);
+
+		SetVariableNode setNode = CreateSetVariableNode("source", "sharedTarget", VariableScope.Shared);
+
+		graph.AddNode(setNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			setNode.InputPorts[ActionNode.InputPort]));
+
+		var sharedVariables = new Variables();
+		sharedVariables.DefineReferenceVariable<IForgeEntity>("sharedTarget");
+
+		var processor = new GraphProcessor(graph, sharedVariables);
+		processor.StartGraph();
+
+		sharedVariables.TryGetReference("sharedTarget", out IForgeEntity? result).Should().BeTrue();
+		result.Should().BeSameAs(entity);
+	}
+
+	[Fact]
+	[Trait("Graph", "SetVariable")]
+	public void Set_variable_node_rebinds_shared_target_when_processor_uses_new_shared_variables()
+	{
+		TestEntity entity1 = CreateTestEntity();
+		TestEntity entity2 = CreateTestEntity();
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("source");
+
+		SetVariableNode setNode = CreateSetVariableNode("source", "sharedTarget", VariableScope.Shared);
+		graph.AddNode(setNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			setNode.InputPorts[ActionNode.InputPort]));
+
+		var sharedVariables1 = new Variables();
+		sharedVariables1.DefineReferenceVariable<IForgeEntity>("sharedTarget");
+
+		var processor = new GraphProcessor(graph, sharedVariables1);
+		processor.StartGraph(variables => variables.SetReference("source", entity1));
+
+		sharedVariables1.TryGetReference("sharedTarget", out IForgeEntity? firstResult).Should().BeTrue();
+		firstResult.Should().BeSameAs(entity1);
+
+		var sharedVariables2 = new Variables();
+		sharedVariables2.DefineReferenceVariable<IForgeEntity>("sharedTarget");
+		processor.GraphContext.SharedVariables = sharedVariables2;
+
+		processor.StartGraph(variables => variables.SetReference("source", entity2));
+
+		sharedVariables2.TryGetReference("sharedTarget", out IForgeEntity? secondResult).Should().BeTrue();
+		secondResult.Should().BeSameAs(entity2);
+		sharedVariables1.TryGetReference("sharedTarget", out IForgeEntity? firstRunValue).Should().BeTrue();
+		firstRunValue.Should().BeSameAs(entity1);
+	}
+
+	[Fact]
+	[Trait("Graph", "SetVariable")]
 	public void Two_processors_using_set_variable_have_independent_state()
 	{
 		var graph = new Graph();
@@ -216,5 +339,12 @@ public class SetVariableNodeTests
 
 		value1.Should().Be(11);
 		value2.Should().Be(11);
+	}
+
+	private static TestEntity CreateTestEntity()
+	{
+		return new TestEntity(
+			new TagsManager(["enemy.undead.zombie", "color.green"]),
+			new CuesManager());
 	}
 }

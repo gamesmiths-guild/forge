@@ -96,6 +96,24 @@ public class Variables
 	}
 
 	/// <summary>
+	/// Tries to get the declared type of a reference variable with the given name.
+	/// </summary>
+	/// <param name="name">The name of the variable to inspect.</param>
+	/// <param name="valueType">The declared type if the reference variable exists.</param>
+	/// <returns><see langword="true"/> if the reference variable exists; otherwise, <see langword="false"/>.</returns>
+	public bool TryGetReferenceVariableType(StringKey name, [NotNullWhen(true)] out Type? valueType)
+	{
+		if (_referenceVariables.TryGetValue(name, out ReferenceVariableStorage stored))
+		{
+			valueType = stored.ValueType;
+			return true;
+		}
+
+		valueType = null;
+		return false;
+	}
+
+	/// <summary>
 	/// Sets the value of a variable with the given name.
 	/// </summary>
 	/// <typeparam name="T">The type of the value to set. Must be supported by <see cref="Variant128"/>.</typeparam>
@@ -192,6 +210,32 @@ public class Variables
 	}
 
 	/// <summary>
+	/// Tries to get the reference value of a variable with the given name using a runtime type.
+	/// </summary>
+	/// <param name="name">The name of the variable to get.</param>
+	/// <param name="expectedType">The expected reference type.</param>
+	/// <param name="value">The stored value if the variable exists and its declared type is compatible.</param>
+	/// <returns><see langword="true"/> if the variable was found and the requested type is compatible;
+	/// <see langword="false"/> otherwise.</returns>
+	public bool TryGetReference(StringKey name, Type expectedType, out object? value)
+	{
+		value = null;
+
+		if (!_referenceVariables.TryGetValue(name, out ReferenceVariableStorage stored))
+		{
+			return false;
+		}
+
+		if (!expectedType.IsAssignableFrom(stored.ValueType))
+		{
+			return false;
+		}
+
+		value = stored.Value;
+		return true;
+	}
+
+	/// <summary>
 	/// Sets the value of a reference variable with the given name.
 	/// </summary>
 	/// <typeparam name="T">The reference type of the value to set.</typeparam>
@@ -201,6 +245,31 @@ public class Variables
 	/// of the variable is not compatible with the value type.</exception>
 	public void SetReference<T>(StringKey name, T? value)
 		where T : class
+	{
+		if (!_referenceVariables.TryGetValue(name, out ReferenceVariableStorage stored))
+		{
+			throw new InvalidOperationException(
+				$"Cannot set '{name}': no reference variable with this name exists.");
+		}
+
+		if (value is not null && !stored.ValueType.IsInstanceOfType(value))
+		{
+			throw new InvalidOperationException(
+				$"Cannot set '{name}' with value type {value.GetType()}: variable expects values assignable to " +
+				$"{stored.ValueType}.");
+		}
+
+		_referenceVariables[name] = new ReferenceVariableStorage(stored.ValueType, value);
+	}
+
+	/// <summary>
+	/// Sets the value of a reference variable with the given name using a runtime value.
+	/// </summary>
+	/// <param name="name">The name of the variable to set.</param>
+	/// <param name="value">The value to set.</param>
+	/// <exception cref="InvalidOperationException">Thrown if no variable with this name exists or if the declared type
+	/// of the variable is not compatible with the value type.</exception>
+	public void SetReference(StringKey name, object? value)
 	{
 		if (!_referenceVariables.TryGetValue(name, out ReferenceVariableStorage stored))
 		{
@@ -256,6 +325,33 @@ public class Variables
 		where T : class
 	{
 		_referenceArrays[name] = new ReferenceArrayStorage(typeof(T), [.. values.Cast<object?>()]);
+	}
+
+	/// <summary>
+	/// Defines a new mutable reference array variable directly in this <see cref="Variables"/> bag using runtime type
+	/// information.
+	/// </summary>
+	/// <param name="name">The name of the array variable.</param>
+	/// <param name="elementType">The declared element type for the array.</param>
+	/// <param name="values">The initial values for the array variable.</param>
+	/// <exception cref="InvalidOperationException">Thrown if any element is not assignable to
+	/// <paramref name="elementType"/>.</exception>
+	public void DefineReferenceArrayVariable(StringKey name, Type elementType, IEnumerable<object?> values)
+	{
+		List<object?> materializedValues = [.. values];
+
+		for (int i = 0; i < materializedValues.Count; i++)
+		{
+			object? value = materializedValues[i];
+			if (value is not null && !elementType.IsInstanceOfType(value))
+			{
+				throw new InvalidOperationException(
+					$"Cannot define '{name}' with element type {value.GetType()}: array expects values assignable to " +
+					$"{elementType}.");
+			}
+		}
+
+		_referenceArrays[name] = new ReferenceArrayStorage(elementType, materializedValues);
 	}
 
 	/// <summary>
@@ -374,6 +470,35 @@ public class Variables
 	}
 
 	/// <summary>
+	/// Tries to get the full contents of a reference array variable using a runtime element type.
+	/// </summary>
+	/// <param name="name">The name of the array variable.</param>
+	/// <param name="expectedElementType">The expected element type.</param>
+	/// <param name="values">The resolved array if found and type-compatible.</param>
+	/// <returns><see langword="true"/> if the array variable was found and the declared element type is compatible;
+	/// <see langword="false"/> otherwise.</returns>
+	public bool TryGetReferenceArray(
+		StringKey name,
+		Type expectedElementType,
+		[NotNullWhen(true)] out object?[]? values)
+	{
+		values = null;
+
+		if (!_referenceArrays.TryGetValue(name, out ReferenceArrayStorage? stored))
+		{
+			return false;
+		}
+
+		if (!expectedElementType.IsAssignableFrom(stored.ElementType))
+		{
+			return false;
+		}
+
+		values = [.. stored.Values];
+		return true;
+	}
+
+	/// <summary>
 	/// Sets the element at the specified index in an array variable.
 	/// </summary>
 	/// <typeparam name="T">The type of the value to set. Must be supported by <see cref="Variant128"/>.</typeparam>
@@ -461,6 +586,24 @@ public class Variables
 		}
 
 		return stored.Values.Count;
+	}
+
+	/// <summary>
+	/// Tries to get the declared element type of a reference array variable with the given name.
+	/// </summary>
+	/// <param name="name">The name of the array variable to inspect.</param>
+	/// <param name="elementType">The declared element type if the array exists.</param>
+	/// <returns><see langword="true"/> if the reference array exists; otherwise, <see langword="false"/>.</returns>
+	public bool TryGetReferenceArrayElementType(StringKey name, [NotNullWhen(true)] out Type? elementType)
+	{
+		if (_referenceArrays.TryGetValue(name, out ReferenceArrayStorage? stored))
+		{
+			elementType = stored.ElementType;
+			return true;
+		}
+
+		elementType = null;
+		return false;
 	}
 
 	/// <summary>

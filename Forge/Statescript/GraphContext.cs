@@ -225,6 +225,47 @@ public sealed class GraphContext
 	}
 
 	/// <summary>
+	/// Resolves a named reference value using a runtime type by first checking reference variables and then falling back
+	/// to read-only reference property definitions on the graph.
+	/// </summary>
+	/// <param name="name">The name of the variable or property.</param>
+	/// <param name="expectedType">The expected reference type.</param>
+	/// <param name="value">The resolved value if found.</param>
+	/// <returns><see langword="true"/> if the name was resolved and type-compatible; <see langword="false"/> otherwise.
+	/// </returns>
+	public bool TryResolveReference(StringKey name, Type expectedType, out object? value)
+	{
+		if (GraphVariables.TryGetReference(name, expectedType, out value))
+		{
+			return true;
+		}
+
+		if (Processor is null)
+		{
+			value = null;
+			return false;
+		}
+
+		foreach (ReferencePropertyDefinition definition in Processor.Graph.VariableDefinitions.ReferencePropertyDefinitions)
+		{
+			if (definition.Name == name)
+			{
+				if (!expectedType.IsAssignableFrom(definition.Resolver.ValueType))
+				{
+					value = null;
+					return false;
+				}
+
+				value = definition.Resolver.Resolve(this);
+				return true;
+			}
+		}
+
+		value = null;
+		return false;
+	}
+
+	/// <summary>
 	/// Resolves a named reference array by first checking reference array variables and then falling back to read-only
 	/// reference array property definitions on the graph.
 	/// </summary>
@@ -261,6 +302,48 @@ public sealed class GraphContext
 						values[i] = (T?)resolved[i];
 					}
 
+					return true;
+				}
+			}
+		}
+
+		values = null;
+		return false;
+	}
+
+	/// <summary>
+	/// Resolves a named reference array using a runtime element type by first checking reference array variables and then
+	/// falling back to read-only reference array property definitions on the graph.
+	/// </summary>
+	/// <param name="name">The name of the array variable or property.</param>
+	/// <param name="expectedElementType">The expected element type.</param>
+	/// <param name="values">The resolved array if found.</param>
+	/// <returns><see langword="true"/> if the name was resolved and type-compatible; <see langword="false"/> otherwise.
+	/// </returns>
+	public bool TryResolveReferenceArray(
+		StringKey name,
+		Type expectedElementType,
+		[NotNullWhen(true)] out object?[]? values)
+	{
+		if (GraphVariables.TryGetReferenceArray(name, expectedElementType, out values))
+		{
+			return true;
+		}
+
+		if (Processor is not null)
+		{
+			foreach (ReferenceArrayPropertyDefinition definition in
+				Processor.Graph.VariableDefinitions.ReferenceArrayPropertyDefinitions)
+			{
+				if (definition.Name == name)
+				{
+					if (!expectedElementType.IsAssignableFrom(definition.Resolver.ElementType))
+					{
+						values = null;
+						return false;
+					}
+
+					values = definition.Resolver.ResolveArray(this);
 					return true;
 				}
 			}
