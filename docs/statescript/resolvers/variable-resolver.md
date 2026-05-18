@@ -46,6 +46,7 @@ graph.VariableDefinitions.DefineProperty("boostedSpeed",
 ## See Also
 
 - [Resolvers Overview](README.md)
-- [ArrayVariableResolver](array-resolver.md)
+- [ArrayResolver](array-resolver.md)
+- [ArrayVariableResolver](array-variable-resolver.md)
 - [VariantResolver](variant-resolver.md)
 - [Variables and Data](../variables.md)
