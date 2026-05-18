@@ -416,6 +416,19 @@ internal sealed class ResolveReferenceResolverNode<T>(IReferenceResolver<T> reso
 	}
 }
 
+internal sealed class ResolveReferenceArrayResolverNode<T>(IReferenceArrayResolver<T> resolver) : ActionNode
+	where T : class
+{
+	private readonly IReferenceArrayResolver<T> _resolver = resolver;
+
+	public T?[]? LastResolvedArray { get; private set; }
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		LastResolvedArray = _resolver.ResolveArray(graphContext);
+	}
+}
+
 internal sealed class FixedRandom(int nextInt = 0, float nextSingle = 0.0f, double nextDouble = 0.0) : IRandom
 {
 	public int NextInt()

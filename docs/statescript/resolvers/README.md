@@ -29,6 +29,7 @@ regular node-bindable properties.
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
+| [EntityArrayResolver](entity-array-resolver.md) | `IForgeEntity?[]` | Builds an entity reference array by evaluating nested entity resolvers. |
 | [EntityArrayVariableResolver](entity-array-variable-resolver.md) | `IForgeEntity?[]` | Reads an entity reference array from graph or shared scope. |
 | [EntityVariableResolver](entity-variable-resolver.md) | `IForgeEntity?` | Reads an entity reference from graph or shared reference variables. |
 | [OwnerEntityResolver](owner-entity-resolver.md) | `IForgeEntity?` | Resolves the owner entity from the current ability activation. |
