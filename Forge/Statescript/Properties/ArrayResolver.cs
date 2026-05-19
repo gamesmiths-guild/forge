@@ -29,6 +29,10 @@ public class ArrayResolver : IArrayPropertyResolver
 	/// <summary>
 	/// Initializes a new instance of the <see cref="ArrayResolver"/> class with an explicit element type.
 	/// </summary>
+	/// <remarks>
+	/// This overload may be used to construct an empty array because the element type is supplied explicitly. The
+	/// inferred-type overload requires at least one nested resolver so it can determine <see cref="ElementType"/>.
+	/// </remarks>
 	/// <param name="elementType">The type of each array element.</param>
 	/// <param name="elementResolvers">The nested resolvers that produce the array elements.</param>
 	public ArrayResolver(Type elementType, params IPropertyResolver[] elementResolvers)
@@ -92,13 +96,16 @@ public class ArrayResolver : IArrayPropertyResolver
 		}
 
 		Type elementType = elementResolvers[0].ValueType;
-		ValidateResolverTypes(elementType, elementResolvers);
+		ValidateResolverTypes(elementType, elementResolvers, 1);
 		return elementType;
 	}
 
-	private static void ValidateResolverTypes(Type elementType, IPropertyResolver[] elementResolvers)
+	private static void ValidateResolverTypes(
+		Type elementType,
+		IPropertyResolver[] elementResolvers,
+		int startIndex = 0)
 	{
-		for (int i = 0; i < elementResolvers.Length; i++)
+		for (int i = startIndex; i < elementResolvers.Length; i++)
 		{
 			IPropertyResolver? resolver = elementResolvers[i];
 

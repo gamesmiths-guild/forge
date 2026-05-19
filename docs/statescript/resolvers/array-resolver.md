@@ -21,6 +21,8 @@ new ArrayResolver(elementType, elementResolvers)
 
 - Resolves each nested resolver in order and returns the results as `Variant128[]`.
 - Infers `ElementType` from the first nested resolver when no explicit `elementType` is provided.
+- The explicit `ArrayResolver(Type, ...)` overload can create an empty array because the element type is supplied up front.
+- The inferred `ArrayResolver(...)` overload requires at least one nested resolver so the element type can be determined.
 - Requires every nested resolver to produce the same element type.
 - Useful when each element should come from its own resolver rather than a variable or inline constant array.
 

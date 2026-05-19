@@ -54,6 +54,36 @@ public class EntityArrayResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 
 	[Fact]
 	[Trait("Resolver", "EntityArray")]
+	public void Entity_array_resolver_throws_for_null_resolver_array()
+	{
+		IEntityResolver[]? resolvers = null;
+
+#pragma warning disable CA1806
+		Action act = () => new EntityArrayResolver(resolvers!);
+#pragma warning restore CA1806
+
+		act.Should().Throw<ArgumentNullException>();
+	}
+
+	[Fact]
+	[Trait("Resolver", "EntityArray")]
+	public void Entity_array_resolver_throws_for_null_nested_resolver()
+	{
+		IEntityResolver[] resolvers =
+		[
+			new OwnerEntityResolver(),
+			null!,
+		];
+
+#pragma warning disable CA1806
+		Action act = () => new EntityArrayResolver(resolvers);
+#pragma warning restore CA1806
+
+		act.Should().Throw<ArgumentException>();
+	}
+
+	[Fact]
+	[Trait("Resolver", "EntityArray")]
 	public void Graph_variable_definitions_validate_entity_array_resolver_output_type()
 	{
 		var graph = new Graph();
