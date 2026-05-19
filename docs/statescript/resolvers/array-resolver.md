@@ -1,50 +1,50 @@
-# ArrayVariableResolver
+# ArrayResolver
 
-> **Type:** `Gamesmiths.Forge.Statescript.Properties.ArrayVariableResolver`
+> **Type:** `Gamesmiths.Forge.Statescript.Properties.ArrayResolver`
 > **Output Type:** *(configured array element type)*
 
-Resolves an array variable by name from either graph-local or shared scope.
+Builds an array by evaluating a nested resolver for each element in order.
 
-## Constructor
+## Constructors
 
 ```csharp
-new ArrayVariableResolver(variableName, elementType)
-new ArrayVariableResolver(variableName, elementType, scope)
+new ArrayResolver(elementResolvers)
+new ArrayResolver(elementType, elementResolvers)
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| variableName | `StringKey` | The name of the array variable to read at runtime. |
-| elementType | `Type` | The type of each element in the array (e.g., `typeof(int)`, `typeof(float)`). |
-| scope | `VariableScope` | Which variable bag to read from: `Graph` (default) or `Shared`. |
+| elementType | `Type` | Optional explicit type for the array elements. Use this when creating an empty array or when you want the constructor to validate against a specific element type. |
+| elementResolvers | `IPropertyResolver[]` | The nested resolvers that produce each array element. |
 
 ## Behavior
 
-- Reads an array variable from either `GraphContext.GraphVariables` or `GraphContext.SharedVariables`.
-- Returns the current array contents as `Variant128[]`.
-- Returns an empty array if the named variable does not exist.
-- Reflects runtime changes made to the underlying variable bag.
+- Resolves each nested resolver in order and returns the results as `Variant128[]`.
+- Infers `ElementType` from the first nested resolver when no explicit `elementType` is provided.
+- The explicit `ArrayResolver(Type, ...)` overload can create an empty array because the element type is supplied up front.
+- The inferred `ArrayResolver(...)` overload requires at least one nested resolver so the element type can be determined.
+- Requires every nested resolver to produce the same element type.
+- Useful when each element should come from its own resolver rather than a variable or inline constant array.
 
 ## Usage
 
 ```csharp
-var graph = new Graph();
-graph.VariableDefinitions.DefineArrayVariable("targets", 10, 20, 30);
+graph.VariableDefinitions.DefineArrayProperty("constants",
+    new ArrayResolver(
+        new PiResolver(),
+        new EResolver()));
 
-graph.VariableDefinitions.DefineArrayProperty("selectedTargets",
-    new ArrayVariableResolver("targets", typeof(int)));
-```
-
-## Composition
-
-```csharp
-graph.VariableDefinitions.DefineArrayProperty("sharedTargets",
-    new ArrayVariableResolver("targets", typeof(int), VariableScope.Shared));
+graph.VariableDefinitions.DefineArrayProperty("floatConstants",
+    new ArrayResolver(
+        typeof(float),
+        new PiResolver(typeof(float)),
+        new EResolver(typeof(float))));
 ```
 
 ## See Also
- 
+
 - [Resolvers Overview](README.md)
-- [EntityArrayVariableResolver](entity-array-variable-resolver.md)
-- [VariableResolver](variable-resolver.md)
-- [Variables and Data](../variables.md)
+- [ArrayVariableResolver](array-variable-resolver.md)
+- [EntityArrayResolver](entity-array-resolver.md)
+- [VariantResolver](variant-resolver.md)
+- [Custom Resolvers](../custom-resolvers.md)

@@ -36,5 +36,7 @@ graph.VariableDefinitions.DefineReferenceArrayProperty("candidateTargets",
 ## See Also
 
 - [Resolvers Overview](README.md)
-- [ArrayVariableResolver](array-resolver.md)
+- [ArrayResolver](array-resolver.md)
+- [ArrayVariableResolver](array-variable-resolver.md)
+- [EntityArrayResolver](entity-array-resolver.md)
 - [EntityVariableResolver](entity-variable-resolver.md)

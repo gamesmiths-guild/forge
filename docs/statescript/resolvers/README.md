@@ -11,7 +11,8 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
 | [ActivationDataResolver](activation-data-resolver.md) | *(configured)* | Reads a field or property from typed activation data. |
-| [ArrayVariableResolver](array-resolver.md) | *(configured array)* | Reads an array variable from graph or shared scope. |
+| [ArrayResolver](array-resolver.md) | *(configured array)* | Builds an array by evaluating nested resolvers for each element. |
+| [ArrayVariableResolver](array-variable-resolver.md) | *(configured array)* | Reads an array variable from graph or shared scope. |
 | [AttributeResolver](attribute-resolver.md) | `int` | Reads a selected value from an entity attribute. |
 | [MagnitudeResolver](magnitude-resolver.md) | `float` | Reads the magnitude from the ability activation context. |
 | [TagQueryResolver](tag-query-resolver.md) | `bool` | Evaluates a tag query against a selected entity's tags. |
@@ -28,6 +29,7 @@ regular node-bindable properties.
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
+| [EntityArrayResolver](entity-array-resolver.md) | `IForgeEntity?[]` | Builds an entity reference array by evaluating nested entity resolvers. |
 | [EntityArrayVariableResolver](entity-array-variable-resolver.md) | `IForgeEntity?[]` | Reads an entity reference array from graph or shared scope. |
 | [EntityVariableResolver](entity-variable-resolver.md) | `IForgeEntity?` | Reads an entity reference from graph or shared reference variables. |
 | [OwnerEntityResolver](owner-entity-resolver.md) | `IForgeEntity?` | Resolves the owner entity from the current ability activation. |

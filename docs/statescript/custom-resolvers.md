@@ -237,6 +237,19 @@ graph.VariableDefinitions.DefineArrayProperty("nearbyAllies",
     new NearbyAllyCountResolver(10.0f));
 ```
 
+If you do not need a custom implementation and only want to assemble an array from existing resolvers, prefer the built-in `ArrayResolver` or `EntityArrayResolver`:
+
+```csharp
+graph.VariableDefinitions.DefineArrayProperty("constants",
+    new ArrayResolver(new PiResolver(), new EResolver()));
+
+graph.VariableDefinitions.DefineReferenceArrayProperty("participants",
+    new EntityArrayResolver(
+        new OwnerEntityResolver(),
+        new TargetEntityResolver(),
+        new SourceEntityResolver()));
+```
+
 ## Composing Resolvers
 
 Custom resolvers compose with built-in resolvers. The most common pattern is using a custom resolver as an operand in a `ComparisonResolver` to create data-driven conditions:
