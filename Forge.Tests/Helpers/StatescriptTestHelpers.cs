@@ -48,21 +48,47 @@ internal static class NodeBindings
 
 	public static ApplyEffectNode CreateApplyEffectNode(
 		StringKey effectPropertyName,
-		StringKey entityPropertyName)
+		StringKey targetPropertyName,
+		StringKey? levelPropertyName = null,
+		StringKey? ownershipPropertyName = null)
 	{
 		var node = new ApplyEffectNode();
 		node.BindInput(ApplyEffectNode.EffectInput, effectPropertyName);
-		node.BindInput(ApplyEffectNode.EntityInput, entityPropertyName);
+		node.BindInput(ApplyEffectNode.TargetInput, targetPropertyName);
+
+		if (levelPropertyName.HasValue && levelPropertyName.Value != StringKey.Empty)
+		{
+			node.BindInput(ApplyEffectNode.LevelInput, levelPropertyName.Value);
+		}
+
+		if (ownershipPropertyName.HasValue && ownershipPropertyName.Value != StringKey.Empty)
+		{
+			node.BindInput(ApplyEffectNode.OwnershipInput, ownershipPropertyName.Value);
+		}
+
 		return node;
 	}
 
 	public static EffectNode CreateEffectNode(
 		StringKey effectPropertyName,
-		StringKey entityPropertyName)
+		StringKey targetPropertyName,
+		StringKey? levelPropertyName = null,
+		StringKey? ownershipPropertyName = null)
 	{
 		var node = new EffectNode();
 		node.BindInput(EffectNode.EffectInput, effectPropertyName);
-		node.BindInput(EffectNode.EntityInput, entityPropertyName);
+		node.BindInput(EffectNode.TargetInput, targetPropertyName);
+
+		if (levelPropertyName.HasValue && levelPropertyName.Value != StringKey.Empty)
+		{
+			node.BindInput(EffectNode.LevelInput, levelPropertyName.Value);
+		}
+
+		if (ownershipPropertyName.HasValue && ownershipPropertyName.Value != StringKey.Empty)
+		{
+			node.BindInput(EffectNode.OwnershipInput, ownershipPropertyName.Value);
+		}
+
 		return node;
 	}
 }
@@ -72,16 +98,17 @@ internal static class NodeBindings
 /// </summary>
 internal static class ResolverTestContextFactory
 {
-	public static GraphContext CreateAbilityGraphContext(TestEntity entity, float magnitude = 0f)
+	public static GraphContext CreateAbilityGraphContext(TestEntity entity, float magnitude = 0f, int level = 1)
 	{
-		return CreateAbilityGraphContext(entity, target: null, source: null, magnitude: magnitude);
+		return CreateAbilityGraphContext(entity, target: null, source: null, magnitude: magnitude, level: level);
 	}
 
 	public static GraphContext CreateAbilityGraphContext(
 		TestEntity owner,
 		TestEntity? target,
 		TestEntity? source,
-		float magnitude = 0f)
+		float magnitude = 0f,
+		int level = 1)
 	{
 		var graph = new Graph();
 		var captureNode = new CaptureGraphContextNode();
@@ -94,7 +121,7 @@ internal static class ResolverTestContextFactory
 		var behavior = new GraphAbilityBehavior(graph);
 
 		AbilityData abilityData = CreateAbilityData("ResolverTest", () => behavior);
-		AbilityHandle handle = Grant(owner, abilityData, source)
+		AbilityHandle handle = Grant(owner, abilityData, source, level)
 			?? throw new InvalidOperationException(
 				"Failed to grant the resolver test ability and create an ability graph context.");
 
@@ -117,7 +144,8 @@ internal static class ResolverTestContextFactory
 	public static GraphContext CreateAbilityGraphContext<TData>(
 		TestEntity entity,
 		TData activationData,
-		float magnitude = 0f)
+		float magnitude = 0f,
+		int level = 1)
 	{
 		var graph = new Graph();
 		var captureNode = new CaptureGraphContextNode();
@@ -130,8 +158,9 @@ internal static class ResolverTestContextFactory
 		var behavior = new GraphAbilityBehavior<TData>(graph);
 
 		AbilityData abilityData = CreateAbilityData("TypedResolverTest", () => behavior);
-		AbilityHandle? handle = Grant(entity, abilityData) ?? throw new InvalidOperationException(
-			"Failed to grant the typed resolver test ability and create an ability graph context.");
+		AbilityHandle? handle = Grant(entity, abilityData, sourceEntity: null, level: level)
+			?? throw new InvalidOperationException(
+				"Failed to grant the typed resolver test ability and create an ability graph context.");
 
 		if (!handle.Activate(activationData, out _, magnitude: magnitude))
 		{
@@ -151,22 +180,16 @@ internal static class ResolverTestContextFactory
 	}
 
 	public static void ExecuteAbilityGraph(
+		Graph graph,
 		TestEntity owner,
-		ActionNode actionNode,
 		TestEntity? target = null,
 		TestEntity? source = null,
-		float magnitude = 0f)
+		float magnitude = 0f,
+		int level = 1)
 	{
-		var graph = new Graph();
-
-		graph.AddNode(actionNode);
-		graph.AddConnection(new Connection(
-			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
-			actionNode.InputPorts[ActionNode.InputPort]));
-
 		var behavior = new GraphAbilityBehavior(graph);
 		AbilityData abilityData = CreateAbilityData("ResolverExecutionTest", () => behavior);
-		AbilityHandle handle = Grant(owner, abilityData, source)
+		AbilityHandle handle = Grant(owner, abilityData, source, level)
 			?? throw new InvalidOperationException("Failed to grant the resolver execution test ability.");
 
 		if (!handle.Activate(out _, target, magnitude))
@@ -175,16 +198,33 @@ internal static class ResolverTestContextFactory
 		}
 	}
 
-	private static AbilityHandle? Grant(TestEntity target, AbilityData data)
+	public static void ExecuteAbilityGraph(
+		TestEntity owner,
+		ActionNode actionNode,
+		TestEntity? target = null,
+		TestEntity? source = null,
+		float magnitude = 0f,
+		int level = 1)
 	{
-		return Grant(target, data, sourceEntity: null);
+		var graph = new Graph();
+
+		graph.AddNode(actionNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			actionNode.InputPorts[ActionNode.InputPort]));
+
+		ExecuteAbilityGraph(graph, owner, target, source, magnitude, level);
 	}
 
-	private static AbilityHandle? Grant(TestEntity target, AbilityData data, IForgeEntity? sourceEntity)
+	private static AbilityHandle? Grant(
+		TestEntity target,
+		AbilityData data,
+		IForgeEntity? sourceEntity,
+		int level = 1)
 	{
 		var grantConfig = new GrantAbilityConfig(
 			data,
-			new ScalableInt(1),
+			new ScalableInt(level),
 			AbilityDeactivationPolicy.CancelImmediately,
 			AbilityDeactivationPolicy.CancelImmediately,
 			false,
