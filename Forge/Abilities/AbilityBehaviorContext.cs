@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Effects;
 
 namespace Gamesmiths.Forge.Abilities;
 
@@ -28,6 +29,11 @@ public class AbilityBehaviorContext
 	/// Gets the level of the ability at the time of execution.
 	/// </summary>
 	public int Level => AbilityHandle.Level;
+
+	/// <summary>
+	/// Gets the ownership configuration derived from the current ability activation.
+	/// </summary>
+	public EffectOwnership Ownership => new(Owner, Source);
 
 	/// <summary>
 	/// Gets the handle to the ability being executed (ability-level operations).

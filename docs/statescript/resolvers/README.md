@@ -24,12 +24,14 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 
 ## Effect Resolvers
 
-These resolvers provide effect definitions to nodes such as `ApplyEffectNode` and `EffectNode`.
+These resolvers provide effect definitions and application context to nodes such as `ApplyEffectNode` and `EffectNode`.
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
 | [EffectDataResolver](effect-data-resolver.md) | `EffectData` | Returns a single fixed `EffectData` value. |
 | [EffectDataArrayResolver](effect-data-array-resolver.md) | `EffectData[]` | Returns a fixed array of `EffectData` values. |
+| [AbilityOwnershipResolver](ability-ownership-resolver.md) | `EffectOwnership` | Reads the current ability owner/source pair as an effect ownership value. |
+| [OwnershipResolver](ownership-resolver.md) | `EffectOwnership` | Composes an effect ownership value from nested entity resolvers. |
 
 ---
 
