@@ -55,7 +55,7 @@ public class DifficultyMultiplierResolver : IPropertyResolver
 
 ### Example: Reading from the Activation Context
 
-If you only need to expose a field or property from typed activation data, prefer the built-in `ActivationDataResolver`. Write a custom resolver when you need custom conversion or more complex logic around the activation context.
+If you only need to expose a field or property from typed activation data, prefer the built-in `AbilityActivationDataResolver`. Write a custom resolver when you need custom conversion or more complex logic around the activation context.
 
 Resolvers that need entity data should access it through the `GraphContext.ActivationContext`. When a graph is driven by an ability, this is an `AbilityBehaviorContext` containing the owner entity, source entity, and magnitude:
 
@@ -245,9 +245,9 @@ graph.VariableDefinitions.DefineArrayProperty("constants",
 
 graph.VariableDefinitions.DefineObjectArrayProperty("participants",
     new EntityArrayResolver(
-        new OwnerEntityResolver(),
-        new TargetEntityResolver(),
-        new SourceEntityResolver()));
+        new AbilityOwnerResolver(),
+        new AbilityTargetResolver(),
+        new AbilitySourceResolver()));
 ```
 
 ## Composing Resolvers

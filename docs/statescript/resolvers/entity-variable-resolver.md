@@ -6,7 +6,7 @@
 Reads an entity reference from graph or shared object-backed variables so other resolvers can inspect entities selected at
 runtime.
 
-## Constructors
+## Constructor
 
 ```csharp
 new EntityVariableResolver(variableName)

@@ -871,12 +871,12 @@ var abilityData = new AbilityData(
 
 ### GraphAbilityBehavior&lt;TData&gt;
 
-For abilities that receive typed activation data, use the generic variant. It can either expose supported payload members directly through `ActivationDataResolver`:
+For abilities that receive typed activation data, use the generic variant. It can either expose supported payload members directly through `AbilityActivationDataResolver`:
 
 ```csharp
 graph.VariableDefinitions.DefineProperty(
     "Distance",
-    new ActivationDataResolver(typeof(DashData), nameof(DashData.Distance)));
+    new AbilityActivationDataResolver(typeof(DashData), nameof(DashData.Distance)));
 
 var behavior = new GraphAbilityBehavior<DashData>(graph);
 ```

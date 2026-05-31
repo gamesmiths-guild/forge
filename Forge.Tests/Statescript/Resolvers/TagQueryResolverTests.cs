@@ -200,7 +200,7 @@ public class TagQueryResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var node = new ResolvePropertyNode(
 			new TagQueryResolver(
 				Tag.RequestTag(_tagsManager, "item.equipment.weapon.axe"),
-				new TargetEntityResolver(),
+				new AbilityTargetResolver(),
 				TagQuerySource.ModifierTags));
 
 		ApplyModifierTags(target, "item.equipment.weapon.axe");

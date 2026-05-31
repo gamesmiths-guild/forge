@@ -6,9 +6,9 @@ using Gamesmiths.Forge.Core;
 namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
-/// Resolves the owner entity from the current <see cref="AbilityBehaviorContext"/>.
+/// Resolves the source entity from the current <see cref="AbilityBehaviorContext"/>.
 /// </summary>
-public class OwnerEntityResolver : ObjectResolver<IForgeEntity>, IEntityResolver
+public class AbilitySourceResolver : ObjectResolver<IForgeEntity>, IEntityResolver
 {
 	/// <inheritdoc/>
 	public override IForgeEntity? Resolve(GraphContext graphContext)
@@ -18,6 +18,6 @@ public class OwnerEntityResolver : ObjectResolver<IForgeEntity>, IEntityResolver
 			return null;
 		}
 
-		return abilityContext.Owner;
+		return abilityContext.Source;
 	}
 }

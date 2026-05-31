@@ -86,7 +86,7 @@ public class AttributeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		var node = new ResolvePropertyNode(
 			new AttributeResolver(
 				"TestAttributeSet.Attribute5",
-				new TargetEntityResolver()));
+				new AbilityTargetResolver()));
 
 		ApplyFlatModifier(target, "TestAttributeSet.Attribute5", 10);
 

@@ -26,15 +26,15 @@ new EntityArrayResolver(elementResolvers)
 ```csharp
 graph.VariableDefinitions.DefineObjectArrayProperty("participants",
     new EntityArrayResolver(
-        new OwnerEntityResolver(),
-        new TargetEntityResolver(),
-        new SourceEntityResolver()));
+        new AbilityOwnerResolver(),
+        new AbilityTargetResolver(),
+        new AbilitySourceResolver()));
 ```
 
 ## See Also
 
 - [Resolvers Overview](README.md)
 - [EntityArrayVariableResolver](entity-array-variable-resolver.md)
-- [OwnerEntityResolver](owner-entity-resolver.md)
-- [SourceEntityResolver](source-entity-resolver.md)
-- [TargetEntityResolver](target-entity-resolver.md)
+- [AbilityOwnerResolver](ability-owner-resolver.md)
+- [AbilitySourceResolver](ability-source-resolver.md)
+- [AbilityTargetResolver](ability-target-resolver.md)

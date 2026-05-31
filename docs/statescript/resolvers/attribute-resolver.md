@@ -5,7 +5,7 @@
 
 Reads a selected value from a specific entity attribute. By default it inspects the owner entity, but it can also target any entity provided by an `IEntityResolver`.
 
-## Constructors
+## Constructor
 
 ```csharp
 new AttributeResolver(attributeKey)
@@ -19,7 +19,7 @@ new AttributeResolver(attributeKey, entityResolver, attributeCalculationType, fi
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | attributeKey | `StringKey` | The fully qualified attribute key (e.g., `"CombatAttributeSet.Health"`). |
-| entityResolver | `IEntityResolver` | Selects which entity to inspect. Defaults to `OwnerEntityResolver`. |
+| entityResolver | `IEntityResolver` | Selects which entity to inspect. Defaults to `AbilityOwnerResolver`. |
 | attributeCalculationType | `AttributeCalculationType` | Which value to read from the attribute. Defaults to `CurrentValue`. |
 | finalChannel | `int` | Only used with `AttributeCalculationType.MagnitudeEvaluatedUpToChannel`. |
 
@@ -70,7 +70,7 @@ graph.VariableDefinitions.DefineProperty("selectedHealth",
 graph.VariableDefinitions.DefineProperty("targetHealth",
     new AttributeResolver(
         "CombatAttributeSet.Health",
-        new TargetEntityResolver()));
+        new AbilityTargetResolver()));
 ```
 
 ## Composition
@@ -89,6 +89,6 @@ graph.VariableDefinitions.DefineProperty("healthAbove50",
 - [Resolvers Overview](README.md)
 - [ComparisonResolver](comparison-resolver.md)
 - [EntityVariableResolver](entity-variable-resolver.md)
-- [OwnerEntityResolver](owner-entity-resolver.md)
-- [TargetEntityResolver](target-entity-resolver.md)
+- [AbilityOwnerResolver](ability-owner-resolver.md)
+- [AbilityTargetResolver](ability-target-resolver.md)
 - [TagQueryResolver](tag-query-resolver.md)

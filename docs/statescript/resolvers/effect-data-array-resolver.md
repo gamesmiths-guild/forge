@@ -34,7 +34,7 @@ graph.VariableDefinitions.DefineObjectArrayProperty(
 ```csharp
 var effectNode = new EffectNode();
 effectNode.BindInput(EffectNode.EffectInput, "effects");
-effectNode.BindInput(EffectNode.EntityInput, "target");
+effectNode.BindInput(EffectNode.TargetInput, "target");
 ```
 
 ## See Also

@@ -8,7 +8,7 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// Property resolver that retrieves the magnitude of the current ability behavior context. This is useful for nodes
 /// that need to access the magnitude of an ability's effect.
 /// </summary>
-public class MagnitudeResolver : IPropertyResolver
+public class AbilityMagnitudeResolver : IPropertyResolver
 {
 	/// <inheritdoc/>
 	public Type ValueType => typeof(float);

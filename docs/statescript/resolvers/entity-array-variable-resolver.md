@@ -6,7 +6,7 @@
 Reads an entity-reference array from graph or shared object-backed variables. This is a typed convenience wrapper around
 `ObjectArrayVariableResolver<IForgeEntity>`.
 
-## Constructors
+## Constructor
 
 ```csharp
 new EntityArrayVariableResolver(variableName)

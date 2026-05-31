@@ -14,7 +14,7 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// activation-data type. It supports reading public instance fields and public readable properties whose types are
 /// supported by <see cref="Variant128"/>.
 /// </remarks>
-public class ActivationDataResolver : IPropertyResolver
+public class AbilityActivationDataResolver : IPropertyResolver
 {
 	private readonly Type _activationContextType;
 
@@ -34,12 +34,12 @@ public class ActivationDataResolver : IPropertyResolver
 	public Type ValueType { get; }
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="ActivationDataResolver"/> class.
+	/// Initializes a new instance of the <see cref="AbilityActivationDataResolver"/> class.
 	/// </summary>
 	/// <param name="activationDataType">The runtime activation-data type carried by
 	/// <see cref="AbilityBehaviorContext{TData}"/>.</param>
 	/// <param name="memberName">The public field or property name to read from the activation data.</param>
-	public ActivationDataResolver(Type activationDataType, string memberName)
+	public AbilityActivationDataResolver(Type activationDataType, string memberName)
 	{
 		EnsureActivationDataType(activationDataType);
 
@@ -116,7 +116,8 @@ public class ActivationDataResolver : IPropertyResolver
 			if (!property.CanRead)
 			{
 				throw new ArgumentException(
-					$"ActivationDataResolver requires member '{memberName}' on '{activationDataType}' to be readable.",
+					$"AbilityActivationDataResolver requires member '{memberName}' on '{activationDataType}' to be " +
+					"readable.",
 					nameof(memberName));
 			}
 
@@ -130,7 +131,7 @@ public class ActivationDataResolver : IPropertyResolver
 		}
 
 		throw new ArgumentException(
-			$"ActivationDataResolver could not find public instance field or property '{memberName}' on " +
+			$"AbilityActivationDataResolver could not find public instance field or property '{memberName}' on " +
 			$"activation-data type '{activationDataType}'.",
 			nameof(memberName));
 	}
@@ -155,7 +156,7 @@ public class ActivationDataResolver : IPropertyResolver
 		}
 
 		throw new ArgumentException(
-			$"ActivationDataResolver does not support member type '{valueType}'. " +
+			$"AbilityActivationDataResolver does not support member type '{valueType}'. " +
 			"Use a graph-variable data binder or a custom resolver for unsupported types.",
 			nameof(valueType));
 	}
@@ -165,7 +166,7 @@ public class ActivationDataResolver : IPropertyResolver
 		if (string.IsNullOrWhiteSpace(memberName))
 		{
 			throw new ArgumentException(
-				"ActivationDataResolver requires a non-empty activation-data member name.",
+				"AbilityActivationDataResolver requires a non-empty activation-data member name.",
 				nameof(memberName));
 		}
 

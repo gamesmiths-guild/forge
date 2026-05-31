@@ -33,7 +33,7 @@ graph.VariableDefinitions.DefineObjectProperty(
 ```csharp
 var effectNode = new EffectNode();
 effectNode.BindInput(EffectNode.EffectInput, "burnEffect");
-effectNode.BindInput(EffectNode.EntityInput, "target");
+effectNode.BindInput(EffectNode.TargetInput, "target");
 ```
 
 ## See Also

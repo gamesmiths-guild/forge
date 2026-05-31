@@ -24,7 +24,7 @@ public class EntityResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IClass
 		var owner = new TestEntity(_tagsManager, _cuesManager);
 		GraphContext context = CreateAbilityGraphContext(owner);
 
-		new OwnerEntityResolver().Resolve(context).Should().BeSameAs(owner);
+		new AbilityOwnerResolver().Resolve(context).Should().BeSameAs(owner);
 	}
 
 	[Fact]
@@ -35,7 +35,7 @@ public class EntityResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IClass
 		var source = new TestEntity(_tagsManager, _cuesManager);
 		GraphContext context = CreateAbilityGraphContext(owner, target: null, source: source);
 
-		new SourceEntityResolver().Resolve(context).Should().BeSameAs(source);
+		new AbilitySourceResolver().Resolve(context).Should().BeSameAs(source);
 	}
 
 	[Fact]
@@ -44,7 +44,7 @@ public class EntityResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IClass
 	{
 		var owner = new TestEntity(_tagsManager, _cuesManager);
 		var target = new TestEntity(_tagsManager, _cuesManager);
-		var node = new ResolveObjectResolverNode<IForgeEntity>(new TargetEntityResolver());
+		var node = new ResolveObjectResolverNode<IForgeEntity>(new AbilityTargetResolver());
 
 		ExecuteAbilityGraph(owner, node, target, source: null);
 
@@ -57,8 +57,8 @@ public class EntityResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IClass
 	{
 		var context = new GraphContext();
 
-		new OwnerEntityResolver().Resolve(context).Should().BeNull();
-		new SourceEntityResolver().Resolve(context).Should().BeNull();
-		new TargetEntityResolver().Resolve(context).Should().BeNull();
+		new AbilityOwnerResolver().Resolve(context).Should().BeNull();
+		new AbilitySourceResolver().Resolve(context).Should().BeNull();
+		new AbilityTargetResolver().Resolve(context).Should().BeNull();
 	}
 }

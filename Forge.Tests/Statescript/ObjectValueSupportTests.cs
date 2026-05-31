@@ -77,7 +77,7 @@ public class ObjectValueSupportTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 	{
 		var graph = new Graph();
 
-		graph.VariableDefinitions.DefineObjectProperty("owner", new OwnerEntityResolver());
+		graph.VariableDefinitions.DefineObjectProperty("owner", new AbilityOwnerResolver());
 		graph.VariableDefinitions.DefineObjectArrayVariable<IForgeEntity>("entities");
 
 		graph.VariableDefinitions.ValidatePropertyType("owner", typeof(IForgeEntity)).Should().BeTrue();

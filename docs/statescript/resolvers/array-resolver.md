@@ -5,7 +5,7 @@
 
 Builds an array by evaluating a nested resolver for each element in order.
 
-## Constructors
+## Constructor
 
 ```csharp
 new ArrayResolver(elementResolvers)

@@ -5,7 +5,7 @@
 
 Computes the signed angle in radians between two vectors. Use this resolver when the direction of rotation matters: `Vector2` operands infer the sign from the 2D plane, while `Vector3` operands require an explicit axis to define the positive rotation direction.
 
-## Constructors
+## Constructor
 
 ```csharp
 new SignedAngleResolver(from, to)

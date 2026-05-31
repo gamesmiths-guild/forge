@@ -92,10 +92,10 @@ For typed activation data:
 
 ```csharp
 graph.VariableDefinitions.DefineProperty("Distance",
-    new ActivationDataResolver(typeof(DashData), nameof(DashData.Distance)));
+    new AbilityActivationDataResolver(typeof(DashData), nameof(DashData.Distance)));
 
 graph.VariableDefinitions.DefineProperty("Speed",
-    new ActivationDataResolver(typeof(DashData), nameof(DashData.Speed)));
+    new AbilityActivationDataResolver(typeof(DashData), nameof(DashData.Speed)));
 
 var behavior = new GraphAbilityBehavior<DashData>(graph);
 ```

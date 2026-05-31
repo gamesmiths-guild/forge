@@ -65,7 +65,7 @@ If you're using `GraphAbilityBehavior` through the standard Abilities system, th
 
 For abilities that receive strongly-typed activation data, use `GraphAbilityBehavior<TData>`.
 
-When your graph only needs to read supported scalar or math types directly from the activation payload, bind them through `ActivationDataResolver`:
+When your graph only needs to read supported scalar or math types directly from the activation payload, bind them through `AbilityActivationDataResolver`:
 
 ```csharp
 public record struct DashData(float Distance, float Speed);
@@ -73,10 +73,10 @@ public record struct DashData(float Distance, float Speed);
 var graph = new Graph();
 
 graph.VariableDefinitions.DefineProperty("distance",
-    new ActivationDataResolver(typeof(DashData), nameof(DashData.Distance)));
+    new AbilityActivationDataResolver(typeof(DashData), nameof(DashData.Distance)));
 
 graph.VariableDefinitions.DefineProperty("speed",
-    new ActivationDataResolver(typeof(DashData), nameof(DashData.Speed)));
+    new AbilityActivationDataResolver(typeof(DashData), nameof(DashData.Speed)));
 
 // ... build graph nodes ...
 
@@ -142,7 +142,7 @@ Several built-in [property resolvers](variables.md#built-in-resolvers) read from
 
 - **`AttributeResolver`**: Reads an attribute from the owner entity.
 - **`TagQueryResolver`**: Evaluates a tag query against the owner entity's tags.
-- **`MagnitudeResolver`**: Reads the activation magnitude.
+- **`AbilityMagnitudeResolver`**: Reads the activation magnitude.
 
 These resolvers gracefully return default values when the graph runs without an ability context (e.g., standalone graph execution).
 
