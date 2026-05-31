@@ -15,6 +15,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 | [ArrayVariableResolver](array-variable-resolver.md) | *(configured array)* | Reads an array variable from graph or shared scope. |
 | [AttributeResolver](attribute-resolver.md) | `int` | Reads a selected value from an entity attribute. |
 | [MagnitudeResolver](magnitude-resolver.md) | `float` | Reads the magnitude from the ability activation context. |
+| [AbilityLevelResolver](ability-level-resolver.md) | `int` | Reads the current ability level from the activation context. |
 | [TagQueryResolver](tag-query-resolver.md) | `bool` | Evaluates a tag query against a selected entity's tags. |
 | [VariableResolver](variable-resolver.md) | *(configured)* | Reads a graph or shared variable by name. |
 | [VariantResolver](variant-resolver.md) | *(configured)* | Holds a fixed constant value. |
