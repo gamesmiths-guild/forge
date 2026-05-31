@@ -39,14 +39,10 @@ Reads a value from an input property and writes it to an existing graph or share
 2. It inspects the bound target variable to determine its storage kind: `Variant128`, `Variant128[]`, object-backed value, or object-backed array.
 3. That target binding is cached for the current graph execution and reused on later `Execute` calls while the node writes to the same variable bag.
 4. The source input is resolved using the API that matches the target kind.
-5. If the source cannot be resolved, the node does nothing (the target variable is not modified).
+5. If the source cannot be resolved, the node does nothing and leaves the target variable unchanged.
 6. The resolved value is written to the bound output variable, preserving the target variable's declared kind.
-7. The output port emits a message.
-
-## Notes
-
-- The target variable must already exist in the selected scope. `SetVariableNode` does not create missing target variables.
-- The declared target variable kind controls how the source is read and written. This lets the same node work with value variables, arrays, object-backed variables, and object-backed arrays.
+7. The target variable must already exist in the selected scope; `SetVariableNode` does not create missing variables.
+8. The output port emits a message.
 
 ## Usage
 

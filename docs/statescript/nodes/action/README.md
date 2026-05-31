@@ -53,4 +53,5 @@ public class ApplyEffectActionNode : ActionNode
 
 | Node | Description |
 |------|-------------|
+| [ApplyEffectNode](apply-effect-node.md) | Applies one or more effects to one or more targets. |
 | [SetVariableNode](set-variable-node.md) | Copies a value from an input property to a graph or shared variable. |
