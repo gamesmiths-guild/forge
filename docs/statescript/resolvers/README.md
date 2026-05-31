@@ -21,6 +21,17 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 
 ---
 
+## Effect Resolvers
+
+These resolvers provide effect definitions to nodes such as `ApplyEffectNode` and `EffectNode`.
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [EffectDataResolver](effect-data-resolver.md) | `EffectData` | Returns a single fixed `EffectData` value. |
+| [EffectDataArrayResolver](effect-data-array-resolver.md) | `EffectData[]` | Returns a fixed array of `EffectData` values. |
+
+---
+
 ## Entity Resolvers
 
 Entity resolvers are typed object-backed resolvers used by APIs such as `AttributeResolver` and `TagQueryResolver`. They do
