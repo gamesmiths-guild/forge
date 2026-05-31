@@ -219,15 +219,15 @@ public class SetVariableNodeTests
 
 	[Fact]
 	[Trait("Graph", "SetVariable")]
-	public void Set_variable_node_copies_reference_values_from_source_to_target()
+	public void Set_variable_node_copies_object_values_from_source_to_target()
 	{
 		TestEntity entity = CreateTestEntity();
 		var graph = new Graph();
-		graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("source", entity);
-		graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("target");
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("source", entity);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target");
 
 		SetVariableNode setNode = CreateSetVariableNode("source", "target");
-		var readNode = new ReadReferencePropertyNode<IForgeEntity>();
+		var readNode = new ReadObjectPropertyNode<IForgeEntity>();
 		readNode.BindInput(0, "target");
 
 		graph.AddNode(setNode);
@@ -248,16 +248,16 @@ public class SetVariableNodeTests
 
 	[Fact]
 	[Trait("Graph", "SetVariable")]
-	public void Set_variable_node_copies_reference_arrays_from_source_to_target()
+	public void Set_variable_node_copies_object_arrays_from_source_to_target()
 	{
 		TestEntity entity1 = CreateTestEntity();
 		TestEntity entity2 = CreateTestEntity();
 		var graph = new Graph();
-		graph.VariableDefinitions.DefineReferenceArrayVariable<IForgeEntity>("source", entity1, entity2);
-		graph.VariableDefinitions.DefineReferenceArrayVariable<IForgeEntity>("target");
+		graph.VariableDefinitions.DefineObjectArrayVariable<IForgeEntity>("source", entity1, entity2);
+		graph.VariableDefinitions.DefineObjectArrayVariable<IForgeEntity>("target");
 
 		SetVariableNode setNode = CreateSetVariableNode("source", "target");
-		var readNode = new ReadReferenceArrayPropertyNode<IForgeEntity>();
+		var readNode = new ReadObjectArrayPropertyNode<IForgeEntity>();
 		readNode.BindInput(0, "target");
 
 		graph.AddNode(setNode);
@@ -278,11 +278,11 @@ public class SetVariableNodeTests
 
 	[Fact]
 	[Trait("Graph", "SetVariable")]
-	public void Set_variable_node_writes_reference_values_to_shared_variables()
+	public void Set_variable_node_writes_object_values_to_shared_variables()
 	{
 		TestEntity entity = CreateTestEntity();
 		var graph = new Graph();
-		graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("source", entity);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("source", entity);
 
 		SetVariableNode setNode = CreateSetVariableNode("source", "sharedTarget", VariableScope.Shared);
 
@@ -292,12 +292,12 @@ public class SetVariableNodeTests
 			setNode.InputPorts[ActionNode.InputPort]));
 
 		var sharedVariables = new Variables();
-		sharedVariables.DefineReferenceVariable<IForgeEntity>("sharedTarget");
+		sharedVariables.DefineObjectVariable<IForgeEntity>("sharedTarget");
 
 		var processor = new GraphProcessor(graph, sharedVariables);
 		processor.StartGraph();
 
-		sharedVariables.TryGetReference("sharedTarget", out IForgeEntity? result).Should().BeTrue();
+		sharedVariables.TryGetObject("sharedTarget", out IForgeEntity? result).Should().BeTrue();
 		result.Should().BeSameAs(entity);
 	}
 
@@ -308,7 +308,7 @@ public class SetVariableNodeTests
 		TestEntity entity1 = CreateTestEntity();
 		TestEntity entity2 = CreateTestEntity();
 		var graph = new Graph();
-		graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("source");
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("source");
 
 		SetVariableNode setNode = CreateSetVariableNode("source", "sharedTarget", VariableScope.Shared);
 		graph.AddNode(setNode);
@@ -317,23 +317,23 @@ public class SetVariableNodeTests
 			setNode.InputPorts[ActionNode.InputPort]));
 
 		var sharedVariables1 = new Variables();
-		sharedVariables1.DefineReferenceVariable<IForgeEntity>("sharedTarget");
+		sharedVariables1.DefineObjectVariable<IForgeEntity>("sharedTarget");
 
 		var processor = new GraphProcessor(graph, sharedVariables1);
-		processor.StartGraph(variables => variables.SetReference("source", entity1));
+		processor.StartGraph(variables => variables.SetObject("source", entity1));
 
-		sharedVariables1.TryGetReference("sharedTarget", out IForgeEntity? firstResult).Should().BeTrue();
+		sharedVariables1.TryGetObject("sharedTarget", out IForgeEntity? firstResult).Should().BeTrue();
 		firstResult.Should().BeSameAs(entity1);
 
 		var sharedVariables2 = new Variables();
-		sharedVariables2.DefineReferenceVariable<IForgeEntity>("sharedTarget");
+		sharedVariables2.DefineObjectVariable<IForgeEntity>("sharedTarget");
 		processor.GraphContext.SharedVariables = sharedVariables2;
 
-		processor.StartGraph(variables => variables.SetReference("source", entity2));
+		processor.StartGraph(variables => variables.SetObject("source", entity2));
 
-		sharedVariables2.TryGetReference("sharedTarget", out IForgeEntity? secondResult).Should().BeTrue();
+		sharedVariables2.TryGetObject("sharedTarget", out IForgeEntity? secondResult).Should().BeTrue();
 		secondResult.Should().BeSameAs(entity2);
-		sharedVariables1.TryGetReference("sharedTarget", out IForgeEntity? firstRunValue).Should().BeTrue();
+		sharedVariables1.TryGetObject("sharedTarget", out IForgeEntity? firstRunValue).Should().BeTrue();
 		firstRunValue.Should().BeSameAs(entity1);
 	}
 

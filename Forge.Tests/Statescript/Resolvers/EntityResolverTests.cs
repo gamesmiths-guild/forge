@@ -44,7 +44,7 @@ public class EntityResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IClass
 	{
 		var owner = new TestEntity(_tagsManager, _cuesManager);
 		var target = new TestEntity(_tagsManager, _cuesManager);
-		var node = new ResolveReferenceResolverNode<IForgeEntity>(new TargetEntityResolver());
+		var node = new ResolveObjectResolverNode<IForgeEntity>(new TargetEntityResolver());
 
 		ExecuteAbilityGraph(owner, node, target, source: null);
 

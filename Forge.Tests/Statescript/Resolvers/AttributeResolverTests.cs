@@ -70,7 +70,7 @@ public class AttributeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 			new EntityVariableResolver("selectedEntity"));
 
 		ApplyFlatModifier(selectedEntity, "TestAttributeSet.Attribute5", 10);
-		context.GraphVariables.DefineReferenceVariable<IForgeEntity>("selectedEntity", selectedEntity);
+		context.GraphVariables.DefineObjectVariable<IForgeEntity>("selectedEntity", selectedEntity);
 
 		Variant128 result = resolver.Resolve(context);
 

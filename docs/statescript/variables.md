@@ -88,7 +88,7 @@ setSharedVar.BindInput(SetVariableNode.SourceInput, "localValue");
 setSharedVar.BindOutput(SetVariableNode.TargetOutput, "comboCounter", VariableScope.Shared);
 ```
 
-`SetVariableNode` writes to the already-defined target variable kind in the selected scope. The same node can therefore target plain value variables, arrays, reference variables, and reference arrays as long as the bound output name already exists in that scope.
+`SetVariableNode` writes to the already-defined target variable kind in the selected scope. The same node can therefore target plain value variables, arrays, object-backed variables, and object-backed arrays as long as the bound output name already exists in that scope.
 
 ### Shared vs. Graph Variables
 

@@ -23,7 +23,7 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 
 ## Entity Resolvers
 
-Entity resolvers are typed reference resolvers used by APIs such as `AttributeResolver` and `TagQueryResolver`. They do
+Entity resolvers are typed object-backed resolvers used by APIs such as `AttributeResolver` and `TagQueryResolver`. They do
 not produce `Variant128` values directly, so they are configured as nested inputs to other resolvers rather than as
 regular node-bindable properties.
 
@@ -31,7 +31,7 @@ regular node-bindable properties.
 |----------|-------------|-------------|
 | [EntityArrayResolver](entity-array-resolver.md) | `IForgeEntity?[]` | Builds an entity reference array by evaluating nested entity resolvers. |
 | [EntityArrayVariableResolver](entity-array-variable-resolver.md) | `IForgeEntity?[]` | Reads an entity reference array from graph or shared scope. |
-| [EntityVariableResolver](entity-variable-resolver.md) | `IForgeEntity?` | Reads an entity reference from graph or shared reference variables. |
+| [EntityVariableResolver](entity-variable-resolver.md) | `IForgeEntity?` | Reads an entity reference from graph or shared object-backed variables. |
 | [OwnerEntityResolver](owner-entity-resolver.md) | `IForgeEntity?` | Resolves the owner entity from the current ability activation. |
 | [SourceEntityResolver](source-entity-resolver.md) | `IForgeEntity?` | Resolves the source entity that granted the current ability. |
 | [TargetEntityResolver](target-entity-resolver.md) | `IForgeEntity?` | Resolves the current ability target. |

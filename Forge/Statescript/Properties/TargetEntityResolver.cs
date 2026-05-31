@@ -8,7 +8,7 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// <summary>
 /// Resolves the target entity from the current <see cref="AbilityBehaviorContext"/>.
 /// </summary>
-public class TargetEntityResolver : ReferenceResolver<IForgeEntity>, IEntityResolver
+public class TargetEntityResolver : ObjectResolver<IForgeEntity>, IEntityResolver
 {
 	/// <inheritdoc/>
 	public override IForgeEntity? Resolve(GraphContext graphContext)

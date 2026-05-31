@@ -59,7 +59,7 @@ graph.VariableDefinitions.DefineProperty("hasTemporaryStun",
 ## Dynamic Entity Example
 
 ```csharp
-graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("selectedEntity");
+graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("selectedEntity");
 
 graph.VariableDefinitions.DefineProperty("selectedEntityIsBoss",
     new TagQueryResolver(

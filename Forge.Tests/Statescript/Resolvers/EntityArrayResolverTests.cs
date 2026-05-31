@@ -24,7 +24,7 @@ public class EntityArrayResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 		var owner = new TestEntity(_tagsManager, _cuesManager);
 		var target = new TestEntity(_tagsManager, _cuesManager);
 		var source = new TestEntity(_tagsManager, _cuesManager);
-		var node = new ResolveReferenceArrayResolverNode<IForgeEntity>(new EntityArrayResolver(
+		var node = new ResolveObjectArrayResolverNode<IForgeEntity>(new EntityArrayResolver(
 			new OwnerEntityResolver(),
 			new TargetEntityResolver(),
 			new SourceEntityResolver()));
@@ -88,7 +88,7 @@ public class EntityArrayResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 	{
 		var graph = new Graph();
 
-		graph.VariableDefinitions.DefineReferenceArrayProperty(
+		graph.VariableDefinitions.DefineObjectArrayProperty(
 			"entities",
 			new EntityArrayResolver(new OwnerEntityResolver()));
 

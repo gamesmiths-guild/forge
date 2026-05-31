@@ -45,6 +45,26 @@ internal static class NodeBindings
 		node.BindOutput(SetVariableNode.TargetOutput, targetVariableName, scope);
 		return node;
 	}
+
+	public static ApplyEffectNode CreateApplyEffectNode(
+		StringKey effectPropertyName,
+		StringKey entityPropertyName)
+	{
+		var node = new ApplyEffectNode();
+		node.BindInput(ApplyEffectNode.EffectInput, effectPropertyName);
+		node.BindInput(ApplyEffectNode.EntityInput, entityPropertyName);
+		return node;
+	}
+
+	public static EffectNode CreateEffectNode(
+		StringKey effectPropertyName,
+		StringKey entityPropertyName)
+	{
+		var node = new EffectNode();
+		node.BindInput(EffectNode.EffectInput, effectPropertyName);
+		node.BindInput(EffectNode.EntityInput, entityPropertyName);
+		return node;
+	}
 }
 
 /// <summary>
@@ -94,7 +114,10 @@ internal static class ResolverTestContextFactory
 		return captureNode.CapturedGraphContext;
 	}
 
-	public static GraphContext CreateAbilityGraphContext<TData>(TestEntity entity, TData activationData, float magnitude = 0f)
+	public static GraphContext CreateAbilityGraphContext<TData>(
+		TestEntity entity,
+		TData activationData,
+		float magnitude = 0f)
 	{
 		var graph = new Graph();
 		var captureNode = new CaptureGraphContextNode();
@@ -357,8 +380,7 @@ internal sealed class ReadArrayPropertyNode : ActionNode
 	}
 }
 
-internal sealed class ReadReferencePropertyNode<T> : ActionNode
-	where T : class
+internal sealed class ReadObjectPropertyNode<T> : ActionNode
 {
 	public T? LastReadValue { get; private set; }
 
@@ -369,15 +391,14 @@ internal sealed class ReadReferencePropertyNode<T> : ActionNode
 
 	protected override void Execute(GraphContext graphContext)
 	{
-		graphContext.TryResolveReference(InputProperties[0].BoundName, out T? value);
-		LastReadValue = value;
+		graphContext.TryResolveObject(InputProperties[0].BoundName, typeof(T), out object? value);
+		LastReadValue = value is T typedValue ? typedValue : default;
 	}
 }
 
-internal sealed class ReadReferenceArrayPropertyNode<T> : ActionNode
-	where T : class
+internal sealed class ReadObjectArrayPropertyNode<T> : ActionNode
 {
-	public T?[]? LastReadArray { get; private set; }
+	public T[]? LastReadArray { get; private set; }
 
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
 	{
@@ -386,7 +407,7 @@ internal sealed class ReadReferenceArrayPropertyNode<T> : ActionNode
 
 	protected override void Execute(GraphContext graphContext)
 	{
-		graphContext.TryResolveReferenceArray(InputProperties[0].BoundName, out T?[]? values);
+		graphContext.TryResolveObjectArray(InputProperties[0].BoundName, out T[]? values);
 		LastReadArray = values;
 	}
 }
@@ -403,10 +424,9 @@ internal sealed class ResolvePropertyNode(IPropertyResolver resolver) : ActionNo
 	}
 }
 
-internal sealed class ResolveReferenceResolverNode<T>(IReferenceResolver<T> resolver) : ActionNode
-	where T : class
+internal sealed class ResolveObjectResolverNode<T>(IObjectResolver<T> resolver) : ActionNode
 {
-	private readonly IReferenceResolver<T> _resolver = resolver;
+	private readonly IObjectResolver<T> _resolver = resolver;
 
 	public T? LastResolvedValue { get; private set; }
 
@@ -416,12 +436,11 @@ internal sealed class ResolveReferenceResolverNode<T>(IReferenceResolver<T> reso
 	}
 }
 
-internal sealed class ResolveReferenceArrayResolverNode<T>(IReferenceArrayResolver<T> resolver) : ActionNode
-	where T : class
+internal sealed class ResolveObjectArrayResolverNode<T>(IObjectArrayResolver<T> resolver) : ActionNode
 {
-	private readonly IReferenceArrayResolver<T> _resolver = resolver;
+	private readonly IObjectArrayResolver<T> _resolver = resolver;
 
-	public T?[]? LastResolvedArray { get; private set; }
+	public T[]? LastResolvedArray { get; private set; }
 
 	protected override void Execute(GraphContext graphContext)
 	{

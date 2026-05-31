@@ -12,7 +12,8 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Action;
 /// <remarks>
 /// <para>The source (input) and target (output) are bound by name at graph construction time via
 /// <see cref="Node.BindInput"/> and <see cref="Node.BindOutput"/>. At runtime, the node resolves the input and writes
-/// the result to the matching target variable kind (variant, variant array, reference, or reference array).</para>
+/// the result to the matching target variable kind (variant, variant array, object-backed value, or object-backed
+/// array).</para>
 /// </remarks>
 public class SetVariableNode : ActionNode
 {
@@ -30,8 +31,8 @@ public class SetVariableNode : ActionNode
 	{
 		Variant = 0,
 		VariantArray = 1,
-		Reference = 2,
-		ReferenceArray = 3,
+		Object = 2,
+		ObjectArray = 3,
 	}
 
 	/// <inheritdoc/>
@@ -69,29 +70,29 @@ public class SetVariableNode : ActionNode
 
 				return;
 
-			case TargetValueKind.Reference:
+			case TargetValueKind.Object:
 				if (targetBinding.ValueType is not null
-					&& graphContext.TryResolveReference(
+					&& graphContext.TryResolveObject(
 						sourceName,
 						targetBinding.ValueType,
-						out object? referenceValue))
+						out object? objectValue))
 				{
-					targetBinding.Variables.SetReference(target.BoundName, referenceValue);
+					targetBinding.Variables.SetObject(target.BoundName, objectValue);
 				}
 
 				return;
 
-			case TargetValueKind.ReferenceArray:
+			case TargetValueKind.ObjectArray:
 				if (targetBinding.ValueType is not null
-					&& graphContext.TryResolveReferenceArray(
+					&& graphContext.TryResolveObjectArray(
 						sourceName,
 						targetBinding.ValueType,
-						out object?[]? referenceArray))
+						out object?[]? objectArray))
 				{
-					targetBinding.Variables.DefineReferenceArrayVariable(
+					targetBinding.Variables.DefineObjectArrayVariable(
 						target.BoundName,
 						targetBinding.ValueType,
-						referenceArray);
+						objectArray);
 				}
 
 				return;
@@ -113,9 +114,9 @@ public class SetVariableNode : ActionNode
 
 	private static TargetBinding ResolveTargetBinding(Variables variables, OutputVariable target)
 	{
-		if (variables.TryGetReferenceArrayElementType(target.BoundName, out Type? referenceArrayElementType))
+		if (variables.TryGetObjectArrayElementType(target.BoundName, out Type? objectArrayElementType))
 		{
-			return new TargetBinding(variables, TargetValueKind.ReferenceArray, referenceArrayElementType);
+			return new TargetBinding(variables, TargetValueKind.ObjectArray, objectArrayElementType);
 		}
 
 		if (variables.GetArrayLength(target.BoundName) >= 0)
@@ -123,9 +124,9 @@ public class SetVariableNode : ActionNode
 			return new TargetBinding(variables, TargetValueKind.VariantArray);
 		}
 
-		if (variables.TryGetReferenceVariableType(target.BoundName, out Type? referenceType))
+		if (variables.TryGetObjectVariableType(target.BoundName, out Type? objectType))
 		{
-			return new TargetBinding(variables, TargetValueKind.Reference, referenceType);
+			return new TargetBinding(variables, TargetValueKind.Object, objectType);
 		}
 
 		if (variables.TryGetVariant(target.BoundName, out _))

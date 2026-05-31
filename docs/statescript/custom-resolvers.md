@@ -243,7 +243,7 @@ If you do not need a custom implementation and only want to assemble an array fr
 graph.VariableDefinitions.DefineArrayProperty("constants",
     new ArrayResolver(new PiResolver(), new EResolver()));
 
-graph.VariableDefinitions.DefineReferenceArrayProperty("participants",
+graph.VariableDefinitions.DefineObjectArrayProperty("participants",
     new EntityArrayResolver(
         new OwnerEntityResolver(),
         new TargetEntityResolver(),

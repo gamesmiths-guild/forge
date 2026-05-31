@@ -24,7 +24,7 @@ new EntityArrayResolver(elementResolvers)
 ## Usage
 
 ```csharp
-graph.VariableDefinitions.DefineReferenceArrayProperty("participants",
+graph.VariableDefinitions.DefineObjectArrayProperty("participants",
     new EntityArrayResolver(
         new OwnerEntityResolver(),
         new TargetEntityResolver(),

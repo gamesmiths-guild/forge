@@ -3,19 +3,18 @@
 namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
-/// Resolves a reference array by evaluating a nested reference resolver for each element in order.
+/// Resolves an object-backed array by evaluating a nested object resolver for each element in order.
 /// </summary>
-/// <typeparam name="T">The reference element type.</typeparam>
-public class ReferenceArrayCompositeResolver<T> : ReferenceArrayResolver<T>
-	where T : class
+/// <typeparam name="T">The element type.</typeparam>
+public class ObjectArrayCompositeResolver<T> : ObjectArrayResolver<T>
 {
-	private readonly IReferenceResolver<T>[] _elementResolvers;
+	private readonly IObjectResolver<T>[] _elementResolvers;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="ReferenceArrayCompositeResolver{T}"/> class.
+	/// Initializes a new instance of the <see cref="ObjectArrayCompositeResolver{T}"/> class.
 	/// </summary>
 	/// <param name="elementResolvers">The nested resolvers that produce the array elements.</param>
-	public ReferenceArrayCompositeResolver(params IReferenceResolver<T>[] elementResolvers)
+	public ObjectArrayCompositeResolver(params IObjectResolver<T>[] elementResolvers)
 	{
 #if NET8_0_OR_GREATER
 		ArgumentNullException.ThrowIfNull(elementResolvers);
@@ -31,7 +30,7 @@ public class ReferenceArrayCompositeResolver<T> : ReferenceArrayResolver<T>
 			if (elementResolvers[i] is null)
 			{
 				throw new ArgumentException(
-					"ReferenceArrayCompositeResolver does not allow null element resolvers.",
+					"ObjectArrayCompositeResolver does not allow null element resolvers.",
 					nameof(elementResolvers));
 			}
 		}
@@ -40,13 +39,13 @@ public class ReferenceArrayCompositeResolver<T> : ReferenceArrayResolver<T>
 	}
 
 	/// <inheritdoc/>
-	public override T?[] ResolveArray(GraphContext graphContext)
+	public override T[] ResolveArray(GraphContext graphContext)
 	{
-		var values = new T?[_elementResolvers.Length];
+		var values = new T[_elementResolvers.Length];
 
 		for (int i = 0; i < _elementResolvers.Length; i++)
 		{
-			values[i] = _elementResolvers[i].Resolve(graphContext);
+			values[i] = _elementResolvers[i].Resolve(graphContext)!;
 		}
 
 		return values;

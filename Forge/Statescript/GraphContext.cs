@@ -183,59 +183,58 @@ public sealed class GraphContext
 	}
 
 	/// <summary>
-	/// Resolves a named reference value by first checking reference variables and then falling back to read-only
-	/// reference property definitions on the graph.
+	/// Resolves a named object-backed value by first checking object-backed variables and then falling back to
+	/// read-only object-backed property definitions on the graph.
 	/// </summary>
-	/// <typeparam name="T">The reference type to interpret the value as.</typeparam>
+	/// <typeparam name="T">The type to interpret the value as.</typeparam>
 	/// <param name="name">The name of the variable or property.</param>
 	/// <param name="value">The resolved value if found.</param>
 	/// <returns><see langword="true"/> if the name was resolved and type-compatible; <see langword="false"/> otherwise.
 	/// </returns>
-	public bool TryResolveReference<T>(StringKey name, out T? value)
-		where T : class
+	public bool TryResolveObject<T>(StringKey name, [MaybeNullWhen(false)] out T value)
 	{
-		if (GraphVariables.TryGetReference(name, out value))
+		if (GraphVariables.TryGetObject(name, out value))
 		{
 			return true;
 		}
 
 		if (Processor is null)
 		{
-			value = null;
+			value = default!;
 			return false;
 		}
 
-		foreach (ReferencePropertyDefinition definition in Processor.Graph.VariableDefinitions.ReferencePropertyDefinitions)
+		foreach (ObjectPropertyDefinition definition in Processor.Graph.VariableDefinitions.ObjectPropertyDefinitions)
 		{
 			if (definition.Name == name)
 			{
 				if (!typeof(T).IsAssignableFrom(definition.Resolver.ValueType))
 				{
-					value = null;
+					value = default!;
 					return false;
 				}
 
-				value = (T?)definition.Resolver.Resolve(this);
+				value = (T)definition.Resolver.Resolve(this)!;
 				return true;
 			}
 		}
 
-		value = null;
+		value = default!;
 		return false;
 	}
 
 	/// <summary>
-	/// Resolves a named reference value using a runtime type by first checking reference variables and then falling back
-	/// to read-only reference property definitions on the graph.
+	/// Resolves a named object-backed value using a runtime type by first checking object-backed variables and then
+	/// falling back to read-only object-backed property definitions on the graph.
 	/// </summary>
 	/// <param name="name">The name of the variable or property.</param>
-	/// <param name="expectedType">The expected reference type.</param>
+	/// <param name="expectedType">The expected object-backed type.</param>
 	/// <param name="value">The resolved value if found.</param>
 	/// <returns><see langword="true"/> if the name was resolved and type-compatible; <see langword="false"/> otherwise.
 	/// </returns>
-	public bool TryResolveReference(StringKey name, Type expectedType, out object? value)
+	public bool TryResolveObject(StringKey name, Type expectedType, out object? value)
 	{
-		if (GraphVariables.TryGetReference(name, expectedType, out value))
+		if (GraphVariables.TryGetObject(name, expectedType, out value))
 		{
 			return true;
 		}
@@ -246,7 +245,7 @@ public sealed class GraphContext
 			return false;
 		}
 
-		foreach (ReferencePropertyDefinition definition in Processor.Graph.VariableDefinitions.ReferencePropertyDefinitions)
+		foreach (ObjectPropertyDefinition definition in Processor.Graph.VariableDefinitions.ObjectPropertyDefinitions)
 		{
 			if (definition.Name == name)
 			{
@@ -266,26 +265,25 @@ public sealed class GraphContext
 	}
 
 	/// <summary>
-	/// Resolves a named reference array by first checking reference array variables and then falling back to read-only
-	/// reference array property definitions on the graph.
+	/// Resolves a named object-backed array by first checking object-backed array variables and then falling back to
+	/// read-only object-backed array property definitions on the graph.
 	/// </summary>
 	/// <typeparam name="T">The element type to interpret the array as.</typeparam>
 	/// <param name="name">The name of the array variable or property.</param>
 	/// <param name="values">The resolved array if found.</param>
 	/// <returns><see langword="true"/> if the name was resolved and type-compatible; <see langword="false"/> otherwise.
 	/// </returns>
-	public bool TryResolveReferenceArray<T>(StringKey name, out T?[]? values)
-		where T : class
+	public bool TryResolveObjectArray<T>(StringKey name, [NotNullWhen(true)] out T[]? values)
 	{
-		if (GraphVariables.TryGetReferenceArray(name, out values))
+		if (GraphVariables.TryGetObjectArray(name, out values))
 		{
 			return true;
 		}
 
 		if (Processor is not null)
 		{
-			foreach (ReferenceArrayPropertyDefinition definition in
-				Processor.Graph.VariableDefinitions.ReferenceArrayPropertyDefinitions)
+			foreach (ObjectArrayPropertyDefinition definition in
+				Processor.Graph.VariableDefinitions.ObjectArrayPropertyDefinitions)
 			{
 				if (definition.Name == name)
 				{
@@ -296,10 +294,10 @@ public sealed class GraphContext
 					}
 
 					object?[] resolved = definition.Resolver.ResolveArray(this);
-					values = new T?[resolved.Length];
+					values = new T[resolved.Length];
 					for (int i = 0; i < resolved.Length; i++)
 					{
-						values[i] = (T?)resolved[i];
+						values[i] = (T)resolved[i]!;
 					}
 
 					return true;
@@ -312,28 +310,28 @@ public sealed class GraphContext
 	}
 
 	/// <summary>
-	/// Resolves a named reference array using a runtime element type by first checking reference array variables and then
-	/// falling back to read-only reference array property definitions on the graph.
+	/// Resolves a named object-backed array using a runtime element type by first checking object-backed array
+	/// variables and then falling back to read-only object-backed array property definitions on the graph.
 	/// </summary>
 	/// <param name="name">The name of the array variable or property.</param>
 	/// <param name="expectedElementType">The expected element type.</param>
 	/// <param name="values">The resolved array if found.</param>
 	/// <returns><see langword="true"/> if the name was resolved and type-compatible; <see langword="false"/> otherwise.
 	/// </returns>
-	public bool TryResolveReferenceArray(
+	public bool TryResolveObjectArray(
 		StringKey name,
 		Type expectedElementType,
 		[NotNullWhen(true)] out object?[]? values)
 	{
-		if (GraphVariables.TryGetReferenceArray(name, expectedElementType, out values))
+		if (GraphVariables.TryGetObjectArray(name, expectedElementType, out values))
 		{
 			return true;
 		}
 
 		if (Processor is not null)
 		{
-			foreach (ReferenceArrayPropertyDefinition definition in
-				Processor.Graph.VariableDefinitions.ReferenceArrayPropertyDefinitions)
+			foreach (ObjectArrayPropertyDefinition definition in
+				Processor.Graph.VariableDefinitions.ObjectArrayPropertyDefinitions)
 			{
 				if (definition.Name == name)
 				{

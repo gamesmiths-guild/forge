@@ -10,6 +10,6 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// <param name="variableName">The name of the array variable to read.</param>
 /// <param name="scope">Which variable bag to read from.</param>
 public class EntityArrayVariableResolver(StringKey variableName, VariableScope scope = VariableScope.Graph)
-	: ReferenceArrayVariableResolver<IForgeEntity>(variableName, scope)
+	: ObjectArrayVariableResolver<IForgeEntity>(variableName, scope)
 {
 }

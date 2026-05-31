@@ -58,7 +58,7 @@ graph.VariableDefinitions.DefineProperty("healthOverflow",
 ## Dynamic Entity Example
 
 ```csharp
-graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("selectedEntity");
+graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("selectedEntity");
 
 graph.VariableDefinitions.DefineProperty("selectedHealth",
     new AttributeResolver(
