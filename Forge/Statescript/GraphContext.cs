@@ -51,6 +51,8 @@ public sealed class GraphContext
 
 	internal bool HasStarted { get; set; }
 
+	internal int FinalizationDeferralCount { get; set; }
+
 	internal int NodeContextCount => _nodeContexts.Count;
 
 	/// <summary>

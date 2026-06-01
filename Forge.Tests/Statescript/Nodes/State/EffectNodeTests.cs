@@ -108,14 +108,20 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 			DurationType.Infinite);
 
 		GraphProcessor processor = CreateProcessor(target, effectData);
+		EffectNode node = GetEffectNode(processor);
+		int effectEndMessages = 0;
+		node.OutputPorts[EffectNode.OnEffectEndPort].OnEmitMessage += _ => effectEndMessages++;
 
 		processor.StartGraph();
 
+		processor.GraphContext.IsActive.Should().BeTrue();
 		target.EffectsManager.GetEffectInfo(effectData).Should().ContainSingle();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 
 		processor.StopGraph();
 
+		effectEndMessages.Should().Be(0);
+		processor.GraphContext.IsActive.Should().BeFalse();
 		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 	}
@@ -135,6 +141,8 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		GraphProcessor processor = CreateProcessor(target, effectData);
 
 		processor.StartGraph();
+
+		processor.GraphContext.IsActive.Should().BeFalse();
 		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
 
@@ -142,6 +150,82 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void Effect_node_deactivates_immediately_when_all_applied_effects_are_instant()
+	{
+		TestEntity target = CreateTestEntity();
+
+		EffectData firstEffect = CreateFlatEffectData(
+			"Instant A",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.Instant);
+
+		EffectData secondEffect = CreateFlatEffectData(
+			"Instant B",
+			"TestAttributeSet.Attribute2",
+			5,
+			DurationType.Instant);
+
+		GraphProcessor processor = CreateProcessor(target, firstEffect, secondEffect);
+		bool completed = false;
+		EffectNode node = GetEffectNode(processor);
+		int effectEndMessages = 0;
+		node.OutputPorts[EffectNode.OnEffectEndPort].OnEmitMessage += _ => effectEndMessages++;
+		processor.OnGraphCompleted = () => completed = true;
+
+		processor.StartGraph();
+
+		effectEndMessages.Should().Be(1);
+		completed.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeFalse();
+		target.EffectsManager.GetEffectInfo(firstEffect).Should().BeEmpty();
+		target.EffectsManager.GetEffectInfo(secondEffect).Should().BeEmpty();
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [7, 7, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void Effect_node_OnEffectEnd_can_still_resolve_property_backed_inputs_before_graph_completion()
+	{
+		TestEntity target = CreateTestEntity();
+
+		EffectData effectData = CreateFlatEffectData(
+			"Instant",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.Instant);
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectDataResolver(effectData));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", target);
+		graph.VariableDefinitions.DefineProperty(
+			"constant",
+			new VariantResolver(new Variant128(2), typeof(int)));
+
+		EffectNode node = CreateEffectNode("effect", "target");
+		var readNode = new ReadPropertyNode<int>();
+		readNode.BindInput(ReadPropertyNode<int>.ValueInput, "constant");
+
+		graph.AddNode(node);
+		graph.AddNode(readNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[EffectNode.OnEffectEndPort],
+			readNode.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		readNode.Found.Should().BeTrue();
+		readNode.LastReadValue.Should().Be(2);
+		processor.GraphContext.IsActive.Should().BeFalse();
 	}
 
 	[Fact]
@@ -168,6 +252,135 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 		processor.StopGraph();
 
+		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void Effect_node_deactivates_when_the_last_active_effect_expires()
+	{
+		TestEntity target = CreateTestEntity();
+		EffectData effectData = CreateFlatEffectData(
+			"Timed",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.HasDuration,
+			duration: 1.0f);
+		GraphProcessor processor = CreateProcessor(target, effectData);
+		bool completed = false;
+		EffectNode node = GetEffectNode(processor);
+		int effectEndMessages = 0;
+		node.OutputPorts[EffectNode.OnEffectEndPort].OnEmitMessage += _ => effectEndMessages++;
+		processor.OnGraphCompleted = () => completed = true;
+
+		processor.StartGraph();
+
+		processor.GraphContext.IsActive.Should().BeTrue();
+		target.EffectsManager.GetEffectInfo(effectData).Should().ContainSingle();
+
+		target.EffectsManager.UpdateEffects(1.0);
+		processor.UpdateGraph(0.0);
+
+		effectEndMessages.Should().Be(1);
+		completed.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeFalse();
+		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void Effect_node_stays_active_while_at_least_one_applied_effect_remains_active()
+	{
+		TestEntity target = CreateTestEntity();
+		EffectData timedEffect = CreateFlatEffectData(
+			"Timed",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.HasDuration,
+			duration: 1.0f);
+		EffectData infiniteEffect = CreateFlatEffectData(
+			"Infinite",
+			"TestAttributeSet.Attribute2",
+			5,
+			DurationType.Infinite);
+		GraphProcessor processor = CreateProcessor(target, timedEffect, infiniteEffect);
+		bool completed = false;
+		EffectNode node = GetEffectNode(processor);
+		int effectEndMessages = 0;
+		node.OutputPorts[EffectNode.OnEffectEndPort].OnEmitMessage += _ => effectEndMessages++;
+		processor.OnGraphCompleted = () => completed = true;
+
+		processor.StartGraph();
+
+		processor.GraphContext.IsActive.Should().BeTrue();
+		target.EffectsManager.GetEffectInfo(timedEffect).Should().ContainSingle();
+		target.EffectsManager.GetEffectInfo(infiniteEffect).Should().ContainSingle();
+
+		target.EffectsManager.UpdateEffects(1.0);
+		processor.UpdateGraph(0.0);
+
+		effectEndMessages.Should().Be(0);
+		completed.Should().BeFalse();
+		processor.GraphContext.IsActive.Should().BeTrue();
+		target.EffectsManager.GetEffectInfo(timedEffect).Should().BeEmpty();
+		target.EffectsManager.GetEffectInfo(infiniteEffect).Should().ContainSingle();
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [7, 2, 5, 0]);
+
+		target.EffectsManager.RemoveEffectData(infiniteEffect);
+		processor.UpdateGraph(0.0);
+
+		effectEndMessages.Should().Be(1);
+		completed.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeFalse();
+		target.EffectsManager.GetEffectInfo(infiniteEffect).Should().BeEmpty();
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void Effect_node_does_not_emit_OnComplete_when_deactivated_by_parent_subgraph()
+	{
+		TestEntity target = CreateTestEntity();
+		EffectData effectData = CreateFlatEffectData(
+			"Infinite",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.Infinite);
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 0.5d);
+		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectDataResolver(effectData));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
+
+		TimerNode timer = CreateTimerNode("duration");
+		EffectNode effectNode = CreateEffectNode("effect", "entity");
+		graph.AddNode(timer);
+		graph.AddNode(effectNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[StateNode<TimerNodeContext>.SubgraphPort],
+			effectNode.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		bool completed = false;
+		int effectEndMessages = 0;
+		effectNode.OutputPorts[EffectNode.OnEffectEndPort].OnEmitMessage += _ => effectEndMessages++;
+		processor.OnGraphCompleted = () => completed = true;
+
+		processor.StartGraph();
+
+		processor.GraphContext.IsActive.Should().BeTrue();
+		target.EffectsManager.GetEffectInfo(effectData).Should().ContainSingle();
+
+		processor.UpdateGraph(0.5);
+
+		effectEndMessages.Should().Be(0);
+		completed.Should().BeTrue();
+		processor.GraphContext.IsActive.Should().BeFalse();
 		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 	}
@@ -290,10 +503,21 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 			shouldHaveSecondEffect ? [7, 2, 5, 0] : [2, 2, 0, 0]);
 	}
 
-	private static GraphProcessor CreateProcessor(TestEntity target, EffectData effectData)
+	private static GraphProcessor CreateProcessor(TestEntity target, params EffectData[] effectData)
 	{
 		var graph = new Graph();
-		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectDataResolver(effectData));
+
+		if (effectData.Length == 1)
+		{
+			graph.VariableDefinitions.DefineObjectProperty("effect", new EffectDataResolver(effectData[0]));
+		}
+		else
+		{
+			graph.VariableDefinitions.DefineObjectArrayProperty(
+				"effect",
+				new EffectDataArrayResolver(effectData));
+		}
+
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
 
 		EffectNode node = CreateEffectNode("effect", "entity");
@@ -303,6 +527,11 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 			node.InputPorts[ActionNode.InputPort]));
 
 		return new GraphProcessor(graph);
+	}
+
+	private static EffectNode GetEffectNode(GraphProcessor processor)
+	{
+		return (EffectNode)processor.Graph.Nodes.Single(node => node is EffectNode);
 	}
 
 	private static EffectData CreateFlatEffectData(

@@ -59,6 +59,19 @@ internal static class EffectApplicationUtilities
 		activeHandles.Clear();
 	}
 
+	public static bool RetainActiveEffects(IList<ActiveEffectHandle> activeHandles)
+	{
+		for (int i = activeHandles.Count - 1; i >= 0; i--)
+		{
+			if (!activeHandles[i].IsValid)
+			{
+				activeHandles.RemoveAt(i);
+			}
+		}
+
+		return activeHandles.Count > 0;
+	}
+
 	private static bool TryResolveEffects(
 		GraphContext graphContext,
 		StringKey effectInputName,

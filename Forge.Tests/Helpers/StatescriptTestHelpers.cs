@@ -346,6 +346,29 @@ internal sealed class ReadVariableNode<T>(string variableName) : ActionNode
 	}
 }
 
+internal sealed class ReadPropertyNode<T> : ActionNode
+	where T : unmanaged
+{
+#pragma warning disable RCS1158 // Static member in generic type should use a type parameter
+	public const byte ValueInput = 0;
+#pragma warning restore RCS1158 // Static member in generic type should use a type parameter
+
+	public bool Found { get; private set; }
+
+	public T LastReadValue { get; private set; }
+
+	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
+	{
+		inputProperties.Add(new InputProperty("Value", typeof(T)));
+	}
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		Found = graphContext.TryResolve(InputProperties[ValueInput].BoundName, out T value);
+		LastReadValue = value;
+	}
+}
+
 internal sealed class CaptureActivationContextNode : ActionNode
 {
 	public object? CapturedActivationContext { get; private set; }
