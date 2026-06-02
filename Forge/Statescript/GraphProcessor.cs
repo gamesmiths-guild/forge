@@ -59,6 +59,7 @@ public class GraphProcessor
 	{
 		GraphContext.Processor = this;
 		GraphContext.HasStarted = true;
+		GraphContext.FinalizationDeferralCount = 0;
 		GraphContext.GraphVariables.InitializeFrom(Graph.VariableDefinitions);
 		variableOverrides?.Invoke(GraphContext.GraphVariables);
 		Graph.FinalizeConnections();
@@ -109,7 +110,6 @@ public class GraphProcessor
 
 		GraphContext.Processor = null;
 		GraphContext.HasStarted = false;
-		GraphContext.FinalizationDeferralCount = 0;
 		Graph.EntryNode.StopGraph(GraphContext);
 		GraphContext.ActiveStateNodes.Clear();
 		GraphContext.InternalNodeActivationStatus.Clear();
@@ -132,7 +132,6 @@ public class GraphProcessor
 
 		GraphContext.HasStarted = false;
 		GraphContext.Processor = null;
-		GraphContext.FinalizationDeferralCount = 0;
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();
 		OnGraphCompleted?.Invoke();

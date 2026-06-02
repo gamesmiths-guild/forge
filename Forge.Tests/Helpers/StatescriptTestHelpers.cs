@@ -353,6 +353,8 @@ internal sealed class ReadPropertyNode<T> : ActionNode
 	public const byte ValueInput = 0;
 #pragma warning restore RCS1158 // Static member in generic type should use a type parameter
 
+	public int ExecutionCount { get; private set; }
+
 	public bool Found { get; private set; }
 
 	public T LastReadValue { get; private set; }
@@ -364,6 +366,7 @@ internal sealed class ReadPropertyNode<T> : ActionNode
 
 	protected override void Execute(GraphContext graphContext)
 	{
+		ExecutionCount++;
 		Found = graphContext.TryResolve(InputProperties[ValueInput].BoundName, out T value);
 		LastReadValue = value;
 	}

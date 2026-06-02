@@ -251,12 +251,7 @@ public class Variables
 				$"Cannot set '{name}': no object variable with this name exists.");
 		}
 
-		if (value is not null && !stored.ValueType.IsInstanceOfType(value))
-		{
-			throw new InvalidOperationException(
-				$"Cannot set '{name}' with value type {value.GetType()}: variable expects values assignable to " +
-				$"{stored.ValueType}.");
-		}
+		ValidateAssignedObjectValue(name, stored.ValueType, value);
 
 		_objectVariables[name] = new ObjectVariableStorage(stored.ValueType, value);
 	}
@@ -276,12 +271,7 @@ public class Variables
 				$"Cannot set '{name}': no object variable with this name exists.");
 		}
 
-		if (value is not null && !stored.ValueType.IsInstanceOfType(value))
-		{
-			throw new InvalidOperationException(
-				$"Cannot set '{name}' with value type {value.GetType()}: variable expects values assignable to " +
-				$"{stored.ValueType}.");
-		}
+		ValidateAssignedObjectValue(name, stored.ValueType, value);
 
 		_objectVariables[name] = new ObjectVariableStorage(stored.ValueType, value);
 	}
@@ -339,13 +329,7 @@ public class Variables
 
 		for (int i = 0; i < materializedValues.Count; i++)
 		{
-			object? value = materializedValues[i];
-			if (value is not null && !elementType.IsInstanceOfType(value))
-			{
-				throw new InvalidOperationException(
-					$"Cannot define '{name}' with element type {value.GetType()}: array expects values assignable to " +
-					$"{elementType}.");
-			}
+			ValidateAssignedObjectArrayElement(name, elementType, materializedValues[i], i, "define");
 		}
 
 		_objectArrays[name] = new ObjectArrayStorage(elementType, materializedValues);
@@ -540,12 +524,7 @@ public class Variables
 				$"Index {index} is out of range for array '{name}' with length {stored.Values.Count}.");
 		}
 
-		if (value is not null && !stored.ElementType.IsInstanceOfType(value))
-		{
-			throw new InvalidOperationException(
-				$"Cannot set '{name}' with element type {value.GetType()}: array expects values assignable to " +
-				$"{stored.ElementType}.");
-		}
+		ValidateAssignedObjectArrayElement(name, stored.ElementType, value, index, "set");
 
 		stored.Values[index] = value;
 	}
@@ -633,6 +612,59 @@ public class Variables
 			Quaternion quaternion => new Variant128(quaternion),
 			_ => throw new ArgumentException($"{typeof(T)} is not supported by Variant128"),
 		};
+	}
+
+	private static void ValidateAssignedObjectValue(StringKey name, Type expectedType, object? value)
+	{
+		if (value is null)
+		{
+			if (IsNonNullableValueType(expectedType))
+			{
+				throw new InvalidOperationException(
+					$"Cannot set '{name}' to null: variable expects non-null values assignable to {expectedType}.");
+			}
+
+			return;
+		}
+
+		if (!expectedType.IsInstanceOfType(value))
+		{
+			throw new InvalidOperationException(
+				$"Cannot set '{name}' with value type {value.GetType()}: variable expects values assignable to " +
+				$"{expectedType}.");
+		}
+	}
+
+	private static void ValidateAssignedObjectArrayElement(
+		StringKey name,
+		Type elementType,
+		object? value,
+		int index,
+		string operation)
+	{
+		if (value is null)
+		{
+			if (IsNonNullableValueType(elementType))
+			{
+				throw new InvalidOperationException(
+					$"Cannot {operation} '{name}' with a null element at index {index}: array expects non-null values " +
+					$"assignable to {elementType}.");
+			}
+
+			return;
+		}
+
+		if (!elementType.IsInstanceOfType(value))
+		{
+			throw new InvalidOperationException(
+				$"Cannot {operation} '{name}' with element type {value.GetType()}: array expects values assignable to " +
+				$"{elementType}.");
+		}
+	}
+
+	private static bool IsNonNullableValueType(Type type)
+	{
+		return type.IsValueType && Nullable.GetUnderlyingType(type) is null;
 	}
 
 	private readonly record struct ObjectVariableStorage(Type ValueType, object? Value);

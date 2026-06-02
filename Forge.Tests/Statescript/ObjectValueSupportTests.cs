@@ -3,6 +3,7 @@
 using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Properties;
@@ -83,5 +84,59 @@ public class ObjectValueSupportTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 		graph.VariableDefinitions.ValidatePropertyType("owner", typeof(IForgeEntity)).Should().BeTrue();
 		graph.VariableDefinitions.ValidatePropertyType("entities", typeof(IForgeEntity[])).Should().BeTrue();
 		graph.VariableDefinitions.ValidatePropertyType("owner", typeof(string)).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Statescript", "ObjectValues")]
+	public void SetObject_generic_rejects_null_for_non_nullable_struct_variables()
+	{
+		var variables = new Variables();
+		variables.DefineObjectVariable<EffectOwnership>("ownership", default);
+
+		Action act = () => variables.SetObject<EffectOwnership?>("ownership", null);
+
+		act.Should().Throw<InvalidOperationException>()
+			.WithMessage("*Cannot set 'ownership' to null*");
+	}
+
+	[Fact]
+	[Trait("Statescript", "ObjectValues")]
+	public void SetObject_runtime_overload_rejects_null_for_non_nullable_struct_variables()
+	{
+		var variables = new Variables();
+		variables.DefineObjectVariable<EffectOwnership>("ownership", default);
+
+		Action act = () => variables.SetObject("ownership", null);
+
+		act.Should().Throw<InvalidOperationException>()
+			.WithMessage("*Cannot set 'ownership' to null*");
+	}
+
+	[Fact]
+	[Trait("Statescript", "ObjectValues")]
+	public void DefineObjectArrayVariable_rejects_null_elements_for_non_nullable_struct_arrays()
+	{
+		var variables = new Variables();
+
+		Action act = () => variables.DefineObjectArrayVariable(
+			"ownerships",
+			typeof(EffectOwnership),
+			[new EffectOwnership(null, null), null]);
+
+		act.Should().Throw<InvalidOperationException>()
+			.WithMessage("*null element at index 1*");
+	}
+
+	[Fact]
+	[Trait("Statescript", "ObjectValues")]
+	public void SetObjectArrayElement_rejects_null_for_non_nullable_struct_arrays()
+	{
+		var variables = new Variables();
+		variables.DefineObjectArrayVariable("ownerships", [new EffectOwnership(null, null)]);
+
+		Action act = () => variables.SetObjectArrayElement<EffectOwnership?>("ownerships", 0, null);
+
+		act.Should().Throw<InvalidOperationException>()
+			.WithMessage("*null element at index 0*");
 	}
 }
