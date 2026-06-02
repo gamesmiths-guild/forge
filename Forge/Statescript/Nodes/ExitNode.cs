@@ -31,7 +31,7 @@ public class ExitNode : Node
 	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
-		inputPorts.Add(CreatePort<InputPort>(InputPort));
+		inputPorts.Add(CreatePort<InputPort>(InputPort, "Stop"));
 	}
 
 	/// <inheritdoc/>

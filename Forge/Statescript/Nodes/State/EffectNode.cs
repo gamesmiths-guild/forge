@@ -52,7 +52,7 @@ public class EffectNode : StateNode<EffectNodeContext>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
 		base.DefinePorts(inputPorts, outputPorts);
-		outputPorts.Add(CreatePort<EventPort>(OnEffectEndPort));
+		outputPorts.Add(CreatePort<EventPort>(OnEffectEndPort, "OnEffectEnd"));
 	}
 
 	/// <inheritdoc/>

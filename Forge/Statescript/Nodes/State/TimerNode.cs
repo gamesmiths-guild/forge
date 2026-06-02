@@ -35,7 +35,7 @@ public class TimerNode : StateNode<TimerNodeContext>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
 		base.DefinePorts(inputPorts, outputPorts);
-		outputPorts.Add(CreatePort<EventPort>(OnTimerEndPort));
+		outputPorts.Add(CreatePort<EventPort>(OnTimerEndPort, "OnTimerEnd"));
 	}
 
 	/// <inheritdoc/>
