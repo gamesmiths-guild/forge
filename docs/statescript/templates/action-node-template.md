@@ -19,6 +19,8 @@
 |-------|------|------|-------------|
 | 0 | Output | Event | Emits after execution. |
 
+> Port names should match the labels defined in code via `CreatePort<T>(index, "Label")`.
+
 ## Parameters
 
 **Input Properties:**

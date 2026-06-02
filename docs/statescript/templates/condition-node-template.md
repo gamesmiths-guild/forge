@@ -20,6 +20,8 @@
 | 0 | True | Event | Emits if the test returns `true`. |
 | 1 | False | Event | Emits if the test returns `false`. |
 
+> Port names should match the labels defined in code via `CreatePort<T>(index, "Label")`.
+
 ## Parameters
 
 **Input Properties:**

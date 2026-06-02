@@ -75,6 +75,12 @@ Carries **both** regular messages and disable-subgraph signals. Used by the Entr
 
 Receives messages from connected output ports and notifies the owning node.
 
+## Port Labels
+
+Port labels are defined by the runtime node, not by editor-specific discovery code. Built-in nodes already provide labels for their standard ports automatically.
+
+If a custom node adds extra flow ports, create them with `CreatePort<T>(index, "Label")` so editor integrations can surface the intended port name consistently without plugin-specific hard-coding.
+
 ## Graph Construction
 
 Nodes are added to a graph with `AddNode()` and wired together with `AddConnection()`:
