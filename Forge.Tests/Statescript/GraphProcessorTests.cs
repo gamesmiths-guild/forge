@@ -539,6 +539,54 @@ public class GraphProcessorTests
 
 	[Fact]
 	[Trait("Graph", "Lifecycle")]
+	public void Graph_processor_can_restart_after_OnTimerEnd_stops_graph()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+		graph.VariableDefinitions.DefineProperty(
+			"constant",
+			new VariantResolver(new Variant128(7), typeof(int)));
+
+		TimerNode timer = CreateTimerNode("duration");
+		var readNode = new ReadPropertyNode<int>();
+		readNode.BindInput(ReadPropertyNode<int>.ValueInput, "constant");
+		var exitNode = new ExitNode();
+
+		graph.AddNode(timer);
+		graph.AddNode(readNode);
+		graph.AddNode(exitNode);
+
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnTimerEndPort],
+			readNode.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnTimerEndPort],
+			exitNode.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		readNode.ExecutionCount.Should().Be(1);
+		readNode.Found.Should().BeTrue();
+		readNode.LastReadValue.Should().Be(7);
+		processor.GraphContext.IsActive.Should().BeFalse();
+
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		readNode.ExecutionCount.Should().Be(2);
+		readNode.Found.Should().BeTrue();
+		readNode.LastReadValue.Should().Be(7);
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
 	public void Action_only_graph_completes_immediately_after_start()
 	{
 		var graph = new Graph();

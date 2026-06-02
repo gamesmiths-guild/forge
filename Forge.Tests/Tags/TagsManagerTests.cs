@@ -27,7 +27,9 @@ public class TagsManagerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 
 	private readonly TagsManager _tagsManagerWithAllTestTags = fixture.TagsManager;
 
+#pragma warning disable CA1825 // Avoid zero-length array allocations
 	public static TheoryData<string[]> TagsData => [.. SharedTagSets];
+#pragma warning restore CA1825 // Avoid zero-length array allocations
 
 	public static TheoryData<string[], int> TagsWithNodeCountData =>
 		new()

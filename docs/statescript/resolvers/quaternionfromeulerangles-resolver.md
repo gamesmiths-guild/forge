@@ -5,7 +5,7 @@
 
 Creates a quaternion from Euler angles stored in a `Vector3`. The input vector stores pitch in `X`, yaw in `Y`, and roll in `Z`.
 
-## Constructors
+## Constructor
 
 ```csharp
 new QuaternionFromEulerAnglesResolver(eulerAngles)

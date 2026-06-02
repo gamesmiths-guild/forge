@@ -9,12 +9,12 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// Resolves a property value by evaluating a <see cref="TagQuery"/> against one of a resolved entity's tag containers.
 /// </summary>
 /// <remarks>
-/// <para>By default, this resolver targets the owner entity through <see cref="OwnerEntityResolver"/>.</para>
+/// <para>By default, this resolver targets the owner entity through <see cref="AbilityOwnerResolver"/>.</para>
 /// <para>If the selected entity is not available, the resolver returns <see langword="false"/>.</para>
 /// </remarks>
 public class TagQueryResolver : IPropertyResolver
 {
-	private static readonly IEntityResolver _defaultEntityResolver = new OwnerEntityResolver();
+	private static readonly IEntityResolver _defaultEntityResolver = new AbilityOwnerResolver();
 
 	private readonly IEntityResolver _entityResolver;
 	private readonly TagQuery _query;

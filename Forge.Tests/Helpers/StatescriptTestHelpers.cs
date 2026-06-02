@@ -45,6 +45,52 @@ internal static class NodeBindings
 		node.BindOutput(SetVariableNode.TargetOutput, targetVariableName, scope);
 		return node;
 	}
+
+	public static ApplyEffectNode CreateApplyEffectNode(
+		StringKey effectPropertyName,
+		StringKey targetPropertyName,
+		StringKey? levelPropertyName = null,
+		StringKey? ownershipPropertyName = null)
+	{
+		var node = new ApplyEffectNode();
+		node.BindInput(ApplyEffectNode.EffectInput, effectPropertyName);
+		node.BindInput(ApplyEffectNode.TargetInput, targetPropertyName);
+
+		if (levelPropertyName.HasValue && levelPropertyName.Value != StringKey.Empty)
+		{
+			node.BindInput(ApplyEffectNode.LevelInput, levelPropertyName.Value);
+		}
+
+		if (ownershipPropertyName.HasValue && ownershipPropertyName.Value != StringKey.Empty)
+		{
+			node.BindInput(ApplyEffectNode.OwnershipInput, ownershipPropertyName.Value);
+		}
+
+		return node;
+	}
+
+	public static EffectNode CreateEffectNode(
+		StringKey effectPropertyName,
+		StringKey targetPropertyName,
+		StringKey? levelPropertyName = null,
+		StringKey? ownershipPropertyName = null)
+	{
+		var node = new EffectNode();
+		node.BindInput(EffectNode.EffectInput, effectPropertyName);
+		node.BindInput(EffectNode.TargetInput, targetPropertyName);
+
+		if (levelPropertyName.HasValue && levelPropertyName.Value != StringKey.Empty)
+		{
+			node.BindInput(EffectNode.LevelInput, levelPropertyName.Value);
+		}
+
+		if (ownershipPropertyName.HasValue && ownershipPropertyName.Value != StringKey.Empty)
+		{
+			node.BindInput(EffectNode.OwnershipInput, ownershipPropertyName.Value);
+		}
+
+		return node;
+	}
 }
 
 /// <summary>
@@ -52,16 +98,17 @@ internal static class NodeBindings
 /// </summary>
 internal static class ResolverTestContextFactory
 {
-	public static GraphContext CreateAbilityGraphContext(TestEntity entity, float magnitude = 0f)
+	public static GraphContext CreateAbilityGraphContext(TestEntity entity, float magnitude = 0f, int level = 1)
 	{
-		return CreateAbilityGraphContext(entity, target: null, source: null, magnitude: magnitude);
+		return CreateAbilityGraphContext(entity, target: null, source: null, magnitude: magnitude, level: level);
 	}
 
 	public static GraphContext CreateAbilityGraphContext(
 		TestEntity owner,
 		TestEntity? target,
 		TestEntity? source,
-		float magnitude = 0f)
+		float magnitude = 0f,
+		int level = 1)
 	{
 		var graph = new Graph();
 		var captureNode = new CaptureGraphContextNode();
@@ -74,7 +121,7 @@ internal static class ResolverTestContextFactory
 		var behavior = new GraphAbilityBehavior(graph);
 
 		AbilityData abilityData = CreateAbilityData("ResolverTest", () => behavior);
-		AbilityHandle handle = Grant(owner, abilityData, source)
+		AbilityHandle handle = Grant(owner, abilityData, source, level)
 			?? throw new InvalidOperationException(
 				"Failed to grant the resolver test ability and create an ability graph context.");
 
@@ -94,7 +141,11 @@ internal static class ResolverTestContextFactory
 		return captureNode.CapturedGraphContext;
 	}
 
-	public static GraphContext CreateAbilityGraphContext<TData>(TestEntity entity, TData activationData, float magnitude = 0f)
+	public static GraphContext CreateAbilityGraphContext<TData>(
+		TestEntity entity,
+		TData activationData,
+		float magnitude = 0f,
+		int level = 1)
 	{
 		var graph = new Graph();
 		var captureNode = new CaptureGraphContextNode();
@@ -107,8 +158,9 @@ internal static class ResolverTestContextFactory
 		var behavior = new GraphAbilityBehavior<TData>(graph);
 
 		AbilityData abilityData = CreateAbilityData("TypedResolverTest", () => behavior);
-		AbilityHandle? handle = Grant(entity, abilityData) ?? throw new InvalidOperationException(
-			"Failed to grant the typed resolver test ability and create an ability graph context.");
+		AbilityHandle? handle = Grant(entity, abilityData, sourceEntity: null, level: level)
+			?? throw new InvalidOperationException(
+				"Failed to grant the typed resolver test ability and create an ability graph context.");
 
 		if (!handle.Activate(activationData, out _, magnitude: magnitude))
 		{
@@ -128,22 +180,16 @@ internal static class ResolverTestContextFactory
 	}
 
 	public static void ExecuteAbilityGraph(
+		Graph graph,
 		TestEntity owner,
-		ActionNode actionNode,
 		TestEntity? target = null,
 		TestEntity? source = null,
-		float magnitude = 0f)
+		float magnitude = 0f,
+		int level = 1)
 	{
-		var graph = new Graph();
-
-		graph.AddNode(actionNode);
-		graph.AddConnection(new Connection(
-			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
-			actionNode.InputPorts[ActionNode.InputPort]));
-
 		var behavior = new GraphAbilityBehavior(graph);
 		AbilityData abilityData = CreateAbilityData("ResolverExecutionTest", () => behavior);
-		AbilityHandle handle = Grant(owner, abilityData, source)
+		AbilityHandle handle = Grant(owner, abilityData, source, level)
 			?? throw new InvalidOperationException("Failed to grant the resolver execution test ability.");
 
 		if (!handle.Activate(out _, target, magnitude))
@@ -152,16 +198,33 @@ internal static class ResolverTestContextFactory
 		}
 	}
 
-	private static AbilityHandle? Grant(TestEntity target, AbilityData data)
+	public static void ExecuteAbilityGraph(
+		TestEntity owner,
+		ActionNode actionNode,
+		TestEntity? target = null,
+		TestEntity? source = null,
+		float magnitude = 0f,
+		int level = 1)
 	{
-		return Grant(target, data, sourceEntity: null);
+		var graph = new Graph();
+
+		graph.AddNode(actionNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			actionNode.InputPorts[ActionNode.InputPort]));
+
+		ExecuteAbilityGraph(graph, owner, target, source, magnitude, level);
 	}
 
-	private static AbilityHandle? Grant(TestEntity target, AbilityData data, IForgeEntity? sourceEntity)
+	private static AbilityHandle? Grant(
+		TestEntity target,
+		AbilityData data,
+		IForgeEntity? sourceEntity,
+		int level = 1)
 	{
 		var grantConfig = new GrantAbilityConfig(
 			data,
-			new ScalableInt(1),
+			new ScalableInt(level),
 			AbilityDeactivationPolicy.CancelImmediately,
 			AbilityDeactivationPolicy.CancelImmediately,
 			false,
@@ -283,6 +346,32 @@ internal sealed class ReadVariableNode<T>(string variableName) : ActionNode
 	}
 }
 
+internal sealed class ReadPropertyNode<T> : ActionNode
+	where T : unmanaged
+{
+#pragma warning disable RCS1158 // Static member in generic type should use a type parameter
+	public const byte ValueInput = 0;
+#pragma warning restore RCS1158 // Static member in generic type should use a type parameter
+
+	public int ExecutionCount { get; private set; }
+
+	public bool Found { get; private set; }
+
+	public T LastReadValue { get; private set; }
+
+	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
+	{
+		inputProperties.Add(new InputProperty("Value", typeof(T)));
+	}
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		ExecutionCount++;
+		Found = graphContext.TryResolve(InputProperties[ValueInput].BoundName, out T value);
+		LastReadValue = value;
+	}
+}
+
 internal sealed class CaptureActivationContextNode : ActionNode
 {
 	public object? CapturedActivationContext { get; private set; }
@@ -357,8 +446,7 @@ internal sealed class ReadArrayPropertyNode : ActionNode
 	}
 }
 
-internal sealed class ReadReferencePropertyNode<T> : ActionNode
-	where T : class
+internal sealed class ReadObjectPropertyNode<T> : ActionNode
 {
 	public T? LastReadValue { get; private set; }
 
@@ -369,15 +457,14 @@ internal sealed class ReadReferencePropertyNode<T> : ActionNode
 
 	protected override void Execute(GraphContext graphContext)
 	{
-		graphContext.TryResolveReference(InputProperties[0].BoundName, out T? value);
-		LastReadValue = value;
+		graphContext.TryResolveObject(InputProperties[0].BoundName, typeof(T), out object? value);
+		LastReadValue = value is T typedValue ? typedValue : default;
 	}
 }
 
-internal sealed class ReadReferenceArrayPropertyNode<T> : ActionNode
-	where T : class
+internal sealed class ReadObjectArrayPropertyNode<T> : ActionNode
 {
-	public T?[]? LastReadArray { get; private set; }
+	public T[]? LastReadArray { get; private set; }
 
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
 	{
@@ -386,7 +473,7 @@ internal sealed class ReadReferenceArrayPropertyNode<T> : ActionNode
 
 	protected override void Execute(GraphContext graphContext)
 	{
-		graphContext.TryResolveReferenceArray(InputProperties[0].BoundName, out T?[]? values);
+		graphContext.TryResolveObjectArray(InputProperties[0].BoundName, out T[]? values);
 		LastReadArray = values;
 	}
 }
@@ -403,10 +490,9 @@ internal sealed class ResolvePropertyNode(IPropertyResolver resolver) : ActionNo
 	}
 }
 
-internal sealed class ResolveReferenceResolverNode<T>(IReferenceResolver<T> resolver) : ActionNode
-	where T : class
+internal sealed class ResolveObjectResolverNode<T>(IObjectResolver<T> resolver) : ActionNode
 {
-	private readonly IReferenceResolver<T> _resolver = resolver;
+	private readonly IObjectResolver<T> _resolver = resolver;
 
 	public T? LastResolvedValue { get; private set; }
 
@@ -416,12 +502,11 @@ internal sealed class ResolveReferenceResolverNode<T>(IReferenceResolver<T> reso
 	}
 }
 
-internal sealed class ResolveReferenceArrayResolverNode<T>(IReferenceArrayResolver<T> resolver) : ActionNode
-	where T : class
+internal sealed class ResolveObjectArrayResolverNode<T>(IObjectArrayResolver<T> resolver) : ActionNode
 {
-	private readonly IReferenceArrayResolver<T> _resolver = resolver;
+	private readonly IObjectArrayResolver<T> _resolver = resolver;
 
-	public T?[]? LastResolvedArray { get; private set; }
+	public T[]? LastResolvedArray { get; private set; }
 
 	protected override void Execute(GraphContext graphContext)
 	{

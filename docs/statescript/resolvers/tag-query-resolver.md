@@ -5,7 +5,7 @@
 
 Evaluates a `TagQuery` against one of a selected entity's tag containers. This is the primary built-in resolver for tag-based conditions and supports both simple single-tag checks and more expressive nested query logic.
 
-## Constructors
+## Constructor
 
 ```csharp
 new TagQueryResolver(query)
@@ -27,7 +27,7 @@ new TagQueryResolver(tag, entityResolver, tagQuerySource)
 | query | `TagQuery` | A prebuilt tag query to evaluate. |
 | queryExpression | `TagQueryExpression` | A fluent tag-query expression that will be compiled into a `TagQuery`. |
 | tag | `Tag` | Convenience overload for the common single-tag match case. |
-| entityResolver | `IEntityResolver` | Selects which entity to inspect. Defaults to `OwnerEntityResolver`. |
+| entityResolver | `IEntityResolver` | Selects which entity to inspect. Defaults to `AbilityOwnerResolver`. |
 | tagQuerySource | `TagQuerySource` | Chooses whether to evaluate against `AllTags` (default), `BaseTags`, or `ModifierTags`. |
 
 ## Behavior
@@ -59,7 +59,7 @@ graph.VariableDefinitions.DefineProperty("hasTemporaryStun",
 ## Dynamic Entity Example
 
 ```csharp
-graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("selectedEntity");
+graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("selectedEntity");
 
 graph.VariableDefinitions.DefineProperty("selectedEntityIsBoss",
     new TagQueryResolver(
@@ -71,7 +71,7 @@ graph.VariableDefinitions.DefineProperty("selectedEntityIsBoss",
 graph.VariableDefinitions.DefineProperty("targetIsCrowdControlled",
     new TagQueryResolver(
         Tag.RequestTag(tagsManager, "status.stunned"),
-        new TargetEntityResolver(),
+        new AbilityTargetResolver(),
         TagQuerySource.ModifierTags));
 ```
 
@@ -99,6 +99,6 @@ graph.VariableDefinitions.DefineProperty("canAttackTarget",
 - [Resolvers Overview](README.md)
 - [AttributeResolver](attribute-resolver.md)
 - [EntityVariableResolver](entity-variable-resolver.md)
-- [OwnerEntityResolver](owner-entity-resolver.md)
-- [TargetEntityResolver](target-entity-resolver.md)
+- [AbilityOwnerResolver](ability-owner-resolver.md)
+- [AbilityTargetResolver](ability-target-resolver.md)
 - [ExpressionNode](../nodes/condition/expression-node.md)

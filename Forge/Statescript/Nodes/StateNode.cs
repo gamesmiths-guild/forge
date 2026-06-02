@@ -202,17 +202,33 @@ public abstract class StateNode<T> : Node
 			return;
 		}
 
-		DeactivateNode(graphContext);
+		graphContext.FinalizationDeferralCount++;
 
-		for (int i = 0; i < eventPortIds.Length; i++)
+		try
 		{
-			Validation.Assert(
-				eventPortIds[i] > OnAbortPort,
-				"DeactivateNodeAndEmitMessage should be used only with custom ports.");
-			Validation.Assert(
-				OutputPorts[eventPortIds[i]] is EventPort,
-				"Only EventPorts can be used for deactivation events.");
-			OutputPorts[eventPortIds[i]].EmitMessage(graphContext);
+			DeactivateNode(graphContext);
+
+			for (int i = 0; i < eventPortIds.Length; i++)
+			{
+				Validation.Assert(
+					eventPortIds[i] > OnAbortPort,
+					"DeactivateNodeAndEmitMessage should be used only with custom ports.");
+				Validation.Assert(
+					OutputPorts[eventPortIds[i]] is EventPort,
+					"Only EventPorts can be used for deactivation events.");
+				OutputPorts[eventPortIds[i]].EmitMessage(graphContext);
+			}
+		}
+		finally
+		{
+			graphContext.FinalizationDeferralCount--;
+		}
+
+		if (graphContext.HasStarted
+			&& graphContext.FinalizationDeferralCount == 0
+			&& graphContext.ActiveStateNodes.Count == 0)
+		{
+			graphContext.Processor?.FinalizeGraph();
 		}
 	}
 
@@ -278,7 +294,8 @@ public abstract class StateNode<T> : Node
 
 		OnDeactivate(graphContext);
 
-		if (graphContext.ActiveStateNodes.Count == 0)
+		if (graphContext.FinalizationDeferralCount == 0
+			&& graphContext.ActiveStateNodes.Count == 0)
 		{
 			graphContext.Processor?.FinalizeGraph();
 		}

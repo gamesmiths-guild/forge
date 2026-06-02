@@ -184,7 +184,7 @@ public class TagQueryResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 			TagQuerySource.ModifierTags);
 
 		ApplyModifierTags(entity, "item.equipment.weapon.axe");
-		context.GraphVariables.DefineReferenceVariable<IForgeEntity>("selectedEntity", entity);
+		context.GraphVariables.DefineObjectVariable<IForgeEntity>("selectedEntity", entity);
 
 		Variant128 result = resolver.Resolve(context);
 
@@ -200,7 +200,7 @@ public class TagQueryResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICla
 		var node = new ResolvePropertyNode(
 			new TagQueryResolver(
 				Tag.RequestTag(_tagsManager, "item.equipment.weapon.axe"),
-				new TargetEntityResolver(),
+				new AbilityTargetResolver(),
 				TagQuerySource.ModifierTags));
 
 		ApplyModifierTags(target, "item.equipment.weapon.axe");

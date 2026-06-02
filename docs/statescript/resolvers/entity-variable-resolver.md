@@ -3,10 +3,10 @@
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.EntityVariableResolver`
 > **Output Type:** `IForgeEntity?`
 
-Reads an entity reference from graph or shared reference variables so other resolvers can inspect entities selected at
+Reads an entity reference from graph or shared object-backed variables so other resolvers can inspect entities selected at
 runtime.
 
-## Constructors
+## Constructor
 
 ```csharp
 new EntityVariableResolver(variableName)
@@ -15,7 +15,7 @@ new EntityVariableResolver(variableName, scope)
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| variableName | `StringKey` | The name of the reference variable to read. |
+| variableName | `StringKey` | The name of the object-backed variable to read. |
 | scope | `VariableScope` | Chooses whether to read from graph variables (default) or shared variables. |
 
 ## Behavior
@@ -27,7 +27,7 @@ new EntityVariableResolver(variableName, scope)
 ## Usage
 
 ```csharp
-graph.VariableDefinitions.DefineReferenceVariable<IForgeEntity>("selectedEntity");
+graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("selectedEntity");
 
 graph.VariableDefinitions.DefineProperty("selectedHealth",
     new AttributeResolver(

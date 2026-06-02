@@ -9,7 +9,7 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// Resolves a property value by reading a selected value from a specific attribute on a resolved entity.
 /// </summary>
 /// <remarks>
-/// <para>By default, this resolver targets the owner entity through <see cref="OwnerEntityResolver"/>.</para>
+/// <para>By default, this resolver targets the owner entity through <see cref="AbilityOwnerResolver"/>.</para>
 /// <para>If the selected entity is not available or does not have the specified attribute, the resolver returns a
 /// default <see cref="Variant128"/> (zero).</para>
 /// </remarks>
@@ -23,7 +23,7 @@ public class AttributeResolver(
 	AttributeCalculationType attributeCalculationType = AttributeCalculationType.CurrentValue,
 	int finalChannel = 0) : IPropertyResolver
 {
-	private static readonly IEntityResolver _defaultEntityResolver = new OwnerEntityResolver();
+	private static readonly IEntityResolver _defaultEntityResolver = new AbilityOwnerResolver();
 
 	private readonly StringKey _attributeKey = attributeKey;
 

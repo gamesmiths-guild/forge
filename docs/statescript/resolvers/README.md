@@ -10,31 +10,45 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
-| [ActivationDataResolver](activation-data-resolver.md) | *(configured)* | Reads a field or property from typed activation data. |
+| [AbilityActivationDataResolver](ability-activation-data-resolver.md) | *(configured)* | Reads a field or property from the current ability activation data. |
+| [AbilityLevelResolver](ability-level-resolver.md) | `int` | Reads the current ability level from the activation context. |
+| [AbilityMagnitudeResolver](ability-magnitude-resolver.md) | `float` | Reads the current ability activation magnitude. |
 | [ArrayResolver](array-resolver.md) | *(configured array)* | Builds an array by evaluating nested resolvers for each element. |
 | [ArrayVariableResolver](array-variable-resolver.md) | *(configured array)* | Reads an array variable from graph or shared scope. |
 | [AttributeResolver](attribute-resolver.md) | `int` | Reads a selected value from an entity attribute. |
-| [MagnitudeResolver](magnitude-resolver.md) | `float` | Reads the magnitude from the ability activation context. |
 | [TagQueryResolver](tag-query-resolver.md) | `bool` | Evaluates a tag query against a selected entity's tags. |
 | [VariableResolver](variable-resolver.md) | *(configured)* | Reads a graph or shared variable by name. |
 | [VariantResolver](variant-resolver.md) | *(configured)* | Holds a fixed constant value. |
 
 ---
 
+## Effect Resolvers
+
+These resolvers provide effect definitions and application context to nodes such as `ApplyEffectNode` and `EffectNode`.
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [AbilityOwnershipResolver](ability-ownership-resolver.md) | `EffectOwnership` | Reads the current ability owner/source pair as an effect ownership value. |
+| [EffectDataResolver](effect-data-resolver.md) | `EffectData` | Returns a single fixed `EffectData` value. |
+| [EffectDataArrayResolver](effect-data-array-resolver.md) | `EffectData[]` | Returns a fixed array of `EffectData` values. |
+| [OwnershipResolver](ownership-resolver.md) | `EffectOwnership` | Composes an effect ownership value from nested entity resolvers. |
+
+---
+
 ## Entity Resolvers
 
-Entity resolvers are typed reference resolvers used by APIs such as `AttributeResolver` and `TagQueryResolver`. They do
+Entity resolvers are typed object-backed resolvers used by APIs such as `AttributeResolver` and `TagQueryResolver`. They do
 not produce `Variant128` values directly, so they are configured as nested inputs to other resolvers rather than as
 regular node-bindable properties.
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
+| [AbilityOwnerResolver](ability-owner-resolver.md) | `IForgeEntity?` | Resolves the current ability owner entity. |
+| [AbilitySourceResolver](ability-source-resolver.md) | `IForgeEntity?` | Resolves the current ability source entity. |
+| [AbilityTargetResolver](ability-target-resolver.md) | `IForgeEntity?` | Resolves the current ability target entity. |
 | [EntityArrayResolver](entity-array-resolver.md) | `IForgeEntity?[]` | Builds an entity reference array by evaluating nested entity resolvers. |
 | [EntityArrayVariableResolver](entity-array-variable-resolver.md) | `IForgeEntity?[]` | Reads an entity reference array from graph or shared scope. |
-| [EntityVariableResolver](entity-variable-resolver.md) | `IForgeEntity?` | Reads an entity reference from graph or shared reference variables. |
-| [OwnerEntityResolver](owner-entity-resolver.md) | `IForgeEntity?` | Resolves the owner entity from the current ability activation. |
-| [SourceEntityResolver](source-entity-resolver.md) | `IForgeEntity?` | Resolves the source entity that granted the current ability. |
-| [TargetEntityResolver](target-entity-resolver.md) | `IForgeEntity?` | Resolves the current ability target. |
+| [EntityVariableResolver](entity-variable-resolver.md) | `IForgeEntity?` | Reads an entity reference from graph or shared object-backed variables. |
 
 ---
 

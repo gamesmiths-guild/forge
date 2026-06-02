@@ -1,11 +1,13 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
-/// Resolves a reference-typed value at runtime.
+/// Resolves an object-backed value at runtime.
 /// </summary>
-public interface IReferenceResolver
+public interface IObjectResolver
 {
 	/// <summary>
 	/// Gets the <see cref="Type"/> of the value this resolver produces.
@@ -16,21 +18,21 @@ public interface IReferenceResolver
 	/// Resolves the current value of the property.
 	/// </summary>
 	/// <param name="graphContext">The graph context providing the runtime state.</param>
-	/// <returns>The resolved reference value.</returns>
+	/// <returns>The resolved object-backed value.</returns>
 	object? Resolve(GraphContext graphContext);
 }
 
 /// <summary>
-/// Resolves a strongly-typed reference value at runtime.
+/// Resolves a strongly-typed object-backed value at runtime.
 /// </summary>
-/// <typeparam name="T">The reference type produced by the resolver.</typeparam>
-public interface IReferenceResolver<out T> : IReferenceResolver
-	where T : class
+/// <typeparam name="T">The value type produced by the resolver.</typeparam>
+public interface IObjectResolver<out T> : IObjectResolver
 {
 	/// <summary>
 	/// Resolves the current value of the property.
 	/// </summary>
 	/// <param name="graphContext">The graph context providing the runtime state.</param>
 	/// <returns>The resolved value.</returns>
-	new T? Resolve(GraphContext graphContext);
+	[return: MaybeNull]
+	new T Resolve(GraphContext graphContext);
 }

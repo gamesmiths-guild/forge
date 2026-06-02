@@ -11,7 +11,8 @@ using static Gamesmiths.Forge.Tests.Helpers.ResolverTestContextFactory;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
-public class ActivationDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<TagsAndCuesFixture>
+public class AbilityActivationDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture)
+	: IClassFixture<TagsAndCuesFixture>
 {
 	private readonly TagsManager _tagsManager = tagsAndCuesFixture.TagsManager;
 	private readonly CuesManager _cuesManager = tagsAndCuesFixture.CuesManager;
@@ -20,7 +21,7 @@ public class ActivationDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) 
 	[Trait("Resolver", "ActivationData")]
 	public void Activation_data_resolver_value_type_matches_property_type()
 	{
-		var resolver = new ActivationDataResolver(typeof(DamageData), nameof(DamageData.Multiplier));
+		var resolver = new AbilityActivationDataResolver(typeof(DamageData), nameof(DamageData.Multiplier));
 
 		resolver.ValueType.Should().Be(typeof(double));
 	}
@@ -30,7 +31,7 @@ public class ActivationDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) 
 	public void Activation_data_resolver_reads_public_property()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var resolver = new ActivationDataResolver(typeof(DamageData), nameof(DamageData.Amount));
+		var resolver = new AbilityActivationDataResolver(typeof(DamageData), nameof(DamageData.Amount));
 		GraphContext context = CreateAbilityGraphContext(entity, new DamageData(42, 1.5));
 
 		Variant128 result = resolver.Resolve(context);
@@ -43,7 +44,7 @@ public class ActivationDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) 
 	public void Activation_data_resolver_reads_public_field()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var resolver = new ActivationDataResolver(typeof(ChargeData), nameof(ChargeData.IsCharged));
+		var resolver = new AbilityActivationDataResolver(typeof(ChargeData), nameof(ChargeData.IsCharged));
 		GraphContext context = CreateAbilityGraphContext(entity, new ChargeData { IsCharged = true });
 
 		Variant128 result = resolver.Resolve(context);
@@ -55,7 +56,7 @@ public class ActivationDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) 
 	[Trait("Resolver", "ActivationData")]
 	public void Activation_data_resolver_returns_default_when_no_activation_context()
 	{
-		var resolver = new ActivationDataResolver(typeof(DamageData), nameof(DamageData.Amount));
+		var resolver = new AbilityActivationDataResolver(typeof(DamageData), nameof(DamageData.Amount));
 
 		Variant128 result = resolver.Resolve(new GraphContext());
 
@@ -67,7 +68,7 @@ public class ActivationDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) 
 	public void Activation_data_resolver_returns_default_for_mismatched_activation_data_type()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var resolver = new ActivationDataResolver(typeof(DamageData), nameof(DamageData.Amount));
+		var resolver = new AbilityActivationDataResolver(typeof(DamageData), nameof(DamageData.Amount));
 		GraphContext context = CreateAbilityGraphContext(entity, new ChargeData { IsCharged = true });
 
 		Variant128 result = resolver.Resolve(context);
@@ -80,7 +81,7 @@ public class ActivationDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) 
 	public void Activation_data_resolver_throws_for_missing_member()
 	{
 #pragma warning disable CA1806 // Constructor invocation is the assertion target
-		Action act = () => new ActivationDataResolver(typeof(DamageData), "MissingValue");
+		Action act = () => new AbilityActivationDataResolver(typeof(DamageData), "MissingValue");
 #pragma warning restore CA1806 // Constructor invocation is the assertion target
 
 		act.Should().Throw<ArgumentException>()
@@ -92,7 +93,7 @@ public class ActivationDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) 
 	public void Activation_data_resolver_throws_for_unsupported_member_type()
 	{
 #pragma warning disable CA1806 // Constructor invocation is the assertion target
-		Action act = () => new ActivationDataResolver(typeof(UnsupportedData), nameof(UnsupportedData.Name));
+		Action act = () => new AbilityActivationDataResolver(typeof(UnsupportedData), nameof(UnsupportedData.Name));
 #pragma warning restore CA1806 // Constructor invocation is the assertion target
 
 		act.Should().Throw<ArgumentException>()

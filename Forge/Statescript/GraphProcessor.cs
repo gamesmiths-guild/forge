@@ -59,6 +59,7 @@ public class GraphProcessor
 	{
 		GraphContext.Processor = this;
 		GraphContext.HasStarted = true;
+		GraphContext.FinalizationDeferralCount = 0;
 		GraphContext.GraphVariables.InitializeFrom(Graph.VariableDefinitions);
 		variableOverrides?.Invoke(GraphContext.GraphVariables);
 		Graph.FinalizeConnections();

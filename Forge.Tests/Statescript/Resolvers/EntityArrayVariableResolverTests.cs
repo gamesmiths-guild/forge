@@ -24,7 +24,7 @@ public class EntityArrayVariableResolverTests(TagsAndCuesFixture tagsAndCuesFixt
 		var context = new GraphContext();
 		var resolver = new EntityArrayVariableResolver("targets");
 
-		context.GraphVariables.DefineReferenceArrayVariable<IForgeEntity>("targets", [entity1, entity2]);
+		context.GraphVariables.DefineObjectArrayVariable<IForgeEntity>("targets", [entity1, entity2]);
 
 		IForgeEntity?[] result = resolver.ResolveArray(context);
 
@@ -41,7 +41,7 @@ public class EntityArrayVariableResolverTests(TagsAndCuesFixture tagsAndCuesFixt
 		var context = new GraphContext { SharedVariables = sharedVariables };
 		var resolver = new EntityArrayVariableResolver("targets", VariableScope.Shared);
 
-		sharedVariables.DefineReferenceArrayVariable<IForgeEntity>("targets", [entity1, entity2]);
+		sharedVariables.DefineObjectArrayVariable<IForgeEntity>("targets", [entity1, entity2]);
 
 		IForgeEntity?[] result = resolver.ResolveArray(context);
 

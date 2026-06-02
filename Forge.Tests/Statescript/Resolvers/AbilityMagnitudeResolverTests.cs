@@ -11,7 +11,7 @@ using static Gamesmiths.Forge.Tests.Helpers.ResolverTestContextFactory;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
-public class MagnitudeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<TagsAndCuesFixture>
+public class AbilityMagnitudeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<TagsAndCuesFixture>
 {
 	private readonly TagsManager _tagsManager = tagsAndCuesFixture.TagsManager;
 	private readonly CuesManager _cuesManager = tagsAndCuesFixture.CuesManager;
@@ -20,7 +20,7 @@ public class MagnitudeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 	[Trait("Resolver", "Magnitude")]
 	public void Magnitude_resolver_value_type_is_float()
 	{
-		var resolver = new MagnitudeResolver();
+		var resolver = new AbilityMagnitudeResolver();
 
 		resolver.ValueType.Should().Be(typeof(float));
 	}
@@ -29,7 +29,7 @@ public class MagnitudeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 	[Trait("Resolver", "Magnitude")]
 	public void Magnitude_resolver_returns_default_when_no_activation_context()
 	{
-		var resolver = new MagnitudeResolver();
+		var resolver = new AbilityMagnitudeResolver();
 
 		var context = new GraphContext();
 
@@ -43,7 +43,7 @@ public class MagnitudeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 	public void Magnitude_resolver_returns_zero_magnitude()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var resolver = new MagnitudeResolver();
+		var resolver = new AbilityMagnitudeResolver();
 
 		GraphContext context = CreateAbilityGraphContext(entity);
 
@@ -57,7 +57,7 @@ public class MagnitudeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 	public void Magnitude_resolver_returns_magnitude_from_activation_context()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var resolver = new MagnitudeResolver();
+		var resolver = new AbilityMagnitudeResolver();
 
 		GraphContext context = CreateAbilityGraphContext(entity, magnitude: 42.5f);
 
@@ -71,7 +71,7 @@ public class MagnitudeResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 	public void Magnitude_resolver_returns_different_magnitudes_for_different_activations()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var resolver = new MagnitudeResolver();
+		var resolver = new AbilityMagnitudeResolver();
 
 		GraphContext context1 = CreateAbilityGraphContext(entity, magnitude: 10f);
 		GraphContext context2 = CreateAbilityGraphContext(entity, magnitude: 99.9f);

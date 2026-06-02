@@ -9,6 +9,6 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// </summary>
 /// <param name="elementResolvers">The nested entity resolvers that produce the array elements.</param>
 public class EntityArrayResolver(params IEntityResolver[] elementResolvers)
-	: ReferenceArrayCompositeResolver<IForgeEntity>(elementResolvers)
+	: ObjectArrayCompositeResolver<IForgeEntity>(elementResolvers)
 {
 }

@@ -82,4 +82,5 @@ Use `DeactivateNode(graphContext)` for simple deactivation, or `DeactivateNodeAn
 
 | Node | Description |
 |------|-------------|
-| [TimerNode](timer-node.md) | Remains active for a configured duration, then deactivates. |
+| [EffectNode](effect-node.md) | Applies effects on activation, emits OnEffectEnd on natural completion, and removes still-active instances on deactivation. |
+| [TimerNode](timer-node.md) | Remains active for a configured duration and emits OnTimerEnd when it finishes naturally. |

@@ -7,8 +7,8 @@ using Gamesmiths.Forge.Core;
 namespace Gamesmiths.Forge.Statescript;
 
 /// <summary>
-/// A mutable bag of named value variables and reference variables. This includes <see cref="Variant128"/> values,
-/// <see cref="Variant128"/> arrays, typed reference values, and typed reference arrays. Used for both per-graph
+/// A mutable bag of named value variables and object-backed variables. This includes <see cref="Variant128"/> values,
+/// <see cref="Variant128"/> arrays, typed object-backed values, and typed object-backed arrays. Used for both per-graph
 /// instance variables (<see cref="GraphContext.GraphVariables"/>) and entity-level shared variables
 /// (<see cref="GraphContext.SharedVariables"/>).
 /// </summary>
@@ -23,9 +23,9 @@ public class Variables
 
 	private readonly Dictionary<StringKey, List<Variant128>> _arrays = [];
 
-	private readonly Dictionary<StringKey, ReferenceVariableStorage> _referenceVariables = [];
+	private readonly Dictionary<StringKey, ObjectVariableStorage> _objectVariables = [];
 
-	private readonly Dictionary<StringKey, ReferenceArrayStorage> _referenceArrays = [];
+	private readonly Dictionary<StringKey, ObjectArrayStorage> _objectArrays = [];
 
 	/// <summary>
 	/// Initializes the runtime variables from a <see cref="GraphVariableDefinitions"/> instance. For each variable
@@ -36,8 +36,8 @@ public class Variables
 	{
 		_variables.Clear();
 		_arrays.Clear();
-		_referenceVariables.Clear();
-		_referenceArrays.Clear();
+		_objectVariables.Clear();
+		_objectArrays.Clear();
 
 		foreach (VariableDefinition definition in definitions.VariableDefinitions)
 		{
@@ -49,16 +49,16 @@ public class Variables
 			_arrays[definition.Name] = [.. definition.InitialValues];
 		}
 
-		foreach (ReferenceVariableDefinition definition in definitions.ReferenceVariableDefinitions)
+		foreach (ObjectVariableDefinition definition in definitions.ObjectVariableDefinitions)
 		{
-			_referenceVariables[definition.Name] =
-				new ReferenceVariableStorage(definition.ValueType, definition.InitialValue);
+			_objectVariables[definition.Name] =
+				new ObjectVariableStorage(definition.ValueType, definition.InitialValue);
 		}
 
-		foreach (ReferenceArrayVariableDefinition definition in definitions.ReferenceArrayVariableDefinitions)
+		foreach (ObjectArrayVariableDefinition definition in definitions.ObjectArrayVariableDefinitions)
 		{
-			_referenceArrays[definition.Name] =
-				new ReferenceArrayStorage(definition.ElementType, [.. definition.InitialValues]);
+			_objectArrays[definition.Name] =
+				new ObjectArrayStorage(definition.ElementType, [.. definition.InitialValues]);
 		}
 	}
 
@@ -96,14 +96,15 @@ public class Variables
 	}
 
 	/// <summary>
-	/// Tries to get the declared type of a reference variable with the given name.
+	/// Tries to get the declared type of an object-backed variable with the given name.
 	/// </summary>
 	/// <param name="name">The name of the variable to inspect.</param>
-	/// <param name="valueType">The declared type if the reference variable exists.</param>
-	/// <returns><see langword="true"/> if the reference variable exists; otherwise, <see langword="false"/>.</returns>
-	public bool TryGetReferenceVariableType(StringKey name, [NotNullWhen(true)] out Type? valueType)
+	/// <param name="valueType">The declared type if the object-backed variable exists.</param>
+	/// <returns><see langword="true"/> if the object-backed variable exists; otherwise, <see langword="false"/>.
+	/// </returns>
+	public bool TryGetObjectVariableType(StringKey name, [NotNullWhen(true)] out Type? valueType)
 	{
-		if (_referenceVariables.TryGetValue(name, out ReferenceVariableStorage stored))
+		if (_objectVariables.TryGetValue(name, out ObjectVariableStorage stored))
 		{
 			valueType = stored.ValueType;
 			return true;
@@ -183,19 +184,18 @@ public class Variables
 	}
 
 	/// <summary>
-	/// Tries to get the typed reference value of a variable with the given name.
+	/// Tries to get the typed object-backed value of a variable with the given name.
 	/// </summary>
-	/// <typeparam name="T">The reference type to interpret the value as.</typeparam>
+	/// <typeparam name="T">The type to interpret the value as.</typeparam>
 	/// <param name="name">The name of the variable to get.</param>
 	/// <param name="value">The value of the variable if it was found and the declared type is compatible.</param>
 	/// <returns><see langword="true"/> if the variable was found and the requested type is compatible;
 	/// <see langword="false"/> otherwise.</returns>
-	public bool TryGetReference<T>(StringKey name, out T? value)
-		where T : class
+	public bool TryGetObject<T>(StringKey name, [MaybeNullWhen(false)] out T value)
 	{
-		value = null;
+		value = default!;
 
-		if (!_referenceVariables.TryGetValue(name, out ReferenceVariableStorage stored))
+		if (!_objectVariables.TryGetValue(name, out ObjectVariableStorage stored))
 		{
 			return false;
 		}
@@ -205,23 +205,23 @@ public class Variables
 			return false;
 		}
 
-		value = (T?)stored.Value;
+		value = (T)stored.Value!;
 		return true;
 	}
 
 	/// <summary>
-	/// Tries to get the reference value of a variable with the given name using a runtime type.
+	/// Tries to get the object-backed value of a variable with the given name using a runtime type.
 	/// </summary>
 	/// <param name="name">The name of the variable to get.</param>
-	/// <param name="expectedType">The expected reference type.</param>
+	/// <param name="expectedType">The expected object-backed type.</param>
 	/// <param name="value">The stored value if the variable exists and its declared type is compatible.</param>
 	/// <returns><see langword="true"/> if the variable was found and the requested type is compatible;
 	/// <see langword="false"/> otherwise.</returns>
-	public bool TryGetReference(StringKey name, Type expectedType, out object? value)
+	public bool TryGetObject(StringKey name, Type expectedType, out object? value)
 	{
 		value = null;
 
-		if (!_referenceVariables.TryGetValue(name, out ReferenceVariableStorage stored))
+		if (!_objectVariables.TryGetValue(name, out ObjectVariableStorage stored))
 		{
 			return false;
 		}
@@ -236,67 +236,55 @@ public class Variables
 	}
 
 	/// <summary>
-	/// Sets the value of a reference variable with the given name.
+	/// Sets the value of an object-backed variable with the given name.
 	/// </summary>
-	/// <typeparam name="T">The reference type of the value to set.</typeparam>
+	/// <typeparam name="T">The type of the value to set.</typeparam>
 	/// <param name="name">The name of the variable to set.</param>
 	/// <param name="value">The value to set.</param>
 	/// <exception cref="InvalidOperationException">Thrown if no variable with this name exists or if the declared type
 	/// of the variable is not compatible with the value type.</exception>
-	public void SetReference<T>(StringKey name, T? value)
-		where T : class
+	public void SetObject<T>(StringKey name, T value)
 	{
-		if (!_referenceVariables.TryGetValue(name, out ReferenceVariableStorage stored))
+		if (!_objectVariables.TryGetValue(name, out ObjectVariableStorage stored))
 		{
 			throw new InvalidOperationException(
-				$"Cannot set '{name}': no reference variable with this name exists.");
+				$"Cannot set '{name}': no object variable with this name exists.");
 		}
 
-		if (value is not null && !stored.ValueType.IsInstanceOfType(value))
-		{
-			throw new InvalidOperationException(
-				$"Cannot set '{name}' with value type {value.GetType()}: variable expects values assignable to " +
-				$"{stored.ValueType}.");
-		}
+		ValidateAssignedObjectValue(name, stored.ValueType, value);
 
-		_referenceVariables[name] = new ReferenceVariableStorage(stored.ValueType, value);
+		_objectVariables[name] = new ObjectVariableStorage(stored.ValueType, value);
 	}
 
 	/// <summary>
-	/// Sets the value of a reference variable with the given name using a runtime value.
+	/// Sets the value of an object-backed variable with the given name using a runtime value.
 	/// </summary>
 	/// <param name="name">The name of the variable to set.</param>
 	/// <param name="value">The value to set.</param>
 	/// <exception cref="InvalidOperationException">Thrown if no variable with this name exists or if the declared type
 	/// of the variable is not compatible with the value type.</exception>
-	public void SetReference(StringKey name, object? value)
+	public void SetObject(StringKey name, object? value)
 	{
-		if (!_referenceVariables.TryGetValue(name, out ReferenceVariableStorage stored))
+		if (!_objectVariables.TryGetValue(name, out ObjectVariableStorage stored))
 		{
 			throw new InvalidOperationException(
-				$"Cannot set '{name}': no reference variable with this name exists.");
+				$"Cannot set '{name}': no object variable with this name exists.");
 		}
 
-		if (value is not null && !stored.ValueType.IsInstanceOfType(value))
-		{
-			throw new InvalidOperationException(
-				$"Cannot set '{name}' with value type {value.GetType()}: variable expects values assignable to " +
-				$"{stored.ValueType}.");
-		}
+		ValidateAssignedObjectValue(name, stored.ValueType, value);
 
-		_referenceVariables[name] = new ReferenceVariableStorage(stored.ValueType, value);
+		_objectVariables[name] = new ObjectVariableStorage(stored.ValueType, value);
 	}
 
 	/// <summary>
-	/// Defines a new mutable reference variable directly in this <see cref="Variables"/> bag.
+	/// Defines a new mutable object-backed variable directly in this <see cref="Variables"/> bag.
 	/// </summary>
-	/// <typeparam name="T">The reference type of the variable.</typeparam>
+	/// <typeparam name="T">The type of the variable.</typeparam>
 	/// <param name="name">The name of the variable.</param>
 	/// <param name="value">The initial value.</param>
-	public void DefineReferenceVariable<T>(StringKey name, T? value = null)
-		where T : class
+	public void DefineObjectVariable<T>(StringKey name, T value = default!)
 	{
-		_referenceVariables[name] = new ReferenceVariableStorage(typeof(T), value);
+		_objectVariables[name] = new ObjectVariableStorage(typeof(T), value);
 	}
 
 	/// <summary>
@@ -316,48 +304,35 @@ public class Variables
 	}
 
 	/// <summary>
-	/// Defines a new mutable reference array variable directly in this <see cref="Variables"/> bag.
+	/// Defines a new mutable object-backed array variable directly in this <see cref="Variables"/> bag.
 	/// </summary>
-	/// <typeparam name="T">The reference type of each element.</typeparam>
+	/// <typeparam name="T">The type of each element.</typeparam>
 	/// <param name="name">The name of the array variable.</param>
 	/// <param name="values">The initial values for the array variable.</param>
-	public void DefineReferenceArrayVariable<T>(StringKey name, IEnumerable<T?> values)
-		where T : class
+	public void DefineObjectArrayVariable<T>(StringKey name, IEnumerable<T> values)
 	{
-		_referenceArrays[name] = new ReferenceArrayStorage(typeof(T), [.. values.Cast<object?>()]);
+		_objectArrays[name] = new ObjectArrayStorage(typeof(T), [.. values.Cast<object?>()]);
 	}
 
 	/// <summary>
-	/// Defines a new mutable reference array variable directly in this <see cref="Variables"/> bag using runtime type
-	/// information.
+	/// Defines a new mutable object-backed array variable directly in this <see cref="Variables"/> bag using runtime
+	/// type information.
 	/// </summary>
 	/// <param name="name">The name of the array variable.</param>
 	/// <param name="elementType">The declared element type for the array.</param>
 	/// <param name="values">The initial values for the array variable.</param>
-	/// <exception cref="InvalidOperationException">Thrown if <paramref name="elementType"/> is a value type or if any
-	/// element is not assignable to <paramref name="elementType"/>.</exception>
-	public void DefineReferenceArrayVariable(StringKey name, Type elementType, IEnumerable<object?> values)
+	/// <exception cref="InvalidOperationException">Thrown if any element is not assignable to
+	/// <paramref name="elementType"/>.</exception>
+	public void DefineObjectArrayVariable(StringKey name, Type elementType, IEnumerable<object?> values)
 	{
-		if (elementType.IsValueType)
-		{
-			throw new InvalidOperationException(
-				$"Cannot define reference array variable '{name}' with value-type element type {elementType}.");
-		}
-
 		List<object?> materializedValues = [.. values];
 
 		for (int i = 0; i < materializedValues.Count; i++)
 		{
-			object? value = materializedValues[i];
-			if (value is not null && !elementType.IsInstanceOfType(value))
-			{
-				throw new InvalidOperationException(
-					$"Cannot define '{name}' with element type {value.GetType()}: array expects values assignable to " +
-					$"{elementType}.");
-			}
+			ValidateAssignedObjectArrayElement(name, elementType, materializedValues[i], i, "define");
 		}
 
-		_referenceArrays[name] = new ReferenceArrayStorage(elementType, materializedValues);
+		_objectArrays[name] = new ObjectArrayStorage(elementType, materializedValues);
 	}
 
 	/// <summary>
@@ -416,20 +391,19 @@ public class Variables
 	}
 
 	/// <summary>
-	/// Gets the element at the specified index from a reference array variable.
+	/// Gets the element at the specified index from an object-backed array variable.
 	/// </summary>
-	/// <typeparam name="T">The reference type to interpret the element as.</typeparam>
+	/// <typeparam name="T">The type to interpret the element as.</typeparam>
 	/// <param name="name">The name of the array variable.</param>
 	/// <param name="index">The zero-based index of the element to get.</param>
 	/// <param name="value">The value of the element if found and type-compatible.</param>
 	/// <returns><see langword="true"/> if the array variable was found, the index was valid, and the declared element
 	/// type is compatible; otherwise, <see langword="false"/>.</returns>
-	public bool TryGetReferenceArrayElement<T>(StringKey name, int index, out T? value)
-		where T : class
+	public bool TryGetObjectArrayElement<T>(StringKey name, int index, [MaybeNullWhen(false)] out T value)
 	{
-		value = null;
+		value = default!;
 
-		if (!_referenceArrays.TryGetValue(name, out ReferenceArrayStorage? stored))
+		if (!_objectArrays.TryGetValue(name, out ObjectArrayStorage? stored))
 		{
 			return false;
 		}
@@ -439,24 +413,23 @@ public class Variables
 			return false;
 		}
 
-		value = (T?)stored.Values[index];
+		value = (T)stored.Values[index]!;
 		return true;
 	}
 
 	/// <summary>
-	/// Tries to get the full typed contents of a reference array variable.
+	/// Tries to get the full typed contents of an object-backed array variable.
 	/// </summary>
-	/// <typeparam name="T">The reference type to interpret the elements as.</typeparam>
+	/// <typeparam name="T">The type to interpret the elements as.</typeparam>
 	/// <param name="name">The name of the array variable.</param>
 	/// <param name="values">The resolved array if found and type-compatible.</param>
 	/// <returns><see langword="true"/> if the array variable was found and the declared element type is compatible;
 	/// <see langword="false"/> otherwise.</returns>
-	public bool TryGetReferenceArray<T>(StringKey name, out T?[]? values)
-		where T : class
+	public bool TryGetObjectArray<T>(StringKey name, [NotNullWhen(true)] out T[]? values)
 	{
 		values = null;
 
-		if (!_referenceArrays.TryGetValue(name, out ReferenceArrayStorage? stored))
+		if (!_objectArrays.TryGetValue(name, out ObjectArrayStorage? stored))
 		{
 			return false;
 		}
@@ -466,31 +439,31 @@ public class Variables
 			return false;
 		}
 
-		values = new T?[stored.Values.Count];
+		values = new T[stored.Values.Count];
 		for (int i = 0; i < stored.Values.Count; i++)
 		{
-			values[i] = (T?)stored.Values[i];
+			values[i] = (T)stored.Values[i]!;
 		}
 
 		return true;
 	}
 
 	/// <summary>
-	/// Tries to get the full contents of a reference array variable using a runtime element type.
+	/// Tries to get the full contents of an object-backed array variable using a runtime element type.
 	/// </summary>
 	/// <param name="name">The name of the array variable.</param>
 	/// <param name="expectedElementType">The expected element type.</param>
 	/// <param name="values">The resolved array if found and type-compatible.</param>
 	/// <returns><see langword="true"/> if the array variable was found and the declared element type is compatible;
 	/// <see langword="false"/> otherwise.</returns>
-	public bool TryGetReferenceArray(
+	public bool TryGetObjectArray(
 		StringKey name,
 		Type expectedElementType,
 		[NotNullWhen(true)] out object?[]? values)
 	{
 		values = null;
 
-		if (!_referenceArrays.TryGetValue(name, out ReferenceArrayStorage? stored))
+		if (!_objectArrays.TryGetValue(name, out ObjectArrayStorage? stored))
 		{
 			return false;
 		}
@@ -526,22 +499,21 @@ public class Variables
 	}
 
 	/// <summary>
-	/// Sets the element at the specified index in a reference array variable.
+	/// Sets the element at the specified index in an object-backed array variable.
 	/// </summary>
-	/// <typeparam name="T">The reference type of the value to set.</typeparam>
+	/// <typeparam name="T">The type of the value to set.</typeparam>
 	/// <param name="name">The name of the array variable.</param>
 	/// <param name="index">The zero-based index of the element to set.</param>
 	/// <param name="value">The value to set.</param>
 	/// <exception cref="InvalidOperationException">Thrown if no variable with this name exists or if the declared type
 	/// of the variable is not compatible with the value type.</exception>
 	/// <exception cref="ArgumentOutOfRangeException">Thrown if the index is out of range.</exception>
-	public void SetReferenceArrayElement<T>(StringKey name, int index, T? value)
-		where T : class
+	public void SetObjectArrayElement<T>(StringKey name, int index, T value)
 	{
-		if (!_referenceArrays.TryGetValue(name, out ReferenceArrayStorage? stored))
+		if (!_objectArrays.TryGetValue(name, out ObjectArrayStorage? stored))
 		{
 			throw new InvalidOperationException(
-				$"Cannot set reference array element for '{name}': no array variable with this name exists.");
+				$"Cannot set object array element for '{name}': no array variable with this name exists.");
 		}
 
 		if ((uint)index >= (uint)stored.Values.Count)
@@ -552,12 +524,7 @@ public class Variables
 				$"Index {index} is out of range for array '{name}' with length {stored.Values.Count}.");
 		}
 
-		if (value is not null && !stored.ElementType.IsInstanceOfType(value))
-		{
-			throw new InvalidOperationException(
-				$"Cannot set '{name}' with element type {value.GetType()}: array expects values assignable to " +
-				$"{stored.ElementType}.");
-		}
+		ValidateAssignedObjectArrayElement(name, stored.ElementType, value, index, "set");
 
 		stored.Values[index] = value;
 	}
@@ -579,14 +546,15 @@ public class Variables
 	}
 
 	/// <summary>
-	/// Gets the length of a reference array variable.
+	/// Gets the length of an object-backed array variable.
 	/// </summary>
 	/// <param name="name">The name of the array variable.</param>
-	/// <returns>The number of elements in the array, or -1 if the variable does not exist or is not a reference array.
+	/// <returns>The number of elements in the array, or -1 if the variable does not exist or is not an object-backed
+	/// array.
 	/// </returns>
-	public int GetReferenceArrayLength(StringKey name)
+	public int GetObjectArrayLength(StringKey name)
 	{
-		if (!_referenceArrays.TryGetValue(name, out ReferenceArrayStorage? stored))
+		if (!_objectArrays.TryGetValue(name, out ObjectArrayStorage? stored))
 		{
 			return -1;
 		}
@@ -595,14 +563,14 @@ public class Variables
 	}
 
 	/// <summary>
-	/// Tries to get the declared element type of a reference array variable with the given name.
+	/// Tries to get the declared element type of an object-backed array variable with the given name.
 	/// </summary>
 	/// <param name="name">The name of the array variable to inspect.</param>
 	/// <param name="elementType">The declared element type if the array exists.</param>
-	/// <returns><see langword="true"/> if the reference array exists; otherwise, <see langword="false"/>.</returns>
-	public bool TryGetReferenceArrayElementType(StringKey name, [NotNullWhen(true)] out Type? elementType)
+	/// <returns><see langword="true"/> if the object-backed array exists; otherwise, <see langword="false"/>.</returns>
+	public bool TryGetObjectArrayElementType(StringKey name, [NotNullWhen(true)] out Type? elementType)
 	{
-		if (_referenceArrays.TryGetValue(name, out ReferenceArrayStorage? stored))
+		if (_objectArrays.TryGetValue(name, out ObjectArrayStorage? stored))
 		{
 			elementType = stored.ElementType;
 			return true;
@@ -646,9 +614,62 @@ public class Variables
 		};
 	}
 
-	private readonly record struct ReferenceVariableStorage(Type ValueType, object? Value);
+	private static void ValidateAssignedObjectValue(StringKey name, Type expectedType, object? value)
+	{
+		if (value is null)
+		{
+			if (IsNonNullableValueType(expectedType))
+			{
+				throw new InvalidOperationException(
+					$"Cannot set '{name}' to null: variable expects non-null values assignable to {expectedType}.");
+			}
 
-	private sealed class ReferenceArrayStorage(Type elementType, List<object?> values)
+			return;
+		}
+
+		if (!expectedType.IsInstanceOfType(value))
+		{
+			throw new InvalidOperationException(
+				$"Cannot set '{name}' with value type {value.GetType()}: variable expects values assignable to " +
+				$"{expectedType}.");
+		}
+	}
+
+	private static void ValidateAssignedObjectArrayElement(
+		StringKey name,
+		Type elementType,
+		object? value,
+		int index,
+		string operation)
+	{
+		if (value is null)
+		{
+			if (IsNonNullableValueType(elementType))
+			{
+				throw new InvalidOperationException(
+					$"Cannot {operation} '{name}' with a null element at index {index}: array expects non-null values " +
+					$"assignable to {elementType}.");
+			}
+
+			return;
+		}
+
+		if (!elementType.IsInstanceOfType(value))
+		{
+			throw new InvalidOperationException(
+				$"Cannot {operation} '{name}' with element type {value.GetType()}: array expects values assignable to " +
+				$"{elementType}.");
+		}
+	}
+
+	private static bool IsNonNullableValueType(Type type)
+	{
+		return type.IsValueType && Nullable.GetUnderlyingType(type) is null;
+	}
+
+	private readonly record struct ObjectVariableStorage(Type ValueType, object? Value);
+
+	private sealed class ObjectArrayStorage(Type elementType, List<object?> values)
 	{
 		public Type ElementType { get; } = elementType;
 

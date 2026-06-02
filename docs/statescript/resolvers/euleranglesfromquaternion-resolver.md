@@ -5,7 +5,7 @@
 
 Extracts Euler angles in radians from a quaternion. The returned `Vector3` stores pitch in `X`, yaw in `Y`, and roll in `Z`.
 
-## Constructors
+## Constructor
 
 ```csharp
 new EulerAnglesFromQuaternionResolver(quaternion)

@@ -4,7 +4,7 @@
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.State.TimerNode`
 > **Context:** `TimerNodeContext`
 
-Remains active for a configured duration, then deactivates. The duration is read from a bound input property, so it can be a fixed variable value, driven by an entity attribute, or any other property resolver that produces a `double`.
+Remains active for a configured duration, emits `OnTimerEnd` when that duration completes naturally, then deactivates. The duration is read from a bound input property, so it can be a fixed variable value, driven by an entity attribute, or any other property resolver that produces a `double`.
 
 ## Ports
 
@@ -23,6 +23,7 @@ Remains active for a configured duration, then deactivates. The duration is read
 | 1 | OnDeactivate | Event | Emits when the node deactivates (any reason). |
 | 2 | OnAbort | Event | Emits only when aborted via the Abort port. |
 | 3 | Subgraph | Subgraph | Active while the timer is running; sends disable signal on deactivation. |
+| 4 | OnTimerEnd | Event | Emits only when the timer duration finishes naturally without external interruption. |
 
 ## Parameters
 
@@ -35,8 +36,9 @@ Remains active for a configured duration, then deactivates. The duration is read
 ## Behavior
 
 1. **Activation:** The elapsed time counter is reset to 0.
-2. **Update:** Each frame, the elapsed time is incremented by `deltaTime`. When the elapsed time reaches or exceeds the bound duration, the node deactivates.
+2. **Update:** Each frame, the elapsed time is incremented by `deltaTime`. When the elapsed time reaches or exceeds the bound duration, the node emits `OnTimerEnd` and deactivates.
 3. **Deactivation:** Standard state node deactivation, `OnDeactivate` port emits and the subgraph receives a disable signal.
+4. **Interrupted End:** If the node is aborted or deactivated externally before the duration finishes, `OnTimerEnd` does not emit.
 
 ## Usage
 

@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Statescript.Ports;
+
 namespace Gamesmiths.Forge.Statescript.Nodes.State;
 
 /// <summary>
@@ -20,8 +22,21 @@ public class TimerNode : StateNode<TimerNodeContext>
 	/// </summary>
 	public const byte DurationInput = 0;
 
+	/// <summary>
+	/// Output port index for the natural timer-end event.
+	/// </summary>
+	public const byte OnTimerEndPort = 4;
+
 	/// <inheritdoc/>
-	public override string Description => "Remains active for a configured duration, then deactivates.";
+	public override string Description => "Remains active for a configured duration, emits OnTimerEnd when the timer " +
+		"finishes naturally, then deactivates.";
+
+	/// <inheritdoc/>
+	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
+	{
+		base.DefinePorts(inputPorts, outputPorts);
+		outputPorts.Add(CreatePort<EventPort>(OnTimerEndPort));
+	}
 
 	/// <inheritdoc/>
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
@@ -55,7 +70,7 @@ public class TimerNode : StateNode<TimerNodeContext>
 
 		if (nodeContext.ElapsedTime >= duration)
 		{
-			DeactivateNode(graphContext);
+			DeactivateNodeAndEmitMessage(graphContext, OnTimerEndPort);
 		}
 	}
 }

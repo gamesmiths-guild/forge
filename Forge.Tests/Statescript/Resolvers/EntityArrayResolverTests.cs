@@ -24,10 +24,10 @@ public class EntityArrayResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 		var owner = new TestEntity(_tagsManager, _cuesManager);
 		var target = new TestEntity(_tagsManager, _cuesManager);
 		var source = new TestEntity(_tagsManager, _cuesManager);
-		var node = new ResolveReferenceArrayResolverNode<IForgeEntity>(new EntityArrayResolver(
-			new OwnerEntityResolver(),
-			new TargetEntityResolver(),
-			new SourceEntityResolver()));
+		var node = new ResolveObjectArrayResolverNode<IForgeEntity>(new EntityArrayResolver(
+			new AbilityOwnerResolver(),
+			new AbilityTargetResolver(),
+			new AbilitySourceResolver()));
 
 		ExecuteAbilityGraph(owner, node, target, source);
 
@@ -43,9 +43,9 @@ public class EntityArrayResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 	public void Entity_array_resolver_returns_null_entries_without_activation_context()
 	{
 		var resolver = new EntityArrayResolver(
-			new OwnerEntityResolver(),
-			new TargetEntityResolver(),
-			new SourceEntityResolver());
+			new AbilityOwnerResolver(),
+			new AbilityTargetResolver(),
+			new AbilitySourceResolver());
 
 		IForgeEntity?[] result = resolver.ResolveArray(new GraphContext());
 
@@ -71,7 +71,7 @@ public class EntityArrayResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 	{
 		IEntityResolver[] resolvers =
 		[
-			new OwnerEntityResolver(),
+			new AbilityOwnerResolver(),
 			null!,
 		];
 
@@ -88,9 +88,9 @@ public class EntityArrayResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 	{
 		var graph = new Graph();
 
-		graph.VariableDefinitions.DefineReferenceArrayProperty(
+		graph.VariableDefinitions.DefineObjectArrayProperty(
 			"entities",
-			new EntityArrayResolver(new OwnerEntityResolver()));
+			new EntityArrayResolver(new AbilityOwnerResolver()));
 
 		graph.VariableDefinitions.ValidatePropertyType("entities", typeof(IForgeEntity[])).Should().BeTrue();
 		graph.VariableDefinitions.ValidatePropertyType("entities", typeof(string[])).Should().BeFalse();
