@@ -47,7 +47,7 @@ public abstract class ConditionNode : Node
 	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
-		inputPorts.Add(CreatePort<InputPort>(InputPort, "Condition"));
+		inputPorts.Add(CreatePort<InputPort>(InputPort, "Input"));
 		outputPorts.Add(CreatePort<EventPort>(TruePort, "True"));
 		outputPorts.Add(CreatePort<EventPort>(FalsePort, "False"));
 	}

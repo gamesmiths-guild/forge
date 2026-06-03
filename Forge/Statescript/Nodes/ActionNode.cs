@@ -40,8 +40,8 @@ public abstract class ActionNode : Node
 	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
-		inputPorts.Add(CreatePort<InputPort>(InputPort, "Execute"));
-		outputPorts.Add(CreatePort<EventPort>(OutputPort, "Done"));
+		inputPorts.Add(CreatePort<InputPort>(InputPort, "Input"));
+		outputPorts.Add(CreatePort<EventPort>(OutputPort, "Output"));
 	}
 
 	/// <inheritdoc/>

@@ -45,7 +45,7 @@ public class EntryNode : Node
 	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
-		outputPorts.Add(CreatePort<SubgraphPort>(OutputPort, "Start"));
+		outputPorts.Add(CreatePort<SubgraphPort>(OutputPort, "Output"));
 	}
 
 	/// <inheritdoc/>

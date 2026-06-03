@@ -234,7 +234,7 @@ public abstract class Node
 		return new T
 		{
 			Index = index,
-			Label = label,
+			Label = label ?? string.Empty,
 		};
 	}
 
