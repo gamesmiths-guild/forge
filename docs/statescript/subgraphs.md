@@ -150,6 +150,8 @@ Entry → TimerA(10s)
 
 Custom state nodes can define additional Subgraph ports and control them independently while the node remains active. This is one of the most powerful patterns in Statescript.
 
+When defining extra Event or Subgraph ports for these nodes, assign explicit labels with `CreatePort<T>(index, "Label")`. Editor integrations use those runtime labels when rendering custom ports.
+
 For example, a combat stance node could have two Subgraph ports, one for each stance. While active, the node switches between stances by disabling one subgraph and activating the other:
 
 ```

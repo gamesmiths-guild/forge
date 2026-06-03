@@ -78,6 +78,18 @@ public class WaitForTagNode : StateNode<WaitForTagNodeContext>
 
 Use `DeactivateNode(graphContext)` for simple deactivation, or `DeactivateNodeAndEmitMessage(graphContext, portIds)` to emit custom event port messages before deactivation.
 
+If your state node defines additional event or subgraph ports, override `DefinePorts`, call `base.DefinePorts(...)`, and create each custom port with an explicit label:
+
+```csharp
+protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
+{
+    base.DefinePorts(inputPorts, outputPorts);
+    outputPorts.Add(CreatePort<EventPort>(OnFinishedPort, "OnFinished"));
+}
+```
+
+That label becomes the canonical port name surfaced by editor integrations such as Forge for Godot.
+
 ## Built-in State Nodes
 
 | Node | Description |

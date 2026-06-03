@@ -134,12 +134,12 @@ public abstract class StateNode<T> : Node
 	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
-		inputPorts.Add(CreatePort<InputPort>(InputPort));
-		inputPorts.Add(CreatePort<InputPort>(AbortPort));
-		outputPorts.Add(CreatePort<EventPort>(OnActivatePort));
-		outputPorts.Add(CreatePort<EventPort>(OnDeactivatePort));
-		outputPorts.Add(CreatePort<EventPort>(OnAbortPort));
-		outputPorts.Add(CreatePort<SubgraphPort>(SubgraphPort));
+		inputPorts.Add(CreatePort<InputPort>(InputPort, "Input"));
+		inputPorts.Add(CreatePort<InputPort>(AbortPort, "Abort"));
+		outputPorts.Add(CreatePort<EventPort>(OnActivatePort, "OnActivate"));
+		outputPorts.Add(CreatePort<EventPort>(OnDeactivatePort, "OnDeactivate"));
+		outputPorts.Add(CreatePort<EventPort>(OnAbortPort, "OnAbort"));
+		outputPorts.Add(CreatePort<SubgraphPort>(SubgraphPort, "Subgraph"));
 	}
 
 	/// <inheritdoc/>

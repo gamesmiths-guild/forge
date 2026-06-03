@@ -226,13 +226,15 @@ public abstract class Node
 	/// </summary>
 	/// <typeparam name="T">The type of port to create.</typeparam>
 	/// <param name="index">The index of the port.</param>
+	/// <param name="label">The editor-facing label for the port.</param>
 	/// <returns>The created port.</returns>
-	protected static T CreatePort<T>(byte index)
+	protected static T CreatePort<T>(byte index, string label = "")
 		where T : Port, new()
 	{
 		return new T
 		{
 			Index = index,
+			Label = label ?? string.Empty,
 		};
 	}
 

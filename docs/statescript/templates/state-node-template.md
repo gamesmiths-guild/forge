@@ -26,6 +26,7 @@
 | {4+} | {Custom} | {Event or Subgraph} | {Description of additional ports.} |
 
 > Remove the custom port rows if the node defines no additional ports beyond the standard four.
+> Port names should match the labels defined in code via `CreatePort<T>(index, "Label")`.
 
 ## Parameters
 

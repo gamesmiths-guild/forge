@@ -16,4 +16,9 @@ public abstract class Port
 	/// Gets or sets the index of this port.
 	/// </summary>
 	public byte Index { get; set; }
+
+	/// <summary>
+	/// Gets or sets the editor-facing label for this port.
+	/// </summary>
+	public string Label { get; set; } = string.Empty;
 }
