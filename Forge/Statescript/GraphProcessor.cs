@@ -103,7 +103,7 @@ public class GraphProcessor
 	/// </summary>
 	public void StopGraph()
 	{
-		if (GraphContext.Processor != this)
+		if (GraphContext.Processor != this || !GraphContext.HasStarted)
 		{
 			return;
 		}
