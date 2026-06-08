@@ -26,6 +26,17 @@ When the graph starts, each variable definition is copied into the `GraphContext
 
 **Array variables** are also supported, holding a list of `Variant128` values.
 
+### Object-Backed (Reference) Variables
+
+Reference types that cannot be stored in a `Variant128`, such as `IForgeEntity` and `Effect`, live in a separate object-backed lane. Define them with `DefineObjectVariable<T>` / `DefineObjectArrayVariable<T>` and read them with the matching object resolvers ([EntityVariableResolver](resolvers/entity-variable-resolver.md), [EffectVariableResolver](resolvers/effect-variable-resolver.md), and their array variants).
+
+```csharp
+graph.VariableDefinitions.DefineObjectVariable<Effect>("storedEffect");
+graph.VariableDefinitions.DefineObjectArrayVariable<IForgeEntity>("targets");
+```
+
+Storing an `Effect` instance is what enables effect reuse: write one with `SetVariableNode` (sourced from an [EffectFromDataResolver](resolvers/effect-from-data-resolver.md)), apply it through `ApplyEffectNode`/`EffectNode` via an `EffectVariableResolver`, and keep mutating the same instance. For non-snapshot effects with a duration, calling `Effect.LevelUp()` (or adjusting set-by-caller magnitudes) updates the active application on its target live.
+
 ### Reading and Writing Variables
 
 Nodes interact with variables through two mechanisms:
