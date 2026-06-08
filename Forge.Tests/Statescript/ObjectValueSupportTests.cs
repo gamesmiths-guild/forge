@@ -4,6 +4,7 @@ using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Properties;
@@ -36,6 +37,31 @@ public class ObjectValueSupportTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 
 		variables.TryGetObjectArray("entities", out IForgeEntity?[]? entities).Should().BeTrue();
 		entities.Should().Equal(entity1, entity2);
+	}
+
+	[Fact]
+	[Trait("Statescript", "ObjectValues")]
+	public void Variables_round_trip_effect_object_variables_and_arrays()
+	{
+		var firstEffect = new Effect(
+			new EffectData("Burn", new DurationData(DurationType.Instant)),
+			new EffectOwnership(null, null));
+		var secondEffect = new Effect(
+			new EffectData("Slow", new DurationData(DurationType.Infinite)),
+			new EffectOwnership(null, null));
+		var definitions = new GraphVariableDefinitions();
+
+		definitions.DefineObjectVariable("active", firstEffect);
+		definitions.DefineObjectArrayVariable("effects", firstEffect, secondEffect);
+
+		var variables = new Variables();
+		variables.InitializeFrom(definitions);
+
+		variables.TryGetObject("active", out Effect? active).Should().BeTrue();
+		active.Should().BeSameAs(firstEffect);
+
+		variables.TryGetObjectArray("effects", out Effect?[]? effects).Should().BeTrue();
+		effects.Should().Equal(firstEffect, secondEffect);
 	}
 
 	[Fact]

@@ -89,7 +89,7 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 
 		graph.VariableDefinitions.DefineObjectProperty(
 			"effect",
-			new EffectDataResolver(CreateTrackingEffectData("Tracked", DurationType.Instant, capture)));
+			new EffectFromDataResolver(CreateTrackingEffectData("Tracked", DurationType.Instant, capture)));
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
 
 		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
@@ -107,7 +107,7 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 
 	[Fact]
 	[Trait("Graph", "ApplyEffect")]
-	public void Apply_effect_node_uses_bound_level_and_ownership_when_present()
+	public void Apply_effect_node_uses_level_and_ownership_configured_on_the_effect_resolver()
 	{
 		TestEntity abilityOwner = CreateTestEntity();
 		TestEntity abilitySource = CreateTestEntity();
@@ -117,20 +117,20 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		var capture = new AppliedEffectCaptureComponent();
 		var graph = new Graph();
 
-		graph.VariableDefinitions.DefineObjectProperty(
-			"effect",
-			new EffectDataResolver(CreateTrackingEffectData("Tracked", DurationType.Instant, capture)));
-		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
 		graph.VariableDefinitions.DefineVariable("level", 7);
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("ownershipOwner", explicitOwner);
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("ownershipSource", explicitSource);
 		graph.VariableDefinitions.DefineObjectProperty(
-			"ownership",
-			new OwnershipResolver(
-				new EntityVariableResolver("ownershipOwner"),
-				new EntityVariableResolver("ownershipSource")));
+			"effect",
+			new EffectFromDataResolver(
+				CreateTrackingEffectData("Tracked", DurationType.Instant, capture),
+				new VariableResolver("level", typeof(int)),
+				new OwnershipResolver(
+					new EntityVariableResolver("ownershipOwner"),
+					new EntityVariableResolver("ownershipSource"))));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
 
-		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity", "level", "ownership");
+		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
 		graph.AddNode(node);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -153,11 +153,13 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		{
 			graph.VariableDefinitions.DefineObjectArrayProperty(
 				"effect",
-				new EffectDataArrayResolver(firstEffect, secondEffect));
+				new EffectArrayFromDataResolver([firstEffect, secondEffect]));
 			return;
 		}
 
-		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectDataResolver(firstEffect));
+		graph.VariableDefinitions.DefineObjectProperty(
+			"effect",
+			new EffectFromDataResolver(firstEffect));
 	}
 
 	private static void ConfigureEntityInput(

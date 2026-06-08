@@ -201,7 +201,9 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 			DurationType.Instant);
 
 		var graph = new Graph();
-		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectDataResolver(effectData));
+		graph.VariableDefinitions.DefineObjectProperty(
+			"effect",
+			new EffectFromDataResolver(effectData));
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", target);
 		graph.VariableDefinitions.DefineProperty(
 			"constant",
@@ -351,7 +353,9 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 			DurationType.Infinite);
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 0.5d);
-		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectDataResolver(effectData));
+		graph.VariableDefinitions.DefineObjectProperty(
+			"effect",
+			new EffectFromDataResolver(effectData));
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
 
 		TimerNode timer = CreateTimerNode("duration");
@@ -387,7 +391,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 	[Fact]
 	[Trait("Graph", "EffectNode")]
-	public void Effect_node_uses_bound_level_and_ownership_when_present()
+	public void Effect_node_uses_level_and_ownership_configured_on_the_effect_resolver()
 	{
 		TestEntity ownershipOwner = CreateTestEntity();
 		TestEntity ownershipSource = CreateTestEntity();
@@ -396,18 +400,20 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		EffectData effectData = CreateTrackingEffectData("Tracked", capture);
 		var graph = new Graph();
 
-		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectDataResolver(effectData));
-		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
 		graph.VariableDefinitions.DefineVariable("level", 7);
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("ownershipOwner", ownershipOwner);
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("ownershipSource", ownershipSource);
 		graph.VariableDefinitions.DefineObjectProperty(
-			"ownership",
-			new OwnershipResolver(
-				new EntityVariableResolver("ownershipOwner"),
-				new EntityVariableResolver("ownershipSource")));
+			"effect",
+			new EffectFromDataResolver(
+				effectData,
+				new VariableResolver("level", typeof(int)),
+				new OwnershipResolver(
+					new EntityVariableResolver("ownershipOwner"),
+					new EntityVariableResolver("ownershipSource"))));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
 
-		EffectNode node = CreateEffectNode("effect", "entity", "level", "ownership");
+		EffectNode node = CreateEffectNode("effect", "entity");
 		graph.AddNode(node);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -435,7 +441,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 		graph.VariableDefinitions.DefineObjectProperty(
 			"effect",
-			new EffectDataResolver(CreateTrackingEffectData("Tracked", capture)));
+			new EffectFromDataResolver(CreateTrackingEffectData("Tracked", capture)));
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
 
 		EffectNode node = CreateEffectNode("effect", "entity");
@@ -461,11 +467,13 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		{
 			graph.VariableDefinitions.DefineObjectArrayProperty(
 				"effect",
-				new EffectDataArrayResolver(firstEffect, secondEffect));
+				new EffectArrayFromDataResolver([firstEffect, secondEffect]));
 			return;
 		}
 
-		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectDataResolver(firstEffect));
+		graph.VariableDefinitions.DefineObjectProperty(
+			"effect",
+			new EffectFromDataResolver(firstEffect));
 	}
 
 	private static void ConfigureTargetInput(
@@ -509,13 +517,15 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 		if (effectData.Length == 1)
 		{
-			graph.VariableDefinitions.DefineObjectProperty("effect", new EffectDataResolver(effectData[0]));
+			graph.VariableDefinitions.DefineObjectProperty(
+				"effect",
+				new EffectFromDataResolver(effectData[0]));
 		}
 		else
 		{
 			graph.VariableDefinitions.DefineObjectArrayProperty(
 				"effect",
-				new EffectDataArrayResolver(effectData));
+				new EffectArrayFromDataResolver(effectData));
 		}
 
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
