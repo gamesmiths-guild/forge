@@ -321,6 +321,42 @@ public class GraphProcessorTests
 	}
 
 	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void Stopping_graph_resolves_property_inputs_during_deactivation_cascade()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 100.0);
+		graph.VariableDefinitions.DefineProperty(
+			"constant",
+			new VariantResolver(new Variant128(42), typeof(int)));
+
+		TimerNode timer = CreateTimerNode("duration");
+		var readNode = new ReadPropertyNode<int>();
+		readNode.BindInput(ReadPropertyNode<int>.ValueInput, "constant");
+
+		graph.AddNode(timer);
+		graph.AddNode(readNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[StateNode<TimerNodeContext>.OnDeactivatePort],
+			readNode.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.IsActive.Should().BeTrue();
+
+		processor.StopGraph();
+
+		readNode.ExecutionCount.Should().Be(1);
+		readNode.Found.Should().BeTrue(
+			"property-backed inputs must still resolve during the StopGraph deactivation cascade");
+		readNode.LastReadValue.Should().Be(42);
+	}
+
+	[Fact]
 	[Trait("Graph", "Complex")]
 	public void Complex_graph_with_condition_and_multiple_actions_executes_correctly()
 	{
