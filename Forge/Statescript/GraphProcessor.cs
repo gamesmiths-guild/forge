@@ -103,14 +103,17 @@ public class GraphProcessor
 	/// </summary>
 	public void StopGraph()
 	{
-		if (GraphContext.Processor != this)
+		if (GraphContext.Processor != this || !GraphContext.HasStarted)
 		{
 			return;
 		}
 
-		GraphContext.Processor = null;
+		// Clear HasStarted first so the disable cascade is re-entrancy safe (e.g. an ExitNode triggering StopGraph, or a
+		// state node reaching FinalizeGraph) without nulling Processor yet. Keeping Processor set throughout the cascade
+		// lets action nodes on OnDeactivate paths still resolve property-backed inputs.
 		GraphContext.HasStarted = false;
 		Graph.EntryNode.StopGraph(GraphContext);
+		GraphContext.Processor = null;
 		GraphContext.ActiveStateNodes.Clear();
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();
