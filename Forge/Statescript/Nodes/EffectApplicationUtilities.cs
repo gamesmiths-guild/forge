@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
 
@@ -12,18 +11,13 @@ internal static class EffectApplicationUtilities
 		GraphContext graphContext,
 		StringKey effectInputName,
 		StringKey entityInputName,
-		StringKey levelInputName,
-		StringKey ownershipInputName,
 		ICollection<ActiveEffectHandle>? activeHandles = null)
 	{
-		if (!TryResolveEffects(graphContext, effectInputName, out IReadOnlyList<EffectData> effects)
+		if (!TryResolveEffects(graphContext, effectInputName, out IReadOnlyList<Effect> effects)
 			|| !TryResolveEntities(graphContext, entityInputName, out IReadOnlyList<IForgeEntity> entities))
 		{
 			return;
 		}
-
-		EffectOwnership ownership = ResolveOwnership(graphContext, ownershipInputName);
-		int level = ResolveLevel(graphContext, levelInputName);
 
 		for (int entityIndex = 0; entityIndex < entities.Count; entityIndex++)
 		{
@@ -31,8 +25,7 @@ internal static class EffectApplicationUtilities
 
 			for (int effectIndex = 0; effectIndex < effects.Count; effectIndex++)
 			{
-				var effect = new Effect(effects[effectIndex], ownership, level);
-				ActiveEffectHandle? handle = entity.EffectsManager.ApplyEffect(effect);
+				ActiveEffectHandle? handle = entity.EffectsManager.ApplyEffect(effects[effectIndex]);
 
 				if (handle is not null && activeHandles is not null)
 				{
@@ -75,17 +68,17 @@ internal static class EffectApplicationUtilities
 	private static bool TryResolveEffects(
 		GraphContext graphContext,
 		StringKey effectInputName,
-		out IReadOnlyList<EffectData> effects)
+		out IReadOnlyList<Effect> effects)
 	{
-		if (graphContext.TryResolveObjectArray(effectInputName, typeof(EffectData), out object?[]? resolvedEffectArray))
+		if (graphContext.TryResolveObjectArray(effectInputName, typeof(Effect), out object?[]? resolvedEffectArray))
 		{
-			var resolvedEffects = new List<EffectData>(resolvedEffectArray.Length);
+			var resolvedEffects = new List<Effect>(resolvedEffectArray.Length);
 
 			for (int i = 0; i < resolvedEffectArray.Length; i++)
 			{
-				if (resolvedEffectArray[i] is EffectData effectData)
+				if (resolvedEffectArray[i] is Effect effect)
 				{
-					resolvedEffects.Add(effectData);
+					resolvedEffects.Add(effect);
 				}
 			}
 
@@ -93,8 +86,8 @@ internal static class EffectApplicationUtilities
 			return resolvedEffects.Count > 0;
 		}
 
-		if (graphContext.TryResolveObject(effectInputName, typeof(EffectData), out object? resolvedEffect)
-			&& resolvedEffect is EffectData singleEffect)
+		if (graphContext.TryResolveObject(effectInputName, typeof(Effect), out object? resolvedEffect)
+			&& resolvedEffect is Effect singleEffect)
 		{
 			effects = [singleEffect];
 			return true;
@@ -137,34 +130,5 @@ internal static class EffectApplicationUtilities
 
 		entities = [];
 		return false;
-	}
-
-	private static EffectOwnership ResolveOwnership(GraphContext graphContext, StringKey ownershipInputName)
-	{
-		if (ownershipInputName != StringKey.Empty
-			&& graphContext.TryResolveObject(ownershipInputName, typeof(EffectOwnership), out object? resolvedOwnership)
-			&& resolvedOwnership is EffectOwnership ownership)
-		{
-			return ownership;
-		}
-
-		if (!graphContext.TryGetActivationContext(out AbilityBehaviorContext? abilityContext))
-		{
-			return new EffectOwnership(null, null);
-		}
-
-		return abilityContext.Ownership;
-	}
-
-	private static int ResolveLevel(GraphContext graphContext, StringKey levelInputName)
-	{
-		if (levelInputName != StringKey.Empty && graphContext.TryResolve(levelInputName, out int level))
-		{
-			return level;
-		}
-
-		return graphContext.TryGetActivationContext(out AbilityBehaviorContext? abilityContext)
-			? abilityContext.Level
-			: 1;
 	}
 }

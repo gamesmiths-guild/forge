@@ -11,15 +11,18 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// instances on deactivation.
 /// </summary>
 /// <remarks>
-/// <para>The effect input accepts either a single <see cref="EffectData"/> or an array of effects.</para>
+/// <para>The effect input accepts either a single <see cref="Effect"/> or an array of effects.</para>
 /// <para>The target input accepts either a single <see cref="IForgeEntity"/> or an array of entities.</para>
 /// <para>Instant effects do not produce removable handles, so deactivation only removes effects that are still active.
 /// </para>
+/// <para>Because effects are resolved as instances, the same <see cref="Effect"/> can be reused across applications.
+/// Level and ownership are configured on the resolved effect (see <c>EffectFromDataResolver</c>) rather than on the
+/// node.</para>
 /// </remarks>
 public class EffectNode : StateNode<EffectNodeContext>
 {
 	/// <summary>
-	/// Input property index for the effect data.
+	/// Input property index for the effect instance.
 	/// </summary>
 	public const byte EffectInput = 0;
 
@@ -27,16 +30,6 @@ public class EffectNode : StateNode<EffectNodeContext>
 	/// Input property index for the effect target.
 	/// </summary>
 	public const byte TargetInput = 1;
-
-	/// <summary>
-	/// Input property index for the effect level override.
-	/// </summary>
-	public const byte LevelInput = 2;
-
-	/// <summary>
-	/// Input property index for the effect ownership override.
-	/// </summary>
-	public const byte OwnershipInput = 3;
 
 	/// <summary>
 	/// Output port index for the natural effect-end event.
@@ -58,10 +51,8 @@ public class EffectNode : StateNode<EffectNodeContext>
 	/// <inheritdoc/>
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
 	{
-		inputProperties.Add(new InputProperty("Effect", typeof(EffectData)));
+		inputProperties.Add(new InputProperty("Effect", typeof(Effect)));
 		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
-		inputProperties.Add(new InputProperty("Level", typeof(int)));
-		inputProperties.Add(new InputProperty("Ownership", typeof(EffectOwnership)));
 	}
 
 	/// <inheritdoc/>
@@ -74,8 +65,6 @@ public class EffectNode : StateNode<EffectNodeContext>
 			graphContext,
 			InputProperties[EffectInput].BoundName,
 			InputProperties[TargetInput].BoundName,
-			InputProperties[LevelInput].BoundName,
-			InputProperties[OwnershipInput].BoundName,
 			nodeContext.ActiveEffectHandles);
 
 		if (!EffectApplicationUtilities.RetainActiveEffects(nodeContext.ActiveEffectHandles))
