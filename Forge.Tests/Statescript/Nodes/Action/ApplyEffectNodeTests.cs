@@ -143,6 +143,101 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		capture.LastSource.Should().BeSameAs(explicitSource);
 	}
 
+	[Fact]
+	[Trait("Graph", "ApplyEffect")]
+	public void Apply_effect_node_writes_single_active_effect_output_for_non_instant_effect()
+	{
+		TestEntity target = CreateTestEntity();
+		EffectData effectData = CreateFlatEffectData(
+			"Buff",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.Infinite);
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectFromDataResolver(effectData));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
+		graph.VariableDefinitions.DefineObjectVariable<ActiveEffectHandle>("activeEffect");
+
+		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
+		node.BindOutput(ApplyEffectNode.ActiveEffectOutput, "activeEffect");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.GraphVariables.TryGetObject("activeEffect", out ActiveEffectHandle? handle)
+			.Should().BeTrue();
+		handle.Should().NotBeNull();
+		handle!.IsValid.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "ApplyEffect")]
+	public void Apply_effect_node_writes_active_effect_array_output_following_input_shape()
+	{
+		TestEntity firstTarget = CreateTestEntity();
+		TestEntity secondTarget = CreateTestEntity();
+		EffectData effectData = CreateFlatEffectData(
+			"Buff",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.Infinite);
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectFromDataResolver(effectData));
+		graph.VariableDefinitions.DefineObjectArrayVariable<IForgeEntity>("entities", firstTarget, secondTarget);
+		graph.VariableDefinitions.DefineObjectArrayVariable<ActiveEffectHandle>("activeEffects");
+
+		ApplyEffectNode node = CreateApplyEffectNode("effect", "entities");
+		node.BindOutput(ApplyEffectNode.ActiveEffectOutput, "activeEffects");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.GraphVariables.TryGetObjectArray("activeEffects", out ActiveEffectHandle[]? handles)
+			.Should().BeTrue();
+		handles.Should().HaveCount(2);
+		handles.Should().OnlyContain(handle => handle.IsValid);
+	}
+
+	[Fact]
+	[Trait("Graph", "ApplyEffect")]
+	public void Apply_effect_node_writes_null_active_effect_output_for_instant_effect()
+	{
+		TestEntity target = CreateTestEntity();
+		EffectData effectData = CreateFlatEffectData(
+			"Zap",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.Instant);
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectFromDataResolver(effectData));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
+		graph.VariableDefinitions.DefineObjectVariable<ActiveEffectHandle>("activeEffect");
+
+		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
+		node.BindOutput(ApplyEffectNode.ActiveEffectOutput, "activeEffect");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.GraphVariables.TryGetObject("activeEffect", out ActiveEffectHandle? handle);
+		handle.Should().BeNull();
+	}
+
 	private static void ConfigureEffectInput(
 		Graph graph,
 		bool useEffectArray,

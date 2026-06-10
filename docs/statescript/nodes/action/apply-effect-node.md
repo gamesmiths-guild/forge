@@ -28,6 +28,12 @@ Applies one or more `Effect` instances to one or more targets, then immediately 
 | 0 | Effect | `Effect` or `Effect[]` | The effect instance(s) to apply. |
 | 1 | Target | `IForgeEntity` or `IForgeEntity[]` | The entity or entities that receive the effect(s). |
 
+**Output Variables:**
+
+| Index | Label | Type | Description |
+|-------|-------|------|-------------|
+| 0 | Active Effect | `ActiveEffectHandle` or `ActiveEffectHandle[]` | Optional. The active effect handle(s) produced by the application. |
+
 ## Behavior
 
 1. The node resolves the **Effect** input as either a single `Effect` or an array of `Effect` instances.
@@ -36,7 +42,8 @@ Applies one or more `Effect` instances to one or more targets, then immediately 
 4. Level and ownership are baked into each resolved `Effect`; configure them on the resolver that produces the effect (typically [EffectFromDataResolver](../../resolvers/effect-from-data-resolver.md)) rather than on the node.
 5. Instant, duration, and infinite effects are all supported.
 6. The node is fire-and-forget, so it does not keep handles for later removal.
-7. The output port emits after all applications are attempted.
+7. If the **Active Effect** output is bound, the produced `ActiveEffectHandle`(s) are written to that variable. The write shape follows the bound variable: a scalar handle variable receives the single handle (or `null` when the effect was instant), while an array handle variable receives the compact list of produced handles (instant applications contribute nothing). Bind it to save handles for later manipulation.
+8. The output port emits after all applications are attempted.
 
 Because effects are passed as instances, the same `Effect` can be reused across applications. Store it in a variable with [SetVariableNode](set-variable-node.md) and an [EffectFromDataResolver](../../resolvers/effect-from-data-resolver.md), then re-read it through an [EffectVariableResolver](../../resolvers/effect-variable-resolver.md). Mutating that instance later (for example `Effect.LevelUp()`) updates any non-snapshot active applications on their targets live.
 

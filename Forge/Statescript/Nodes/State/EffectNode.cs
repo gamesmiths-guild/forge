@@ -32,6 +32,11 @@ public class EffectNode : StateNode<EffectNodeContext>
 	public const byte TargetInput = 1;
 
 	/// <summary>
+	/// Output variable index for the applied effect handle(s).
+	/// </summary>
+	public const byte ActiveEffectOutput = 0;
+
+	/// <summary>
 	/// Output port index for the natural effect-end event.
 	/// </summary>
 	public const byte OnEffectEndPort = 4;
@@ -53,6 +58,7 @@ public class EffectNode : StateNode<EffectNodeContext>
 	{
 		inputProperties.Add(new InputProperty("Effect", typeof(Effect)));
 		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
+		outputVariables.Add(new OutputVariable("Active Effect", typeof(ActiveEffectHandle)));
 	}
 
 	/// <inheritdoc/>
@@ -65,6 +71,11 @@ public class EffectNode : StateNode<EffectNodeContext>
 			graphContext,
 			InputProperties[EffectInput].BoundName,
 			InputProperties[TargetInput].BoundName,
+			nodeContext.ActiveEffectHandles);
+
+		EffectApplicationUtilities.WriteHandleOutput(
+			graphContext,
+			OutputVariables[ActiveEffectOutput],
 			nodeContext.ActiveEffectHandles);
 
 		if (!EffectApplicationUtilities.RetainActiveEffects(nodeContext.ActiveEffectHandles))

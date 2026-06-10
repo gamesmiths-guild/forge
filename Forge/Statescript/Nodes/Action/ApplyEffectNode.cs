@@ -28,6 +28,11 @@ public class ApplyEffectNode : ActionNode
 	/// </summary>
 	public const byte TargetInput = 1;
 
+	/// <summary>
+	/// Output variable index for the applied effect handle(s).
+	/// </summary>
+	public const byte ActiveEffectOutput = 0;
+
 	/// <inheritdoc/>
 	public override string Description => "Applies effects to targets.";
 
@@ -36,14 +41,20 @@ public class ApplyEffectNode : ActionNode
 	{
 		inputProperties.Add(new InputProperty("Effect", typeof(Effect)));
 		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
+		outputVariables.Add(new OutputVariable("Active Effect", typeof(ActiveEffectHandle)));
 	}
 
 	/// <inheritdoc/>
 	protected override void Execute(GraphContext graphContext)
 	{
+		var handles = new List<ActiveEffectHandle>();
+
 		EffectApplicationUtilities.ApplyEffects(
 			graphContext,
 			InputProperties[EffectInput].BoundName,
-			InputProperties[TargetInput].BoundName);
+			InputProperties[TargetInput].BoundName,
+			handles);
+
+		EffectApplicationUtilities.WriteHandleOutput(graphContext, OutputVariables[ActiveEffectOutput], handles);
 	}
 }

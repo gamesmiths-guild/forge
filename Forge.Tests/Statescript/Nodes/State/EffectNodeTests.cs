@@ -457,6 +457,40 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		capture.LastSource.Should().BeSameAs(source);
 	}
 
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void Effect_node_writes_active_effect_output_on_activation()
+	{
+		TestEntity target = CreateTestEntity();
+		EffectData effectData = CreateFlatEffectData(
+			"Sustain",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.Infinite);
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineObjectProperty(
+			"effect",
+			new EffectFromDataResolver(effectData));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
+		graph.VariableDefinitions.DefineObjectVariable<ActiveEffectHandle>("activeEffect");
+
+		EffectNode node = CreateEffectNode("effect", "entity");
+		node.BindOutput(EffectNode.ActiveEffectOutput, "activeEffect");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.GraphVariables.TryGetObject("activeEffect", out ActiveEffectHandle? handle)
+			.Should().BeTrue();
+		handle.Should().NotBeNull();
+		handle!.IsValid.Should().BeTrue();
+	}
+
 	private static void ConfigureEffectInput(
 		Graph graph,
 		bool useEffectArray,
