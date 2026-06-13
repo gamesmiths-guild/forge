@@ -37,5 +37,6 @@ graph.VariableDefinitions.DefineProperty("bonusLevel",
 
 - [AbilityOwnershipResolver](ability-ownership-resolver.md)
 - [OwnershipResolver](ownership-resolver.md)
+- [EffectFromDataResolver](effect-from-data-resolver.md)
 - [ApplyEffectNode](../nodes/action/apply-effect-node.md)
 - [EffectNode](../nodes/state/effect-node.md)

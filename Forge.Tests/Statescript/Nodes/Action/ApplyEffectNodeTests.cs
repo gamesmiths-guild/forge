@@ -89,7 +89,7 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 
 		graph.VariableDefinitions.DefineObjectProperty(
 			"effect",
-			new EffectDataResolver(CreateTrackingEffectData("Tracked", DurationType.Instant, capture)));
+			new EffectFromDataResolver(CreateTrackingEffectData("Tracked", DurationType.Instant, capture)));
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
 
 		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
@@ -107,7 +107,7 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 
 	[Fact]
 	[Trait("Graph", "ApplyEffect")]
-	public void Apply_effect_node_uses_bound_level_and_ownership_when_present()
+	public void Apply_effect_node_uses_level_and_ownership_configured_on_the_effect_resolver()
 	{
 		TestEntity abilityOwner = CreateTestEntity();
 		TestEntity abilitySource = CreateTestEntity();
@@ -117,20 +117,20 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		var capture = new AppliedEffectCaptureComponent();
 		var graph = new Graph();
 
-		graph.VariableDefinitions.DefineObjectProperty(
-			"effect",
-			new EffectDataResolver(CreateTrackingEffectData("Tracked", DurationType.Instant, capture)));
-		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
 		graph.VariableDefinitions.DefineVariable("level", 7);
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("ownershipOwner", explicitOwner);
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("ownershipSource", explicitSource);
 		graph.VariableDefinitions.DefineObjectProperty(
-			"ownership",
-			new OwnershipResolver(
-				new EntityVariableResolver("ownershipOwner"),
-				new EntityVariableResolver("ownershipSource")));
+			"effect",
+			new EffectFromDataResolver(
+				CreateTrackingEffectData("Tracked", DurationType.Instant, capture),
+				new VariableResolver("level", typeof(int)),
+				new OwnershipResolver(
+					new EntityVariableResolver("ownershipOwner"),
+					new EntityVariableResolver("ownershipSource"))));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
 
-		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity", "level", "ownership");
+		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
 		graph.AddNode(node);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -143,6 +143,159 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		capture.LastSource.Should().BeSameAs(explicitSource);
 	}
 
+	[Fact]
+	[Trait("Graph", "ApplyEffect")]
+	public void Apply_effect_node_writes_single_active_effect_output_for_non_instant_effect()
+	{
+		TestEntity target = CreateTestEntity();
+		EffectData effectData = CreateFlatEffectData(
+			"Buff",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.Infinite);
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectFromDataResolver(effectData));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
+		graph.VariableDefinitions.DefineObjectVariable<ActiveEffectHandle>("activeEffect");
+
+		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
+		node.BindOutput(ApplyEffectNode.ActiveEffectOutput, "activeEffect");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.GraphVariables.TryGetObject("activeEffect", out ActiveEffectHandle? handle)
+			.Should().BeTrue();
+		handle.Should().NotBeNull();
+		handle!.IsValid.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "ApplyEffect")]
+	public void Apply_effect_node_writes_active_effect_array_output_following_input_shape()
+	{
+		TestEntity firstTarget = CreateTestEntity();
+		TestEntity secondTarget = CreateTestEntity();
+		EffectData effectData = CreateFlatEffectData(
+			"Buff",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.Infinite);
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectFromDataResolver(effectData));
+		graph.VariableDefinitions.DefineObjectArrayVariable<IForgeEntity>("entities", firstTarget, secondTarget);
+		graph.VariableDefinitions.DefineObjectArrayVariable<ActiveEffectHandle>("activeEffects");
+
+		ApplyEffectNode node = CreateApplyEffectNode("effect", "entities");
+		node.BindOutput(ApplyEffectNode.ActiveEffectOutput, "activeEffects");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.GraphVariables.TryGetObjectArray("activeEffects", out ActiveEffectHandle[]? handles)
+			.Should().BeTrue();
+		handles.Should().HaveCount(2);
+		handles.Should().OnlyContain(handle => handle.IsValid);
+	}
+
+	[Fact]
+	[Trait("Graph", "ApplyEffect")]
+	public void Apply_effect_node_writes_null_active_effect_output_for_instant_effect()
+	{
+		TestEntity target = CreateTestEntity();
+		EffectData effectData = CreateFlatEffectData(
+			"Zap",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.Instant);
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectFromDataResolver(effectData));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
+		graph.VariableDefinitions.DefineObjectVariable<ActiveEffectHandle>("activeEffect");
+
+		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
+		node.BindOutput(ApplyEffectNode.ActiveEffectOutput, "activeEffect");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext.GraphVariables.TryGetObject("activeEffect", out ActiveEffectHandle? handle);
+		handle.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Graph", "ApplyEffect")]
+	public void Apply_effect_node_passes_provider_built_context_data_through_the_pipeline()
+	{
+		TestEntity target = CreateTestEntity();
+		var capture = new ContextCaptureComponent();
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineVariable("damage", 42);
+		graph.VariableDefinitions.DefineObjectProperty(
+			"effect",
+			new EffectFromDataResolver(CreateTrackingEffectData("Tracked", DurationType.Instant, capture)));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
+		graph.VariableDefinitions.DefineObjectProperty(
+			"context",
+			new EffectContextDataResolver(new DamageContextProvider()));
+
+		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
+		node.BindInput(ApplyEffectNode.ContextDataInput, "context");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		capture.WasApplied.Should().BeTrue();
+		capture.ReceivedContext.Should().BeTrue();
+		capture.ReceivedDamage.Should().Be(42);
+	}
+
+	[Fact]
+	[Trait("Graph", "ApplyEffect")]
+	public void Apply_effect_node_applies_without_context_data_when_input_is_unbound()
+	{
+		TestEntity target = CreateTestEntity();
+		var capture = new ContextCaptureComponent();
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineObjectProperty(
+			"effect",
+			new EffectFromDataResolver(CreateTrackingEffectData("Tracked", DurationType.Instant, capture)));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
+
+		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		capture.WasApplied.Should().BeTrue();
+		capture.ReceivedContext.Should().BeFalse();
+	}
+
 	private static void ConfigureEffectInput(
 		Graph graph,
 		bool useEffectArray,
@@ -153,11 +306,13 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		{
 			graph.VariableDefinitions.DefineObjectArrayProperty(
 				"effect",
-				new EffectDataArrayResolver(firstEffect, secondEffect));
+				new EffectArrayFromDataResolver([firstEffect, secondEffect]));
 			return;
 		}
 
-		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectDataResolver(firstEffect));
+		graph.VariableDefinitions.DefineObjectProperty(
+			"effect",
+			new EffectFromDataResolver(firstEffect));
 	}
 
 	private static void ConfigureEntityInput(
@@ -243,6 +398,37 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 			LastLevel = effectEvaluatedData.Level;
 			LastOwner = effectEvaluatedData.Effect.Ownership.Owner;
 			LastSource = effectEvaluatedData.Effect.Ownership.Source;
+		}
+	}
+
+	private sealed record DamageContext(int Damage);
+
+	private sealed class DamageContextProvider : EffectContextDataProvider<DamageContext>
+	{
+		public override DamageContext CreateData(GraphContext graphContext, EffectContextDataInputs inputs)
+		{
+			graphContext.TryResolve("damage", out int damage);
+			return new DamageContext(damage);
+		}
+	}
+
+	private sealed class ContextCaptureComponent : IEffectComponent
+	{
+		public bool WasApplied { get; private set; }
+
+		public bool ReceivedContext { get; private set; }
+
+		public int ReceivedDamage { get; private set; }
+
+		public void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
+		{
+			WasApplied = true;
+
+			if (effectEvaluatedData.TryGetContextData(out DamageContext? context))
+			{
+				ReceivedContext = true;
+				ReceivedDamage = context.Damage;
+			}
 		}
 	}
 }

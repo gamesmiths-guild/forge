@@ -24,13 +24,16 @@ For an overview of the Statescript system, see the [Statescript overview](../REA
 
 ## Effect Resolvers
 
-These resolvers provide effect definitions and application context to nodes such as `ApplyEffectNode` and `EffectNode`.
+These resolvers provide effect instances and application context to nodes such as `ApplyEffectNode` and `EffectNode`, which take `Effect` instances. Author them with `EffectFromDataResolver` (or `EffectVariableResolver` to reuse a stored instance).
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
 | [AbilityOwnershipResolver](ability-ownership-resolver.md) | `EffectOwnership` | Reads the current ability owner/source pair as an effect ownership value. |
-| [EffectDataResolver](effect-data-resolver.md) | `EffectData` | Returns a single fixed `EffectData` value. |
-| [EffectDataArrayResolver](effect-data-array-resolver.md) | `EffectData[]` | Returns a fixed array of `EffectData` values. |
+| [EffectArrayFromDataResolver](effect-array-from-data-resolver.md) | `Effect[]` | Builds an array of `Effect` instances sharing the same level and ownership. |
+| [EffectArrayVariableResolver](effect-array-variable-resolver.md) | `Effect[]` | Reads a stored `Effect` instance array from graph or shared scope. |
+| [EffectContextDataResolver](effect-context-data-resolver.md) | `EffectApplicationContext` | Produces custom application context data for an effect via an `IEffectContextDataProvider`. |
+| [EffectFromDataResolver](effect-from-data-resolver.md) | `Effect` | Builds an `Effect` instance from an `EffectData` value plus optional level and ownership. |
+| [EffectVariableResolver](effect-variable-resolver.md) | `Effect?` | Reads a stored `Effect` instance from graph or shared scope for reuse. |
 | [OwnershipResolver](ownership-resolver.md) | `EffectOwnership` | Composes an effect ownership value from nested entity resolvers. |
 
 ---

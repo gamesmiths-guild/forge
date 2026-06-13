@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
 
@@ -12,18 +11,17 @@ internal static class EffectApplicationUtilities
 		GraphContext graphContext,
 		StringKey effectInputName,
 		StringKey entityInputName,
-		StringKey levelInputName,
-		StringKey ownershipInputName,
-		ICollection<ActiveEffectHandle>? activeHandles = null)
+		ICollection<ActiveEffectHandle>? activeHandles = null,
+		StringKey contextDataInputName = default)
 	{
-		if (!TryResolveEffects(graphContext, effectInputName, out IReadOnlyList<EffectData> effects)
+		if (!TryResolveEffects(graphContext, effectInputName, out IReadOnlyList<Effect> effects)
 			|| !TryResolveEntities(graphContext, entityInputName, out IReadOnlyList<IForgeEntity> entities))
 		{
 			return;
 		}
 
-		EffectOwnership ownership = ResolveOwnership(graphContext, ownershipInputName);
-		int level = ResolveLevel(graphContext, levelInputName);
+		// Resolved once per node execution and shared across the whole effect x target cross-product.
+		EffectApplicationContext? applicationContext = ResolveContextData(graphContext, contextDataInputName);
 
 		for (int entityIndex = 0; entityIndex < entities.Count; entityIndex++)
 		{
@@ -31,14 +29,61 @@ internal static class EffectApplicationUtilities
 
 			for (int effectIndex = 0; effectIndex < effects.Count; effectIndex++)
 			{
-				var effect = new Effect(effects[effectIndex], ownership, level);
-				ActiveEffectHandle? handle = entity.EffectsManager.ApplyEffect(effect);
+				// applicationContext is null when no context-data input is bound; ApplyEffectInternal handles both
+				// cases.
+				ActiveEffectHandle? handle =
+					entity.EffectsManager.ApplyEffectInternal(effects[effectIndex], applicationContext);
 
 				if (handle is not null && activeHandles is not null)
 				{
 					activeHandles.Add(handle);
 				}
 			}
+		}
+	}
+
+	/// <summary>
+	/// Writes the active effect handles produced by an application to the node's bound output variable, choosing a
+	/// scalar or array write based on the bound variable's shape. Instant applications produce no handle, so the array
+	/// form is compact (only real handles) and the scalar form is <see langword="null"/> when no handle was produced.
+	/// </summary>
+	/// <param name="graphContext">The graph execution context.</param>
+	/// <param name="output">The node's handle output variable.</param>
+	/// <param name="handles">The handles collected during application.</param>
+	public static void WriteHandleOutput(
+		GraphContext graphContext,
+		OutputVariable output,
+		IReadOnlyList<ActiveEffectHandle> handles)
+	{
+		if (output.BoundName == StringKey.Empty)
+		{
+			return;
+		}
+
+		Variables? variables = output.Scope == VariableScope.Shared
+			? graphContext.SharedVariables
+			: graphContext.GraphVariables;
+
+		if (variables is null)
+		{
+			return;
+		}
+
+		if (variables.TryGetObjectArrayElementType(output.BoundName, out Type? elementType))
+		{
+			object?[] values = new object?[handles.Count];
+			for (int i = 0; i < handles.Count; i++)
+			{
+				values[i] = handles[i];
+			}
+
+			variables.DefineObjectArrayVariable(output.BoundName, elementType, values);
+			return;
+		}
+
+		if (variables.TryGetObjectVariableType(output.BoundName, out _))
+		{
+			variables.SetObject(output.BoundName, handles.Count > 0 ? handles[0] : null);
 		}
 	}
 
@@ -72,20 +117,41 @@ internal static class EffectApplicationUtilities
 		return activeHandles.Count > 0;
 	}
 
+	private static EffectApplicationContext? ResolveContextData(
+		GraphContext graphContext,
+		StringKey contextDataInputName)
+	{
+		if (contextDataInputName == StringKey.Empty)
+		{
+			return null;
+		}
+
+		if (graphContext.TryResolveObject(
+			contextDataInputName,
+			typeof(EffectApplicationContext),
+			out object? resolved)
+			&& resolved is EffectApplicationContext context)
+		{
+			return context;
+		}
+
+		return null;
+	}
+
 	private static bool TryResolveEffects(
 		GraphContext graphContext,
 		StringKey effectInputName,
-		out IReadOnlyList<EffectData> effects)
+		out IReadOnlyList<Effect> effects)
 	{
-		if (graphContext.TryResolveObjectArray(effectInputName, typeof(EffectData), out object?[]? resolvedEffectArray))
+		if (graphContext.TryResolveObjectArray(effectInputName, typeof(Effect), out object?[]? resolvedEffectArray))
 		{
-			var resolvedEffects = new List<EffectData>(resolvedEffectArray.Length);
+			var resolvedEffects = new List<Effect>(resolvedEffectArray.Length);
 
 			for (int i = 0; i < resolvedEffectArray.Length; i++)
 			{
-				if (resolvedEffectArray[i] is EffectData effectData)
+				if (resolvedEffectArray[i] is Effect effect)
 				{
-					resolvedEffects.Add(effectData);
+					resolvedEffects.Add(effect);
 				}
 			}
 
@@ -93,8 +159,8 @@ internal static class EffectApplicationUtilities
 			return resolvedEffects.Count > 0;
 		}
 
-		if (graphContext.TryResolveObject(effectInputName, typeof(EffectData), out object? resolvedEffect)
-			&& resolvedEffect is EffectData singleEffect)
+		if (graphContext.TryResolveObject(effectInputName, typeof(Effect), out object? resolvedEffect)
+			&& resolvedEffect is Effect singleEffect)
 		{
 			effects = [singleEffect];
 			return true;
@@ -137,34 +203,5 @@ internal static class EffectApplicationUtilities
 
 		entities = [];
 		return false;
-	}
-
-	private static EffectOwnership ResolveOwnership(GraphContext graphContext, StringKey ownershipInputName)
-	{
-		if (ownershipInputName != StringKey.Empty
-			&& graphContext.TryResolveObject(ownershipInputName, typeof(EffectOwnership), out object? resolvedOwnership)
-			&& resolvedOwnership is EffectOwnership ownership)
-		{
-			return ownership;
-		}
-
-		if (!graphContext.TryGetActivationContext(out AbilityBehaviorContext? abilityContext))
-		{
-			return new EffectOwnership(null, null);
-		}
-
-		return abilityContext.Ownership;
-	}
-
-	private static int ResolveLevel(GraphContext graphContext, StringKey levelInputName)
-	{
-		if (levelInputName != StringKey.Empty && graphContext.TryResolve(levelInputName, out int level))
-		{
-			return level;
-		}
-
-		return graphContext.TryGetActivationContext(out AbilityBehaviorContext? abilityContext)
-			? abilityContext.Level
-			: 1;
 	}
 }

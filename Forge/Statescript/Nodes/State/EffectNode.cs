@@ -11,15 +11,21 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// instances on deactivation.
 /// </summary>
 /// <remarks>
-/// <para>The effect input accepts either a single <see cref="EffectData"/> or an array of effects.</para>
+/// <para>The effect input accepts either a single <see cref="Effect"/> or an array of effects.</para>
 /// <para>The target input accepts either a single <see cref="IForgeEntity"/> or an array of entities.</para>
 /// <para>Instant effects do not produce removable handles, so deactivation only removes effects that are still active.
 /// </para>
+/// <para>Because effects are resolved as instances, the same <see cref="Effect"/> can be reused across applications.
+/// Level and ownership are configured on the resolved effect (see <c>EffectFromDataResolver</c>) rather than on the
+/// node.</para>
+/// <para>The optional context-data input supplies a custom <see cref="EffectApplicationContext"/> (typically built by
+/// an <see cref="IEffectContextDataProvider"/>) that is passed through the effect pipeline for every application. When
+/// the input is unbound, effects are applied without context data.</para>
 /// </remarks>
 public class EffectNode : StateNode<EffectNodeContext>
 {
 	/// <summary>
-	/// Input property index for the effect data.
+	/// Input property index for the effect instance.
 	/// </summary>
 	public const byte EffectInput = 0;
 
@@ -29,14 +35,14 @@ public class EffectNode : StateNode<EffectNodeContext>
 	public const byte TargetInput = 1;
 
 	/// <summary>
-	/// Input property index for the effect level override.
+	/// Input property index for the optional effect application context data.
 	/// </summary>
-	public const byte LevelInput = 2;
+	public const byte ContextDataInput = 2;
 
 	/// <summary>
-	/// Input property index for the effect ownership override.
+	/// Output variable index for the applied effect handle(s).
 	/// </summary>
-	public const byte OwnershipInput = 3;
+	public const byte ActiveEffectOutput = 0;
 
 	/// <summary>
 	/// Output port index for the natural effect-end event.
@@ -58,10 +64,10 @@ public class EffectNode : StateNode<EffectNodeContext>
 	/// <inheritdoc/>
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
 	{
-		inputProperties.Add(new InputProperty("Effect", typeof(EffectData)));
+		inputProperties.Add(new InputProperty("Effect", typeof(Effect)));
 		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
-		inputProperties.Add(new InputProperty("Level", typeof(int)));
-		inputProperties.Add(new InputProperty("Ownership", typeof(EffectOwnership)));
+		inputProperties.Add(new InputProperty("Context Data", typeof(EffectApplicationContext)));
+		outputVariables.Add(new OutputVariable("Active Effect", typeof(ActiveEffectHandle)));
 	}
 
 	/// <inheritdoc/>
@@ -74,8 +80,12 @@ public class EffectNode : StateNode<EffectNodeContext>
 			graphContext,
 			InputProperties[EffectInput].BoundName,
 			InputProperties[TargetInput].BoundName,
-			InputProperties[LevelInput].BoundName,
-			InputProperties[OwnershipInput].BoundName,
+			nodeContext.ActiveEffectHandles,
+			InputProperties[ContextDataInput].BoundName);
+
+		EffectApplicationUtilities.WriteHandleOutput(
+			graphContext,
+			OutputVariables[ActiveEffectOutput],
 			nodeContext.ActiveEffectHandles);
 
 		if (!EffectApplicationUtilities.RetainActiveEffects(nodeContext.ActiveEffectHandles))

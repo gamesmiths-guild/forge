@@ -28,8 +28,11 @@ graph.VariableDefinitions.DefineObjectProperty(
 ## Composition
 
 ```csharp
-var applyEffect = new ApplyEffectNode();
-applyEffect.BindInput(ApplyEffectNode.OwnershipInput, "ownership");
+graph.VariableDefinitions.DefineObjectProperty(
+    "effect",
+    new EffectFromDataResolver(
+        effectData,
+        ownershipResolver: new AbilityOwnershipResolver()));
 ```
 
 ## See Also
@@ -38,5 +41,6 @@ applyEffect.BindInput(ApplyEffectNode.OwnershipInput, "ownership");
 - [AbilityOwnerResolver](ability-owner-resolver.md)
 - [AbilitySourceResolver](ability-source-resolver.md)
 - [OwnershipResolver](ownership-resolver.md)
+- [EffectFromDataResolver](effect-from-data-resolver.md)
 - [ApplyEffectNode](../nodes/action/apply-effect-node.md)
 - [EffectNode](../nodes/state/effect-node.md)

@@ -48,47 +48,21 @@ internal static class NodeBindings
 
 	public static ApplyEffectNode CreateApplyEffectNode(
 		StringKey effectPropertyName,
-		StringKey targetPropertyName,
-		StringKey? levelPropertyName = null,
-		StringKey? ownershipPropertyName = null)
+		StringKey targetPropertyName)
 	{
 		var node = new ApplyEffectNode();
 		node.BindInput(ApplyEffectNode.EffectInput, effectPropertyName);
 		node.BindInput(ApplyEffectNode.TargetInput, targetPropertyName);
-
-		if (levelPropertyName.HasValue && levelPropertyName.Value != StringKey.Empty)
-		{
-			node.BindInput(ApplyEffectNode.LevelInput, levelPropertyName.Value);
-		}
-
-		if (ownershipPropertyName.HasValue && ownershipPropertyName.Value != StringKey.Empty)
-		{
-			node.BindInput(ApplyEffectNode.OwnershipInput, ownershipPropertyName.Value);
-		}
-
 		return node;
 	}
 
 	public static EffectNode CreateEffectNode(
 		StringKey effectPropertyName,
-		StringKey targetPropertyName,
-		StringKey? levelPropertyName = null,
-		StringKey? ownershipPropertyName = null)
+		StringKey targetPropertyName)
 	{
 		var node = new EffectNode();
 		node.BindInput(EffectNode.EffectInput, effectPropertyName);
 		node.BindInput(EffectNode.TargetInput, targetPropertyName);
-
-		if (levelPropertyName.HasValue && levelPropertyName.Value != StringKey.Empty)
-		{
-			node.BindInput(EffectNode.LevelInput, levelPropertyName.Value);
-		}
-
-		if (ownershipPropertyName.HasValue && ownershipPropertyName.Value != StringKey.Empty)
-		{
-			node.BindInput(EffectNode.OwnershipInput, ownershipPropertyName.Value);
-		}
-
 		return node;
 	}
 }
