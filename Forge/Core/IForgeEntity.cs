@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Statescript;
@@ -25,6 +26,11 @@ public interface IForgeEntity
 	/// Gets the effects manager for this entity.
 	/// </summary>
 	EffectsManager EffectsManager { get; }
+
+	/// <summary>
+	/// Gets the cues manager used to trigger cues for this entity. This is typically the game-wide shared manager.
+	/// </summary>
+	CuesManager CuesManager { get; }
 
 	/// <summary>
 	/// Gets the abilities manager for this entity.

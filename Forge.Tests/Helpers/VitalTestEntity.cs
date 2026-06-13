@@ -19,6 +19,8 @@ public class VitalTestEntity : IForgeEntity
 
 	public EffectsManager EffectsManager { get; }
 
+	public CuesManager CuesManager { get; }
+
 	public EntityAbilities Abilities { get; }
 
 	public EventManager Events { get; }
@@ -31,6 +33,7 @@ public class VitalTestEntity : IForgeEntity
 		var originalTags = new TagContainer(tagsManager, []);
 
 		EffectsManager = new(this, cuesManager);
+		CuesManager = cuesManager;
 		Attributes = new(VitalAttributeSet);
 		Tags = new(originalTags);
 		Abilities = new(this);
