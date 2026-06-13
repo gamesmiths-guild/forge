@@ -491,6 +491,64 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		handle!.IsValid.Should().BeTrue();
 	}
 
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void Effect_node_passes_provider_built_context_data_through_the_pipeline()
+	{
+		TestEntity target = CreateTestEntity();
+		var capture = new ContextCaptureComponent();
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineVariable("damage", 42);
+		graph.VariableDefinitions.DefineObjectProperty(
+			"effect",
+			new EffectFromDataResolver(CreateTrackingEffectData("Tracked", capture)));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
+		graph.VariableDefinitions.DefineObjectProperty(
+			"context",
+			new EffectContextDataResolver(new DamageContextProvider()));
+
+		EffectNode node = CreateEffectNode("effect", "entity");
+		node.BindInput(EffectNode.ContextDataInput, "context");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		capture.WasApplied.Should().BeTrue();
+		capture.ReceivedContext.Should().BeTrue();
+		capture.ReceivedDamage.Should().Be(42);
+	}
+
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void Effect_node_applies_without_context_data_when_input_is_unbound()
+	{
+		TestEntity target = CreateTestEntity();
+		var capture = new ContextCaptureComponent();
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineObjectProperty(
+			"effect",
+			new EffectFromDataResolver(CreateTrackingEffectData("Tracked", capture)));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
+
+		EffectNode node = CreateEffectNode("effect", "entity");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		capture.WasApplied.Should().BeTrue();
+		capture.ReceivedContext.Should().BeFalse();
+	}
+
 	private static void ConfigureEffectInput(
 		Graph graph,
 		bool useEffectArray,
@@ -632,6 +690,37 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 			LastLevel = effectEvaluatedData.Level;
 			LastOwner = effectEvaluatedData.Effect.Ownership.Owner;
 			LastSource = effectEvaluatedData.Effect.Ownership.Source;
+		}
+	}
+
+	private sealed record DamageContext(int Damage);
+
+	private sealed class DamageContextProvider : EffectContextDataProvider<DamageContext>
+	{
+		public override DamageContext CreateData(GraphContext graphContext, EffectContextDataInputs inputs)
+		{
+			graphContext.TryResolve("damage", out int damage);
+			return new DamageContext(damage);
+		}
+	}
+
+	private sealed class ContextCaptureComponent : IEffectComponent
+	{
+		public bool WasApplied { get; private set; }
+
+		public bool ReceivedContext { get; private set; }
+
+		public int ReceivedDamage { get; private set; }
+
+		public void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
+		{
+			WasApplied = true;
+
+			if (effectEvaluatedData.TryGetContextData(out DamageContext? context))
+			{
+				ReceivedContext = true;
+				ReceivedDamage = context.Damage;
+			}
 		}
 	}
 }
