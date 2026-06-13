@@ -11,7 +11,8 @@ internal static class EffectApplicationUtilities
 		GraphContext graphContext,
 		StringKey effectInputName,
 		StringKey entityInputName,
-		ICollection<ActiveEffectHandle>? activeHandles = null)
+		ICollection<ActiveEffectHandle>? activeHandles = null,
+		StringKey contextDataInputName = default)
 	{
 		if (!TryResolveEffects(graphContext, effectInputName, out IReadOnlyList<Effect> effects)
 			|| !TryResolveEntities(graphContext, entityInputName, out IReadOnlyList<IForgeEntity> entities))
@@ -19,13 +20,19 @@ internal static class EffectApplicationUtilities
 			return;
 		}
 
+		// Resolved once per node execution and shared across the whole effect x target cross-product.
+		EffectApplicationContext? applicationContext = ResolveContextData(graphContext, contextDataInputName);
+
 		for (int entityIndex = 0; entityIndex < entities.Count; entityIndex++)
 		{
 			IForgeEntity entity = entities[entityIndex];
 
 			for (int effectIndex = 0; effectIndex < effects.Count; effectIndex++)
 			{
-				ActiveEffectHandle? handle = entity.EffectsManager.ApplyEffect(effects[effectIndex]);
+				// applicationContext is null when no context-data input is bound; ApplyEffectInternal handles both
+				// cases.
+				ActiveEffectHandle? handle =
+					entity.EffectsManager.ApplyEffectInternal(effects[effectIndex], applicationContext);
 
 				if (handle is not null && activeHandles is not null)
 				{
@@ -108,6 +115,27 @@ internal static class EffectApplicationUtilities
 		}
 
 		return activeHandles.Count > 0;
+	}
+
+	private static EffectApplicationContext? ResolveContextData(
+		GraphContext graphContext,
+		StringKey contextDataInputName)
+	{
+		if (contextDataInputName == StringKey.Empty)
+		{
+			return null;
+		}
+
+		if (graphContext.TryResolveObject(
+			contextDataInputName,
+			typeof(EffectApplicationContext),
+			out object? resolved)
+			&& resolved is EffectApplicationContext context)
+		{
+			return context;
+		}
+
+		return null;
 	}
 
 	private static bool TryResolveEffects(

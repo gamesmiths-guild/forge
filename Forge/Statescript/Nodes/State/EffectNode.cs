@@ -18,6 +18,9 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// <para>Because effects are resolved as instances, the same <see cref="Effect"/> can be reused across applications.
 /// Level and ownership are configured on the resolved effect (see <c>EffectFromDataResolver</c>) rather than on the
 /// node.</para>
+/// <para>The optional context-data input supplies a custom <see cref="EffectApplicationContext"/> (typically built by
+/// an <see cref="IEffectContextDataProvider"/>) that is passed through the effect pipeline for every application. When
+/// the input is unbound, effects are applied without context data.</para>
 /// </remarks>
 public class EffectNode : StateNode<EffectNodeContext>
 {
@@ -30,6 +33,11 @@ public class EffectNode : StateNode<EffectNodeContext>
 	/// Input property index for the effect target.
 	/// </summary>
 	public const byte TargetInput = 1;
+
+	/// <summary>
+	/// Input property index for the optional effect application context data.
+	/// </summary>
+	public const byte ContextDataInput = 2;
 
 	/// <summary>
 	/// Output variable index for the applied effect handle(s).
@@ -58,6 +66,7 @@ public class EffectNode : StateNode<EffectNodeContext>
 	{
 		inputProperties.Add(new InputProperty("Effect", typeof(Effect)));
 		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
+		inputProperties.Add(new InputProperty("Context Data", typeof(EffectApplicationContext)));
 		outputVariables.Add(new OutputVariable("Active Effect", typeof(ActiveEffectHandle)));
 	}
 
@@ -71,7 +80,8 @@ public class EffectNode : StateNode<EffectNodeContext>
 			graphContext,
 			InputProperties[EffectInput].BoundName,
 			InputProperties[TargetInput].BoundName,
-			nodeContext.ActiveEffectHandles);
+			nodeContext.ActiveEffectHandles,
+			InputProperties[ContextDataInput].BoundName);
 
 		EffectApplicationUtilities.WriteHandleOutput(
 			graphContext,

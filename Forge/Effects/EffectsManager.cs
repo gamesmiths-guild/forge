@@ -193,59 +193,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return true;
 	}
 
-	private static bool MatchesStackPolicy(ActiveEffect existingEffect, Effect newEffect)
-	{
-		Validation.Assert(
-			newEffect.EffectData.StackingData.HasValue,
-			"StackingData should always be valid at this point.");
-
-		return newEffect.EffectData.StackingData.Value.StackPolicy == StackPolicy.AggregateByTarget ||
-			   existingEffect.EffectEvaluatedData.Effect.Ownership.Owner == newEffect.Ownership.Owner;
-	}
-
-	private static bool MatchesStackLevelPolicy(ActiveEffect existingEffect, Effect newEffect)
-	{
-		Validation.Assert(
-			newEffect.EffectData.StackingData.HasValue,
-			"StackingData should always be valid at this point.");
-
-		return newEffect.EffectData.StackingData.Value.StackLevelPolicy == StackLevelPolicy.AggregateLevels ||
-			   existingEffect.EffectEvaluatedData.Effect.Level == newEffect.Level;
-	}
-
-	private static IEnumerable<EffectStackInstanceData> ConvertToStackInstanceData(
-		IEnumerable<ActiveEffect> filteredEffects)
-	{
-		return filteredEffects.Select(CreateStackInstanceData);
-	}
-
-	private static EffectStackInstanceData CreateStackInstanceData(ActiveEffect effect)
-	{
-		EffectEvaluatedData evaluatedData = effect.EffectEvaluatedData;
-		return new EffectStackInstanceData(
-			evaluatedData.Effect.Ownership.Owner,
-			evaluatedData.Level,
-			evaluatedData.Stack);
-	}
-
-	private IEnumerable<ActiveEffect> FilterEffectsByData(EffectData effectData)
-	{
-		return _activeEffects.Where(x => x.EffectEvaluatedData.Effect.EffectData == effectData);
-	}
-
-	private IEnumerable<ActiveEffect> FilterEffectsByEffect(Effect effect)
-	{
-		return _activeEffects.Where(x => x.EffectEvaluatedData.Effect == effect);
-	}
-
-	private ActiveEffect? FindStackableEffect(Effect effect)
-	{
-		return FilterEffectsByData(effect.EffectData).FirstOrDefault(x =>
-			MatchesStackPolicy(x, effect) &&
-			MatchesStackLevelPolicy(x, effect));
-	}
-
-	private ActiveEffectHandle? ApplyEffectInternal(Effect effect, EffectApplicationContext? applicationContext)
+	internal ActiveEffectHandle? ApplyEffectInternal(Effect effect, EffectApplicationContext? applicationContext)
 	{
 		if (!effect.CanApply(Owner))
 		{
@@ -296,6 +244,58 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		}
 
 		return ApplyNewEffect(effect, applicationContext).Handle;
+	}
+
+	private static bool MatchesStackPolicy(ActiveEffect existingEffect, Effect newEffect)
+	{
+		Validation.Assert(
+			newEffect.EffectData.StackingData.HasValue,
+			"StackingData should always be valid at this point.");
+
+		return newEffect.EffectData.StackingData.Value.StackPolicy == StackPolicy.AggregateByTarget ||
+			   existingEffect.EffectEvaluatedData.Effect.Ownership.Owner == newEffect.Ownership.Owner;
+	}
+
+	private static bool MatchesStackLevelPolicy(ActiveEffect existingEffect, Effect newEffect)
+	{
+		Validation.Assert(
+			newEffect.EffectData.StackingData.HasValue,
+			"StackingData should always be valid at this point.");
+
+		return newEffect.EffectData.StackingData.Value.StackLevelPolicy == StackLevelPolicy.AggregateLevels ||
+			   existingEffect.EffectEvaluatedData.Effect.Level == newEffect.Level;
+	}
+
+	private static IEnumerable<EffectStackInstanceData> ConvertToStackInstanceData(
+		IEnumerable<ActiveEffect> filteredEffects)
+	{
+		return filteredEffects.Select(CreateStackInstanceData);
+	}
+
+	private static EffectStackInstanceData CreateStackInstanceData(ActiveEffect effect)
+	{
+		EffectEvaluatedData evaluatedData = effect.EffectEvaluatedData;
+		return new EffectStackInstanceData(
+			evaluatedData.Effect.Ownership.Owner,
+			evaluatedData.Level,
+			evaluatedData.Stack);
+	}
+
+	private IEnumerable<ActiveEffect> FilterEffectsByData(EffectData effectData)
+	{
+		return _activeEffects.Where(x => x.EffectEvaluatedData.Effect.EffectData == effectData);
+	}
+
+	private IEnumerable<ActiveEffect> FilterEffectsByEffect(Effect effect)
+	{
+		return _activeEffects.Where(x => x.EffectEvaluatedData.Effect == effect);
+	}
+
+	private ActiveEffect? FindStackableEffect(Effect effect)
+	{
+		return FilterEffectsByData(effect.EffectData).FirstOrDefault(x =>
+			MatchesStackPolicy(x, effect) &&
+			MatchesStackLevelPolicy(x, effect));
 	}
 
 	private ActiveEffect ApplyNewEffect(Effect effect, EffectApplicationContext? applicationContext)
