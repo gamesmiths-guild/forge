@@ -69,7 +69,7 @@ internal static class EffectApplicationUtilities
 			return;
 		}
 
-		if (variables.TryGetObjectArrayElementType(output.BoundName, out _))
+		if (variables.TryGetObjectArrayElementType(output.BoundName, out Type? elementType))
 		{
 			object?[] values = new object?[handles.Count];
 			for (int i = 0; i < handles.Count; i++)
@@ -77,7 +77,7 @@ internal static class EffectApplicationUtilities
 				values[i] = handles[i];
 			}
 
-			variables.DefineObjectArrayVariable(output.BoundName, typeof(ActiveEffectHandle), values);
+			variables.DefineObjectArrayVariable(output.BoundName, elementType, values);
 			return;
 		}
 
