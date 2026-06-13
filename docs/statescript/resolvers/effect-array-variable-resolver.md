@@ -1,7 +1,7 @@
 # EffectArrayVariableResolver
 
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.EffectArrayVariableResolver`
-> **Output Type:** `Effect?[]`
+> **Output Type:** `Effect[]`
 
 Reads an array of `Effect` instances from graph or shared object-backed variables so a set of effects can be stored once and reused across applications.
 

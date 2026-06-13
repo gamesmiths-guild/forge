@@ -30,7 +30,7 @@ These resolvers provide effect instances and application context to nodes such a
 |----------|-------------|-------------|
 | [AbilityOwnershipResolver](ability-ownership-resolver.md) | `EffectOwnership` | Reads the current ability owner/source pair as an effect ownership value. |
 | [EffectArrayFromDataResolver](effect-array-from-data-resolver.md) | `Effect[]` | Builds an array of `Effect` instances sharing the same level and ownership. |
-| [EffectArrayVariableResolver](effect-array-variable-resolver.md) | `Effect?[]` | Reads a stored `Effect` instance array from graph or shared scope. |
+| [EffectArrayVariableResolver](effect-array-variable-resolver.md) | `Effect[]` | Reads a stored `Effect` instance array from graph or shared scope. |
 | [EffectContextDataResolver](effect-context-data-resolver.md) | `EffectApplicationContext` | Produces custom application context data for an effect via an `IEffectContextDataProvider`. |
 | [EffectFromDataResolver](effect-from-data-resolver.md) | `Effect` | Builds an `Effect` instance from an `EffectData` value plus optional level and ownership. |
 | [EffectVariableResolver](effect-variable-resolver.md) | `Effect?` | Reads a stored `Effect` instance from graph or shared scope for reuse. |
