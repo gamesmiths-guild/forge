@@ -94,5 +94,6 @@ That label becomes the canonical port name surfaced by editor integrations such 
 
 | Node | Description |
 |------|-------------|
+| [CueNode](cue-node.md) | Applies cues on activation and removes them on deactivation, with an optional interrupted flag. |
 | [EffectNode](effect-node.md) | Applies effects on activation, emits OnEffectEnd on natural completion, and removes still-active instances on deactivation. |
 | [TimerNode](timer-node.md) | Remains active for a configured duration and emits OnTimerEnd when it finishes naturally. |

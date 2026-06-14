@@ -65,6 +65,36 @@ internal static class NodeBindings
 		node.BindInput(EffectNode.TargetInput, targetPropertyName);
 		return node;
 	}
+
+	public static ExecuteCueNode CreateExecuteCueNode(
+		StringKey cueTagPropertyName,
+		StringKey targetPropertyName)
+	{
+		var node = new ExecuteCueNode();
+		node.BindInput(ExecuteCueNode.CueTagInput, cueTagPropertyName);
+		node.BindInput(ExecuteCueNode.TargetInput, targetPropertyName);
+		return node;
+	}
+
+	public static UpdateCueNode CreateUpdateCueNode(
+		StringKey cueTagPropertyName,
+		StringKey targetPropertyName)
+	{
+		var node = new UpdateCueNode();
+		node.BindInput(UpdateCueNode.CueTagInput, cueTagPropertyName);
+		node.BindInput(UpdateCueNode.TargetInput, targetPropertyName);
+		return node;
+	}
+
+	public static CueNode CreateCueNode(
+		StringKey cueTagPropertyName,
+		StringKey targetPropertyName)
+	{
+		var node = new CueNode();
+		node.BindInput(CueNode.CueTagInput, cueTagPropertyName);
+		node.BindInput(CueNode.TargetInput, targetPropertyName);
+		return node;
+	}
 }
 
 /// <summary>

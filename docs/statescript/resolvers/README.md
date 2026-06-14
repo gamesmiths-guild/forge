@@ -38,6 +38,16 @@ These resolvers provide effect instances and application context to nodes such a
 
 ---
 
+## Cue Resolvers
+
+These resolvers author the optional inputs of the cue nodes (`ExecuteCueNode`, `UpdateCueNode`, `CueNode`).
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [CueCustomParametersResolver](cue-custom-parameters-resolver.md) | `Dictionary<StringKey, object>` | Produces the `CueParameters.CustomParameters` bag for a cue via an `ICueCustomParametersProvider`. |
+
+---
+
 ## Entity Resolvers
 
 Entity resolvers are typed object-backed resolvers used by APIs such as `AttributeResolver` and `TagQueryResolver`. They do

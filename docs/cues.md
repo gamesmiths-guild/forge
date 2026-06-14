@@ -289,12 +289,15 @@ entity.EffectsManager.ApplyEffect(effect);
 
 ### 2. Manual Triggering
 
-Cues can be manually triggered for specific scenarios:
+Cues can be manually triggered for specific scenarios. Every entity exposes a cues manager through `IForgeEntity.CuesManager` (typically the game-wide shared instance). Statescript cue nodes use this same mechanism to fire cues on their targets:
 
 ```csharp
 // Execute a one-shot cue
 var fireImpactTag = Tag.RequestTag(tagsManager, "cues.environment.fire_impact");
 cuesManager.ExecuteCue(fireImpactTag, targetEntity, parameters);
+
+// Equivalently, reach the manager through the target entity
+targetEntity.CuesManager.ExecuteCue(fireImpactTag, targetEntity, parameters);
 
 // Apply a persistent cue
 var burningTag = Tag.RequestTag(tagsManager, "cues.status.burning");

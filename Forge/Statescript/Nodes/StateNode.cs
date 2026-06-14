@@ -149,6 +149,7 @@ public abstract class StateNode<T> : Node
 		{
 			var nodeContext = (StateNodeContext)graphContext.GetOrCreateNodeContext<T>(NodeID);
 
+			nodeContext.WasAborted = false;
 			nodeContext.Activating = true;
 			ActivateNode(graphContext);
 			OutputPorts[OnActivatePort].EmitMessage(graphContext);
@@ -160,6 +161,11 @@ public abstract class StateNode<T> : Node
 		}
 		else if (receiverPort.Index == AbortPort)
 		{
+			if (graphContext.HasNodeContext(NodeID))
+			{
+				graphContext.GetNodeContext<StateNodeContext>(NodeID).WasAborted = true;
+			}
+
 			OutputPorts[OnAbortPort].EmitMessage(graphContext);
 			DeactivateNode(graphContext);
 		}

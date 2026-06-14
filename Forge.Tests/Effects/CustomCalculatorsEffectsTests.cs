@@ -1285,6 +1285,8 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		public EffectsManager EffectsManager { get; }
 
+		public CuesManager CuesManager { get; }
+
 		public EntityAbilities Abilities { get; }
 
 		public EventManager Events { get; }
@@ -1294,6 +1296,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		public NoAttributesEntity(TagsManager tagsManager, CuesManager cuesManager)
 		{
 			EffectsManager = new(this, cuesManager);
+			CuesManager = cuesManager;
 			Attributes = new();
 			Tags = new(new TagContainer(tagsManager));
 			Abilities = new(this);

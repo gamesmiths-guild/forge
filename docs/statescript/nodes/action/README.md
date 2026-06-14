@@ -54,4 +54,6 @@ public class ApplyEffectActionNode : ActionNode
 | Node | Description |
 |------|-------------|
 | [ApplyEffectNode](apply-effect-node.md) | Applies one or more effects to one or more targets. |
+| [ExecuteCueNode](execute-cue-node.md) | Executes one or more one-shot cues on one or more targets. |
 | [SetVariableNode](set-variable-node.md) | Copies a value from an input property to a graph or shared variable. |
+| [UpdateCueNode](update-cue-node.md) | Updates one or more active cues on one or more targets. |

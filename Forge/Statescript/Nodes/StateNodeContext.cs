@@ -14,6 +14,13 @@ public class StateNodeContext : INodeContext
 	/// </summary>
 	public bool Active { get; internal set; }
 
+	/// <summary>
+	/// Gets a value indicating whether the in-progress deactivation was triggered by the Abort port. Reset on each
+	/// activation; set just before deactivation when the node is aborted. Lets nodes distinguish a forced interruption
+	/// from a natural shutdown (subgraph end or graph stop) inside <c>OnDeactivate</c>.
+	/// </summary>
+	public bool WasAborted { get; internal set; }
+
 	internal bool Activating { get; set; }
 
 	internal int[]? DeferredDeactivationEventPortIds { get; set; }

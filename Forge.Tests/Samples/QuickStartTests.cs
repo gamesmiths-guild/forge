@@ -1080,8 +1080,13 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	public class Player : IForgeEntity
 	{
 		public EntityAttributes Attributes { get; }
+
 		public EntityTags Tags { get; }
+
 		public EffectsManager EffectsManager { get; }
+
+		public CuesManager CuesManager { get; }
+
 		public EntityAbilities Abilities { get; }
 
 		public EventManager Events { get; }
@@ -1101,6 +1106,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			Attributes = new EntityAttributes(new PlayerAttributeSet());
 			Tags = new EntityTags(baseTags);
 			EffectsManager = new EffectsManager(this, cuesManager);
+			CuesManager = cuesManager;
 			Abilities = new(this);
 			Events = new();
 		}
