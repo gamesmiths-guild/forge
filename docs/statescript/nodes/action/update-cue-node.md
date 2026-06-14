@@ -30,6 +30,7 @@ Updates one or more already-active cues (`CuesManager.UpdateCue`) on one or more
 | 2 | Magnitude | `int` | Optional. Cue magnitude. |
 | 3 | Normalized Magnitude | `float` | Optional. Cue magnitude normalized to 0–1. |
 | 4 | Source | `IForgeEntity` | Optional. The source entity carried in the cue parameters. |
+| 5 | Custom Parameters | `Dictionary<StringKey, object>` | Optional. Custom parameter bag built by an `ICueCustomParametersProvider` (see [CueCustomParametersResolver](../../resolvers/cue-custom-parameters-resolver.md)). |
 
 This node has no output variables, cues are addressed entirely by tag.
 
@@ -55,3 +56,4 @@ updateCue.BindInput(UpdateCueNode.MagnitudeInput, "charge");
 - [Action Nodes Overview](README.md)
 - [ExecuteCueNode](execute-cue-node.md)
 - [CueNode](../state/cue-node.md)
+- [CueCustomParametersResolver](../../resolvers/cue-custom-parameters-resolver.md)

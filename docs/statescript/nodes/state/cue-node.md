@@ -35,12 +35,13 @@ Applies one or more persistent cues (`CuesManager.ApplyCue`) on activation and r
 | 2 | Magnitude | `int` | Optional. Cue magnitude for the apply. |
 | 3 | Normalized Magnitude | `float` | Optional. Cue magnitude normalized to 0–1. |
 | 4 | Source | `IForgeEntity` | Optional. The source entity carried in the cue parameters. |
+| 5 | Custom Parameters | `Dictionary<StringKey, object>` | Optional. Custom parameter bag built by an `ICueCustomParametersProvider` (see [CueCustomParametersResolver](../../resolvers/cue-custom-parameters-resolver.md)). |
 
 This node has no output variables, cues are addressed entirely by tag.
 
 ## Behavior
 
-1. On activation, the node resolves the **Cue Tags** and **Target** inputs (single or array each) and applies every cue tag to every target, the full `cueTag[] x target[]` matrix, through each target's `IForgeEntity.CuesManager`. The optional **Magnitude** / **Normalized Magnitude** / **Source** inputs are resolved once and shared (`null` parameters when all are unbound).
+1. On activation, the node resolves the **Cue Tags** and **Target** inputs (single or array each) and applies every cue tag to every target, the full `cueTag[] x target[]` matrix, through each target's `IForgeEntity.CuesManager`. The optional **Magnitude** / **Normalized Magnitude** / **Source** / **Custom Parameters** inputs are resolved once and shared (`null` parameters when all are unbound).
 2. The exact cue/target pairs applied on activation are recorded in `CueNodeContext`.
 3. The node has **no timer**: it stays active until deactivated externally. It is typically placed as a subgraph of another state node so it lives for that state's duration.
 4. On deactivation, the node removes exactly the recorded cue/target pairs. Whether the removal is an interruption is derived from how the node was deactivated: a natural shutdown (parent subgraph ending or `GraphProcessor.StopGraph`) passes `interrupted: false`, while a deactivation forced through the **Abort** port passes `interrupted: true`. No interrupt input is needed.
@@ -63,3 +64,4 @@ Place the node as a subgraph of another state node so it lives for that state's 
 - [State Nodes Overview](README.md)
 - [ExecuteCueNode](../action/execute-cue-node.md)
 - [UpdateCueNode](../action/update-cue-node.md)
+- [CueCustomParametersResolver](../../resolvers/cue-custom-parameters-resolver.md)
