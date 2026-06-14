@@ -25,7 +25,8 @@ internal static class CueApplicationUtilities
 		StringKey targetInputName,
 		StringKey magnitudeInputName,
 		StringKey normalizedMagnitudeInputName,
-		StringKey sourceInputName)
+		StringKey sourceInputName,
+		StringKey customParametersInputName)
 	{
 		FireCues(
 			graphContext,
@@ -34,6 +35,7 @@ internal static class CueApplicationUtilities
 			magnitudeInputName,
 			normalizedMagnitudeInputName,
 			sourceInputName,
+			customParametersInputName,
 			CueOperation.Execute,
 			appliedCues: null);
 	}
@@ -45,6 +47,7 @@ internal static class CueApplicationUtilities
 		StringKey magnitudeInputName,
 		StringKey normalizedMagnitudeInputName,
 		StringKey sourceInputName,
+		StringKey customParametersInputName,
 		ICollection<AppliedCue>? appliedCues = null)
 	{
 		FireCues(
@@ -54,6 +57,7 @@ internal static class CueApplicationUtilities
 			magnitudeInputName,
 			normalizedMagnitudeInputName,
 			sourceInputName,
+			customParametersInputName,
 			CueOperation.Apply,
 			appliedCues);
 	}
@@ -64,7 +68,8 @@ internal static class CueApplicationUtilities
 		StringKey targetInputName,
 		StringKey magnitudeInputName,
 		StringKey normalizedMagnitudeInputName,
-		StringKey sourceInputName)
+		StringKey sourceInputName,
+		StringKey customParametersInputName)
 	{
 		FireCues(
 			graphContext,
@@ -73,6 +78,7 @@ internal static class CueApplicationUtilities
 			magnitudeInputName,
 			normalizedMagnitudeInputName,
 			sourceInputName,
+			customParametersInputName,
 			CueOperation.Update,
 			appliedCues: null);
 	}
@@ -93,6 +99,7 @@ internal static class CueApplicationUtilities
 		StringKey magnitudeInputName,
 		StringKey normalizedMagnitudeInputName,
 		StringKey sourceInputName,
+		StringKey customParametersInputName,
 		CueOperation operation,
 		ICollection<AppliedCue>? appliedCues)
 	{
@@ -107,7 +114,8 @@ internal static class CueApplicationUtilities
 			graphContext,
 			magnitudeInputName,
 			normalizedMagnitudeInputName,
-			sourceInputName);
+			sourceInputName,
+			customParametersInputName);
 
 		for (int targetIndex = 0; targetIndex < targets.Count; targetIndex++)
 		{
@@ -140,13 +148,15 @@ internal static class CueApplicationUtilities
 		GraphContext graphContext,
 		StringKey magnitudeInputName,
 		StringKey normalizedMagnitudeInputName,
-		StringKey sourceInputName)
+		StringKey sourceInputName,
+		StringKey customParametersInputName)
 	{
 		bool hasMagnitude = magnitudeInputName != StringKey.Empty;
 		bool hasNormalizedMagnitude = normalizedMagnitudeInputName != StringKey.Empty;
 		bool hasSource = sourceInputName != StringKey.Empty;
+		bool hasCustomParameters = customParametersInputName != StringKey.Empty;
 
-		if (!hasMagnitude && !hasNormalizedMagnitude && !hasSource)
+		if (!hasMagnitude && !hasNormalizedMagnitude && !hasSource && !hasCustomParameters)
 		{
 			return null;
 		}
@@ -170,7 +180,17 @@ internal static class CueApplicationUtilities
 			source = resolvedSource as IForgeEntity;
 		}
 
-		return new CueParameters(magnitude, normalizedMagnitude, source);
+		Dictionary<StringKey, object>? customParameters = null;
+		if (hasCustomParameters
+			&& graphContext.TryResolveObject(
+				customParametersInputName,
+				typeof(Dictionary<StringKey, object>),
+				out object? resolvedCustomParameters))
+		{
+			customParameters = resolvedCustomParameters as Dictionary<StringKey, object>;
+		}
+
+		return new CueParameters(magnitude, normalizedMagnitude, source, customParameters);
 	}
 
 	private static bool ResolveCueTags(

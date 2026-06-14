@@ -12,9 +12,9 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Action;
 /// <para>The cue-tag input accepts either a single <see cref="Tag"/> or an array of tags.</para>
 /// <para>The target input accepts either a single <see cref="IForgeEntity"/> or an array of entities.</para>
 /// <para>When either input resolves to an array, the node updates every cue tag on every target.</para>
-/// <para>Magnitude, normalized magnitude, and source are optional; when all are unbound, the cue is updated without
-/// parameters. The update is fired through each target's <see cref="IForgeEntity.CuesManager"/>. This is intended for
-/// cues applied by a <c>CueNode</c> that need new values without re-applying.</para>
+/// <para>Magnitude, normalized magnitude, source, and custom parameters are optional; when all are unbound, the cue is
+/// updated without parameters. The update is fired through each target's <see cref="IForgeEntity.CuesManager"/>. This
+/// is intended for cues applied by a <c>CueNode</c> that need new values without re-applying.</para>
 /// </remarks>
 public class UpdateCueNode : ActionNode
 {
@@ -43,6 +43,11 @@ public class UpdateCueNode : ActionNode
 	/// </summary>
 	public const byte SourceInput = 4;
 
+	/// <summary>
+	/// Input property index for the optional cue custom parameters.
+	/// </summary>
+	public const byte CustomParametersInput = 5;
+
 	/// <inheritdoc/>
 	public override string Description => "Updates active cues on targets.";
 
@@ -54,6 +59,7 @@ public class UpdateCueNode : ActionNode
 		inputProperties.Add(new InputProperty("Magnitude", typeof(int)));
 		inputProperties.Add(new InputProperty("Normalized Magnitude", typeof(float)));
 		inputProperties.Add(new InputProperty("Source", typeof(IForgeEntity)));
+		inputProperties.Add(new InputProperty("Custom Parameters", typeof(Dictionary<StringKey, object>)));
 	}
 
 	/// <inheritdoc/>
@@ -65,6 +71,7 @@ public class UpdateCueNode : ActionNode
 			InputProperties[TargetInput].BoundName,
 			InputProperties[MagnitudeInput].BoundName,
 			InputProperties[NormalizedMagnitudeInput].BoundName,
-			InputProperties[SourceInput].BoundName);
+			InputProperties[SourceInput].BoundName,
+			InputProperties[CustomParametersInput].BoundName);
 	}
 }

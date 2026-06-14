@@ -46,6 +46,11 @@ public class CueNode : StateNode<CueNodeContext>
 	/// </summary>
 	public const byte SourceInput = 4;
 
+	/// <summary>
+	/// Input property index for the optional cue custom parameters.
+	/// </summary>
+	public const byte CustomParametersInput = 5;
+
 	/// <inheritdoc/>
 	public override string Description =>
 		"Applies cues while active and removes them on deactivation.";
@@ -58,6 +63,7 @@ public class CueNode : StateNode<CueNodeContext>
 		inputProperties.Add(new InputProperty("Magnitude", typeof(int)));
 		inputProperties.Add(new InputProperty("Normalized Magnitude", typeof(float)));
 		inputProperties.Add(new InputProperty("Source", typeof(IForgeEntity)));
+		inputProperties.Add(new InputProperty("Custom Parameters", typeof(Dictionary<StringKey, object>)));
 	}
 
 	/// <inheritdoc/>
@@ -73,6 +79,7 @@ public class CueNode : StateNode<CueNodeContext>
 			InputProperties[MagnitudeInput].BoundName,
 			InputProperties[NormalizedMagnitudeInput].BoundName,
 			InputProperties[SourceInput].BoundName,
+			InputProperties[CustomParametersInput].BoundName,
 			nodeContext.AppliedCues);
 	}
 
