@@ -6,6 +6,7 @@ using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Action;
+using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
@@ -115,6 +116,40 @@ public class ExecuteCueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClass
 
 		handler.ExecuteCount.Should().Be(1);
 		handler.LastParameters.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Graph", "ExecuteCue")]
+	public void Execute_cue_node_passes_provider_authored_custom_parameters_to_the_handler()
+	{
+		var cuesManager = new CuesManager();
+		var handler = new RecordingCueHandler();
+		var cue = Tag.RequestTag(_tagsManager, "test.cue1");
+		cuesManager.RegisterCue(cue, handler);
+		var target = new TestEntity(_tagsManager, cuesManager);
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable("cueTag", cue);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", target);
+		graph.VariableDefinitions.DefineObjectProperty(
+			"customParams",
+			new CueCustomParametersResolver(new TestCueCustomParametersProvider()));
+
+		ExecuteCueNode node = CreateExecuteCueNode("cueTag", "target");
+		node.BindInput(ExecuteCueNode.CustomParametersInput, "customParams");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		handler.ExecuteCount.Should().Be(1);
+		handler.LastParameters.Should().NotBeNull();
+		handler.LastParameters!.Value.CustomParameters.Should().NotBeNull();
+		handler.LastParameters.Value.CustomParameters![TestCueCustomParametersProvider.PowerKey]
+			.Should().Be(TestCueCustomParametersProvider.PowerValue);
 	}
 
 	private static void ConfigureCueTagInput(Graph graph, bool useArray, Tag firstCue, Tag secondCue)
