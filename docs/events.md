@@ -9,7 +9,7 @@ For a practical guide on using events with abilities, see the [Abilities documen
 - Events carry tags for filtering `EventTags` plus optional source, target, magnitude, and payload data.
 - Handlers subscribe by tag and run in priority order (higher priority first).
 - Generic events avoid boxing by using typed payloads.
-- Generic raises do **not** forward to non-generic handlers.
+- Non-generic subscriptions are **catch-all**: a generic raise also reaches them with the payload boxed into `EventData.Payload`. A non-generic raise does **not** reach generic (typed) handlers.
 
 ## Event Data
 
@@ -81,6 +81,7 @@ public sealed class EventManager
 - Subscriptions are sorted by `priority` (higher first).
 - A handler is invoked when `data.EventTags.HasTag(eventTag)` is true.
 - Generic subscriptions are stored per `TPayload` type and are only invoked for matching generic raises.
+- Non-generic subscriptions also receive generic raises, with the typed payload boxed into `EventData.Payload` (only boxed when at least one non-generic subscriber exists).
 
 ## Usage Examples
 
