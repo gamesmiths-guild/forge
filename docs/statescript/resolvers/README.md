@@ -48,6 +48,17 @@ These resolvers author the optional inputs of the cue nodes (`ExecuteCueNode`, `
 
 ---
 
+## Event Resolvers
+
+These resolvers author the optional payload of the event nodes (`RaiseEventNode`, `EventListenerNode`) via an `IEventPayloadProvider`.
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [EventPayloadOutputResolver](event-payload-resolver.md#listener-side-eventpayloadoutputresolver) | `EventPayloadWriter` | Decomposes a received event payload into graph variables for `EventListenerNode` via an `IEventPayloadProvider`. |
+| [EventPayloadResolver](event-payload-resolver.md#raise-side-eventpayloadresolver) | `EventPayloadRaiser` | Builds and raises a typed event payload for `RaiseEventNode` via an `IEventPayloadProvider`. |
+
+---
+
 ## Entity Resolvers
 
 Entity resolvers are typed object-backed resolvers used by APIs such as `AttributeResolver` and `TagQueryResolver`. They do

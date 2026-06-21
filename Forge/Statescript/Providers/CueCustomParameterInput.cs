@@ -1,6 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
-namespace Gamesmiths.Forge.Statescript;
+namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
 /// Declares an authored input that an <see cref="ICueCustomParametersProvider"/> exposes to the graph editor. Each

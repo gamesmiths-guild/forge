@@ -439,21 +439,21 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 
 	[Fact]
 	[Trait("Isolation", null)]
-	public void Generic_raise_does_not_trigger_non_generic_handlers()
+	public void Generic_raise_also_triggers_non_generic_handlers_with_boxed_payload()
 	{
 		var events = new EventManager();
 		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
-		bool nonGenericCalled = false;
+		object? capturedPayload = null;
 		bool genericCalled = false;
 
-		events.Subscribe(eventTag, _ => nonGenericCalled = true);
+		events.Subscribe(eventTag, data => capturedPayload = data.Payload);
 		events.Subscribe<int>(eventTag, _ => genericCalled = true);
 
 		// Raise generic event
 		events.Raise(new EventData<int> { EventTags = eventTag.GetSingleTagContainer()!, Payload = 42 });
 
-		nonGenericCalled.Should().BeFalse("non-generic handler should not be called by generic raise");
 		genericCalled.Should().BeTrue();
+		capturedPayload.Should().Be(42, "non-generic subscriptions are catch-all and receive the boxed payload");
 	}
 
 	[Fact]

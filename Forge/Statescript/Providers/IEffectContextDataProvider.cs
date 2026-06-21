@@ -2,7 +2,7 @@
 
 using Gamesmiths.Forge.Effects;
 
-namespace Gamesmiths.Forge.Statescript;
+namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
 /// Produces an <see cref="EffectApplicationContext"/> to pass as custom context data when a graph applies an effect.

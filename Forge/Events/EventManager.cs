@@ -7,7 +7,9 @@ namespace Gamesmiths.Forge.Events;
 /// <summary>
 /// Per-entity event bus that supports both non-generic and generic (typed) event subscriptions.
 /// Subscriptions are ordered by priority (higher priority invoked first).
-/// Generic handlers are invoked without boxing. Generic raises do NOT forward to non-generic handlers.
+/// Generic handlers are invoked without boxing. Non-generic subscriptions are catch-all: a generic raise also reaches
+/// them with the payload boxed into <see cref="EventData.Payload"/>. A non-generic raise does NOT reach generic
+/// (typed) handlers.
 /// </summary>
 public sealed class EventManager
 {
@@ -20,16 +22,7 @@ public sealed class EventManager
 	/// <param name="data">The event data to raise.</param>
 	public void Raise(in EventData data)
 	{
-		for (int i = 0; i < _nonGeneric.Count; i++)
-		{
-			NonGenericSubscription sub = _nonGeneric[i];
-			if (!data.EventTags.HasTag(sub.EventTag))
-			{
-				continue;
-			}
-
-			sub.Handler.Invoke(data);
-		}
+		InvokeNonGenericHandlers(data);
 	}
 
 	/// <summary>
@@ -52,6 +45,20 @@ public sealed class EventManager
 
 				((Action<EventData<TPayload>>)sub.Handler).Invoke(data);
 			}
+		}
+
+		// Non-generic subscriptions are catch-all: a generic raise also reaches them with the payload boxed. Only build
+		// the boxed event when such subscribers exist, so typed-only buses pay no boxing cost.
+		if (_nonGeneric.Count > 0)
+		{
+			InvokeNonGenericHandlers(new EventData
+			{
+				EventTags = data.EventTags,
+				Source = data.Source,
+				Target = data.Target,
+				EventMagnitude = data.EventMagnitude,
+				Payload = data.Payload,
+			});
 		}
 	}
 
@@ -135,6 +142,20 @@ public sealed class EventManager
 		}
 
 		return removed;
+	}
+
+	private void InvokeNonGenericHandlers(in EventData data)
+	{
+		for (int i = 0; i < _nonGeneric.Count; i++)
+		{
+			NonGenericSubscription sub = _nonGeneric[i];
+			if (!data.EventTags.HasTag(sub.EventTag))
+			{
+				continue;
+			}
+
+			sub.Handler.Invoke(data);
+		}
 	}
 
 	private readonly record struct NonGenericSubscription(

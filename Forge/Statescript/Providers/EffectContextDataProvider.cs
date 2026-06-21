@@ -2,7 +2,7 @@
 
 using Gamesmiths.Forge.Effects;
 
-namespace Gamesmiths.Forge.Statescript;
+namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
 /// Base class for strongly-typed effect context-data providers. Override <see cref="CreateData"/> to build a
