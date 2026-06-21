@@ -48,6 +48,21 @@ public sealed class EventPayloadOutputs
 	}
 
 	/// <summary>
+	/// Writes a single-precision float to the variable bound to the named output, widening it to the double-backed
+	/// graph variable. Providers writing a <see langword="float"/> bind to this overload, which avoids the boxing the
+	/// generic <see cref="Set{T}"/> incurs when it special-cases <see langword="float"/>.
+	/// </summary>
+	/// <param name="name">The declared output name.</param>
+	/// <param name="value">The value to write.</param>
+	public void Set(string name, float value)
+	{
+		Variables? variables = ResolveBinding(name, out StringKey variableName);
+
+		// Floating-point graph variables are double-backed, so widen single-precision values before storing them.
+		variables?.SetVar(variableName, (double)value);
+	}
+
+	/// <summary>
 	/// Writes a reference value to the variable bound to the named output.
 	/// </summary>
 	/// <typeparam name="T">The reference value type.</typeparam>

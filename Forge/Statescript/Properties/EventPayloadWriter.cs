@@ -8,10 +8,10 @@ using Gamesmiths.Forge.Tags;
 namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
-/// Decomposes a received event payload into the listener node's bound graph variables by delegating to an
-/// <see cref="IEventPayloadProvider"/>. Created by <see cref="EventPayloadOutputResolver"/> and used by
-/// <c>EventListenerNode</c>, either to subscribe through the provider's typed (non-boxing) path or to write a payload
-/// received from a non-generic raise.
+/// Wraps an <see cref="IEventPayloadProvider"/> and its output-to-variable bindings for the event-listener node.
+/// Created by <see cref="EventPayloadOutputResolver"/>: <c>Subscribe</c> sets up the provider's typed (non-boxing)
+/// subscription that <c>EventListenerNode</c> uses while active; <c>Write</c> decomposes an already-boxed payload
+/// directly into the bound graph variables.
 /// </summary>
 /// <param name="provider">The provider that decomposes the payload.</param>
 /// <param name="bindings">The output-name to graph-variable bindings authored on the listener node.</param>

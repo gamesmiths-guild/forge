@@ -124,14 +124,34 @@ public class RaiseEventNode : ActionNode
 			tags.Add(singleTag);
 		}
 
-		if (tags.Count == 0)
+		// Keep only valid tags that share a single manager: an unregistered tag has no manager (and would throw when
+		// building the container), and a TagContainer cannot mix managers.
+		TagsManager? manager = null;
+		var validTags = new List<Tag>();
+
+		foreach (Tag tag in tags)
+		{
+			if (!tag.IsValid || tag.TagsManager is null)
+			{
+				continue;
+			}
+
+			manager ??= tag.TagsManager;
+
+			if (tag.TagsManager == manager)
+			{
+				validTags.Add(tag);
+			}
+		}
+
+		if (manager is null || validTags.Count == 0)
 		{
 			return null;
 		}
 
-		return tags.Count == 1
-			? new TagContainer(tags[0])
-			: new TagContainer(tags[0].TagsManager!, [.. tags]);
+		return validTags.Count == 1
+			? new TagContainer(validTags[0])
+			: new TagContainer(manager, [.. validTags]);
 	}
 
 	private bool ResolveTargets(GraphContext graphContext, out IReadOnlyList<IForgeEntity> targets)
