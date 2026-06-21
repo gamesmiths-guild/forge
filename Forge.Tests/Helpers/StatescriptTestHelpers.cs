@@ -95,6 +95,26 @@ internal static class NodeBindings
 		node.BindInput(CueNode.TargetInput, targetPropertyName);
 		return node;
 	}
+
+	public static RaiseEventNode CreateRaiseEventNode(
+		StringKey eventTagPropertyName,
+		StringKey targetPropertyName)
+	{
+		var node = new RaiseEventNode();
+		node.BindInput(RaiseEventNode.EventTagInput, eventTagPropertyName);
+		node.BindInput(RaiseEventNode.TargetInput, targetPropertyName);
+		return node;
+	}
+
+	public static EventListenerNode CreateEventListenerNode(
+		StringKey eventTagPropertyName,
+		StringKey listenOnPropertyName)
+	{
+		var node = new EventListenerNode();
+		node.BindInput(EventListenerNode.EventTagInput, eventTagPropertyName);
+		node.BindInput(EventListenerNode.ListenOnInput, listenOnPropertyName);
+		return node;
+	}
 }
 
 /// <summary>
