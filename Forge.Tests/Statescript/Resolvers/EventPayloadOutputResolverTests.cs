@@ -3,6 +3,7 @@
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Statescript.Providers;
 using Gamesmiths.Forge.Tests.Helpers;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;

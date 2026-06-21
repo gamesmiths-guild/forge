@@ -2,7 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 
-namespace Gamesmiths.Forge.Statescript;
+namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
 /// Writes the values an <see cref="IEventPayloadProvider"/> extracts from a received event payload to the graph

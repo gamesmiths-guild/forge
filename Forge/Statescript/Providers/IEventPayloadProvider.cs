@@ -5,7 +5,7 @@ using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
 
-namespace Gamesmiths.Forge.Statescript;
+namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
 /// Builds and decomposes the custom <c>Payload</c> of an event for the event nodes. The same provider serves both

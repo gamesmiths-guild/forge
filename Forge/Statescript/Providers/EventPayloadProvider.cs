@@ -5,7 +5,7 @@ using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
 
-namespace Gamesmiths.Forge.Statescript;
+namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
 /// Base class for typed event-payload providers. Override <see cref="CreatePayload"/> to build the payload from the

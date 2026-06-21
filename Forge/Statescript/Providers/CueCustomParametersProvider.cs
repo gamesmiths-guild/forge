@@ -2,7 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 
-namespace Gamesmiths.Forge.Statescript;
+namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
 /// Base class for cue custom-parameter providers. Override <see cref="CreateCustomParameters"/> to build the parameter

@@ -2,7 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 
-namespace Gamesmiths.Forge.Statescript;
+namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
 /// Builds the custom parameter bag (<see cref="Cues.CueParameters.CustomParameters"/>) passed when a graph fires a cue.

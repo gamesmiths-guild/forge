@@ -2,7 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 
-namespace Gamesmiths.Forge.Statescript;
+namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
 /// Binds a declared event-payload output to the graph variable the event-listener node writes it to.

@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript;
+using Gamesmiths.Forge.Statescript.Providers;
 
 namespace Gamesmiths.Forge.Tests.Helpers;
 

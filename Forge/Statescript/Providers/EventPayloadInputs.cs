@@ -2,21 +2,19 @@
 
 using Gamesmiths.Forge.Statescript.Properties;
 
-namespace Gamesmiths.Forge.Statescript;
+namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
-/// Provides the resolved values for the inputs an <see cref="IEffectContextDataProvider"/> declared through
-/// <see cref="IEffectContextDataProvider.Inputs"/>. Values are resolved lazily against the current
+/// Provides the resolved values for the inputs an <see cref="IEventPayloadProvider"/> declared through
+/// <see cref="IEventPayloadProvider.Inputs"/>. Values are resolved lazily against the current
 /// <see cref="GraphContext"/> when read, so an input that the provider never reads is never evaluated.
 /// </summary>
-public sealed class EffectContextDataInputs
+public sealed class EventPayloadInputs
 {
 	private readonly GraphContext _graphContext;
 	private readonly IReadOnlyDictionary<string, IPropertyResolver> _resolvers;
 
-	internal EffectContextDataInputs(
-		GraphContext graphContext,
-		IReadOnlyDictionary<string, IPropertyResolver> resolvers)
+	internal EventPayloadInputs(GraphContext graphContext, IReadOnlyDictionary<string, IPropertyResolver> resolvers)
 	{
 		_graphContext = graphContext;
 		_resolvers = resolvers;

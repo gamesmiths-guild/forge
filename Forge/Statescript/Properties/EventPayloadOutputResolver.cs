@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Statescript.Providers;
+
 namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>

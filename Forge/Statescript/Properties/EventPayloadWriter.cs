@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Events;
+using Gamesmiths.Forge.Statescript.Providers;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Statescript.Properties;

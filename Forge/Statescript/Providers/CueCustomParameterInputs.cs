@@ -2,7 +2,7 @@
 
 using Gamesmiths.Forge.Statescript.Properties;
 
-namespace Gamesmiths.Forge.Statescript;
+namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
 /// Provides the resolved values for the inputs an <see cref="ICueCustomParametersProvider"/> declared through

@@ -12,6 +12,7 @@ using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.State;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Statescript.Providers;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 

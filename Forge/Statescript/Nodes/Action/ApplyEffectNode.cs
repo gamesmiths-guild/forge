@@ -16,8 +16,8 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Action;
 /// for example by storing it in a variable and re-reading it. Level and ownership are configured on the resolved effect
 /// (see <c>EffectFromDataResolver</c>) rather than on the node.</para>
 /// <para>The optional context-data input supplies a custom <see cref="EffectApplicationContext"/> (typically built by
-/// an <see cref="IEffectContextDataProvider"/>) that is passed through the effect pipeline for every application. When
-/// the input is unbound, effects are applied without context data.</para>
+/// an <see cref="Providers.IEffectContextDataProvider"/>) that is passed through the effect pipeline for every
+/// application. When the input is unbound, effects are applied without context data.</para>
 /// </remarks>
 public class ApplyEffectNode : ActionNode
 {
