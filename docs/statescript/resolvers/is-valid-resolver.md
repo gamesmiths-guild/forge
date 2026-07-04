@@ -19,7 +19,7 @@ new IsValidResolver(source)
 
 - Resolves `source` and returns `true` when the result is not `null`.
 - Missing variables resolve to `null` and are therefore reported as invalid.
-- For an "is null" check, wrap this resolver in a [NotResolver](not-resolver.md) or, when driving an `ExpressionNode`, simply connect the opposite port.
+- For an "is null" check, wrap this resolver in a [NotResolver](not-resolver.md) or, when driving an `ExpressionNode`, simply connect the `false` port.
 
 ## Usage
 
