@@ -76,6 +76,13 @@ regular node-bindable properties.
 
 ---
 
+## Object Utilities
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [IsValidResolver](is-valid-resolver.md) | `bool` | Checks whether an object-backed resolver produces a valid (non-null) value. |
+| [ObjectEqualsResolver](object-equals-resolver.md) | `bool` | Checks whether two object-backed resolvers produce the same instance (reference identity). |
+
 ## Boolean Expressions
 
 | Resolver | Output Type | Description |
