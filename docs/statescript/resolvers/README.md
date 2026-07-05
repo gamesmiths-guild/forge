@@ -95,10 +95,10 @@ Operations that take a nested predicate, key selector, or projection evaluate it
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
-| [ElementValueResolver](element-value-resolver.md) | *(configured)* | Reads the value-typed element currently being iterated. |
-| [ElementResolver&lt;T&gt;](element-resolver.md) | `T?` | Reads the object-backed element currently being iterated. |
 | [ElementEntityResolver](element-entity-resolver.md) | `IForgeEntity?` | Reads the iterated entity; composes with entity-aware resolvers for per-element keys. |
 | [ElementIndexResolver](element-index-resolver.md) | `int` | Reads the zero-based index of the element currently being iterated. |
+| [ElementResolver&lt;T&gt;](element-resolver.md) | `T?` | Reads the object-backed element currently being iterated. |
+| [ElementValueResolver](element-value-resolver.md) | *(configured)* | Reads the value-typed element currently being iterated. |
 
 ### Element Access
 
@@ -107,6 +107,22 @@ Operations that take a nested predicate, key selector, or projection evaluate it
 | [ElementAtResolver](element-at-resolver.md) | *(element type)* | Reads the element at a resolved index. Object/entity variants: `ObjectElementAtResolver<T>`, `EntityElementAtResolver`. |
 | [FirstResolver](first-resolver.md) | *(element type)* | Reads the first element. Object/entity variants: `ObjectFirstResolver<T>`, `EntityFirstResolver`. |
 | [LastResolver](last-resolver.md) | *(element type)* | Reads the last element. Object/entity variants: `ObjectLastResolver<T>`, `EntityLastResolver`. |
+
+### Transformation
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [AppendResolver](append-resolver.md) | *(element array)* | Appends nested-resolver elements to the end. Object variant: `ObjectAppendResolver<T>`. |
+| [ConcatResolver](concat-resolver.md) | *(element array)* | Concatenates two arrays. Object variant: `ObjectConcatResolver<T>`. |
+| [DistinctResolver](distinct-resolver.md) | *(element array)* | De-duplicates, keeping first occurrences. Object variant: `ObjectDistinctResolver<T>`. |
+| [ExceptResolver](except-resolver.md) | *(element array)* | Removes the elements found in another array. Object variant: `ObjectExceptResolver<T>`. |
+| [OrderByResolver](order-by-resolver.md) | *(element array)* | Stable-sorts elements by a nested numeric key selector. Object variant: `ObjectOrderByResolver<T>`. |
+| [RemoveAtResolver](remove-at-resolver.md) | *(element array)* | Removes the element at a resolved index. Object variant: `ObjectRemoveAtResolver<T>`. |
+| [ReverseResolver](reverse-resolver.md) | *(element array)* | Reverses the element order. Object variant: `ObjectReverseResolver<T>`. |
+| [SelectResolver](select-resolver.md) | *(projected array)* | Projects each element through a nested resolver (either source lane). Object-producing variant: `SelectObjectResolver<TResult>`. |
+| [SkipResolver](skip-resolver.md) | *(element array)* | Drops the first N elements. Object variant: `ObjectSkipResolver<T>`. |
+| [TakeResolver](take-resolver.md) | *(element array)* | Keeps the first N elements. Object variant: `ObjectTakeResolver<T>`. |
+| [WhereResolver](where-resolver.md) | *(element array)* | Keeps the elements matching a nested boolean predicate. Object variant: `ObjectWhereResolver<T>`. |
 
 ---
 
