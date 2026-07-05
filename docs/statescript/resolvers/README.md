@@ -124,6 +124,20 @@ Operations that take a nested predicate, key selector, or projection evaluate it
 | [TakeResolver](take-resolver.md) | *(element array)* | Keeps the first N elements. Object variant: `ObjectTakeResolver<T>`. |
 | [WhereResolver](where-resolver.md) | *(element array)* | Keeps the elements matching a nested boolean predicate. Object variant: `ObjectWhereResolver<T>`. |
 
+### Reductions and Aggregation
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [AllResolver](all-resolver.md) | `bool` | Checks whether every element matches a nested predicate (either source lane). |
+| [AnyResolver](any-resolver.md) | `bool` | Checks whether any element exists or matches a nested predicate (either source lane). |
+| [AverageResolver](average-resolver.md) | `double`/`float`/`decimal` | Computes the arithmetic mean of a numeric array. |
+| [ContainsResolver](contains-resolver.md) | `bool` | Checks whether the array contains a resolved value. Object variant: `ObjectContainsResolver`. |
+| [CountResolver](count-resolver.md) | `int` | Counts elements, optionally only those matching a nested predicate (either source lane). |
+| [IndexOfResolver](index-of-resolver.md) | `int` | Finds the index of the first occurrence of a resolved value, or -1. Object variant: `ObjectIndexOfResolver`. |
+| [MaxElementResolver](max-element-resolver.md) | *(element type)* | Returns the largest element of a numeric array. |
+| [MinElementResolver](min-element-resolver.md) | *(element type)* | Returns the smallest element of a numeric array. |
+| [SumResolver](sum-resolver.md) | *(promoted numeric)* | Adds up all elements of a numeric array. |
+
 ---
 
 ## Boolean Expressions
