@@ -83,6 +83,28 @@ regular node-bindable properties.
 | [IsValidResolver](is-valid-resolver.md) | `bool` | Checks whether an object-backed resolver produces a valid (non-null) value. |
 | [ObjectEqualsResolver](object-equals-resolver.md) | `bool` | Checks whether two object-backed resolvers produce the same instance (reference identity). |
 
+---
+
+## Array Operations
+
+LINQ-inspired resolvers for building array pipelines (filter → sort → take, projections, reductions). Most
+operations ship in two variants that share a doc page: a value-lane resolver for `Variant128` arrays and an
+object-lane `Object*Resolver<T>` for reference arrays. Entity-flavored helpers (`Entity*Resolver`) implement
+`IEntityResolver` so their result plugs into `AttributeResolver`, `TagQueryResolver`, and friends.
+
+### Element (Lambda) Resolvers
+
+Operations that take a nested predicate, key selector, or projection evaluate it once per element with the
+current element published on the graph context. These resolvers are the "lambda parameter" — they read the
+current element back inside that nested resolver.
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [ElementValueResolver](element-value-resolver.md) | *(configured)* | Reads the value-typed element currently being iterated. |
+| [ElementResolver&lt;T&gt;](element-resolver.md) | `T?` | Reads the object-backed element currently being iterated. |
+| [ElementEntityResolver](element-entity-resolver.md) | `IForgeEntity?` | Reads the iterated entity; composes with entity-aware resolvers for per-element keys. |
+| [ElementIndexResolver](element-index-resolver.md) | `int` | Reads the zero-based index of the element currently being iterated. |
+
 ## Boolean Expressions
 
 | Resolver | Output Type | Description |
