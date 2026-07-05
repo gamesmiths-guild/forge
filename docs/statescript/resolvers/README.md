@@ -87,16 +87,11 @@ regular node-bindable properties.
 
 ## Array Operations
 
-LINQ-inspired resolvers for building array pipelines (filter → sort → take, projections, reductions). Most
-operations ship in two variants that share a doc page: a value-lane resolver for `Variant128` arrays and an
-object-lane `Object*Resolver<T>` for reference arrays. Entity-flavored helpers (`Entity*Resolver`) implement
-`IEntityResolver` so their result plugs into `AttributeResolver`, `TagQueryResolver`, and friends.
+LINQ-inspired resolvers for building array pipelines (filter → sort → take, projections, reductions). Most operations ship in two variants that share a doc page: a value-lane resolver for `Variant128` arrays and an object-lane `Object*Resolver<T>` for reference arrays. Entity-flavored helpers (`Entit *Resolver`) implement `IEntityResolver` so their result plugs into `AttributeResolver`, `TagQueryResolver`, and friends.
 
 ### Element (Lambda) Resolvers
 
-Operations that take a nested predicate, key selector, or projection evaluate it once per element with the
-current element published on the graph context. These resolvers are the "lambda parameter" — they read the
-current element back inside that nested resolver.
+Operations that take a nested predicate, key selector, or projection evaluate it once per element with the current element published on the graph context. These resolvers are the "lambda parameter", they read the current element back inside that nested resolver.
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
@@ -104,6 +99,16 @@ current element back inside that nested resolver.
 | [ElementResolver&lt;T&gt;](element-resolver.md) | `T?` | Reads the object-backed element currently being iterated. |
 | [ElementEntityResolver](element-entity-resolver.md) | `IForgeEntity?` | Reads the iterated entity; composes with entity-aware resolvers for per-element keys. |
 | [ElementIndexResolver](element-index-resolver.md) | `int` | Reads the zero-based index of the element currently being iterated. |
+
+### Element Access
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [ElementAtResolver](element-at-resolver.md) | *(element type)* | Reads the element at a resolved index. Object/entity variants: `ObjectElementAtResolver<T>`, `EntityElementAtResolver`. |
+| [FirstResolver](first-resolver.md) | *(element type)* | Reads the first element. Object/entity variants: `ObjectFirstResolver<T>`, `EntityFirstResolver`. |
+| [LastResolver](last-resolver.md) | *(element type)* | Reads the last element. Object/entity variants: `ObjectLastResolver<T>`, `EntityLastResolver`. |
+
+---
 
 ## Boolean Expressions
 
