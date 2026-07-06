@@ -87,7 +87,7 @@ regular node-bindable properties.
 
 ## Array Operations
 
-LINQ-inspired resolvers for building array pipelines (filter → sort → take, projections, reductions). Most operations ship in two variants that share a doc page: a value-lane resolver for `Variant128` arrays and an object-lane `Object*Resolver<T>` for reference arrays. Entity-flavored helpers (`Entit *Resolver`) implement `IEntityResolver` so their result plugs into `AttributeResolver`, `TagQueryResolver`, and friends.
+LINQ-inspired resolvers for building array pipelines (filter → sort → take, projections, reductions). Most operations ship in two variants that share a doc page: a value-lane resolver for `Variant128` arrays and an object-lane `Object*Resolver<T>` for reference arrays. Entity-flavored helpers (`Entit*Resolver`) implement `IEntityResolver` so their result plugs into `AttributeResolver`, `TagQueryResolver`, and friends.
 
 ### Element (Lambda) Resolvers
 
