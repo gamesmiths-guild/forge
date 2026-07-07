@@ -3,6 +3,8 @@
 using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
@@ -33,10 +35,31 @@ public class ObjectDistinctResolverTests(TagsAndCuesFixture tagsAndCuesFixture) 
 
 	[Fact]
 	[Trait("Resolver", "ObjectDistinct")]
+	public void Object_distinct_resolver_dedupes_effects_by_reference_identity()
+	{
+		Effect burn = CreateInstantEffect("Burn");
+		Effect chill = CreateInstantEffect("Chill");
+		var context = new GraphContext();
+		context.GraphVariables.DefineObjectArrayVariable("effects", [burn, chill, burn, chill]);
+
+		var resolver = new ObjectDistinctResolver<Effect>(new ObjectArrayVariableResolver<Effect>("effects"));
+
+		resolver.ResolveArray(context).Should().Equal(burn, chill);
+	}
+
+	[Fact]
+	[Trait("Resolver", "ObjectDistinct")]
 	public void Object_distinct_resolver_returns_empty_array_for_missing_variable()
 	{
 		var resolver = new ObjectDistinctResolver<IForgeEntity>(new EntityArrayVariableResolver("missing"));
 
 		resolver.ResolveArray(new GraphContext()).Should().BeEmpty();
+	}
+
+	private static Effect CreateInstantEffect(string name)
+	{
+		return new Effect(
+			new EffectData(name, new DurationData(DurationType.Instant)),
+			new EffectOwnership(null, null));
 	}
 }
