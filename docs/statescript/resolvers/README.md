@@ -83,6 +83,63 @@ regular node-bindable properties.
 | [IsValidResolver](is-valid-resolver.md) | `bool` | Checks whether an object-backed resolver produces a valid (non-null) value. |
 | [ObjectEqualsResolver](object-equals-resolver.md) | `bool` | Checks whether two object-backed resolvers produce the same instance (reference identity). |
 
+---
+
+## Array Operations
+
+LINQ-inspired resolvers for building array pipelines (filter → sort → take, projections, reductions). Most operations ship in two variants that share a doc page: a value-lane resolver for `Variant128` arrays and an object-lane `Object*Resolver<T>` for reference arrays. Entity-flavored helpers (`Entit*Resolver`) implement `IEntityResolver` so their result plugs into `AttributeResolver`, `TagQueryResolver`, and friends.
+
+### Element (Lambda) Resolvers
+
+Operations that take a nested predicate, key selector, or projection evaluate it once per element with the current element published on the graph context. These resolvers are the "lambda parameter", they read the current element back inside that nested resolver.
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [ElementEntityResolver](element-entity-resolver.md) | `IForgeEntity?` | Reads the iterated entity; composes with entity-aware resolvers for per-element keys. |
+| [ElementIndexResolver](element-index-resolver.md) | `int` | Reads the zero-based index of the element currently being iterated. |
+| [ElementResolver&lt;T&gt;](element-resolver.md) | `T?` | Reads the object-backed element currently being iterated. |
+| [ElementValueResolver](element-value-resolver.md) | *(configured)* | Reads the value-typed element currently being iterated. |
+
+### Element Access
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [ElementAtResolver](element-at-resolver.md) | *(element type)* | Reads the element at a resolved index. Object/entity variants: `ObjectElementAtResolver<T>`, `EntityElementAtResolver`. |
+| [FirstResolver](first-resolver.md) | *(element type)* | Reads the first element. Object/entity variants: `ObjectFirstResolver<T>`, `EntityFirstResolver`. |
+| [LastResolver](last-resolver.md) | *(element type)* | Reads the last element. Object/entity variants: `ObjectLastResolver<T>`, `EntityLastResolver`. |
+
+### Transformation
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [AppendResolver](append-resolver.md) | *(element array)* | Appends nested-resolver elements to the end. Object variant: `ObjectAppendResolver<T>`. |
+| [ConcatResolver](concat-resolver.md) | *(element array)* | Concatenates two arrays. Object variant: `ObjectConcatResolver<T>`. |
+| [DistinctResolver](distinct-resolver.md) | *(element array)* | De-duplicates, keeping first occurrences. Object variant: `ObjectDistinctResolver<T>`. |
+| [ExceptResolver](except-resolver.md) | *(element array)* | Removes the elements found in another array. Object variant: `ObjectExceptResolver<T>`. |
+| [OrderByResolver](order-by-resolver.md) | *(element array)* | Stable-sorts elements by a nested numeric key selector. Object variant: `ObjectOrderByResolver<T>`. |
+| [RemoveAtResolver](remove-at-resolver.md) | *(element array)* | Removes the element at a resolved index. Object variant: `ObjectRemoveAtResolver<T>`. |
+| [ReverseResolver](reverse-resolver.md) | *(element array)* | Reverses the element order. Object variant: `ObjectReverseResolver<T>`. |
+| [SelectResolver](select-resolver.md) | *(projected array)* | Projects each element through a nested resolver (either source lane). Object-producing variant: `SelectObjectResolver<TResult>`. |
+| [SkipResolver](skip-resolver.md) | *(element array)* | Drops the first N elements. Object variant: `ObjectSkipResolver<T>`. |
+| [TakeResolver](take-resolver.md) | *(element array)* | Keeps the first N elements. Object variant: `ObjectTakeResolver<T>`. |
+| [WhereResolver](where-resolver.md) | *(element array)* | Keeps the elements matching a nested boolean predicate. Object variant: `ObjectWhereResolver<T>`. |
+
+### Reductions and Aggregation
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [AllResolver](all-resolver.md) | `bool` | Checks whether every element matches a nested predicate (either source lane). |
+| [AnyResolver](any-resolver.md) | `bool` | Checks whether any element exists or matches a nested predicate (either source lane). |
+| [AverageResolver](average-resolver.md) | `double`/`float`/`decimal` | Computes the arithmetic mean of a numeric array. |
+| [ContainsResolver](contains-resolver.md) | `bool` | Checks whether the array contains a resolved value. Object variant: `ObjectContainsResolver`. |
+| [CountResolver](count-resolver.md) | `int` | Counts elements, optionally only those matching a nested predicate (either source lane). |
+| [IndexOfResolver](index-of-resolver.md) | `int` | Finds the index of the first occurrence of a resolved value, or -1. Object variant: `ObjectIndexOfResolver`. |
+| [MaxElementResolver](max-element-resolver.md) | *(element type)* | Returns the largest element of a numeric array. |
+| [MinElementResolver](min-element-resolver.md) | *(element type)* | Returns the smallest element of a numeric array. |
+| [SumResolver](sum-resolver.md) | *(promoted numeric)* | Adds up all elements of a numeric array. |
+
+---
+
 ## Boolean Expressions
 
 | Resolver | Output Type | Description |

@@ -14,6 +14,8 @@ public sealed class GraphContext
 {
 	private readonly Dictionary<Guid, INodeContext> _nodeContexts = [];
 
+	private readonly List<ElementFrame> _elementFrames = [];
+
 	/// <summary>
 	/// Gets a value indicating whether the graph is currently active. A graph is considered active if it has at least
 	/// one active state node.
@@ -76,6 +78,28 @@ public sealed class GraphContext
 
 		data = null;
 		return false;
+	}
+
+	/// <summary>
+	/// Attempts to retrieve the array element currently being iterated by an enclosing array resolver. Iterating
+	/// resolvers (filter, sort, projection, etc.) push one <see cref="ElementFrame"/> per element while evaluating
+	/// their nested "lambda" resolvers; element resolvers use this method to read the current element back. Frames
+	/// form a stack, so nested array operations always observe the innermost element.
+	/// </summary>
+	/// <param name="frame">When this method returns <see langword="true"/>, contains the innermost element frame.
+	/// </param>
+	/// <returns><see langword="true"/> if an array element is currently being iterated; otherwise,
+	/// <see langword="false"/>.</returns>
+	public bool TryGetCurrentElement(out ElementFrame frame)
+	{
+		if (_elementFrames.Count == 0)
+		{
+			frame = default;
+			return false;
+		}
+
+		frame = _elementFrames[^1];
+		return true;
 	}
 
 	/// <summary>
@@ -387,6 +411,16 @@ public sealed class GraphContext
 		var newContext = new T();
 		_nodeContexts[nodeID] = newContext;
 		return newContext;
+	}
+
+	internal void PushElement(in ElementFrame frame)
+	{
+		_elementFrames.Add(frame);
+	}
+
+	internal void PopElement()
+	{
+		_elementFrames.RemoveAt(_elementFrames.Count - 1);
 	}
 
 	internal bool HasNodeContext(Guid nodeID)

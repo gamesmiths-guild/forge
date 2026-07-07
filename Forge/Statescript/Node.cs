@@ -244,8 +244,12 @@ public abstract class Node
 	/// <see cref="BindInput"/> and <see cref="BindOutput"/>.
 	/// </summary>
 	/// <remarks>
-	/// The default implementation declares no parameters, which is correct for nodes like
-	/// <see cref="Nodes.EntryNode"/> and <see cref="Nodes.ExitNode"/> that have no data dependencies.
+	/// <para>The default implementation declares no parameters, which is correct for nodes like
+	/// <see cref="Nodes.EntryNode"/> and <see cref="Nodes.ExitNode"/> that have no data dependencies.</para>
+	/// <para>This method is invoked from the base <see cref="Node"/> constructor, before any derived constructor body
+	/// runs. If the parameter schema depends on constructor arguments, capture them through field or
+	/// primary-constructor initializers (which execute before the base constructor). Assignments inside a constructor
+	/// body happen too late and this method would observe default field values.</para>
 	/// </remarks>
 	/// <param name="inputProperties">The list to add input property declarations to.</param>
 	/// <param name="outputVariables">The list to add output variable declarations to.</param>
