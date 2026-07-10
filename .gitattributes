@@ -1,9 +1,10 @@
-* text=auto
+# Normalize EOL for all files that Git considers text files.
+* text=auto eol=lf
 
-*.editorconfig   text eol=crlf
-*.gitattributes  text eol=crlf
-*.gitignore      text eol=crlf
-*.sln            text eol=crlf
-*.csproj         text eol=crlf
-*.cs             text eol=crlf diff=csharp
-*.md             text eol=crlf diff=markdown
+*.cs             text eol=lf diff=csharp
+*.md             text eol=lf diff=markdown
+*.sh             text eol=lf
+
+# Windows-only script formats that require CRLF.
+*.bat            text eol=crlf
+*.cmd            text eol=crlf
