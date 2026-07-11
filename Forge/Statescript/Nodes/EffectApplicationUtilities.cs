@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Statescript.Nodes;
 
@@ -117,28 +118,95 @@ internal static class EffectApplicationUtilities
 		return activeHandles.Count > 0;
 	}
 
-	private static EffectApplicationContext? ResolveContextData(
+	/// <summary>
+	/// Resolves a handle input that accepts either a single <see cref="ActiveEffectHandle"/> or an array of handles.
+	/// </summary>
+	/// <param name="graphContext">The graph execution context.</param>
+	/// <param name="handleInputName">The bound name of the handle input property.</param>
+	/// <param name="handles">The resolved handles.</param>
+	/// <returns><see langword="true"/> when at least one handle was resolved.</returns>
+	public static bool TryResolveHandles(
 		GraphContext graphContext,
-		StringKey contextDataInputName)
+		StringKey handleInputName,
+		out IReadOnlyList<ActiveEffectHandle> handles)
 	{
-		if (contextDataInputName == StringKey.Empty)
+		if (graphContext.TryResolveObjectArray(
+			handleInputName,
+			typeof(ActiveEffectHandle),
+			out object?[]? resolvedHandleArray))
 		{
-			return null;
+			var resolvedHandles = new List<ActiveEffectHandle>(resolvedHandleArray.Length);
+
+			for (int i = 0; i < resolvedHandleArray.Length; i++)
+			{
+				if (resolvedHandleArray[i] is ActiveEffectHandle handle)
+				{
+					resolvedHandles.Add(handle);
+				}
+			}
+
+			handles = resolvedHandles;
+			return resolvedHandles.Count > 0;
 		}
 
-		if (graphContext.TryResolveObject(
-			contextDataInputName,
-			typeof(EffectApplicationContext),
-			out object? resolved)
-			&& resolved is EffectApplicationContext context)
+		if (graphContext.TryResolveObject(handleInputName, typeof(ActiveEffectHandle), out object? resolvedHandle)
+			&& resolvedHandle is ActiveEffectHandle singleHandle)
 		{
-			return context;
+			handles = [singleHandle];
+			return true;
 		}
 
-		return null;
+		handles = [];
+		return false;
 	}
 
-	private static bool TryResolveEffects(
+	/// <summary>
+	/// Resolves a tag input that accepts either a single <see cref="Tag"/> or an array of tags.
+	/// </summary>
+	/// <param name="graphContext">The graph execution context.</param>
+	/// <param name="tagInputName">The bound name of the tag input property.</param>
+	/// <param name="tags">The resolved tags.</param>
+	/// <returns><see langword="true"/> when at least one tag was resolved.</returns>
+	public static bool TryResolveTags(
+		GraphContext graphContext,
+		StringKey tagInputName,
+		out IReadOnlyList<Tag> tags)
+	{
+		if (graphContext.TryResolveObjectArray(tagInputName, typeof(Tag), out object?[]? resolvedTagArray))
+		{
+			var resolvedTags = new List<Tag>(resolvedTagArray.Length);
+
+			for (int i = 0; i < resolvedTagArray.Length; i++)
+			{
+				if (resolvedTagArray[i] is Tag tag)
+				{
+					resolvedTags.Add(tag);
+				}
+			}
+
+			tags = resolvedTags;
+			return resolvedTags.Count > 0;
+		}
+
+		if (graphContext.TryResolveObject(tagInputName, typeof(Tag), out object? resolvedTag)
+			&& resolvedTag is Tag singleTag)
+		{
+			tags = [singleTag];
+			return true;
+		}
+
+		tags = [];
+		return false;
+	}
+
+	/// <summary>
+	/// Resolves an effect input that accepts either a single <see cref="Effect"/> or an array of effects.
+	/// </summary>
+	/// <param name="graphContext">The graph execution context.</param>
+	/// <param name="effectInputName">The bound name of the effect input property.</param>
+	/// <param name="effects">The resolved effects.</param>
+	/// <returns><see langword="true"/> when at least one effect was resolved.</returns>
+	public static bool TryResolveEffects(
 		GraphContext graphContext,
 		StringKey effectInputName,
 		out IReadOnlyList<Effect> effects)
@@ -168,6 +236,27 @@ internal static class EffectApplicationUtilities
 
 		effects = [];
 		return false;
+	}
+
+	private static EffectApplicationContext? ResolveContextData(
+		GraphContext graphContext,
+		StringKey contextDataInputName)
+	{
+		if (contextDataInputName == StringKey.Empty)
+		{
+			return null;
+		}
+
+		if (graphContext.TryResolveObject(
+			contextDataInputName,
+			typeof(EffectApplicationContext),
+			out object? resolved)
+			&& resolved is EffectApplicationContext context)
+		{
+			return context;
+		}
+
+		return null;
 	}
 
 	private static bool TryResolveEntities(

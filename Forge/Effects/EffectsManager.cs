@@ -126,6 +126,25 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return ConvertToStackInstanceData(filteredEffects);
 	}
 
+	/// <summary>
+	/// Queries and gets the handles for all active applications of a given <see cref="EffectData"/>.
+	/// </summary>
+	/// <param name="effectData">Which effect to query for.</param>
+	/// <returns>The handles for the currently active effects matching the given data.</returns>
+	public IEnumerable<ActiveEffectHandle> GetActiveEffects(EffectData effectData)
+	{
+		return FilterEffectsByData(effectData).Select(x => x.Handle);
+	}
+
+	/// <summary>
+	/// Queries and gets the handles for all effects currently active on the owner.
+	/// </summary>
+	/// <returns>The handles for all currently active effects.</returns>
+	public IEnumerable<ActiveEffectHandle> GetActiveEffects()
+	{
+		return _activeEffects.Select(x => x.Handle);
+	}
+
 	internal void OnEffectExecuted_InternalCall(
 		EffectEvaluatedData executedEffectEvaluatedData,
 		IEffectComponent[]? componentInstances)
