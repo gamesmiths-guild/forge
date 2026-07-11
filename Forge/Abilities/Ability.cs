@@ -202,26 +202,19 @@ internal sealed class Ability
 			return;
 		}
 
+		// OnInstanceEnded raises the ability-ended notification when the last instance ends.
 		AbilityInstance last = _activeInstances[^1];
 		last.End();
-
-		Owner.Abilities.NotifyAbilityEnded(new AbilityEndedData(Handle, false));
 	}
 
 	internal void CancelAllInstances()
 	{
-		if (_activeInstances.Count == 0)
-		{
-			return;
-		}
-
-		// Copy to avoid modification during iteration.
+		// Copy to avoid modification during iteration. OnInstanceEnded raises the ability-ended notification (with
+		// the canceled flag) when the last instance ends.
 		foreach (AbilityInstance instance in _activeInstances.ToArray())
 		{
 			instance.Cancel();
 		}
-
-		Owner.Abilities.NotifyAbilityEnded(new AbilityEndedData(Handle, true));
 	}
 
 	internal void Cleanup()
@@ -298,7 +291,7 @@ internal sealed class Ability
 		}
 	}
 
-	internal void OnInstanceEnded(AbilityInstance instance)
+	internal void OnInstanceEnded(AbilityInstance instance, bool wasCanceled)
 	{
 		_activeInstances.Remove(instance);
 
@@ -324,7 +317,7 @@ internal sealed class Ability
 		if (_activeInstances.Count == 0)
 		{
 			OnAbilityDeactivated?.Invoke(this);
-			Owner.Abilities.NotifyAbilityEnded(new AbilityEndedData(Handle, false));
+			Owner.Abilities.NotifyAbilityEnded(new AbilityEndedData(Handle, wasCanceled));
 		}
 	}
 

@@ -52,6 +52,16 @@ internal sealed class AbilityInstance
 
 	internal void End()
 	{
+		EndInstance(wasCanceled: false);
+	}
+
+	internal void Cancel()
+	{
+		EndInstance(wasCanceled: true);
+	}
+
+	private void EndInstance(bool wasCanceled)
+	{
 		if (!IsActive)
 		{
 			return;
@@ -71,12 +81,7 @@ internal sealed class AbilityInstance
 		}
 
 		IsActive = false;
-		_ability.OnInstanceEnded(this);
-	}
-
-	internal void Cancel()
-	{
-		End();
+		_ability.OnInstanceEnded(this, wasCanceled);
 	}
 
 	private void ApplyActivationState()
