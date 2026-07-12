@@ -329,6 +329,8 @@ entity.Abilities.OnAbilityEnded += data =>
 };
 ```
 
+`OnAbilityEnded` fires **exactly once** each time an ability deactivates, when its last active instance ends. `WasCanceled` is `true` when the ability was canceled (via `AbilityHandle.Cancel()` or `CancelAbilitiesWithTag`) and `false` when it ended gracefully (reaching its natural end, or a Statescript Exit node).
+
 ## Ability Handle
 
 `AbilityHandle` is the public interface for interacting with a granted ability:

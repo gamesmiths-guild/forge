@@ -94,7 +94,10 @@ That label becomes the canonical port name surfaced by editor integrations such 
 
 | Node | Description |
 |------|-------------|
+| [AbilityEndListenerNode](ability-end-listener-node.md) | Listens for abilities ending on an entity and emits OnAbilityEnded with the ability and cancel state. |
 | [CueNode](cue-node.md) | Applies cues on activation and removes them on deactivation, with an optional interrupted flag. |
+| [EffectLevelListenerNode](effect-level-listener-node.md) | Listens for effect level changes and emits OnLevelChanged with the new level. |
 | [EffectNode](effect-node.md) | Applies effects on activation, emits OnEffectEnd on natural completion, and removes still-active instances on deactivation. |
 | [EventListenerNode](event-listener-node.md) | Listens for events while active and emits OnEvent each time a matching event fires. |
+| [GrantAbilityNode](grant-ability-node.md) | Grants an ability while active, removing the grant on deactivation. |
 | [TimerNode](timer-node.md) | Remains active for a configured duration and emits OnTimerEnd when it finishes naturally. |

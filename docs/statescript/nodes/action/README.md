@@ -54,7 +54,15 @@ public class ApplyEffectActionNode : ActionNode
 | Node | Description |
 |------|-------------|
 | [ApplyEffectNode](apply-effect-node.md) | Applies one or more effects to one or more targets. |
+| [CancelAbilitiesByTagNode](cancel-abilities-by-tag-node.md) | Cancels active abilities on an entity whose ability tags match. |
+| [CancelAbilityNode](cancel-ability-node.md) | Cancels the ability driving the current graph. |
+| [CommitAbilityNode](commit-ability-node.md) | Commits the cost and/or cooldown of the ability driving the graph. |
 | [ExecuteCueNode](execute-cue-node.md) | Executes one or more one-shot cues on one or more targets. |
+| [GrantAbilityPermanentlyNode](grant-ability-permanently-node.md) | Permanently grants an ability to an entity (cannot be revoked). |
 | [RaiseEventNode](raise-event-node.md) | Raises an event on one or more target entities' event buses. |
+| [RemoveEffectNode](remove-effect-node.md) | Removes active effects through their handles. |
+| [SetByCallerMagnitudeNode](set-by-caller-magnitude-node.md) | Sets a SetByCaller magnitude on effects, keyed by tag. |
+| [SetEffectInhibitionNode](set-effect-inhibition-node.md) | Sets the inhibition state of active effects. |
+| [SetEffectLevelNode](set-effect-level-node.md) | Levels up effects or sets their level to a resolved value. |
 | [SetVariableNode](set-variable-node.md) | Copies a value from an input property to a graph or shared variable. |
 | [UpdateCueNode](update-cue-node.md) | Updates one or more active cues on one or more targets. |

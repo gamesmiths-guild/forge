@@ -29,12 +29,32 @@ These resolvers provide effect instances and application context to nodes such a
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
 | [AbilityOwnershipResolver](ability-ownership-resolver.md) | `EffectOwnership` | Reads the current ability owner/source pair as an effect ownership value. |
-| [EffectArrayFromDataResolver](effect-array-from-data-resolver.md) | `Effect[]` | Builds an array of `Effect` instances sharing the same level and ownership. |
+| [ActiveEffectDataResolver](active-effect-data-resolver.md) | `double`/`int`/`bool` | Reads a selected runtime value (remaining duration, stacks, level, ...) from an active effect handle. |
+| [ActiveEffectEffectResolver](active-effect-effect-resolver.md) | `Effect?` | Reads the live `Effect` instance behind an active effect handle. |
+| [ActiveEffectTargetResolver](active-effect-target-resolver.md) | `IForgeEntity?` | Reads the entity an active effect is applied to, from its handle. |
+| [EffectArrayFromDataResolver](effect-array-from-data-resolver.md) | `Effect[]` | Builds an array of `Effect` instances sharing the same level, ownership, and SetByCaller magnitudes. |
 | [EffectArrayVariableResolver](effect-array-variable-resolver.md) | `Effect[]` | Reads a stored `Effect` instance array from graph or shared scope. |
 | [EffectContextDataResolver](effect-context-data-resolver.md) | `EffectApplicationContext` | Produces custom application context data for an effect via an `IEffectContextDataProvider`. |
-| [EffectFromDataResolver](effect-from-data-resolver.md) | `Effect` | Builds an `Effect` instance from an `EffectData` value plus optional level and ownership. |
+| [EffectFromDataResolver](effect-from-data-resolver.md) | `Effect` | Builds an `Effect` instance from an `EffectData` value plus optional level, ownership, and SetByCaller magnitudes. |
+| [EffectInfoResolver](effect-info-resolver.md) | `int` | Aggregates stack/instance/level info over the active applications of an effect on an entity. |
 | [EffectVariableResolver](effect-variable-resolver.md) | `Effect?` | Reads a stored `Effect` instance from graph or shared scope for reuse. |
 | [OwnershipResolver](ownership-resolver.md) | `EffectOwnership` | Composes an effect ownership value from nested entity resolvers. |
+| [QueryActiveEffectsResolver](query-active-effects-resolver.md) | `ActiveEffectHandle[]` | Queries the active effect handles on an entity, optionally filtered by `EffectData`. |
+| [SetByCallerMagnitudeResolver](set-by-caller-magnitude-resolver.md) | `float` | Reads the SetByCaller magnitude stored on an `Effect` for an identifier tag. |
+
+---
+
+## Ability Resolvers
+
+These resolvers read from the ability driving the current graph (through the activation context) or, when given an `IObjectResolver<AbilityHandle>`, from another ability. Look up other abilities with `GetAbilityHandleResolver`.
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [AbilityCooldownResolver](ability-cooldown-resolver.md) | `float` | Reads a cooldown value (remaining time, total time, or remaining fraction) from an ability. |
+| [AbilityCostResolver](ability-cost-resolver.md) | `int` | Reads the evaluated cost of an ability for a specific attribute. |
+| [AbilityStateResolver](ability-state-resolver.md) | `bool` | Reads a state flag (is active, is inhibited, is valid) from an ability. |
+| [CanActivateAbilityResolver](can-activate-ability-resolver.md) | `bool` | Checks whether an ability can currently activate (cooldowns, costs, tag requirements). |
+| [GetAbilityHandleResolver](get-ability-handle-resolver.md) | `AbilityHandle` | Looks up the handle of a granted ability on an entity by its `AbilityData`. |
 
 ---
 
