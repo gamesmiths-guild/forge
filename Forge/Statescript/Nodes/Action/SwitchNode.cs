@@ -28,9 +28,9 @@ public class SwitchNode(int caseCount = 2) : Node
 	/// <summary>
 	/// Gets the port index of the default port, emitted for out-of-range selectors. Also the number of case ports.
 	/// </summary>
-	public int DefaultPort { get; } = caseCount >= 1
+	public int DefaultPort { get; } = (caseCount >= 1 && caseCount <= byte.MaxValue)
 		? caseCount
-		: throw new ArgumentOutOfRangeException(nameof(caseCount), "A switch needs at least one case port.");
+		: throw new ArgumentOutOfRangeException(nameof(caseCount), $"caseCount must be between 1 and {byte.MaxValue}.");
 
 	/// <inheritdoc/>
 	public override string Description => "Routes the incoming message to a case port picked by an integer selector.";

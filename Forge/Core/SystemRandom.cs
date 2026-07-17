@@ -51,7 +51,11 @@ public sealed class SystemRandom : IRandom
 	/// <inheritdoc/>
 	public double NextDoubleInclusive()
 	{
-		return _random.NextDouble();
+		Span<byte> buffer = stackalloc byte[8];
+		_random.NextBytes(buffer);
+		ulong rand = BitConverter.ToUInt64(buffer);
+		ulong value = (rand >> 10) % ((1UL << 53) + 1UL);
+		return (double)value / (1UL << 53);
 	}
 
 	/// <inheritdoc/>
@@ -63,13 +67,13 @@ public sealed class SystemRandom : IRandom
 	/// <inheritdoc/>
 	public int NextInt(int maxValue)
 	{
-		return _random.Next(maxValue);
+		return maxValue <= 0 ? 0 : _random.Next(maxValue);
 	}
 
 	/// <inheritdoc/>
 	public int NextInt(int minValue, int maxValue)
 	{
-		return _random.Next(minValue, maxValue);
+		return minValue >= maxValue ? minValue : _random.Next(minValue, maxValue);
 	}
 
 	/// <inheritdoc/>
@@ -77,9 +81,7 @@ public sealed class SystemRandom : IRandom
 	{
 		if (minValue > maxValue)
 		{
-			throw new ArgumentOutOfRangeException(
-				nameof(minValue),
-				"minValue must be less than or equal to maxValue.");
+			return minValue;
 		}
 
 		if (maxValue == int.MaxValue)
@@ -95,13 +97,13 @@ public sealed class SystemRandom : IRandom
 	{
 		Span<byte> buffer = stackalloc byte[8];
 		_random.NextBytes(buffer);
-		return BitConverter.ToInt64(buffer);
+		return (long)(BitConverter.ToUInt64(buffer) & long.MaxValue);
 	}
 
 	/// <inheritdoc/>
 	public long NextInt64(long maxValue)
 	{
-		return NextInt64(0, maxValue);
+		return maxValue <= 0 ? 0 : NextInt64(0, maxValue);
 	}
 
 	/// <inheritdoc/>
@@ -109,7 +111,7 @@ public sealed class SystemRandom : IRandom
 	{
 		if (minValue >= maxValue)
 		{
-			throw new ArgumentOutOfRangeException(nameof(minValue), "minValue must be less than maxValue.");
+			return minValue;
 		}
 
 		ulong range = (ulong)(maxValue - minValue);
@@ -123,9 +125,7 @@ public sealed class SystemRandom : IRandom
 	{
 		if (minValue > maxValue)
 		{
-			throw new ArgumentOutOfRangeException(
-				nameof(minValue),
-				"minValue must be less than or equal to maxValue.");
+			return minValue;
 		}
 
 		if (minValue == maxValue)
@@ -159,6 +159,6 @@ public sealed class SystemRandom : IRandom
 	/// <inheritdoc/>
 	public float NextSingleInclusive()
 	{
-		return (float)_random.NextDouble();
+		return (float)NextDoubleInclusive();
 	}
 }

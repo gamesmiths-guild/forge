@@ -39,9 +39,11 @@ public class StateMachineNode(int stateCount = 2) : StateNode<StateMachineNodeCo
 	/// </summary>
 	public const byte FirstStatePort = 5;
 
-	private readonly int _stateCount = stateCount >= 1
+	private readonly int _stateCount = (stateCount >= 1 && stateCount <= byte.MinValue - (FirstStatePort + 1))
 		? stateCount
-		: throw new ArgumentOutOfRangeException(nameof(stateCount), "A state machine needs at least one state.");
+		: throw new ArgumentOutOfRangeException(
+			nameof(stateCount),
+			$"stateCount must be between 1 and {byte.MaxValue - FirstStatePort + 1}.");
 
 	/// <inheritdoc/>
 	public override string Description => "Keeps exactly one state subgraph active, selected by an integer input.";
