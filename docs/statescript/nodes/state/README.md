@@ -103,4 +103,6 @@ That label becomes the canonical port name surfaced by editor integrations such 
 | [EventListenerNode](event-listener-node.md) | Listens for events while active and emits OnEvent each time a matching event fires. |
 | [GrantAbilityNode](grant-ability-node.md) | Grants an ability while active, removing the grant on deactivation. |
 | [LoopTimerNode](loop-timer-node.md) | Emits an interval event every period while active, optionally finishing after a number of loops. |
+| [StateMachineNode](state-machine-node.md) | Keeps exactly one state subgraph active, selected by an integer input. |
+| [TagListenerNode](tag-listener-node.md) | Listens for watched tags being added to or removed from an entity. |
 | [TimerNode](timer-node.md) | Remains active for a configured duration and emits OnTimerEnd when it finishes naturally. |

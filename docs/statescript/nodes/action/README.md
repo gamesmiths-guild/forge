@@ -65,4 +65,5 @@ public class ApplyEffectActionNode : ActionNode
 | [SetEffectInhibitionNode](set-effect-inhibition-node.md) | Sets the inhibition state of active effects. |
 | [SetEffectLevelNode](set-effect-level-node.md) | Levels up effects or sets their level to a resolved value. |
 | [SetVariableNode](set-variable-node.md) | Copies a value from an input property to a graph or shared variable. |
+| [SwitchNode](switch-node.md) | Routes the incoming message to a case port picked by an integer selector. |
 | [UpdateCueNode](update-cue-node.md) | Updates one or more active cues on one or more targets. |
