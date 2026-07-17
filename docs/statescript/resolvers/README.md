@@ -136,10 +136,12 @@ Operations that take a nested predicate, key selector, or projection evaluate it
 | [ConcatResolver](concat-resolver.md) | *(element array)* | Concatenates two arrays. Object variant: `ObjectConcatResolver<T>`. |
 | [DistinctResolver](distinct-resolver.md) | *(element array)* | De-duplicates, keeping first occurrences. Object variant: `ObjectDistinctResolver<T>`. |
 | [ExceptResolver](except-resolver.md) | *(element array)* | Removes the elements found in another array. Object variant: `ObjectExceptResolver<T>`. |
+| [IntersectResolver](intersect-resolver.md) | *(element array)* | Keeps the elements also found in another array. Object variant: `ObjectIntersectResolver<T>`. |
 | [OrderByResolver](order-by-resolver.md) | *(element array)* | Stable-sorts elements by a nested numeric key selector. Object variant: `ObjectOrderByResolver<T>`. |
 | [RemoveAtResolver](remove-at-resolver.md) | *(element array)* | Removes the element at a resolved index. Object variant: `ObjectRemoveAtResolver<T>`. |
 | [ReverseResolver](reverse-resolver.md) | *(element array)* | Reverses the element order. Object variant: `ObjectReverseResolver<T>`. |
 | [SelectResolver](select-resolver.md) | *(projected array)* | Projects each element through a nested resolver (either source lane). Object-producing variant: `SelectObjectResolver<TResult>`. |
+| [ShuffleResolver](shuffle-resolver.md) | *(element array)* | Produces a random permutation using an `IRandom` provider. Object variant: `ObjectShuffleResolver<T>`. |
 | [SkipResolver](skip-resolver.md) | *(element array)* | Drops the first N elements. Object variant: `ObjectSkipResolver<T>`. |
 | [TakeResolver](take-resolver.md) | *(element array)* | Keeps the first N elements. Object variant: `ObjectTakeResolver<T>`. |
 | [WhereResolver](where-resolver.md) | *(element array)* | Keeps the elements matching a nested boolean predicate. Object variant: `ObjectWhereResolver<T>`. |
@@ -156,6 +158,7 @@ Operations that take a nested predicate, key selector, or projection evaluate it
 | [IndexOfResolver](index-of-resolver.md) | `int` | Finds the index of the first occurrence of a resolved value, or -1. Object variant: `ObjectIndexOfResolver`. |
 | [MaxElementResolver](max-element-resolver.md) | *(element type)* | Returns the largest element of a numeric array. |
 | [MinElementResolver](min-element-resolver.md) | *(element type)* | Returns the smallest element of a numeric array. |
+| [RandomElementResolver](random-element-resolver.md) | *(element type)* | Picks a random element using an `IRandom` provider. Object variant: `ObjectRandomElementResolver<T>`. |
 | [SumResolver](sum-resolver.md) | *(promoted numeric)* | Adds up all elements of a numeric array. |
 
 ---
