@@ -39,7 +39,7 @@ public class StateMachineNode(int stateCount = 2) : StateNode<StateMachineNodeCo
 	/// </summary>
 	public const byte FirstStatePort = 5;
 
-	private readonly int _stateCount = (stateCount >= 1 && stateCount <= byte.MinValue - (FirstStatePort + 1))
+	private readonly int _stateCount = (stateCount >= 1 && stateCount <= byte.MaxValue - FirstStatePort + 1)
 		? stateCount
 		: throw new ArgumentOutOfRangeException(
 			nameof(stateCount),
