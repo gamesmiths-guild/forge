@@ -165,7 +165,10 @@ Operations that take a nested predicate, key selector, or projection evaluate it
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
 | [AndResolver](and-resolver.md) | `bool` | Returns `true` only when both boolean operands are `true`. |
+| [ApproximatelyResolver](approximately-resolver.md) | `bool` | Returns `true` when two numeric values are equal within a tolerance. |
 | [ComparisonResolver](comparison-resolver.md) | `bool` | Compares two values using a comparison operation. |
+| [ConditionalResolver](conditional-resolver.md) | *(matches branches)* | Selects one of two value-lane branches based on a boolean condition (ternary select). |
+| [ConditionalObjectResolver](conditional-object-resolver.md) | *(matches branches)* | Selects one of two object-lane branches based on a boolean condition (e.g. picking an entity). |
 | [NotResolver](not-resolver.md) | `bool` | Returns the logical inverse of a boolean operand. |
 | [OrResolver](or-resolver.md) | `bool` | Returns `true` when either boolean operand is `true`. |
 | [XorResolver](xor-resolver.md) | `bool` | Returns `true` when exactly one boolean operand is `true`. |
@@ -211,21 +214,28 @@ Operations that take a nested predicate, key selector, or projection evaluate it
 | [AddResolver](add-resolver.md) | *(promoted or same vector type)* | Adds two numeric, vector or quaternion values. |
 | [CeilResolver](ceil-resolver.md) | *(same)* | Rounds up to the smallest integer greater than or equal to the operand. |
 | [ClampResolver](clamp-resolver.md) | *(promoted or same vector type)* | Clamps a numeric value or vector components between minimum and maximum bounds. |
+| [CurveSampleResolver](curve-sample-resolver.md) | `float` | Samples an `ICurve` at a resolved position (engine curve assets plug in via `ICurve`). |
 | [DegToRadResolver](degtorad-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4` | Converts degrees to radians. |
+| [DeltaAngleResolver](delta-angle-resolver.md) | `float` | Computes the shortest signed angle difference between two angles in radians. |
 | [DivideResolver](divide-resolver.md) | *(promoted or same vector type)* | Divides two numeric values, vectors component-wise, or two quaternions. |
 | [FloorResolver](floor-resolver.md) | *(same)* | Rounds down to the largest integer less than or equal to the operand. |
+| [InverseLerpResolver](inverse-lerp-resolver.md) | `float`/`double` | Computes the normalized position of a value within a range (inverse of Lerp), clamped to 0-1. |
 | [LerpResolver](lerp-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4`/`Quaternion` | Linearly interpolates between two values (scalar, vector, or quaternion). |
 | [MaxResolver](max-resolver.md) | *(promoted or same vector type)* | Returns the larger of two numeric values or the component-wise maximum of two vectors. |
 | [MinResolver](min-resolver.md) | *(promoted or same vector type)* | Returns the smaller of two numeric values or the component-wise minimum of two vectors. |
 | [ModuloResolver](modulo-resolver.md) | *(promoted)* | Computes the remainder of dividing two numeric values. |
 | [MultiplyResolver](multiply-resolver.md) | *(promoted or same vector type)* | Multiplies two numeric, vectors component-wise, or two quaternions. |
 | [NegateResolver](negate-resolver.md) | *(promoted)* | Negates a numeric or vector value. |
+| [PingPongResolver](ping-pong-resolver.md) | `float` | Bounces a value back and forth between 0 and a length. |
 | [PowResolver](pow-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4` | Raises a value to a specified power. |
 | [RadToDegResolver](radtodeg-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4` | Converts radians to degrees. |
+| [RemapResolver](remap-resolver.md) | `float`/`double` | Remaps a value from an input range to an output range, optionally clamped. |
 | [RoundResolver](round-resolver.md) | *(same)* | Rounds to a specified number of digits with configurable rounding mode. |
+| [SmoothStepResolver](smooth-step-resolver.md) | `float` | Computes the smooth Hermite interpolation of a value between two edges (0-1). |
 | [SqrtResolver](sqrt-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4` | Computes the square root of a numeric value or component-wise square root of a vector. |
 | [SubtractResolver](subtract-resolver.md) | *(promoted or same vector type)* | Subtracts two numeric, vector or quaternion values. |
 | [TruncateResolver](truncate-resolver.md) | *(same)* | Removes the fractional part, rounding toward zero. |
+| [WrapResolver](wrap-resolver.md) | `float` | Wraps a value into a `[min, max)` range. |
 
 ---
 
