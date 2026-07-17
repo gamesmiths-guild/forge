@@ -2450,14 +2450,20 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		abilityHandle.Should().NotBeNull();
 
 		AbilityEndedData? capturedData = null;
+		int eventCount = 0;
 
-		targetEntity.Abilities.OnAbilityEnded += x => { capturedData = x; };
+		targetEntity.Abilities.OnAbilityEnded += x =>
+		{
+			capturedData = x;
+			eventCount++;
+		};
 
 		// Activate the ability
 		abilityHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		abilityHandle.Cancel();
 
-		// Verify event was fired
+		// Verify the event was fired exactly once, with the canceled flag set.
+		eventCount.Should().Be(1);
 		capturedData.Should().NotBeNull();
 		capturedData!.Value.Ability.Should().Be(abilityHandle);
 		capturedData.Value.WasCanceled.Should().BeTrue();

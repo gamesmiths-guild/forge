@@ -29,12 +29,32 @@ These resolvers provide effect instances and application context to nodes such a
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
 | [AbilityOwnershipResolver](ability-ownership-resolver.md) | `EffectOwnership` | Reads the current ability owner/source pair as an effect ownership value. |
-| [EffectArrayFromDataResolver](effect-array-from-data-resolver.md) | `Effect[]` | Builds an array of `Effect` instances sharing the same level and ownership. |
+| [ActiveEffectDataResolver](active-effect-data-resolver.md) | `double`/`int`/`bool` | Reads a selected runtime value (remaining duration, stacks, level, ...) from an active effect handle. |
+| [ActiveEffectEffectResolver](active-effect-effect-resolver.md) | `Effect?` | Reads the live `Effect` instance behind an active effect handle. |
+| [ActiveEffectTargetResolver](active-effect-target-resolver.md) | `IForgeEntity?` | Reads the entity an active effect is applied to, from its handle. |
+| [EffectArrayFromDataResolver](effect-array-from-data-resolver.md) | `Effect[]` | Builds an array of `Effect` instances sharing the same level, ownership, and SetByCaller magnitudes. |
 | [EffectArrayVariableResolver](effect-array-variable-resolver.md) | `Effect[]` | Reads a stored `Effect` instance array from graph or shared scope. |
 | [EffectContextDataResolver](effect-context-data-resolver.md) | `EffectApplicationContext` | Produces custom application context data for an effect via an `IEffectContextDataProvider`. |
-| [EffectFromDataResolver](effect-from-data-resolver.md) | `Effect` | Builds an `Effect` instance from an `EffectData` value plus optional level and ownership. |
+| [EffectFromDataResolver](effect-from-data-resolver.md) | `Effect` | Builds an `Effect` instance from an `EffectData` value plus optional level, ownership, and SetByCaller magnitudes. |
+| [EffectInfoResolver](effect-info-resolver.md) | `int` | Aggregates stack/instance/level info over the active applications of an effect on an entity. |
 | [EffectVariableResolver](effect-variable-resolver.md) | `Effect?` | Reads a stored `Effect` instance from graph or shared scope for reuse. |
 | [OwnershipResolver](ownership-resolver.md) | `EffectOwnership` | Composes an effect ownership value from nested entity resolvers. |
+| [QueryActiveEffectsResolver](query-active-effects-resolver.md) | `ActiveEffectHandle[]` | Queries the active effect handles on an entity, optionally filtered by `EffectData`. |
+| [SetByCallerMagnitudeResolver](set-by-caller-magnitude-resolver.md) | `float` | Reads the SetByCaller magnitude stored on an `Effect` for an identifier tag. |
+
+---
+
+## Ability Resolvers
+
+These resolvers read from the ability driving the current graph (through the activation context) or, when given an `IObjectResolver<AbilityHandle>`, from another ability. Look up other abilities with `GetAbilityHandleResolver`.
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [AbilityCooldownResolver](ability-cooldown-resolver.md) | `float` | Reads a cooldown value (remaining time, total time, or remaining fraction) from an ability. |
+| [AbilityCostResolver](ability-cost-resolver.md) | `int` | Reads the evaluated cost of an ability for a specific attribute. |
+| [AbilityStateResolver](ability-state-resolver.md) | `bool` | Reads a state flag (is active, is inhibited, is valid) from an ability. |
+| [CanActivateAbilityResolver](can-activate-ability-resolver.md) | `bool` | Checks whether an ability can currently activate (cooldowns, costs, tag requirements). |
+| [GetAbilityHandleResolver](get-ability-handle-resolver.md) | `AbilityHandle` | Looks up the handle of a granted ability on an entity by its `AbilityData`. |
 
 ---
 
@@ -116,10 +136,12 @@ Operations that take a nested predicate, key selector, or projection evaluate it
 | [ConcatResolver](concat-resolver.md) | *(element array)* | Concatenates two arrays. Object variant: `ObjectConcatResolver<T>`. |
 | [DistinctResolver](distinct-resolver.md) | *(element array)* | De-duplicates, keeping first occurrences. Object variant: `ObjectDistinctResolver<T>`. |
 | [ExceptResolver](except-resolver.md) | *(element array)* | Removes the elements found in another array. Object variant: `ObjectExceptResolver<T>`. |
+| [IntersectResolver](intersect-resolver.md) | *(element array)* | Keeps the elements also found in another array. Object variant: `ObjectIntersectResolver<T>`. |
 | [OrderByResolver](order-by-resolver.md) | *(element array)* | Stable-sorts elements by a nested numeric key selector. Object variant: `ObjectOrderByResolver<T>`. |
 | [RemoveAtResolver](remove-at-resolver.md) | *(element array)* | Removes the element at a resolved index. Object variant: `ObjectRemoveAtResolver<T>`. |
 | [ReverseResolver](reverse-resolver.md) | *(element array)* | Reverses the element order. Object variant: `ObjectReverseResolver<T>`. |
 | [SelectResolver](select-resolver.md) | *(projected array)* | Projects each element through a nested resolver (either source lane). Object-producing variant: `SelectObjectResolver<TResult>`. |
+| [ShuffleResolver](shuffle-resolver.md) | *(element array)* | Produces a random permutation using an `IRandom` provider. Object variant: `ObjectShuffleResolver<T>`. |
 | [SkipResolver](skip-resolver.md) | *(element array)* | Drops the first N elements. Object variant: `ObjectSkipResolver<T>`. |
 | [TakeResolver](take-resolver.md) | *(element array)* | Keeps the first N elements. Object variant: `ObjectTakeResolver<T>`. |
 | [WhereResolver](where-resolver.md) | *(element array)* | Keeps the elements matching a nested boolean predicate. Object variant: `ObjectWhereResolver<T>`. |
@@ -136,6 +158,7 @@ Operations that take a nested predicate, key selector, or projection evaluate it
 | [IndexOfResolver](index-of-resolver.md) | `int` | Finds the index of the first occurrence of a resolved value, or -1. Object variant: `ObjectIndexOfResolver`. |
 | [MaxElementResolver](max-element-resolver.md) | *(element type)* | Returns the largest element of a numeric array. |
 | [MinElementResolver](min-element-resolver.md) | *(element type)* | Returns the smallest element of a numeric array. |
+| [RandomElementResolver](random-element-resolver.md) | *(element type)* | Picks a random element using an `IRandom` provider. Object variant: `ObjectRandomElementResolver<T>`. |
 | [SumResolver](sum-resolver.md) | *(promoted numeric)* | Adds up all elements of a numeric array. |
 
 ---
@@ -145,7 +168,10 @@ Operations that take a nested predicate, key selector, or projection evaluate it
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
 | [AndResolver](and-resolver.md) | `bool` | Returns `true` only when both boolean operands are `true`. |
+| [ApproximatelyResolver](approximately-resolver.md) | `bool` | Returns `true` when two numeric values are equal within a tolerance. |
 | [ComparisonResolver](comparison-resolver.md) | `bool` | Compares two values using a comparison operation. |
+| [ConditionalResolver](conditional-resolver.md) | *(matches branches)* | Selects one of two value-lane branches based on a boolean condition (ternary select). |
+| [ConditionalObjectResolver](conditional-object-resolver.md) | *(matches branches)* | Selects one of two object-lane branches based on a boolean condition (e.g. picking an entity). |
 | [NotResolver](not-resolver.md) | `bool` | Returns the logical inverse of a boolean operand. |
 | [OrResolver](or-resolver.md) | `bool` | Returns `true` when either boolean operand is `true`. |
 | [XorResolver](xor-resolver.md) | `bool` | Returns `true` when exactly one boolean operand is `true`. |
@@ -191,21 +217,28 @@ Operations that take a nested predicate, key selector, or projection evaluate it
 | [AddResolver](add-resolver.md) | *(promoted or same vector type)* | Adds two numeric, vector or quaternion values. |
 | [CeilResolver](ceil-resolver.md) | *(same)* | Rounds up to the smallest integer greater than or equal to the operand. |
 | [ClampResolver](clamp-resolver.md) | *(promoted or same vector type)* | Clamps a numeric value or vector components between minimum and maximum bounds. |
+| [CurveSampleResolver](curve-sample-resolver.md) | `float` | Samples an `ICurve` at a resolved position (engine curve assets plug in via `ICurve`). |
 | [DegToRadResolver](degtorad-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4` | Converts degrees to radians. |
+| [DeltaAngleResolver](delta-angle-resolver.md) | `float` | Computes the shortest signed angle difference between two angles in radians. |
 | [DivideResolver](divide-resolver.md) | *(promoted or same vector type)* | Divides two numeric values, vectors component-wise, or two quaternions. |
 | [FloorResolver](floor-resolver.md) | *(same)* | Rounds down to the largest integer less than or equal to the operand. |
+| [InverseLerpResolver](inverse-lerp-resolver.md) | `float`/`double` | Computes the normalized position of a value within a range (inverse of Lerp), clamped to 0-1. |
 | [LerpResolver](lerp-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4`/`Quaternion` | Linearly interpolates between two values (scalar, vector, or quaternion). |
 | [MaxResolver](max-resolver.md) | *(promoted or same vector type)* | Returns the larger of two numeric values or the component-wise maximum of two vectors. |
 | [MinResolver](min-resolver.md) | *(promoted or same vector type)* | Returns the smaller of two numeric values or the component-wise minimum of two vectors. |
 | [ModuloResolver](modulo-resolver.md) | *(promoted)* | Computes the remainder of dividing two numeric values. |
 | [MultiplyResolver](multiply-resolver.md) | *(promoted or same vector type)* | Multiplies two numeric, vectors component-wise, or two quaternions. |
 | [NegateResolver](negate-resolver.md) | *(promoted)* | Negates a numeric or vector value. |
+| [PingPongResolver](ping-pong-resolver.md) | `float` | Bounces a value back and forth between 0 and a length. |
 | [PowResolver](pow-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4` | Raises a value to a specified power. |
 | [RadToDegResolver](radtodeg-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4` | Converts radians to degrees. |
+| [RemapResolver](remap-resolver.md) | `float`/`double` | Remaps a value from an input range to an output range, optionally clamped. |
 | [RoundResolver](round-resolver.md) | *(same)* | Rounds to a specified number of digits with configurable rounding mode. |
+| [SmoothStepResolver](smooth-step-resolver.md) | `float` | Computes the smooth Hermite interpolation of a value between two edges (0-1). |
 | [SqrtResolver](sqrt-resolver.md) | `float`/`double`/`Vector2`/`Vector3`/`Vector4` | Computes the square root of a numeric value or component-wise square root of a vector. |
 | [SubtractResolver](subtract-resolver.md) | *(promoted or same vector type)* | Subtracts two numeric, vector or quaternion values. |
 | [TruncateResolver](truncate-resolver.md) | *(same)* | Removes the fractional part, rounding toward zero. |
+| [WrapResolver](wrap-resolver.md) | `float` | Wraps a value into a `[min, max)` range. |
 
 ---
 

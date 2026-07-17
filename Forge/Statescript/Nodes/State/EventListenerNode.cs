@@ -24,8 +24,11 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// received with no boxing and the typed payload is decomposed directly. When no provider is bound, the node subscribes
 /// non-generically and is a catch-all: it also receives generic raises with the payload boxed into
 /// <see cref="EventData.Payload"/>. Either way the handler emits synchronously from the raise call.</para>
+/// <para>With <paramref name="deactivateOnEvent"/> enabled the node acts as a "wait for event": it deactivates itself
+/// right after emitting <c>OnEvent</c> for the first matching event.</para>
 /// </remarks>
-public class EventListenerNode : StateNode<EventListenerNodeContext>
+/// <param name="deactivateOnEvent">Whether the node deactivates itself after the first matching event.</param>
+public class EventListenerNode(bool deactivateOnEvent = false) : StateNode<EventListenerNodeContext>
 {
 	/// <summary>
 	/// Input property index for the event tag(s) to listen for.
@@ -61,6 +64,8 @@ public class EventListenerNode : StateNode<EventListenerNodeContext>
 	/// Output port index for the per-event signal.
 	/// </summary>
 	public const byte OnEventPort = 4;
+
+	private readonly bool _deactivateOnEvent = deactivateOnEvent;
 
 	/// <inheritdoc/>
 	public override string Description =>
@@ -209,6 +214,12 @@ public class EventListenerNode : StateNode<EventListenerNodeContext>
 		WriteEntityOutput(graphContext, OutputVariables[SourceOutput], source);
 		WriteEntityOutput(graphContext, OutputVariables[TargetOutput], target);
 		WriteMagnitudeOutput(graphContext, OutputVariables[MagnitudeOutput], magnitude);
+
+		if (_deactivateOnEvent)
+		{
+			DeactivateNodeAndEmitMessage(graphContext, OnEventPort);
+			return;
+		}
 
 		OutputPorts[OnEventPort].EmitMessage(graphContext);
 	}

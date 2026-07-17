@@ -106,10 +106,20 @@ if (buffHandle is not null)
 - **IsInhibited**: Indicates whether the effect is currently inhibited (e.g. due to tag changes or other logic).
 - **IsValid**: Indicates whether the handle is valid (the effect is still active).
 - **ComponentInstances**: The actual per-application component instances for this effect. These may hold state unique to this particular effect instance (such as granted abilities or subscriptions).
+- **RemainingDuration** / **TotalDuration**: The remaining and total evaluated duration in seconds. Both return `-1` for infinite effects and `0` for invalid handles.
+- **StackCount**: The current stack count (`0` for invalid handles).
+- **Level**: The current evaluated level (`0` for invalid handles).
+- **ExecutionCount**: The number of times the effect has executed (periodic/instant executions).
+- **Period**: The evaluated period in seconds (`0` for non-periodic effects).
+- **Target**: The entity the effect is applied to, or `null` for invalid handles.
+- **Effect**: The `Effect` instance behind this active effect, or `null` for invalid handles.
+
+These read-only getters let you poll live effect state, for example a buff's remaining time for a UI timer, without holding the internal `ActiveEffect`.
 
 #### Public Methods
 
 - **SetInhibit(bool value)**: Sets the inhibition status of the effect (e.g., to temporarily pause its action without removing it).
+- **RefreshDuration()**: Resets the remaining duration back to the total evaluated duration. Does nothing for infinite effects or invalid handles.
 - **GetComponent\<T\>()**: Returns the first component instance of type `T` attached to this effect, or `null` if not found.
 
     Useful for retrieving a specific effect component's runtime state.
@@ -133,6 +143,24 @@ entity.EffectsManager.RemoveEffect(effect);
 // Removes first effect instance matching the EffectData
 entity.EffectsManager.RemoveEffectData(effectData);
 ```
+
+#### Querying Active Effects
+
+Beyond `GetEffectInfo(effectData)` (which returns per-application `EffectStackInstanceData`), the manager can return live handles:
+
+```csharp
+// Handles for every active application of a given EffectData
+foreach (ActiveEffectHandle handle in entity.EffectsManager.GetActiveEffects(effectData))
+{
+    // e.g. read handle.RemainingDuration, or dispel it
+    entity.EffectsManager.RemoveEffect(handle, forceRemoval: true);
+}
+
+// Handles for every active effect on the entity
+IEnumerable<ActiveEffectHandle> all = entity.EffectsManager.GetActiveEffects();
+```
+
+This is the entry point for "dispel" patterns and for polling effects the caller did not apply itself. In Statescript, the same query is exposed as [`QueryActiveEffectsResolver`](../statescript/resolvers/query-active-effects-resolver.md).
 
 ## Effect Lifecycle
 

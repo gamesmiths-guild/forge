@@ -1,6 +1,8 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Components;
+using Gamesmiths.Forge.Effects.Duration;
 
 namespace Gamesmiths.Forge.Effects;
 
@@ -28,6 +30,90 @@ public class ActiveEffectHandle
 	/// </remarks>
 	public IReadOnlyList<IEffectComponent> ComponentInstances => ActiveEffect?.ComponentInstances ?? [];
 
+	/// <summary>
+	/// Gets the remaining duration of the effect, in seconds.
+	/// </summary>
+	/// <remarks>
+	/// Returns <c>-1</c> for infinite effects and <c>0</c> for invalid handles.
+	/// </remarks>
+	public double RemainingDuration
+	{
+		get
+		{
+			if (ActiveEffect is null)
+			{
+				return 0;
+			}
+
+			if (ActiveEffect.EffectData.DurationData.DurationType == DurationType.Infinite)
+			{
+				return -1;
+			}
+
+			return ActiveEffect.RemainingDuration;
+		}
+	}
+
+	/// <summary>
+	/// Gets the total evaluated duration of the effect, in seconds.
+	/// </summary>
+	/// <remarks>
+	/// Returns <c>-1</c> for infinite effects and <c>0</c> for invalid handles.
+	/// </remarks>
+	public double TotalDuration
+	{
+		get
+		{
+			if (ActiveEffect is null)
+			{
+				return 0;
+			}
+
+			if (ActiveEffect.EffectData.DurationData.DurationType == DurationType.Infinite)
+			{
+				return -1;
+			}
+
+			return ActiveEffect.EffectEvaluatedData.Duration;
+		}
+	}
+
+	/// <summary>
+	/// Gets the current stack count of the effect, or <c>0</c> for invalid handles.
+	/// </summary>
+	public int StackCount => ActiveEffect?.StackCount ?? 0;
+
+	/// <summary>
+	/// Gets the current evaluated level of the effect, or <c>0</c> for invalid handles.
+	/// </summary>
+	public int Level => ActiveEffect?.EffectEvaluatedData.Level ?? 0;
+
+	/// <summary>
+	/// Gets the number of times the effect has executed, or <c>0</c> for invalid handles.
+	/// </summary>
+	/// <remarks>
+	/// Only periodic and instant executions increase this count; non-periodic duration effects never execute.
+	/// </remarks>
+	public int ExecutionCount => ActiveEffect?.ExecutionCount ?? 0;
+
+	/// <summary>
+	/// Gets the evaluated period of the effect, in seconds.
+	/// </summary>
+	/// <remarks>
+	/// Returns <c>0</c> for non-periodic effects and invalid handles.
+	/// </remarks>
+	public double Period => ActiveEffect?.EffectEvaluatedData.Period ?? 0;
+
+	/// <summary>
+	/// Gets the entity this effect is applied to, or <c>null</c> for invalid handles.
+	/// </summary>
+	public IForgeEntity? Target => ActiveEffect?.EffectEvaluatedData.Target;
+
+	/// <summary>
+	/// Gets the effect instance behind this active effect, or <c>null</c> for invalid handles.
+	/// </summary>
+	public Effect? Effect => ActiveEffect?.Effect;
+
 	internal ActiveEffect? ActiveEffect { get; private set; }
 
 	internal ActiveEffectHandle(ActiveEffect activeEffect)
@@ -42,6 +128,23 @@ public class ActiveEffectHandle
 	public void SetInhibit(bool value)
 	{
 		ActiveEffect?.SetInhibit(value);
+	}
+
+	/// <summary>
+	/// Resets the remaining duration of the effect back to its total evaluated duration.
+	/// </summary>
+	/// <remarks>
+	/// Does nothing for infinite effects or invalid handles.
+	/// </remarks>
+	public void RefreshDuration()
+	{
+		if (ActiveEffect is null
+			|| ActiveEffect.EffectData.DurationData.DurationType != DurationType.HasDuration)
+		{
+			return;
+		}
+
+		ActiveEffect.RemainingDuration = ActiveEffect.EffectEvaluatedData.Duration;
 	}
 
 	/// <summary>

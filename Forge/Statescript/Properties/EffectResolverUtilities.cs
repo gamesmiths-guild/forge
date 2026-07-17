@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Statescript.Properties;
 
@@ -11,6 +12,27 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// </summary>
 internal static class EffectResolverUtilities
 {
+	public static void ApplySetByCallerMagnitudes(
+		GraphContext graphContext,
+		Effect effect,
+		IReadOnlyList<KeyValuePair<Tag, IPropertyResolver>>? setByCallerMagnitudes)
+	{
+		if (setByCallerMagnitudes is null)
+		{
+			return;
+		}
+
+		for (int i = 0; i < setByCallerMagnitudes.Count; i++)
+		{
+			IPropertyResolver magnitudeResolver = setByCallerMagnitudes[i].Value;
+			float magnitude = MathTypeUtils.ResolveAsFloat(
+				magnitudeResolver.ValueType,
+				magnitudeResolver.Resolve(graphContext));
+
+			effect.SetSetByCallerMagnitude(setByCallerMagnitudes[i].Key, magnitude);
+		}
+	}
+
 	public static int ResolveLevel(GraphContext graphContext, IPropertyResolver? levelResolver)
 	{
 		if (levelResolver is not null)

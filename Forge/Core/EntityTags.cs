@@ -70,23 +70,41 @@ public class EntityTags
 
 	internal void RemoveBaseTag(Tag tag)
 	{
+		bool removedAnyTag = false;
+
 		foreach (Tag removedTag in BaseTags.RemoveTag(tag))
 		{
+			removedAnyTag = true;
+
 			if (!_modifierTagCounts.TryGetValue(removedTag, out int count) || count == 0)
 			{
 				AllTags.RemoveTag(removedTag);
 			}
 		}
+
+		if (removedAnyTag)
+		{
+			OnTagsChanged?.Invoke(AllTags);
+		}
 	}
 
 	internal void RemoveBaseTags(TagContainer tags)
 	{
+		bool removedAnyTag = false;
+
 		foreach (Tag removedTag in BaseTags.RemoveTags(tags))
 		{
+			removedAnyTag = true;
+
 			if (!_modifierTagCounts.TryGetValue(removedTag, out int count) || count == 0)
 			{
 				AllTags.RemoveTag(removedTag);
 			}
+		}
+
+		if (removedAnyTag)
+		{
+			OnTagsChanged?.Invoke(AllTags);
 		}
 	}
 
