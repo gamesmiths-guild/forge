@@ -102,4 +102,5 @@ That label becomes the canonical port name surfaced by editor integrations such 
 | [EffectNode](effect-node.md) | Applies effects on activation, emits OnEffectEnd on natural completion, and removes still-active instances on deactivation. |
 | [EventListenerNode](event-listener-node.md) | Listens for events while active and emits OnEvent each time a matching event fires. |
 | [GrantAbilityNode](grant-ability-node.md) | Grants an ability while active, removing the grant on deactivation. |
+| [LoopTimerNode](loop-timer-node.md) | Emits an interval event every period while active, optionally finishing after a number of loops. |
 | [TimerNode](timer-node.md) | Remains active for a configured duration and emits OnTimerEnd when it finishes naturally. |
