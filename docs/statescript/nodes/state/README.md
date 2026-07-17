@@ -96,6 +96,7 @@ That label becomes the canonical port name surfaced by editor integrations such 
 |------|-------------|
 | [AbilityEndListenerNode](ability-end-listener-node.md) | Listens for abilities ending on an entity and emits OnAbilityEnded with the ability and cancel state. |
 | [AttributeListenerNode](attribute-listener-node.md) | Listens for attribute value changes and emits OnChanged with the new value and delta. |
+| [ConditionMonitorNode](condition-monitor-node.md) | Monitors a boolean condition, emitting transition events and routing between a true and false subgraph. |
 | [CueNode](cue-node.md) | Applies cues on activation and removes them on deactivation, with an optional interrupted flag. |
 | [EffectLevelListenerNode](effect-level-listener-node.md) | Listens for effect level changes and emits OnLevelChanged with the new level. |
 | [EffectNode](effect-node.md) | Applies effects on activation, emits OnEffectEnd on natural completion, and removes still-active instances on deactivation. |
