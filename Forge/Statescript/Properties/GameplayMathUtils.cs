@@ -11,6 +11,94 @@ internal static class GameplayMathUtils
 		return Math.Clamp(value, -1.0f, 1.0f);
 	}
 
+	internal static Type DetermineFloatingResultType(string resolverName, params Type[] operandTypes)
+	{
+		bool anyDouble = false;
+
+		foreach (Type operandType in operandTypes)
+		{
+			if (!MathTypeUtils.IsNumericType(operandType))
+			{
+				throw new ArgumentException(
+					$"{resolverName} requires numeric operands, but got '{operandType}'.",
+					nameof(operandTypes));
+			}
+
+			anyDouble |= operandType == typeof(double) || operandType == typeof(decimal) ||
+				operandType == typeof(long) || operandType == typeof(ulong);
+		}
+
+		return anyDouble ? typeof(double) : typeof(float);
+	}
+
+	internal static Type DetermineFloatOnlyResultType(string resolverName, params Type[] operandTypes)
+	{
+		foreach (Type operandType in operandTypes)
+		{
+			if (!MathTypeUtils.IsNumericType(operandType))
+			{
+				throw new ArgumentException(
+					$"{resolverName} requires numeric operands, but got '{operandType}'.",
+					nameof(operandTypes));
+			}
+		}
+
+		return typeof(float);
+	}
+
+	internal static float Wrap(float value, float min, float max)
+	{
+		float range = max - min;
+
+		if (range <= float.Epsilon)
+		{
+			return min;
+		}
+
+		float wrapped = (value - min) % range;
+
+		if (wrapped < 0.0f)
+		{
+			wrapped += range;
+		}
+
+		return min + wrapped;
+	}
+
+	internal static float PingPong(float value, float length)
+	{
+		if (length <= float.Epsilon)
+		{
+			return 0.0f;
+		}
+
+		float wrapped = MathF.Abs(value) % (length * 2.0f);
+		return wrapped <= length ? wrapped : (length * 2.0f) - wrapped;
+	}
+
+	internal static float DeltaAngle(float current, float target)
+	{
+		float delta = Wrap(target - current, 0.0f, 2.0f * MathF.PI);
+
+		if (delta > MathF.PI)
+		{
+			delta -= 2.0f * MathF.PI;
+		}
+
+		return delta;
+	}
+
+	internal static float SmoothStep(float edge0, float edge1, float value)
+	{
+		if (MathF.Abs(edge1 - edge0) <= float.Epsilon)
+		{
+			return value < edge0 ? 0.0f : 1.0f;
+		}
+
+		float t = Math.Clamp((value - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+		return t * t * (3.0f - (2.0f * t));
+	}
+
 	internal static Vector2 Project(Vector2 value, Vector2 onto)
 	{
 		float denominator = Vector2.Dot(onto, onto);
