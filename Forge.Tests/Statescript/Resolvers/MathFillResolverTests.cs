@@ -76,6 +76,16 @@ public class MathFillResolverTests
 		resolver.Resolve(new GraphContext()).Get<float>().Should().BeApproximately(expected, 0.0001f);
 	}
 
+	[Fact]
+	[Trait("Resolver", "SmoothStep")]
+	public void Smooth_step_resolver_accepts_double_operands()
+	{
+		var resolver = new SmoothStepResolver(ConstantDouble(0), ConstantDouble(10), ConstantDouble(2.5));
+
+		resolver.ValueType.Should().Be(typeof(float));
+		resolver.Resolve(new GraphContext()).Get<float>().Should().BeApproximately(0.15625f, 0.0001f);
+	}
+
 	[Theory]
 	[Trait("Resolver", "Wrap")]
 	[InlineData(370f, 0f, 360f, 10f)]
@@ -86,6 +96,15 @@ public class MathFillResolverTests
 		var resolver = new WrapResolver(Constant(value), Constant(min), Constant(max));
 
 		resolver.Resolve(new GraphContext()).Get<float>().Should().BeApproximately(expected, 0.0001f);
+	}
+
+	[Fact]
+	[Trait("Resolver", "Wrap")]
+	public void Wrap_resolver_accepts_double_operands()
+	{
+		var resolver = new WrapResolver(ConstantDouble(370), ConstantDouble(0), ConstantDouble(360));
+
+		resolver.Resolve(new GraphContext()).Get<float>().Should().BeApproximately(10f, 0.0001f);
 	}
 
 	[Theory]
@@ -101,10 +120,28 @@ public class MathFillResolverTests
 	}
 
 	[Fact]
+	[Trait("Resolver", "PingPong")]
+	public void Ping_pong_resolver_accepts_double_operands()
+	{
+		var resolver = new PingPongResolver(ConstantDouble(7), ConstantDouble(5));
+
+		resolver.Resolve(new GraphContext()).Get<float>().Should().BeApproximately(3f, 0.0001f);
+	}
+
+	[Fact]
 	[Trait("Resolver", "DeltaAngle")]
 	public void Delta_angle_resolver_returns_the_shortest_signed_difference()
 	{
 		var resolver = new DeltaAngleResolver(Constant(0f), Constant(3f * MathF.PI / 2f));
+
+		resolver.Resolve(new GraphContext()).Get<float>().Should().BeApproximately(-MathF.PI / 2f, 0.0001f);
+	}
+
+	[Fact]
+	[Trait("Resolver", "DeltaAngle")]
+	public void Delta_angle_resolver_accepts_double_operands()
+	{
+		var resolver = new DeltaAngleResolver(ConstantDouble(0), ConstantDouble(3d * Math.PI / 2d));
 
 		resolver.Resolve(new GraphContext()).Get<float>().Should().BeApproximately(-MathF.PI / 2f, 0.0001f);
 	}
@@ -150,6 +187,15 @@ public class MathFillResolverTests
 	public void Curve_sample_resolver_evaluates_the_curve()
 	{
 		var resolver = new CurveSampleResolver(new DoublingCurve(), Constant(3f));
+
+		resolver.Resolve(new GraphContext()).Get<float>().Should().BeApproximately(6f, 0.0001f);
+	}
+
+	[Fact]
+	[Trait("Resolver", "CurveSample")]
+	public void Curve_sample_resolver_accepts_a_double_time_input()
+	{
+		var resolver = new CurveSampleResolver(new DoublingCurve(), ConstantDouble(3));
 
 		resolver.Resolve(new GraphContext()).Get<float>().Should().BeApproximately(6f, 0.0001f);
 	}
