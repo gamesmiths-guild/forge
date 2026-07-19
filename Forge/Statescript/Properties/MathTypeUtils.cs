@@ -239,6 +239,31 @@ internal static class MathTypeUtils
 			return value.AsFloat();
 		}
 
+		if (type == typeof(double))
+		{
+			return (float)value.AsDouble();
+		}
+
+		if (type == typeof(decimal))
+		{
+			return (float)value.AsDecimal();
+		}
+
+		if (type == typeof(long))
+		{
+			return value.AsLong();
+		}
+
+		if (type == typeof(ulong))
+		{
+			return value.AsULong();
+		}
+
+		if (type == typeof(uint))
+		{
+			return value.AsUInt();
+		}
+
 		if (type == typeof(int))
 		{
 			return value.AsInt();
