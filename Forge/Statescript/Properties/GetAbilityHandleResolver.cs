@@ -19,7 +19,9 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// </remarks>
 /// <param name="abilityData">The ability data identifying the granted ability.</param>
 /// <param name="entityResolver">The entity resolver that selects which entity to inspect.</param>
-/// <param name="sourceResolver">Optional resolver for the granting source entity used in the lookup.</param>
+/// <param name="sourceResolver">Optional resolver for the granting source entity used to filter the lookup. When
+/// omitted (or resolving to <see langword="null"/>), the lookup matches the ability regardless of its granting
+/// source.</param>
 public class GetAbilityHandleResolver(
 	AbilityData abilityData,
 	IEntityResolver? entityResolver = null,

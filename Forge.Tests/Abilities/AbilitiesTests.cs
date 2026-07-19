@@ -484,6 +484,55 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 	[Fact]
 	[Trait("Grant ability", null)]
+	public void TryGetAbility_without_source_finds_ability_granted_with_a_source()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+		TestEntity sourceEntity = new(_tagsManager, _cuesManager);
+		TestEntity otherEntity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		GrantAbilityConfig grantAbilityConfig = new(
+			abilityData,
+			new ScalableInt(1),
+			AbilityDeactivationPolicy.CancelImmediately,
+			AbilityDeactivationPolicy.CancelImmediately,
+			false,
+			false,
+			LevelComparison.None);
+
+		var grantAbilityEffectData = new EffectData(
+			"GrantFireball",
+			new DurationData(DurationType.Instant),
+			effectComponents: [new GrantAbilityEffectComponent([grantAbilityConfig])]);
+
+		var effect = new Effect(
+			grantAbilityEffectData,
+			new EffectOwnership(null, sourceEntity));
+
+		entity.EffectsManager.ApplyEffect(effect);
+
+		// Null source matches regardless of the granting source.
+		entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? anySourceHandle).Should().BeTrue();
+		anySourceHandle.Should().NotBeNull();
+
+		// An explicit source still filters the lookup.
+		entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? matchingSourceHandle, sourceEntity)
+			.Should().BeTrue();
+		matchingSourceHandle.Should().Be(anySourceHandle);
+
+		entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? wrongSourceHandle, otherEntity)
+			.Should().BeFalse();
+		wrongSourceHandle.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Grant ability", null)]
 	public void Ability_granted_by_late_instant_effect_is_permanent()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);

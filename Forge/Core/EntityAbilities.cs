@@ -42,9 +42,15 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <summary>
 	/// Tries to get a granted ability from its data.
 	/// </summary>
+	/// <remarks>
+	/// When <paramref name="source"/> is <see langword="null"/> the lookup matches regardless of the granting source;
+	/// if the same ability data was granted by multiple sources, which instance is returned is unspecified. Pass a
+	/// source entity to find the instance granted by that specific source.
+	/// </remarks>
 	/// <param name="abilityData">The data of the ability to find.</param>
 	/// <param name="abilityHandle">The handle of the found ability.</param>
-	/// <param name="source">The source entity of the ability, if any.</param>
+	/// <param name="source">The granting source entity to filter by, or <see langword="null"/> to match any source.
+	/// </param>
 	/// <returns><see>true</see> if the ability was found; otherwise, <c>false</c>.</returns>
 	public bool TryGetAbility(
 		AbilityData abilityData,
@@ -52,7 +58,8 @@ public class EntityAbilities(IForgeEntity owner)
 		IForgeEntity? source = null)
 	{
 		Ability? ability = GrantedAbilities.FirstOrDefault(
-			x => x?.Ability?.AbilityData == abilityData && x.Ability?.SourceEntity == source)?.Ability;
+			x => x?.Ability?.AbilityData == abilityData
+				&& (source is null || x.Ability?.SourceEntity == source))?.Ability;
 		if (ability is not null)
 		{
 			abilityHandle = ability.Handle;

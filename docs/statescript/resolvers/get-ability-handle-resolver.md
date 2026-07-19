@@ -15,12 +15,13 @@ new GetAbilityHandleResolver(abilityData, entityResolver = null, sourceResolver 
 |-----------|------|-------------|
 | abilityData | `AbilityData` | The ability data identifying the granted ability. |
 | entityResolver | `IEntityResolver` | Selects which entity to inspect. Defaults to `AbilityOwnerResolver`. |
-| sourceResolver | `IEntityResolver?` | Optional granting source used in the lookup. |
+| sourceResolver | `IEntityResolver?` | Optional granting source used to filter the lookup. When omitted, the lookup matches any granting source. |
 
 ## Behavior
 
 - Resolves the entity; returns `null` when it is not available or the ability is not granted.
 - Calls `EntityAbilities.TryGetAbility(abilityData, out handle, source)`.
+- Without a source resolver the lookup matches the ability regardless of its granting source; with one, only the instance granted by that source matches. If the same ability data was granted by multiple sources, the sourceless lookup returns an unspecified instance.
 
 ## Usage
 
