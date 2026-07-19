@@ -316,8 +316,11 @@ internal sealed class Ability
 
 		if (_activeInstances.Count == 0)
 		{
+			// OnAbilityDeactivated may free the handle (e.g. RemoveOnEnd grants), so AbilityData is captured in the
+			// payload beforehand.
+			AbilityEndedData endedData = new(Handle, AbilityData, wasCanceled);
 			OnAbilityDeactivated?.Invoke(this);
-			Owner.Abilities.NotifyAbilityEnded(new AbilityEndedData(Handle, wasCanceled));
+			Owner.Abilities.NotifyAbilityEnded(endedData);
 		}
 	}
 

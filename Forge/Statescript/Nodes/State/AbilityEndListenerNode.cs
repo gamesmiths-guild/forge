@@ -147,7 +147,7 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 		}
 
 		if (nodeContext.FilterData is AbilityData filterData
-			&& endedData.Ability.Ability?.AbilityData != filterData)
+			&& endedData.AbilityData != filterData)
 		{
 			return;
 		}
