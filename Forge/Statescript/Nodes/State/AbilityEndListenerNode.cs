@@ -70,7 +70,7 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 		AbilityEndListenerNodeContext nodeContext =
 			graphContext.GetNodeContext<AbilityEndListenerNodeContext>(NodeID);
 		nodeContext.SubscribedEntity = null;
-		nodeContext.FilterHandle = null;
+		nodeContext.FilterData = null;
 		nodeContext.Handler = null;
 
 		IForgeEntity? entity = AbilityNodeUtilities.ResolveEntityOrOwner(
@@ -87,8 +87,7 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 			InputProperties[AbilityDataInput].BoundName,
 			out AbilityData filterData))
 		{
-			entity.Abilities.TryGetAbility(filterData, out AbilityHandle? filterHandle);
-			nodeContext.FilterHandle = filterHandle;
+			nodeContext.FilterData = filterData;
 		}
 
 		void Handler(AbilityEndedData endedData)
@@ -114,7 +113,7 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 		}
 
 		nodeContext.SubscribedEntity = null;
-		nodeContext.FilterHandle = null;
+		nodeContext.FilterData = null;
 		nodeContext.Handler = null;
 	}
 
@@ -147,7 +146,8 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 			return;
 		}
 
-		if (nodeContext.FilterHandle is not null && endedData.Ability != nodeContext.FilterHandle)
+		if (nodeContext.FilterData is AbilityData filterData
+			&& endedData.Ability.Ability?.AbilityData != filterData)
 		{
 			return;
 		}

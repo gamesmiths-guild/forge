@@ -199,6 +199,115 @@ public class ListenerNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassF
 		onEnded.ExecutionCount.Should().Be(1);
 	}
 
+	[Fact]
+	[Trait("Graph", "AbilityEndListener")]
+	public void Ability_end_listener_node_filters_by_ability_data_when_granted_with_a_source()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var source = new TestEntity(_tagsManager, _cuesManager);
+
+		var behaviorGraph = new Graph();
+		var captureNode = new CaptureGraphContextNode();
+		behaviorGraph.AddNode(captureNode);
+		behaviorGraph.AddConnection(new Connection(
+			behaviorGraph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			captureNode.InputPorts[ActionNode.InputPort]));
+
+		var watchedData = new AbilityData(
+			"Watched Filter",
+			behaviorFactory: () => new GraphAbilityBehavior(behaviorGraph));
+
+		AbilityHandle watchedHandle = owner.Abilities.GrantAbilityPermanently(
+			watchedData,
+			1,
+			LevelComparison.None,
+			sourceEntity: source);
+		AbilityHandle otherHandle = GrantInstantAbility(owner, "Other");
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", owner);
+		graph.VariableDefinitions.DefineObjectVariable("filterData", watchedData);
+
+		var listener = new AbilityEndListenerNode();
+		listener.BindInput(AbilityEndListenerNode.EntityInput, "entity");
+		listener.BindInput(AbilityEndListenerNode.AbilityDataInput, "filterData");
+
+		var onEnded = new TrackingActionNode();
+
+		graph.AddNode(listener);
+		graph.AddNode(onEnded);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			listener.InputPorts[StateNode<AbilityEndListenerNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			listener.OutputPorts[AbilityEndListenerNode.OnAbilityEndedPort],
+			onEnded.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		otherHandle.Activate(out _).Should().BeTrue();
+		onEnded.ExecutionCount.Should().Be(0);
+
+		watchedHandle.Activate(out _).Should().BeTrue();
+		onEnded.ExecutionCount.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Graph", "AbilityEndListener")]
+	public void Ability_end_listener_node_filters_ability_granted_after_activation()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+
+		var behaviorGraph = new Graph();
+		var captureNode = new CaptureGraphContextNode();
+		behaviorGraph.AddNode(captureNode);
+		behaviorGraph.AddConnection(new Connection(
+			behaviorGraph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			captureNode.InputPorts[ActionNode.InputPort]));
+
+		var watchedData = new AbilityData(
+			"Watched Filter",
+			behaviorFactory: () => new GraphAbilityBehavior(behaviorGraph));
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", owner);
+		graph.VariableDefinitions.DefineObjectVariable("filterData", watchedData);
+
+		var listener = new AbilityEndListenerNode();
+		listener.BindInput(AbilityEndListenerNode.EntityInput, "entity");
+		listener.BindInput(AbilityEndListenerNode.AbilityDataInput, "filterData");
+
+		var onEnded = new TrackingActionNode();
+
+		graph.AddNode(listener);
+		graph.AddNode(onEnded);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			listener.InputPorts[StateNode<AbilityEndListenerNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			listener.OutputPorts[AbilityEndListenerNode.OnAbilityEndedPort],
+			onEnded.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		// The watched ability is granted only after the listener is already active, so a filter resolved to a handle at
+		// activation time would never match it.
+		AbilityHandle watchedHandle = owner.Abilities.GrantAbilityPermanently(
+			watchedData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+		AbilityHandle otherHandle = GrantInstantAbility(owner, "Other");
+
+		otherHandle.Activate(out _).Should().BeTrue();
+		onEnded.ExecutionCount.Should().Be(0);
+
+		watchedHandle.Activate(out _).Should().BeTrue();
+		onEnded.ExecutionCount.Should().Be(1);
+	}
+
 	private static EffectData CreateInfiniteEffectData()
 	{
 		return new EffectData(

@@ -32,8 +32,8 @@ Standard state ports, plus:
 
 ## Behavior
 
-1. On activation, subscribes to `EntityAbilities.OnAbilityEnded` on the resolved entity. When an ability-data filter is bound, only ends of that granted ability are reported.
-2. On each matching end, writes **Ability** and **Was Canceled**, then emits `OnAbilityEnded`.
+1. On activation, subscribes to `EntityAbilities.OnAbilityEnded` on the resolved entity. When an ability-data filter is bound, it is captured as the filter value.
+2. On each end, if a filter is bound only ends whose ability shares that `AbilityData` are reported (matched per event by data, independent of the grant's source entity and of whether the ability was granted before or after this node activated). Matching ends write **Ability** and **Was Canceled**, then emit `OnAbilityEnded`.
 3. Unsubscribes on deactivation.
 
 ## Usage

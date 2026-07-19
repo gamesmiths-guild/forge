@@ -6,8 +6,8 @@ using Gamesmiths.Forge.Core;
 namespace Gamesmiths.Forge.Statescript.Nodes.State;
 
 /// <summary>
-/// The context for an <see cref="AbilityEndListenerNode"/>. Tracks the subscribed entity, handler and optional
-/// ability filter so the subscription can be removed on deactivation.
+/// The context for an <see cref="AbilityEndListenerNode"/>. Tracks the subscribed entity, handler and optional ability
+/// filter so the subscription can be removed on deactivation.
 /// </summary>
 public class AbilityEndListenerNodeContext : StateNodeContext
 {
@@ -17,10 +17,10 @@ public class AbilityEndListenerNodeContext : StateNodeContext
 	public IForgeEntity? SubscribedEntity { get; set; }
 
 	/// <summary>
-	/// Gets or sets the handle used to filter ended abilities, or <see langword="null"/> when every ended ability is
-	/// reported.
+	/// Gets or sets the ability data used to filter ended abilities, or <see langword="null"/> when every ended ability
+	/// is reported.
 	/// </summary>
-	public AbilityHandle? FilterHandle { get; set; }
+	public AbilityData? FilterData { get; set; }
 
 	internal Action<AbilityEndedData>? Handler { get; set; }
 }
