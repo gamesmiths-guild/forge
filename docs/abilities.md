@@ -261,17 +261,25 @@ Use `TryGetAbility` to find a granted ability by its data.
 
 **Note on Identity:** An ability is uniquely identified by its `AbilityData` **and** its `SourceEntity`. You can have the same ability granted multiple times if the sources differ (e.g., one from an Item, one from a Class).
 
+Without a source, the lookup matches the ability regardless of who granted it (if several sources granted the same data, which instance you get is unspecified). Pass a source entity to find the instance granted by that specific source. Because `null` is itself a valid granting source, pass `exactSourceMatch: true` to find specifically the instance granted without a source.
+
 ```csharp
 if (entity.Abilities.TryGetAbility(fireballData, out AbilityHandle? handle))
 {
-    // Ability is granted, use the handle
+    // Ability is granted (by any source), use the handle
     handle.Activate(out AbilityActivationFailures failures);
 }
 
 // With a specific source entity
-if (entity.Abilities.TryGetAbility(buffData, out AbilityHandle? handle, sourceEntity: caster))
+if (entity.Abilities.TryGetAbility(buffData, out AbilityHandle? handle, source: caster))
 {
     // Found the ability granted by this specific source
+}
+
+// Specifically the instance granted without a source (source == null)
+if (entity.Abilities.TryGetAbility(buffData, out AbilityHandle? handle, source: null, exactSourceMatch: true))
+{
+    // Found the sourceless instance, even if other sources granted the same data
 }
 ```
 

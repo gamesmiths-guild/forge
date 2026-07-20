@@ -19,17 +19,24 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// </remarks>
 /// <param name="abilityData">The ability data identifying the granted ability.</param>
 /// <param name="entityResolver">The entity resolver that selects which entity to inspect.</param>
-/// <param name="sourceResolver">Optional resolver for the granting source entity used in the lookup.</param>
+/// <param name="sourceResolver">Optional resolver for the granting source entity used to filter the lookup. When
+/// omitted (or resolving to <see langword="null"/>), the lookup matches any granting source unless
+/// <paramref name="exactSourceMatch"/> is <see langword="true"/>, in which case it matches only sourceless grants.
+/// </param>
+/// <param name="exactSourceMatch">When <see langword="true"/>, only the instance whose granting source is exactly the
+/// resolved source matches, including <see langword="null"/> for abilities granted without a source.</param>
 public class GetAbilityHandleResolver(
 	AbilityData abilityData,
 	IEntityResolver? entityResolver = null,
-	IEntityResolver? sourceResolver = null) : ObjectResolver<AbilityHandle>
+	IEntityResolver? sourceResolver = null,
+	bool exactSourceMatch = false) : ObjectResolver<AbilityHandle>
 {
 	private static readonly IEntityResolver _defaultEntityResolver = new AbilityOwnerResolver();
 
 	private readonly AbilityData _abilityData = abilityData;
 	private readonly IEntityResolver _entityResolver = entityResolver ?? _defaultEntityResolver;
 	private readonly IEntityResolver? _sourceResolver = sourceResolver;
+	private readonly bool _exactSourceMatch = exactSourceMatch;
 
 	/// <inheritdoc/>
 	[return: MaybeNull]
@@ -44,7 +51,7 @@ public class GetAbilityHandleResolver(
 
 		IForgeEntity? source = _sourceResolver?.Resolve(graphContext);
 
-		entity.Abilities.TryGetAbility(_abilityData, out AbilityHandle? handle, source);
+		entity.Abilities.TryGetAbility(_abilityData, out AbilityHandle? handle, source, _exactSourceMatch);
 
 		return handle;
 	}

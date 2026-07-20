@@ -316,8 +316,11 @@ internal sealed class Ability
 
 		if (_activeInstances.Count == 0)
 		{
+			// OnAbilityDeactivated may free the handle (e.g. RemoveOnEnd grants), so AbilityData is captured in the
+			// payload beforehand.
+			AbilityEndedData endedData = new(Handle, AbilityData, wasCanceled);
 			OnAbilityDeactivated?.Invoke(this);
-			Owner.Abilities.NotifyAbilityEnded(new AbilityEndedData(Handle, wasCanceled));
+			Owner.Abilities.NotifyAbilityEnded(endedData);
 		}
 	}
 
@@ -544,6 +547,7 @@ internal sealed class Ability
 
 	private EventSubscriptionToken SubscribeTypedEvent(AbilityTriggerData triggerData)
 	{
+#pragma warning disable IDE0370 // Remove unnecessary suppression
 #pragma warning disable S3011 // Reflection should not be used to increase accessibility of classes, methods, or fields
 		// Do not attempt this in production environments without adult supervision.
 		MethodInfo method = typeof(Ability)
@@ -552,6 +556,7 @@ internal sealed class Ability
 #pragma warning restore S3011 // Reflection should not be used to increase accessibility of classes, methods, or fields
 
 		return (EventSubscriptionToken)method.Invoke(this, [triggerData.TriggerTag, triggerData.Priority])!;
+#pragma warning restore IDE0370 // Remove unnecessary suppression
 	}
 
 	private EventSubscriptionToken SubscribeTypedEventCore<TPayload>(Tag tag, int priority)

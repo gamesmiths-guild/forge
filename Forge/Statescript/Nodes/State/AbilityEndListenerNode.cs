@@ -16,6 +16,9 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// <para>On each end the node writes the Ability output variable (<see cref="AbilityHandle"/>) and the Was Canceled
 /// output (<see langword="bool"/>), then emits <see cref="OnAbilityEndedPort"/>. The node stays active until
 /// deactivated externally, unsubscribing on deactivation.</para>
+/// <para>When the grant is removed on end (e.g. a RemoveOnEnd policy), the emitted handle may already be freed
+/// (<see cref="AbilityHandle.IsValid"/> is <see langword="false"/>); the end is still reported, but the handle is
+/// then only useful for identity/logging, not for further queries.</para>
 /// </remarks>
 public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 {
@@ -70,7 +73,7 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 		AbilityEndListenerNodeContext nodeContext =
 			graphContext.GetNodeContext<AbilityEndListenerNodeContext>(NodeID);
 		nodeContext.SubscribedEntity = null;
-		nodeContext.FilterHandle = null;
+		nodeContext.FilterData = null;
 		nodeContext.Handler = null;
 
 		IForgeEntity? entity = AbilityNodeUtilities.ResolveEntityOrOwner(
@@ -87,8 +90,7 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 			InputProperties[AbilityDataInput].BoundName,
 			out AbilityData filterData))
 		{
-			entity.Abilities.TryGetAbility(filterData, out AbilityHandle? filterHandle);
-			nodeContext.FilterHandle = filterHandle;
+			nodeContext.FilterData = filterData;
 		}
 
 		void Handler(AbilityEndedData endedData)
@@ -114,7 +116,7 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 		}
 
 		nodeContext.SubscribedEntity = null;
-		nodeContext.FilterHandle = null;
+		nodeContext.FilterData = null;
 		nodeContext.Handler = null;
 	}
 
@@ -147,7 +149,8 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 			return;
 		}
 
-		if (nodeContext.FilterHandle is not null && endedData.Ability != nodeContext.FilterHandle)
+		if (nodeContext.FilterData is AbilityData filterData
+			&& endedData.AbilityData != filterData)
 		{
 			return;
 		}

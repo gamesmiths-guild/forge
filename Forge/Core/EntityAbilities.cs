@@ -42,17 +42,32 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <summary>
 	/// Tries to get a granted ability from its data.
 	/// </summary>
+	/// <remarks>
+	/// When <paramref name="source"/> is <see langword="null"/> the lookup matches regardless of the granting source;
+	/// if the same ability data was granted by multiple sources, which instance is returned is unspecified. Pass a
+	/// source entity to find the instance granted by that specific source. Since <see langword="null"/> is itself a
+	/// valid granting source, pass <paramref name="exactSourceMatch"/> as <see langword="true"/> to find the instance
+	/// granted without a source.
+	/// </remarks>
 	/// <param name="abilityData">The data of the ability to find.</param>
 	/// <param name="abilityHandle">The handle of the found ability.</param>
-	/// <param name="source">The source entity of the ability, if any.</param>
+	/// <param name="source">The granting source entity to filter by, or <see langword="null"/> to match any source
+	/// (or, when <paramref name="exactSourceMatch"/> is <see langword="true"/>, only the sourceless instance).</param>
+	/// <param name="exactSourceMatch">When <see langword="true"/>, only the instance whose granting source is exactly
+	/// <paramref name="source"/> matches, including <see langword="null"/> for abilities granted without a source.
+	/// </param>
 	/// <returns><see>true</see> if the ability was found; otherwise, <c>false</c>.</returns>
 	public bool TryGetAbility(
 		AbilityData abilityData,
 		[NotNullWhen(true)] out AbilityHandle? abilityHandle,
-		IForgeEntity? source = null)
+		IForgeEntity? source = null,
+		bool exactSourceMatch = false)
 	{
 		Ability? ability = GrantedAbilities.FirstOrDefault(
-			x => x?.Ability?.AbilityData == abilityData && x.Ability?.SourceEntity == source)?.Ability;
+			x => x?.Ability?.AbilityData == abilityData
+				&& (exactSourceMatch
+					? x.Ability?.SourceEntity == source
+					: source is null || x.Ability?.SourceEntity == source))?.Ability;
 		if (ability is not null)
 		{
 			abilityHandle = ability.Handle;
