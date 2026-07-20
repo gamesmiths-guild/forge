@@ -22,16 +22,20 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// <param name="sourceResolver">Optional resolver for the granting source entity used to filter the lookup. When
 /// omitted (or resolving to <see langword="null"/>), the lookup matches the ability regardless of its granting
 /// source.</param>
+/// <param name="exactSourceMatch">When <see langword="true"/>, only the instance whose granting source is exactly the
+/// resolved source matches, including <see langword="null"/> for abilities granted without a source.</param>
 public class GetAbilityHandleResolver(
 	AbilityData abilityData,
 	IEntityResolver? entityResolver = null,
-	IEntityResolver? sourceResolver = null) : ObjectResolver<AbilityHandle>
+	IEntityResolver? sourceResolver = null,
+	bool exactSourceMatch = false) : ObjectResolver<AbilityHandle>
 {
 	private static readonly IEntityResolver _defaultEntityResolver = new AbilityOwnerResolver();
 
 	private readonly AbilityData _abilityData = abilityData;
 	private readonly IEntityResolver _entityResolver = entityResolver ?? _defaultEntityResolver;
 	private readonly IEntityResolver? _sourceResolver = sourceResolver;
+	private readonly bool _exactSourceMatch = exactSourceMatch;
 
 	/// <inheritdoc/>
 	[return: MaybeNull]
@@ -46,7 +50,7 @@ public class GetAbilityHandleResolver(
 
 		IForgeEntity? source = _sourceResolver?.Resolve(graphContext);
 
-		entity.Abilities.TryGetAbility(_abilityData, out AbilityHandle? handle, source);
+		entity.Abilities.TryGetAbility(_abilityData, out AbilityHandle? handle, source, _exactSourceMatch);
 
 		return handle;
 	}

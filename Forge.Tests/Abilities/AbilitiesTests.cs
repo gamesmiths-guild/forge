@@ -533,6 +533,58 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 	[Fact]
 	[Trait("Grant ability", null)]
+	public void TryGetAbility_with_exact_source_match_finds_the_sourceless_instance()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+		TestEntity sourceEntity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		// The same data granted twice: once by a source entity and once without a source.
+		AbilityHandle sourcedHandle = entity.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity);
+		AbilityHandle sourcelessHandle = entity.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		sourcelessHandle.Should().NotBe(sourcedHandle);
+		entity.Abilities.GrantedAbilities.Should().HaveCount(2);
+
+		// An exact match with a null source finds specifically the sourceless instance.
+		entity.Abilities.TryGetAbility(
+				abilityData,
+				out AbilityHandle? exactSourcelessHandle,
+				source: null,
+				exactSourceMatch: true)
+			.Should().BeTrue();
+		exactSourcelessHandle.Should().Be(sourcelessHandle);
+
+		// An exact match with a source entity behaves like the plain source filter.
+		entity.Abilities.TryGetAbility(
+				abilityData,
+				out AbilityHandle? exactSourcedHandle,
+				sourceEntity,
+				exactSourceMatch: true)
+			.Should().BeTrue();
+		exactSourcedHandle.Should().Be(sourcedHandle);
+
+		// Without the exact flag, a null source still matches any instance.
+		entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? anySourceHandle).Should().BeTrue();
+		anySourceHandle.Should().NotBeNull();
+	}
+
+	[Fact]
+	[Trait("Grant ability", null)]
 	public void Ability_granted_by_late_instant_effect_is_permanent()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);

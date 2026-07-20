@@ -16,6 +16,9 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// <para>On each end the node writes the Ability output variable (<see cref="AbilityHandle"/>) and the Was Canceled
 /// output (<see langword="bool"/>), then emits <see cref="OnAbilityEndedPort"/>. The node stays active until
 /// deactivated externally, unsubscribing on deactivation.</para>
+/// <para>When the grant is removed on end (e.g. a RemoveOnEnd policy), the emitted handle may already be freed
+/// (<see cref="AbilityHandle.IsValid"/> is <see langword="false"/>); the end is still reported, but the handle is
+/// then only useful for identity/logging, not for further queries.</para>
 /// </remarks>
 public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 {

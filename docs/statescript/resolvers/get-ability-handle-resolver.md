@@ -8,7 +8,7 @@ Looks up the `AbilityHandle` of a granted ability on a resolved entity, identifi
 ## Constructor
 
 ```csharp
-new GetAbilityHandleResolver(abilityData, entityResolver = null, sourceResolver = null)
+new GetAbilityHandleResolver(abilityData, entityResolver = null, sourceResolver = null, exactSourceMatch = false)
 ```
 
 | Parameter | Type | Description |
@@ -16,12 +16,14 @@ new GetAbilityHandleResolver(abilityData, entityResolver = null, sourceResolver 
 | abilityData | `AbilityData` | The ability data identifying the granted ability. |
 | entityResolver | `IEntityResolver` | Selects which entity to inspect. Defaults to `AbilityOwnerResolver`. |
 | sourceResolver | `IEntityResolver?` | Optional granting source used to filter the lookup. When omitted, the lookup matches any granting source. |
+| exactSourceMatch | `bool` | When `true`, only the instance whose granting source is exactly the resolved source matches — including `null` for abilities granted without a source. |
 
 ## Behavior
 
 - Resolves the entity; returns `null` when it is not available or the ability is not granted.
-- Calls `EntityAbilities.TryGetAbility(abilityData, out handle, source)`.
+- Calls `EntityAbilities.TryGetAbility(abilityData, out handle, source, exactSourceMatch)`.
 - Without a source resolver the lookup matches the ability regardless of its granting source; with one, only the instance granted by that source matches. If the same ability data was granted by multiple sources, the sourceless lookup returns an unspecified instance.
+- With `exactSourceMatch: true`, the resolved source (or `null` when there is no source resolver) must match the instance's granting source exactly, so the instance granted without a source can be targeted specifically.
 
 ## Usage
 
