@@ -17,15 +17,13 @@ Standard state ports (the grant/revoke happens on activate/deactivate).
 ```csharp
 new GrantAbilityNode(
     removalPolicy = AbilityDeactivationPolicy.CancelImmediately,
-    levelOverridePolicy = LevelComparison.None,
-    tryActivateOnGrant = false)
+    levelOverridePolicy = LevelComparison.None)
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | removalPolicy | `AbilityDeactivationPolicy` | How the ability is removed when the node deactivates. |
 | levelOverridePolicy | `LevelComparison` | When the ability is already granted, which level relationships override the existing level. |
-| tryActivateOnGrant | `bool` | Whether to try activating the ability right after granting it. |
 
 ## Parameters
 
@@ -34,7 +32,7 @@ new GrantAbilityNode(
 | Index | Label | Type | Description |
 |-------|-------|------|-------------|
 | 0 | Ability Data | `AbilityData` | The ability to grant. |
-| 1 | Target | `IForgeEntity` | Optional. The entity to grant on. Defaults to the ability context's owner. |
+| 1 | Entity | `IForgeEntity` | Optional. The entity to grant on. Defaults to the ability context's owner. |
 | 2 | Level | `int` | Optional. The grant level. Defaults to the context level, or `1`. |
 | 3 | Source | `IForgeEntity` | Optional. The granting source entity. |
 
@@ -46,8 +44,10 @@ new GrantAbilityNode(
 
 ## Behavior
 
-1. On activation, grants the ability through the internal grant-source machinery (the same path effects use), optionally activating it, and writes the handle to the **Ability** output.
+1. On activation, grants the ability through the internal grant-source machinery (the same path effects use) and writes the handle to the **Ability** output.
 2. On deactivation, removes this node's grant according to `removalPolicy`.
+
+To activate the granted ability, feed the **Ability** output into a [TryActivateAbilityNode](../condition/try-activate-ability-node.md).
 
 ## Usage
 

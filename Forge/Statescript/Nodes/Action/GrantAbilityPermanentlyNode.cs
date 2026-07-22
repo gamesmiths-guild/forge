@@ -12,9 +12,9 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Action;
 /// <para>Permanent grants cannot be revoked or inhibited, use them for unlock-style progression. For grants tied to
 /// a graph state's lifetime, use the GrantAbility state node instead; for data-driven grants, use effects with a
 /// grant-ability component.</para>
-/// <para>The ability-data input must resolve to an <see cref="AbilityData"/>. The target input defaults to the
-/// ability context's owner when unbound. The level input defaults to the ability context's level, or <c>1</c>
-/// without a context.</para>
+/// <para>The ability-data input must resolve to an <see cref="AbilityData"/>. The entity input selects who receives
+/// the grant, defaulting to the ability context's owner when unbound. The level input defaults to the ability
+/// context's level, or <c>1</c> without a context.</para>
 /// <para>The granted <see cref="AbilityHandle"/> is written to the node's output variable.</para>
 /// </remarks>
 /// <param name="levelOverridePolicy">When the ability is already granted, which level relationships override the
@@ -29,7 +29,7 @@ public class GrantAbilityPermanentlyNode(LevelComparison levelOverridePolicy = L
 	/// <summary>
 	/// Input property index for the entity to grant the ability on.
 	/// </summary>
-	public const byte TargetInput = 1;
+	public const byte EntityInput = 1;
 
 	/// <summary>
 	/// Input property index for the ability level.
@@ -55,7 +55,7 @@ public class GrantAbilityPermanentlyNode(LevelComparison levelOverridePolicy = L
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
 	{
 		inputProperties.Add(new InputProperty("Ability Data", typeof(AbilityData)));
-		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
+		inputProperties.Add(new InputProperty("Entity", typeof(IForgeEntity)));
 		inputProperties.Add(new InputProperty("Level", typeof(int)));
 		inputProperties.Add(new InputProperty("Source", typeof(IForgeEntity)));
 		outputVariables.Add(new OutputVariable("Ability", typeof(AbilityHandle)));
@@ -72,11 +72,11 @@ public class GrantAbilityPermanentlyNode(LevelComparison levelOverridePolicy = L
 			return;
 		}
 
-		IForgeEntity? target = AbilityNodeUtilities.ResolveEntityOrOwner(
+		IForgeEntity? entity = AbilityNodeUtilities.ResolveEntityOrOwner(
 			graphContext,
-			InputProperties[TargetInput].BoundName);
+			InputProperties[EntityInput].BoundName);
 
-		if (target is null)
+		if (entity is null)
 		{
 			return;
 		}
@@ -86,7 +86,7 @@ public class GrantAbilityPermanentlyNode(LevelComparison levelOverridePolicy = L
 			graphContext,
 			InputProperties[SourceInput].BoundName);
 
-		AbilityHandle handle = target.Abilities.GrantAbilityPermanently(
+		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
 			abilityData,
 			level,
 			_levelOverridePolicy,
