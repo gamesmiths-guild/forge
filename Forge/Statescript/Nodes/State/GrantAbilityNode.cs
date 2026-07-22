@@ -14,7 +14,7 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// the grant, defaulting to the ability context's owner when unbound. The level input defaults to the ability
 /// context's level, or <c>1</c> without a context. The optional source input records the granting entity.</para>
 /// <para>The granted <see cref="AbilityHandle"/> is written to the node's output variable, so the graph can activate
-/// or inspect the granted ability, for example through a TryActivateAbility node.</para>
+/// or inspect the granted ability, for example through a <see cref="Condition.TryActivateAbilityNode"/>.</para>
 /// <para>Grants are reference counted per source: if other grant sources (such as effects) also granted the same
 /// ability, removing this node's grant only removes its own share.</para>
 /// </remarks>
