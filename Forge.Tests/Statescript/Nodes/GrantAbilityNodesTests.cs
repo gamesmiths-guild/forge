@@ -33,7 +33,7 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 
 		var grantNode = new GrantAbilityNode();
 		grantNode.BindInput(GrantAbilityNode.AbilityDataInput, "abilityData");
-		grantNode.BindInput(GrantAbilityNode.TargetInput, "target");
+		grantNode.BindInput(GrantAbilityNode.EntityInput, "target");
 		grantNode.BindOutput(GrantAbilityNode.AbilityOutput, "grantedAbility");
 
 		graph.AddNode(grantNode);
@@ -60,7 +60,7 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 
 	[Fact]
 	[Trait("Graph", "GrantAbility")]
-	public void Grant_ability_node_can_activate_the_granted_ability()
+	public void Grant_ability_node_output_feeds_try_activate_ability_node()
 	{
 		var owner = new TestEntity(_tagsManager, _cuesManager);
 
@@ -78,15 +78,24 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineObjectVariable("abilityData", abilityData);
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", owner);
+		graph.VariableDefinitions.DefineObjectVariable<AbilityHandle>("grantedAbility");
 
-		var grantNode = new GrantAbilityNode(tryActivateOnGrant: true);
+		var grantNode = new GrantAbilityNode();
 		grantNode.BindInput(GrantAbilityNode.AbilityDataInput, "abilityData");
-		grantNode.BindInput(GrantAbilityNode.TargetInput, "target");
+		grantNode.BindInput(GrantAbilityNode.EntityInput, "target");
+		grantNode.BindOutput(GrantAbilityNode.AbilityOutput, "grantedAbility");
+
+		var activateNode = new TryActivateAbilityNode();
+		activateNode.BindInput(TryActivateAbilityNode.AbilityInput, "grantedAbility");
 
 		graph.AddNode(grantNode);
+		graph.AddNode(activateNode);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			grantNode.InputPorts[StateNode<GrantAbilityNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			grantNode.OutputPorts[StateNode<GrantAbilityNodeContext>.OnActivatePort],
+			activateNode.InputPorts[ConditionNode.InputPort]));
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
@@ -107,7 +116,7 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 
 		var grantNode = new GrantAbilityPermanentlyNode();
 		grantNode.BindInput(GrantAbilityPermanentlyNode.AbilityDataInput, "abilityData");
-		grantNode.BindInput(GrantAbilityPermanentlyNode.TargetInput, "target");
+		grantNode.BindInput(GrantAbilityPermanentlyNode.EntityInput, "target");
 
 		graph.AddNode(grantNode);
 		graph.AddConnection(new Connection(

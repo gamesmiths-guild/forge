@@ -10,11 +10,11 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// on deactivation.
 /// </summary>
 /// <remarks>
-/// <para>The ability-data input must resolve to an <see cref="AbilityData"/>. The target input selects the entity to
-/// grant on, defaulting to the ability context's owner when unbound. The level input defaults to the ability
+/// <para>The ability-data input must resolve to an <see cref="AbilityData"/>. The entity input selects who receives
+/// the grant, defaulting to the ability context's owner when unbound. The level input defaults to the ability
 /// context's level, or <c>1</c> without a context. The optional source input records the granting entity.</para>
 /// <para>The granted <see cref="AbilityHandle"/> is written to the node's output variable, so the graph can activate
-/// or inspect the granted ability.</para>
+/// or inspect the granted ability, for example through a <see cref="Condition.TryActivateAbilityNode"/>.</para>
 /// <para>Grants are reference counted per source: if other grant sources (such as effects) also granted the same
 /// ability, removing this node's grant only removes its own share.</para>
 /// </remarks>
@@ -22,11 +22,9 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// <see cref="AbilityDeactivationPolicy.CancelImmediately"/>.</param>
 /// <param name="levelOverridePolicy">When the ability is already granted, which level relationships override the
 /// existing level.</param>
-/// <param name="tryActivateOnGrant">Whether to try activating the ability right after granting it.</param>
 public class GrantAbilityNode(
 	AbilityDeactivationPolicy removalPolicy = AbilityDeactivationPolicy.CancelImmediately,
-	LevelComparison levelOverridePolicy = LevelComparison.None,
-	bool tryActivateOnGrant = false) : StateNode<GrantAbilityNodeContext>
+	LevelComparison levelOverridePolicy = LevelComparison.None) : StateNode<GrantAbilityNodeContext>
 {
 	/// <summary>
 	/// Input property index for the ability data to grant.
@@ -36,7 +34,7 @@ public class GrantAbilityNode(
 	/// <summary>
 	/// Input property index for the entity to grant the ability on.
 	/// </summary>
-	public const byte TargetInput = 1;
+	public const byte EntityInput = 1;
 
 	/// <summary>
 	/// Input property index for the ability level.
@@ -55,7 +53,6 @@ public class GrantAbilityNode(
 
 	private readonly AbilityDeactivationPolicy _removalPolicy = removalPolicy;
 	private readonly LevelComparison _levelOverridePolicy = levelOverridePolicy;
-	private readonly bool _tryActivateOnGrant = tryActivateOnGrant;
 
 	/// <inheritdoc/>
 	public override string Description => "Grants an ability while active, removing the grant on deactivation.";
@@ -64,7 +61,7 @@ public class GrantAbilityNode(
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
 	{
 		inputProperties.Add(new InputProperty("Ability Data", typeof(AbilityData)));
-		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
+		inputProperties.Add(new InputProperty("Entity", typeof(IForgeEntity)));
 		inputProperties.Add(new InputProperty("Level", typeof(int)));
 		inputProperties.Add(new InputProperty("Source", typeof(IForgeEntity)));
 		outputVariables.Add(new OutputVariable("Ability", typeof(AbilityHandle)));
@@ -86,11 +83,11 @@ public class GrantAbilityNode(
 			return;
 		}
 
-		IForgeEntity? target = AbilityNodeUtilities.ResolveEntityOrOwner(
+		IForgeEntity? entity = AbilityNodeUtilities.ResolveEntityOrOwner(
 			graphContext,
-			InputProperties[TargetInput].BoundName);
+			InputProperties[EntityInput].BoundName);
 
-		if (target is null)
+		if (entity is null)
 		{
 			return;
 		}
@@ -102,7 +99,7 @@ public class GrantAbilityNode(
 
 		var grantSource = new StatescriptGrantSource(_removalPolicy, AbilityDeactivationPolicy.Ignore);
 
-		AbilityHandle handle = target.Abilities.GrantAbility(
+		AbilityHandle handle = entity.Abilities.GrantAbility(
 			abilityData,
 			level,
 			_levelOverridePolicy,
@@ -110,15 +107,10 @@ public class GrantAbilityNode(
 			source);
 
 		nodeContext.GrantedHandle = handle;
-		nodeContext.GrantedOn = target;
+		nodeContext.GrantedOn = entity;
 		nodeContext.GrantSource = grantSource;
 
 		AbilityNodeUtilities.WriteHandleOutput(graphContext, OutputVariables[AbilityOutput], handle);
-
-		if (_tryActivateOnGrant)
-		{
-			handle.Activate(out _);
-		}
 	}
 
 	/// <inheritdoc/>
