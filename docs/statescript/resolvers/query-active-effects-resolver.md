@@ -46,4 +46,4 @@ graph.VariableDefinitions.DefineObjectProperty("shortestDebuff",
 - [Resolvers Overview](README.md)
 - [RemoveEffectNode](../nodes/action/remove-effect-node.md)
 - [ActiveEffectDataResolver](active-effect-data-resolver.md)
-- [EffectInfoResolver](effect-info-resolver.md)
+- [EffectStackDataResolver](effect-stack-data-resolver.md)

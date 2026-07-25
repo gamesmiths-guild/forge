@@ -116,14 +116,14 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		processor.StartGraph();
 
 		processor.GraphContext.IsActive.Should().BeTrue();
-		target.EffectsManager.GetEffectInfo(effectData).Should().ContainSingle();
+		target.EffectsManager.GetEffectStackData(effectData).Should().ContainSingle();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 
 		processor.StopGraph();
 
 		effectEndMessages.Should().Be(0);
 		processor.GraphContext.IsActive.Should().BeFalse();
-		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
+		target.EffectsManager.GetEffectStackData(effectData).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 	}
 
@@ -144,12 +144,12 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		processor.StartGraph();
 
 		processor.GraphContext.IsActive.Should().BeFalse();
-		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
+		target.EffectsManager.GetEffectStackData(effectData).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
 
 		processor.StopGraph();
 
-		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
+		target.EffectsManager.GetEffectStackData(effectData).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
 	}
 
@@ -183,8 +183,8 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		effectEndMessages.Should().Be(1);
 		completed.Should().BeTrue();
 		processor.GraphContext.IsActive.Should().BeFalse();
-		target.EffectsManager.GetEffectInfo(firstEffect).Should().BeEmpty();
-		target.EffectsManager.GetEffectInfo(secondEffect).Should().BeEmpty();
+		target.EffectsManager.GetEffectStackData(firstEffect).Should().BeEmpty();
+		target.EffectsManager.GetEffectStackData(secondEffect).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [7, 7, 0, 0]);
 	}
@@ -246,16 +246,16 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 		processor.StartGraph();
 
-		target.EffectsManager.GetEffectInfo(effectData).Should().ContainSingle();
+		target.EffectsManager.GetEffectStackData(effectData).Should().ContainSingle();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 
 		target.EffectsManager.UpdateEffects(1.0);
-		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
+		target.EffectsManager.GetEffectStackData(effectData).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 
 		processor.StopGraph();
 
-		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
+		target.EffectsManager.GetEffectStackData(effectData).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 	}
 
@@ -280,7 +280,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		processor.StartGraph();
 
 		processor.GraphContext.IsActive.Should().BeTrue();
-		target.EffectsManager.GetEffectInfo(effectData).Should().ContainSingle();
+		target.EffectsManager.GetEffectStackData(effectData).Should().ContainSingle();
 
 		target.EffectsManager.UpdateEffects(1.0);
 		processor.UpdateGraph(0.0);
@@ -288,7 +288,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		effectEndMessages.Should().Be(1);
 		completed.Should().BeTrue();
 		processor.GraphContext.IsActive.Should().BeFalse();
-		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
+		target.EffectsManager.GetEffectStackData(effectData).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 	}
 
@@ -318,8 +318,8 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		processor.StartGraph();
 
 		processor.GraphContext.IsActive.Should().BeTrue();
-		target.EffectsManager.GetEffectInfo(timedEffect).Should().ContainSingle();
-		target.EffectsManager.GetEffectInfo(infiniteEffect).Should().ContainSingle();
+		target.EffectsManager.GetEffectStackData(timedEffect).Should().ContainSingle();
+		target.EffectsManager.GetEffectStackData(infiniteEffect).Should().ContainSingle();
 
 		target.EffectsManager.UpdateEffects(1.0);
 		processor.UpdateGraph(0.0);
@@ -327,8 +327,8 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		effectEndMessages.Should().Be(0);
 		completed.Should().BeFalse();
 		processor.GraphContext.IsActive.Should().BeTrue();
-		target.EffectsManager.GetEffectInfo(timedEffect).Should().BeEmpty();
-		target.EffectsManager.GetEffectInfo(infiniteEffect).Should().ContainSingle();
+		target.EffectsManager.GetEffectStackData(timedEffect).Should().BeEmpty();
+		target.EffectsManager.GetEffectStackData(infiniteEffect).Should().ContainSingle();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [7, 2, 5, 0]);
 
@@ -338,7 +338,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		effectEndMessages.Should().Be(1);
 		completed.Should().BeTrue();
 		processor.GraphContext.IsActive.Should().BeFalse();
-		target.EffectsManager.GetEffectInfo(infiniteEffect).Should().BeEmpty();
+		target.EffectsManager.GetEffectStackData(infiniteEffect).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
 	}
 
@@ -379,14 +379,14 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		processor.StartGraph();
 
 		processor.GraphContext.IsActive.Should().BeTrue();
-		target.EffectsManager.GetEffectInfo(effectData).Should().ContainSingle();
+		target.EffectsManager.GetEffectStackData(effectData).Should().ContainSingle();
 
 		processor.UpdateGraph(0.5);
 
 		effectEndMessages.Should().Be(0);
 		completed.Should().BeTrue();
 		processor.GraphContext.IsActive.Should().BeFalse();
-		target.EffectsManager.GetEffectInfo(effectData).Should().BeEmpty();
+		target.EffectsManager.GetEffectStackData(effectData).Should().BeEmpty();
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 	}
 
@@ -591,8 +591,8 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		bool shouldHaveFirstEffect,
 		bool shouldHaveSecondEffect)
 	{
-		target.EffectsManager.GetEffectInfo(firstEffect).Should().HaveCount(shouldHaveFirstEffect ? 1 : 0);
-		target.EffectsManager.GetEffectInfo(secondEffect).Should().HaveCount(shouldHaveSecondEffect ? 1 : 0);
+		target.EffectsManager.GetEffectStackData(firstEffect).Should().HaveCount(shouldHaveFirstEffect ? 1 : 0);
+		target.EffectsManager.GetEffectStackData(secondEffect).Should().HaveCount(shouldHaveSecondEffect ? 1 : 0);
 
 		TestUtils.TestAttribute(
 			target,

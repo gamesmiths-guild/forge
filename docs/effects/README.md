@@ -146,7 +146,7 @@ entity.EffectsManager.RemoveEffectData(effectData);
 
 #### Querying Active Effects
 
-Beyond `GetEffectInfo(effectData)` (which returns per-application `EffectStackInstanceData`), the manager can return live handles:
+Beyond `GetEffectStackData(effectData)` (which returns per-application `EffectStackInstanceData`), the manager can return live handles:
 
 ```csharp
 // Handles for every active application of a given EffectData

@@ -1812,7 +1812,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			firstExpectedStackDataCount,
 			firstExpectedStackData,
 			owner1,
@@ -1827,7 +1827,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			secondExpectedStackDataCount,
 			secondExpectedStackData,
 			owner1,
@@ -2061,7 +2061,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			firstExpectedStackDataCount,
 			firstExpectedStackData,
 			owner1,
@@ -2077,7 +2077,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			secondExpectedStackDataCount,
 			secondExpectedStackData,
 			owner1,
@@ -2093,7 +2093,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, thirdExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			thirdExpectedStackDataCount,
 			thirdExpectedStackData,
 			owner1,
@@ -2104,7 +2104,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, fourthExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			fourthExpectedStackDataCount,
 			fourthExpectedStackData,
 			owner1,
@@ -2337,7 +2337,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			firstExpectedStackDataCount,
 			firstExpectedStackData,
 			owner1,
@@ -2348,7 +2348,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			secondExpectedStackDataCount,
 			secondExpectedStackData,
 			owner1,
@@ -2363,7 +2363,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, thirdExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			thirdExpectedStackDataCount,
 			thirdExpectedStackData,
 			owner1,
@@ -2374,7 +2374,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, fourthExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			fourthExpectedStackDataCount,
 			fourthExpectedStackData,
 			owner1,
@@ -2849,7 +2849,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			firstExpectedStackDataCount,
 			firstExpectedStackData,
 			owner,
@@ -2860,7 +2860,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			secondExpectedStackDataCount,
 			secondExpectedStackData,
 			owner,
@@ -2871,7 +2871,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, thirdExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			thirdExpectedStackDataCount,
 			thirdExpectedStackData,
 			owner,
@@ -2882,7 +2882,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, fourthExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			fourthExpectedStackDataCount,
 			fourthExpectedStackData,
 			owner,
@@ -3085,7 +3085,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, firstExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			firstExpectedStackDataCount,
 			firstExpectedStackData,
 			owner,
@@ -3096,7 +3096,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, secondExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			secondExpectedStackDataCount,
 			secondExpectedStackData,
 			owner,
@@ -3107,7 +3107,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, thirdExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			thirdExpectedStackDataCount,
 			thirdExpectedStackData,
 			owner,
@@ -3118,7 +3118,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		TestUtils.TestAttribute(target, targetAttribute, fourthExpectedResults);
 
 		TestUtils.TestStackData(
-			target.EffectsManager.GetEffectInfo(effectData),
+			target.EffectsManager.GetEffectStackData(effectData),
 			fourthExpectedStackDataCount,
 			fourthExpectedStackData,
 			owner,
