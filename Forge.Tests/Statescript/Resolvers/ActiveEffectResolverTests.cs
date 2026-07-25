@@ -165,8 +165,8 @@ public class ActiveEffectResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : 
 	}
 
 	[Fact]
-	[Trait("Resolver", "EffectInfo")]
-	public void Effect_info_resolver_aggregates_stack_data()
+	[Trait("Resolver", "EffectStackData")]
+	public void Effect_stack_data_resolver_aggregates_stack_data()
 	{
 		TestEntity owner = CreateEntity();
 		TestEntity target = CreateEntity();
@@ -179,11 +179,11 @@ public class ActiveEffectResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : 
 		context.GraphVariables.DefineObjectVariable<IForgeEntity>("entity", target);
 		var entityResolver = new EntityVariableResolver("entity");
 
-		new EffectInfoResolver(effectData, EffectInfoType.TotalStackCount, entityResolver)
+		new EffectStackDataResolver(effectData, EffectStackDataType.TotalStackCount, entityResolver)
 			.Resolve(context).Get<int>().Should().Be(2);
-		new EffectInfoResolver(effectData, EffectInfoType.InstanceCount, entityResolver)
+		new EffectStackDataResolver(effectData, EffectStackDataType.InstanceCount, entityResolver)
 			.Resolve(context).Get<int>().Should().Be(1);
-		new EffectInfoResolver(effectData, EffectInfoType.MaxLevel, entityResolver)
+		new EffectStackDataResolver(effectData, EffectStackDataType.MaxLevel, entityResolver)
 			.Resolve(context).Get<int>().Should().Be(2);
 	}
 

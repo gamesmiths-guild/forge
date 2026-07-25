@@ -36,7 +36,7 @@ These resolvers provide effect instances and application context to nodes such a
 | [EffectArrayVariableResolver](effect-array-variable-resolver.md) | `Effect[]` | Reads a stored `Effect` instance array from graph or shared scope. |
 | [EffectContextDataResolver](effect-context-data-resolver.md) | `EffectApplicationContext` | Produces custom application context data for an effect via an `IEffectContextDataProvider`. |
 | [EffectFromDataResolver](effect-from-data-resolver.md) | `Effect` | Builds an `Effect` instance from an `EffectData` value plus optional level, ownership, and SetByCaller magnitudes. |
-| [EffectInfoResolver](effect-info-resolver.md) | `int` | Aggregates stack/instance/level info over the active applications of an effect on an entity. |
+| [EffectStackDataResolver](effect-stack-data-resolver.md) | `int` | Aggregates stack/instance/level data over the active applications of an effect on an entity. |
 | [EffectVariableResolver](effect-variable-resolver.md) | `Effect?` | Reads a stored `Effect` instance from graph or shared scope for reuse. |
 | [OwnershipResolver](ownership-resolver.md) | `EffectOwnership` | Composes an effect ownership value from nested entity resolvers. |
 | [QueryActiveEffectsResolver](query-active-effects-resolver.md) | `ActiveEffectHandle[]` | Queries the active effect handles on an entity, optionally filtered by `EffectData`. |

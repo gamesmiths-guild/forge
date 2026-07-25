@@ -338,8 +338,8 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		bool shouldHaveFirstEffect,
 		bool shouldHaveSecondEffect)
 	{
-		target.EffectsManager.GetEffectInfo(firstEffect).Should().HaveCount(shouldHaveFirstEffect ? 1 : 0);
-		target.EffectsManager.GetEffectInfo(secondEffect).Should().HaveCount(shouldHaveSecondEffect ? 1 : 0);
+		target.EffectsManager.GetEffectStackData(firstEffect).Should().HaveCount(shouldHaveFirstEffect ? 1 : 0);
+		target.EffectsManager.GetEffectStackData(secondEffect).Should().HaveCount(shouldHaveSecondEffect ? 1 : 0);
 
 		TestUtils.TestAttribute(
 			target,

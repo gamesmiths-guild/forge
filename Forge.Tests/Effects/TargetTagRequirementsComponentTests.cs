@@ -51,7 +51,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		entity.EffectsManager.ApplyEffect(effect);
 
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			1,
 			[new int[] { 3, 1, 0 }],
 			entity,
@@ -95,7 +95,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		entity.EffectsManager.ApplyEffect(effect);
 
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			0,
 			[],
 			entity,
@@ -154,7 +154,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		entity.EffectsManager.ApplyEffect(effect);
 
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			1,
 			[new int[] { 3, 1, 0 }],
 			entity,
@@ -207,7 +207,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		entity.EffectsManager.ApplyEffect(effect);
 
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			0,
 			[],
 			entity,
@@ -254,7 +254,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		entity.EffectsManager.ApplyEffect(modifierTagEffect);
 
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			0,
 			[],
 			entity,
@@ -302,7 +302,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		entity.EffectsManager.ApplyEffect(effect);
 
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			1,
 			[new int[] { 3, 1, 0 }],
 			entity,
@@ -311,7 +311,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		entity.EffectsManager.RemoveEffect(activeModifierEffectHandle!);
 
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			0,
 			[],
 			entity,
@@ -354,7 +354,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		entity.EffectsManager.ApplyEffect(effect);
 
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			1,
 			[new int[] { 1, 1, 0 }],
 			entity,
@@ -397,7 +397,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 		entity.EffectsManager.ApplyEffect(effect);
 
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			0,
 			[],
 			entity,
@@ -431,7 +431,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			1,
 			[new int[] { 1, 1, 0 }],
 			entity,
@@ -441,7 +441,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			0,
 			[],
 			entity,
@@ -475,7 +475,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			1,
 			[new int[] { 1, 1, 0 }],
 			entity,
@@ -485,7 +485,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			0,
 			[],
 			entity,
@@ -602,7 +602,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			1,
 			[new int[] { 1, 1, 0 }],
 			entity,
@@ -616,7 +616,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [41, 41, 0, 0]);
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			0,
 			[],
 			entity,
@@ -653,7 +653,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			1,
 			[new int[] { 1, 1, 0 }],
 			entity,
@@ -663,7 +663,7 @@ public class TargetTagRequirementsComponentTests(TagsAndCuesFixture tagsAndCueFi
 
 		TestUtils.TestAttribute(entity, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestStackData(
-			entity.EffectsManager.GetEffectInfo(effectData),
+			entity.EffectsManager.GetEffectStackData(effectData),
 			0,
 			[],
 			entity,

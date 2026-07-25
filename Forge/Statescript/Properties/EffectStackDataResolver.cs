@@ -11,22 +11,22 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// </summary>
 /// <remarks>
 /// <para>By default, this resolver targets the owner entity through <see cref="AbilityOwnerResolver"/>.</para>
-/// <para><see cref="EffectInfoType.TotalStackCount"/> is the "current number of stacks" query: it sums the stacks of
-/// every active application of the effect on the entity.</para>
+/// <para><see cref="EffectStackDataType.TotalStackCount"/> is the "current number of stacks" query: it sums the stacks
+/// of every active application of the effect on the entity.</para>
 /// <para>If the selected entity is not available or the effect is not active, the resolver returns <c>0</c>.</para>
 /// </remarks>
 /// <param name="effectData">The effect data to query for.</param>
-/// <param name="infoType">Which aggregate to compute.</param>
+/// <param name="dataType">Which aggregate to compute.</param>
 /// <param name="entityResolver">The entity resolver that selects which entity to inspect.</param>
-public class EffectInfoResolver(
+public class EffectStackDataResolver(
 	EffectData effectData,
-	EffectInfoType infoType,
+	EffectStackDataType dataType,
 	IEntityResolver? entityResolver = null) : IPropertyResolver
 {
 	private static readonly IEntityResolver _defaultEntityResolver = new AbilityOwnerResolver();
 
 	private readonly EffectData _effectData = effectData;
-	private readonly EffectInfoType _infoType = infoType;
+	private readonly EffectStackDataType _dataType = dataType;
 	private readonly IEntityResolver _entityResolver = entityResolver ?? _defaultEntityResolver;
 
 	/// <inheritdoc/>
@@ -46,18 +46,18 @@ public class EffectInfoResolver(
 		int instanceCount = 0;
 		int maxLevel = 0;
 
-		foreach (EffectStackInstanceData instanceData in entity.EffectsManager.GetEffectInfo(_effectData))
+		foreach (EffectStackInstanceData instanceData in entity.EffectsManager.GetEffectStackData(_effectData))
 		{
 			totalStacks += instanceData.StackCount;
 			instanceCount++;
 			maxLevel = Math.Max(maxLevel, instanceData.EffectLevel);
 		}
 
-		return _infoType switch
+		return _dataType switch
 		{
-			EffectInfoType.TotalStackCount => new Variant128(totalStacks),
-			EffectInfoType.InstanceCount => new Variant128(instanceCount),
-			EffectInfoType.MaxLevel => new Variant128(maxLevel),
+			EffectStackDataType.TotalStackCount => new Variant128(totalStacks),
+			EffectStackDataType.InstanceCount => new Variant128(instanceCount),
+			EffectStackDataType.MaxLevel => new Variant128(maxLevel),
 			_ => default,
 		};
 	}

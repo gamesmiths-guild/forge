@@ -116,11 +116,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	}
 
 	/// <summary>
-	/// Queries and gets information about application of a given <see cref="EffectData"/>.
+	/// Queries and gets the stack data for the active applications of a given <see cref="EffectData"/>.
 	/// </summary>
 	/// <param name="effectData">Which effect to query for.</param>
-	/// <returns>A list of <see cref="EffectStackInstanceData"/> grouped by their stack configuration.</returns>
-	public IEnumerable<EffectStackInstanceData> GetEffectInfo(EffectData effectData)
+	/// <returns>An enumerable of <see cref="EffectStackInstanceData"/> grouped by their stack configuration.</returns>
+	public IEnumerable<EffectStackInstanceData> GetEffectStackData(EffectData effectData)
 	{
 		IEnumerable<ActiveEffect> filteredEffects = FilterEffectsByData(effectData);
 		return ConvertToStackInstanceData(filteredEffects);

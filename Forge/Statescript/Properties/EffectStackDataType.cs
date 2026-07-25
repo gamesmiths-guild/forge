@@ -3,9 +3,10 @@
 namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
-/// Selects which aggregate an <see cref="EffectInfoResolver"/> computes over the active applications of an effect.
+/// Selects which aggregate an <see cref="EffectStackDataResolver"/> computes over the active applications of an
+/// effect.
 /// </summary>
-public enum EffectInfoType : byte
+public enum EffectStackDataType : byte
 {
 	/// <summary>
 	/// The sum of the stack counts across every active application.
