@@ -156,6 +156,18 @@ public class AbilityActivatorResolverTests(TagsAndCuesFixture tagsAndCuesFixture
 		handle.Should().BeNull();
 	}
 
+	[Fact]
+	[Trait("Resolver", "AbilityActivator")]
+	public void One_member_list_serves_both_directions()
+	{
+		// The same declaration authors the sending node's resolvers and offers the reading node's bindable fields.
+		IReadOnlyList<AbilityActivationDataMember> members = new DeclaredInputShoutProvider().Members;
+
+		members.Should().ContainSingle();
+		members[0].Name.Should().Be("Volume");
+		members[0].ValueType.Should().Be(typeof(int));
+	}
+
 	private static AbilityHandle GrantTypedAbility(
 		TestEntity owner,
 		string name,
@@ -183,8 +195,8 @@ public class AbilityActivatorResolverTests(TagsAndCuesFixture tagsAndCuesFixture
 
 	private sealed class DeclaredInputShoutProvider : AbilityActivationDataProvider<Shout>
 	{
-		public override IReadOnlyList<AbilityActivationDataInput> Inputs =>
-			[new AbilityActivationDataInput("Volume", typeof(int))];
+		public override IReadOnlyList<AbilityActivationDataMember> Members =>
+			[new AbilityActivationDataMember("Volume", typeof(int))];
 
 		public override Shout CreateData(GraphContext graphContext, AbilityActivationDataInputs inputs)
 		{
