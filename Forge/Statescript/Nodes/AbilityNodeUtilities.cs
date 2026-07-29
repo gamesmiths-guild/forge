@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Statescript.Nodes;
@@ -85,6 +86,26 @@ internal static class AbilityNodeUtilities
 
 		abilityData = default;
 		return false;
+	}
+
+	/// <summary>
+	/// Resolves an optional activation-data input to the <see cref="AbilityActivator"/> that carries the graph's custom
+	/// activation data.
+	/// </summary>
+	/// <param name="graphContext">The graph execution context.</param>
+	/// <param name="activationDataInputName">The bound name of the activation data input property.</param>
+	/// <returns>The resolved activator, or <see langword="null"/> when the input is unbound or does not resolve, in
+	/// which case the ability is activated without custom data.</returns>
+	public static AbilityActivator? ResolveActivator(GraphContext graphContext, StringKey activationDataInputName)
+	{
+		if (activationDataInputName != StringKey.Empty
+			&& graphContext.TryResolveObject(activationDataInputName, typeof(AbilityActivator), out object? resolved)
+			&& resolved is AbilityActivator activator)
+		{
+			return activator;
+		}
+
+		return null;
 	}
 
 	/// <summary>

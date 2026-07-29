@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Statescript.Properties;
 
 namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 
@@ -14,6 +15,10 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 /// the grant, defaulting to the ability context's owner when unbound. The level input defaults to the ability
 /// context's level, or <c>1</c> without a context. The optional target input is passed as the activation target.
 /// </para>
+/// <para>The optional activation-data input supplies an <see cref="AbilityActivator"/> (typically built by an
+/// <see cref="Providers.IAbilityActivationDataProvider"/>) carrying strongly-typed data for the activation. Since the
+/// ability being activated is known up front, the provider's data type can be matched to it. When the input is unbound,
+/// the ability is activated without custom data.</para>
 /// </remarks>
 /// <param name="levelOverridePolicy">When the ability is already granted, which level relationships override the
 /// existing level.</param>
@@ -40,6 +45,11 @@ public class GrantAbilityAndActivateOnceNode(LevelComparison levelOverridePolicy
 	/// </summary>
 	public const byte TargetInput = 3;
 
+	/// <summary>
+	/// Input property index for the optional custom activation data.
+	/// </summary>
+	public const byte ActivationDataInput = 4;
+
 	private readonly LevelComparison _levelOverridePolicy = levelOverridePolicy;
 
 	/// <inheritdoc/>
@@ -53,6 +63,7 @@ public class GrantAbilityAndActivateOnceNode(LevelComparison levelOverridePolicy
 		inputProperties.Add(new InputProperty("Entity", typeof(IForgeEntity)));
 		inputProperties.Add(new InputProperty("Level", typeof(int)));
 		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
+		inputProperties.Add(new InputProperty("Activation Data", typeof(AbilityActivator)));
 	}
 
 	/// <inheritdoc/>
@@ -79,6 +90,22 @@ public class GrantAbilityAndActivateOnceNode(LevelComparison levelOverridePolicy
 		IForgeEntity? target = AbilityNodeUtilities.ResolveOptionalEntity(
 			graphContext,
 			InputProperties[TargetInput].BoundName);
+
+		AbilityActivator? activator = AbilityNodeUtilities.ResolveActivator(
+			graphContext,
+			InputProperties[ActivationDataInput].BoundName);
+
+		if (activator is not null)
+		{
+			return activator.GrantAndActivateOnce(
+				entity.Abilities,
+				abilityData,
+				level,
+				_levelOverridePolicy,
+				target,
+				source: null,
+				graphContext);
+		}
 
 		entity.Abilities.GrantAbilityAndActivateOnce(
 			abilityData,
