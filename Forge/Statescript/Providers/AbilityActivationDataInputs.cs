@@ -6,7 +6,7 @@ namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
 /// Provides the resolved values for the inputs an <see cref="IAbilityActivationDataProvider"/> declared through
-/// <see cref="IAbilityActivationDataProvider.Inputs"/>. Values are resolved lazily against the current
+/// <see cref="IAbilityActivationDataProvider.Members"/>. Values are resolved lazily against the current
 /// <see cref="GraphContext"/> when read, so an input that the provider never reads is never evaluated.
 /// </summary>
 public sealed class AbilityActivationDataInputs
