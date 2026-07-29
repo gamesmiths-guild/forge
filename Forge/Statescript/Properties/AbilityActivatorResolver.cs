@@ -11,12 +11,12 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// through the generic (non-boxing) activation APIs.
 /// </summary>
 /// <remarks>
-/// When the provider declares authored inputs, the matching <paramref name="inputResolvers"/> resolve them on demand as
-/// the data is built.
+/// When the provider declares members, the matching <paramref name="inputResolvers"/> resolve them on demand as the
+/// data is built.
 /// </remarks>
 /// <param name="provider">The provider that builds the activation data from the graph state.</param>
-/// <param name="inputResolvers">The resolvers for the provider's declared inputs, keyed by input name. May be
-/// <see langword="null"/> when the provider declares no inputs.</param>
+/// <param name="inputResolvers">The resolvers for the provider's declared members, keyed by input name. May be
+/// <see langword="null"/> when the provider declares no members.</param>
 public class AbilityActivatorResolver(
 	IAbilityActivationDataProvider provider,
 	IReadOnlyDictionary<string, IPropertyResolver>? inputResolvers = null) : ObjectResolver<AbilityActivator>

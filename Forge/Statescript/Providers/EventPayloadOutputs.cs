@@ -6,7 +6,7 @@ namespace Gamesmiths.Forge.Statescript.Providers;
 
 /// <summary>
 /// Writes the values an <see cref="IEventPayloadProvider"/> extracts from a received event payload to the graph
-/// variables bound to the provider's declared <see cref="IEventPayloadProvider.Members"/>. Output names with no binding
+/// variables bound to the provider's declared <see cref="IEventPayloadProvider.Members"/>. Member names with no binding
 /// are skipped.
 /// </summary>
 public sealed class EventPayloadOutputs

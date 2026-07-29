@@ -13,8 +13,8 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// activation nodes to reach the generic activation APIs.
 /// </summary>
 /// <param name="provider">The provider that builds the activation data.</param>
-/// <param name="inputResolvers">The resolvers for the provider's declared inputs, keyed by input name. May be
-/// <see langword="null"/> when the provider declares no inputs.</param>
+/// <param name="inputResolvers">The resolvers for the provider's declared members, keyed by input name. May be
+/// <see langword="null"/> when the provider declares no members.</param>
 public sealed class AbilityActivator(
 	IAbilityActivationDataProvider provider,
 	IReadOnlyDictionary<string, IPropertyResolver>? inputResolvers)
