@@ -15,18 +15,15 @@ This is the event-side analog of [EffectContextDataResolver](effect-context-data
 
 ## Defining a provider
 
-Derive from `EventPayloadProvider<TPayload>` and override `CreatePayload` (build) and `WriteOutputs` (decompose). Declare `Inputs` to author values on the raise node, and `Outputs` to bind graph variables on the listener node.
+Derive from `EventPayloadProvider<TPayload>` and override `CreatePayload` (build) and `WriteOutputs` (decompose). Declare `Members` **once**: each one is authored on the raise node and bound to a graph variable on the listener node.
 
 ```csharp
 public sealed record HitEventPayload(int Damage, bool IsCritical);
 
 public sealed class HitEventPayloadProvider : EventPayloadProvider<HitEventPayload>
 {
-    public override IReadOnlyList<EventPayloadInput> Inputs =>
-        [new EventPayloadInput("Damage", typeof(int)), new EventPayloadInput("IsCritical", typeof(bool))];
-
-    public override IReadOnlyList<EventPayloadOutput> Outputs =>
-        [new EventPayloadOutput("Damage", typeof(int)), new EventPayloadOutput("IsCritical", typeof(bool))];
+    public override IReadOnlyList<EventPayloadMember> Members =>
+        [new EventPayloadMember("Damage", typeof(int)), new EventPayloadMember("IsCritical", typeof(bool))];
 
     public override HitEventPayload CreatePayload(GraphContext graphContext, EventPayloadInputs inputs)
     {
@@ -41,7 +38,9 @@ public sealed class HitEventPayloadProvider : EventPayloadProvider<HitEventPaylo
 }
 ```
 
-`EventPayloadInputs.Get<T>` reads a declared input (`default` when unbound); `EventPayloadOutputs.Set<T>` writes an unmanaged value, and `SetObject` writes a reference value, to the variable bound to the named output (skipped when the output has no binding). Declared input/output value types must be supported by `Variant128`; a provider that needs object-lane values can read them directly from `graphContext` (build) or write them with `SetObject` (decompose).
+`EventPayloadInputs.Get<T>` reads a declared member on the raise side (`default` when unbound); `EventPayloadOutputs.Set<T>` writes an unmanaged value, and `SetObject` writes a reference value, to the variable bound to that member on the listener side (skipped when it has no binding). Declared value types must be supported by `Variant128`; a provider that needs object-lane values can read them directly from `graphContext` when building and write them with `SetObject` when decomposing.
+
+Both methods key off the declared names, so the two directions stay in step by construction — there is no separate output list that could drift from the input list.
 
 ## Raise side: `EventPayloadResolver`
 
