@@ -97,5 +97,6 @@ applyEffect.BindInput(ApplyEffectNode.ContextDataInput, "damageContext");
 - [Resolvers Overview](README.md)
 - [EffectFromDataResolver](effect-from-data-resolver.md)
 - [AbilityActivationDataResolver](ability-activation-data-resolver.md)
+- [AbilityActivatorResolver](ability-activator-resolver.md) — the same pattern for ability activations
 - [ApplyEffectNode](../nodes/action/apply-effect-node.md)
 - [EffectNode](../nodes/state/effect-node.md)

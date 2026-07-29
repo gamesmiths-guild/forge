@@ -50,6 +50,7 @@ These resolvers read from the ability driving the current graph (through the act
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
+| [AbilityActivatorResolver](ability-activator-resolver.md) | `AbilityActivator` | Produces custom activation data for an ability activation via an `IAbilityActivationDataProvider`. |
 | [AbilityCooldownResolver](ability-cooldown-resolver.md) | `float` | Reads a cooldown value (remaining time, total time, or remaining fraction) from an ability. |
 | [AbilityCostResolver](ability-cost-resolver.md) | `int` | Reads the evaluated cost of an ability for a specific attribute. |
 | [AbilityStateResolver](ability-state-resolver.md) | `bool` | Reads a state flag (is active, is inhibited, is valid) from an ability. |

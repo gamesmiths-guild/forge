@@ -48,6 +48,7 @@ graph.VariableDefinitions.DefineProperty("scaledDistance",
 ## See Also
 
 - [Resolvers Overview](README.md)
+- [AbilityActivatorResolver](ability-activator-resolver.md) — the inverse: builds the activation data a graph sends
 - [AbilityMagnitudeResolver](ability-magnitude-resolver.md)
 - [Ability Integration](../ability-integration.md)
 - [Custom Resolvers](../custom-resolvers.md)

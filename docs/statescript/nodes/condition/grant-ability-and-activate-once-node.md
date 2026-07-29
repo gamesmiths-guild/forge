@@ -40,11 +40,12 @@ new GrantAbilityAndActivateOnceNode(levelOverridePolicy = LevelComparison.None)
 | 1 | Entity | `IForgeEntity` | Optional. The entity to grant on. Defaults to the ability context's owner. |
 | 2 | Level | `int` | Optional. The grant level. Defaults to the context level, or `1`. |
 | 3 | Target | `IForgeEntity` | Optional. Passed as the activation target. |
+| 4 | Activation Data | `AbilityActivator` | Optional. Custom activation data passed to the ability. |
 
 ## Behavior
 
 1. Resolves the ability data, entity (default owner), level, and optional target.
-2. Calls `EntityAbilities.GrantAbilityAndActivateOnce(...)`.
+2. Calls `EntityAbilities.GrantAbilityAndActivateOnce(...)`, or `EntityAbilities.GrantAbilityAndActivateOnce<TData>(...)` when the **Activation Data** input is bound.
 3. Routes to **True** when the activation succeeded (judged by the returned failure flags), otherwise **False**.
 
 ## Usage
@@ -63,8 +64,22 @@ graph.AddConnection(new Connection(
     onProcNode.InputPorts[ActionNode.InputPort]));
 ```
 
+## Passing custom activation data
+
+Bind the **Activation Data** input to an [AbilityActivatorResolver](../../resolvers/ability-activator-resolver.md) to hand the procced ability a strongly-typed value built from the current graph state:
+
+```csharp
+graph.VariableDefinitions.DefineObjectProperty("counterData",
+    new AbilityActivatorResolver(new CounterAttackDataProvider()));
+
+proc.BindInput(GrantAbilityAndActivateOnceNode.ActivationDataInput, "counterData");
+```
+
+Unlike [TryActivateAbilitiesByTagNode](try-activate-abilities-by-tag-node.md), the ability being activated is fixed by the **Ability Data** input, so the provider's data type can be matched to it up front. An ability that does not implement `IAbilityBehavior<TData>` still activates and simply ignores the data.
+
 ## See Also
 
 - [Condition Nodes Overview](README.md)
 - [GrantAbilityNode](../state/grant-ability-node.md)
 - [GrantAbilityPermanentlyNode](../action/grant-ability-permanently-node.md)
+- [AbilityActivatorResolver](../../resolvers/ability-activator-resolver.md)
