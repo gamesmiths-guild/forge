@@ -15,34 +15,29 @@ namespace Gamesmiths.Forge.Statescript.Providers;
 /// </summary>
 /// <remarks>
 /// <para>The recommended way is to derive from <see cref="EventPayloadProvider{TPayload}"/>, which supplies the default
-/// (empty) input/output lists and the boxing so implementations work with the typed payload directly.</para>
-/// <para>Declared <see cref="Inputs"/> render as nested resolvers on the raise-event node; declared
-/// <see cref="Outputs"/> render as graph-variable bindings on the event-listener node.</para>
+/// (empty) member list and the boxing so implementations work with the typed payload directly.</para>
+/// <para>A provider declares its <see cref="Members"/> once and both directions use that one list: each member renders
+/// as a nested resolver on the raise-event node and as a graph-variable binding on the event-listener node.</para>
 /// </remarks>
 public interface IEventPayloadProvider
 {
 	/// <summary>
-	/// Gets the authored inputs this provider exposes to the raise-event node. Defaults to an empty list for providers
-	/// that build their payload entirely from the graph state.
+	/// Gets the payload members this provider exposes to the event nodes, authored on the raise side and bound to graph
+	/// variables on the listener side. Defaults to an empty list for providers that build their payload entirely from
+	/// the graph state and do not decompose it into graph variables.
 	/// </summary>
-	IReadOnlyList<EventPayloadInput> Inputs { get; }
-
-	/// <summary>
-	/// Gets the outputs this provider exposes to the event-listener node. Defaults to an empty list for providers whose
-	/// payload is not decomposed into graph variables.
-	/// </summary>
-	IReadOnlyList<EventPayloadOutput> Outputs { get; }
+	IReadOnlyList<EventPayloadMember> Members { get; }
 
 	/// <summary>
 	/// Builds the payload for an event raised by the graph.
 	/// </summary>
 	/// <param name="graphContext">The graph execution context.</param>
-	/// <param name="inputs">The resolved values for the provider's declared <see cref="Inputs"/>.</param>
+	/// <param name="inputs">The resolved values for the provider's declared <see cref="Members"/>.</param>
 	/// <returns>The payload object attached to the raised event.</returns>
 	object CreatePayload(GraphContext graphContext, EventPayloadInputs inputs);
 
 	/// <summary>
-	/// Writes the values of a received payload to the graph variables bound to the declared <see cref="Outputs"/>.
+	/// Writes the values of a received payload to the graph variables bound to the declared <see cref="Members"/>.
 	/// </summary>
 	/// <param name="payload">The payload carried by the received event.</param>
 	/// <param name="outputs">The writer bound to the listener node's output variables.</param>
