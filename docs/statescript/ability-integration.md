@@ -130,6 +130,8 @@ tryActivate.BindInput(TryActivateAbilityNode.ActivationDataInput, "dashData");
 
 The activated ability then receives the value through `IAbilityBehavior<DashData>.OnStarted` — including a `GraphAbilityBehavior<DashData>`, which makes the data readable in the *other* graph through `AbilityActivationDataResolver` or a data binder.
 
+The provider covers **both** directions from a single `Members` declaration: the same entries the sending node authors are the fields the receiving graph binds. So `DashDataProvider` is the whole contract for `DashData` — the reading examples earlier in this page are driven by that one list, not by a second declaration that could drift from it.
+
 The same **Activation Data** input exists on `TryActivateAbilitiesByTagNode` and `GrantAbilityAndActivateOnceNode`. Abilities whose behavior does not accept the provider's type still activate and ignore the data, which is what makes the by-tag node safe when one tag selects abilities with different activation-data types. See [AbilityActivatorResolver](resolvers/ability-activator-resolver.md) for details.
 
 ## Activation Context

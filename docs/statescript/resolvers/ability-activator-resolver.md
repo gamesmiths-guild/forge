@@ -5,7 +5,7 @@
 
 Produces the custom activation data a graph passes when it activates an ability. It delegates to an `IAbilityActivationDataProvider`, which builds a strongly-typed value from the current graph state and hands it to the generic activation APIs. Bind it to the optional **Activation Data** input of [TryActivateAbilityNode](../nodes/condition/try-activate-ability-node.md), [TryActivateAbilitiesByTagNode](../nodes/condition/try-activate-abilities-by-tag-node.md), and [GrantAbilityAndActivateOnceNode](../nodes/condition/grant-ability-and-activate-once-node.md).
 
-This is the inverse of [AbilityActivationDataResolver](ability-activation-data-resolver.md): instead of reading values *out* of typed data the ability system supplied, a provider builds typed data *from* the graph and feeds it *into* the activation, where the activated ability reads it back through its behavior. It is the ability counterpart of [EffectContextDataResolver](effect-context-data-resolver.md) and [EventPayloadResolver](event-payload-resolver.md).
+This is the send end of the channel [AbilityActivationDataResolver](ability-activation-data-resolver.md) reads from: a provider builds typed data *from* the graph and feeds it *into* the activation, where the activated ability reads members back *out*. **Both ends are driven by the same `IAbilityActivationDataProvider`**, so one implementation per activation-data type covers the whole round trip. It is the ability counterpart of [EffectContextDataResolver](effect-context-data-resolver.md) and [EventPayloadResolver](event-payload-resolver.md).
 
 ## Constructor
 
@@ -53,17 +53,17 @@ public sealed class ThrowBehavior : IAbilityBehavior<ThrowData>
 
 When the activated ability is itself driven by a graph, use `GraphAbilityBehavior<ThrowData>` and read the fields back with [AbilityActivationDataResolver](ability-activation-data-resolver.md) (or map them into graph variables with a data binder).
 
-## Declaring authored inputs
+## Declaring members
 
-Instead of reading values from named graph variables, a provider can declare **inputs** that the graph editor renders as nested resolvers directly on the node's Activation Data section. Override `Inputs` and read the resolved values from the `AbilityActivationDataInputs` bag:
+Declare `Members` **once** and both directions use that one list — the sending node authors them, the receiving graph binds them:
 
 ```csharp
 public sealed record AimData(System.Numerics.Vector3 Direction);
 
 public sealed class AimDataProvider : AbilityActivationDataProvider<AimData>
 {
-    public override IReadOnlyList<AbilityActivationDataInput> Inputs =>
-        [new AbilityActivationDataInput("Direction", typeof(System.Numerics.Vector3))];
+    public override IReadOnlyList<AbilityActivationDataMember> Members =>
+        [new AbilityActivationDataMember("Direction", typeof(System.Numerics.Vector3))];
 
     public override AimData CreateData(GraphContext graphContext, AbilityActivationDataInputs inputs)
     {
@@ -72,7 +72,11 @@ public sealed class AimDataProvider : AbilityActivationDataProvider<AimData>
 }
 ```
 
-Each declared input renders its own resolver dropdown (constant, variable, activation data, math, ...) in the editor, so a designer can author the value without touching graph variables. `AbilityActivationDataInputs.Get<T>` reads the resolved value (`default` when no resolver is bound); input value types must be supported by `Variant128`. The same `Name` is used both as the editor label and as the key passed to `Get<T>`.
+On the **sending** side each member renders its own resolver dropdown (constant, variable, activation data, math, ...) on the node's Activation Data section, so a designer can author the value without touching graph variables. `AbilityActivationDataInputs.Get<T>` reads the resolved value (`default` when no resolver is bound).
+
+On the **reading** side the same member is offered as a bindable field of [AbilityActivationDataResolver](ability-activation-data-resolver.md), which reads it off the activation data. So `Name` must match the public field or property on `TData` — the reading side resolves it there by name, and it cannot be an alias.
+
+`ValueType` is the type **as the graph sees it**, so it must be supported by `Variant128` — declare `System.Numerics.Vector3` rather than an engine-specific vector even when `TData` stores the engine's. Converting between the two is `CreateData`'s job on the way in, and the engine integration's on the way out.
 
 ## Behavior
 
