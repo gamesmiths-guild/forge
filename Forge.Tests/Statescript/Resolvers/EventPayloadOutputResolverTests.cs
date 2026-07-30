@@ -76,9 +76,18 @@ public class EventPayloadOutputResolverTests
 		value.Should().Be(11.0);
 	}
 
+	[Fact]
+	[Trait("Resolver", "EventPayloadOutput")]
+	public void One_member_list_serves_both_directions()
+	{
+		// The same declaration drives the raise node's authored resolvers and the listener node's variable bindings.
+		new TestEventPayloadProvider().Members.Should()
+			.ContainSingle().Which.Name.Should().Be(TestEventPayloadProvider.AmountKey);
+	}
+
 	private sealed class FloatPayloadProvider : EventPayloadProvider<float>
 	{
-		public override IReadOnlyList<EventPayloadOutput> Outputs => [new EventPayloadOutput("Value", typeof(float))];
+		public override IReadOnlyList<EventPayloadMember> Members => [new EventPayloadMember("Value", typeof(float))];
 
 		public override float CreatePayload(GraphContext graphContext, EventPayloadInputs inputs)
 		{

@@ -5,6 +5,8 @@
 
 Reads a public field or property directly from `AbilityBehaviorContext<TData>.Data`.
 
+This is the read end of the channel [AbilityActivatorResolver](ability-activator-resolver.md) sends on. In a graph editor the two are driven by the same `IAbilityActivationDataProvider`: its `Members` are the fields this resolver offers, and they are the very same declarations the sending side authors — so one provider covers the round trip. Constructed directly in C#, this resolver needs no provider at all — just the type and member name.
+
 ## Constructor
 
 ```csharp
@@ -48,6 +50,7 @@ graph.VariableDefinitions.DefineProperty("scaledDistance",
 ## See Also
 
 - [Resolvers Overview](README.md)
+- [AbilityActivatorResolver](ability-activator-resolver.md) — the other end: builds the activation data a graph sends, from the same provider
 - [AbilityMagnitudeResolver](ability-magnitude-resolver.md)
 - [Ability Integration](../ability-integration.md)
 - [Custom Resolvers](../custom-resolvers.md)

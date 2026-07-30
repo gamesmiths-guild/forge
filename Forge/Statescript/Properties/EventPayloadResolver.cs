@@ -14,7 +14,7 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// the payload is built.
 /// </remarks>
 /// <param name="provider">The provider that builds the payload from the graph state.</param>
-/// <param name="inputResolvers">The resolvers for the provider's declared inputs, keyed by input name. May be
+/// <param name="inputResolvers">The resolvers for the provider's declared members, keyed by member name. May be
 /// <see langword="null"/> when the provider declares no inputs.</param>
 public class EventPayloadResolver(
 	IEventPayloadProvider provider,

@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
@@ -13,6 +14,11 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 /// <para>The tag input accepts a single <see cref="Tag"/> or an array of tags. The entity input selects whose
 /// abilities are activated, defaulting to the ability context's owner when unbound. The optional target input is
 /// passed as the activation target.</para>
+/// <para>The optional activation-data input supplies an <see cref="AbilityActivator"/> (typically built by an
+/// <see cref="Providers.IAbilityActivationDataProvider"/>) carrying strongly-typed data for the activations. Because a
+/// tag can select several abilities, the data is not guaranteed to match all of them: abilities whose behavior does not
+/// accept the provider's data type still activate and simply ignore it. When the input is unbound, the abilities are
+/// activated without custom data.</para>
 /// </remarks>
 public class TryActivateAbilitiesByTagNode : ConditionNode
 {
@@ -31,6 +37,11 @@ public class TryActivateAbilitiesByTagNode : ConditionNode
 	/// </summary>
 	public const byte TargetInput = 2;
 
+	/// <summary>
+	/// Input property index for the optional custom activation data.
+	/// </summary>
+	public const byte ActivationDataInput = 3;
+
 	/// <inheritdoc/>
 	public override string Description =>
 		"Tries to activate abilities matching the given tags; True when any activated.";
@@ -41,6 +52,7 @@ public class TryActivateAbilitiesByTagNode : ConditionNode
 		inputProperties.Add(new InputProperty("Tags", typeof(Tag)));
 		inputProperties.Add(new InputProperty("Entity", typeof(IForgeEntity)));
 		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
+		inputProperties.Add(new InputProperty("Activation Data", typeof(AbilityActivator)));
 	}
 
 	/// <inheritdoc/>
@@ -69,6 +81,12 @@ public class TryActivateAbilitiesByTagNode : ConditionNode
 			graphContext,
 			InputProperties[TargetInput].BoundName);
 
-		return entity.Abilities.TryActivateAbilitiesByTag(tags, target, out _);
+		AbilityActivator? activator = AbilityNodeUtilities.ResolveActivator(
+			graphContext,
+			InputProperties[ActivationDataInput].BoundName);
+
+		return activator is not null
+			? activator.ActivateByTag(entity.Abilities, tags, target, graphContext)
+			: entity.Abilities.TryActivateAbilitiesByTag(tags, target, out _);
 	}
 }

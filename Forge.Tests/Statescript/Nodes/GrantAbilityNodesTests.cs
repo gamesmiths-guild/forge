@@ -9,6 +9,8 @@ using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Action;
 using Gamesmiths.Forge.Statescript.Nodes.Condition;
 using Gamesmiths.Forge.Statescript.Nodes.State;
+using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Statescript.Providers;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
@@ -368,5 +370,193 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		// Transient grant: the ability is removed after it ends.
 		owner.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle);
 		handle.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Graph", "GrantAbility")]
+	public void Try_activate_ability_node_passes_activation_data_to_the_ability()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var captured = new List<Shout>();
+
+		AbilityHandle handle = owner.Abilities.GrantAbilityPermanently(
+			new AbilityData("Shouter", behaviorFactory: () => new ShoutBehavior(captured)),
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("volume", 8);
+		graph.VariableDefinitions.DefineObjectVariable("ability", handle);
+		graph.VariableDefinitions.DefineObjectProperty(
+			"activationData",
+			new AbilityActivatorResolver(new ShoutProvider()));
+
+		var activateNode = new TryActivateAbilityNode();
+		activateNode.BindInput(TryActivateAbilityNode.AbilityInput, "ability");
+		activateNode.BindInput(TryActivateAbilityNode.ActivationDataInput, "activationData");
+
+		var onTrue = new TrackingActionNode();
+
+		graph.AddNode(activateNode);
+		graph.AddNode(onTrue);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			activateNode.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			activateNode.OutputPorts[ConditionNode.TruePort],
+			onTrue.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		onTrue.ExecutionCount.Should().Be(1);
+		captured.Should().ContainSingle().Which.Volume.Should().Be(8);
+	}
+
+	[Fact]
+	[Trait("Graph", "GrantAbility")]
+	public void Try_activate_abilities_by_tag_node_passes_activation_data_to_matching_abilities()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var abilityTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		TagContainer abilityTags = new(_tagsManager, [abilityTag]);
+
+		var captured = new List<Shout>();
+		int untypedStarts = 0;
+
+		owner.Abilities.GrantAbilityPermanently(
+			new AbilityData(
+				"Typed",
+				abilityTags: abilityTags,
+				behaviorFactory: () => new ShoutBehavior(captured)),
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		owner.Abilities.GrantAbilityPermanently(
+			new AbilityData(
+				"Untyped",
+				abilityTags: abilityTags,
+				behaviorFactory: () => new CountingBehavior(() => untypedStarts++)),
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("volume", 4);
+		graph.VariableDefinitions.DefineObjectVariable("tag", abilityTag);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", owner);
+		graph.VariableDefinitions.DefineObjectProperty(
+			"activationData",
+			new AbilityActivatorResolver(new ShoutProvider()));
+
+		var activateNode = new TryActivateAbilitiesByTagNode();
+		activateNode.BindInput(TryActivateAbilitiesByTagNode.TagInput, "tag");
+		activateNode.BindInput(TryActivateAbilitiesByTagNode.EntityInput, "entity");
+		activateNode.BindInput(TryActivateAbilitiesByTagNode.ActivationDataInput, "activationData");
+
+		var onTrue = new TrackingActionNode();
+
+		graph.AddNode(activateNode);
+		graph.AddNode(onTrue);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			activateNode.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			activateNode.OutputPorts[ConditionNode.TruePort],
+			onTrue.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		onTrue.ExecutionCount.Should().Be(1);
+
+		// The matching ability got the data; the one that does not accept it still activated without it.
+		captured.Should().ContainSingle().Which.Volume.Should().Be(4);
+		untypedStarts.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Graph", "GrantAbility")]
+	public void Grant_ability_and_activate_once_node_passes_activation_data_to_the_ability()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var captured = new List<Shout>();
+
+		var abilityData = new AbilityData("Proc", behaviorFactory: () => new ShoutBehavior(captured));
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("volume", 12);
+		graph.VariableDefinitions.DefineObjectVariable("abilityData", abilityData);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", owner);
+		graph.VariableDefinitions.DefineObjectProperty(
+			"activationData",
+			new AbilityActivatorResolver(new ShoutProvider()));
+
+		var procNode = new GrantAbilityAndActivateOnceNode();
+		procNode.BindInput(GrantAbilityAndActivateOnceNode.AbilityDataInput, "abilityData");
+		procNode.BindInput(GrantAbilityAndActivateOnceNode.EntityInput, "entity");
+		procNode.BindInput(GrantAbilityAndActivateOnceNode.ActivationDataInput, "activationData");
+
+		var onTrue = new TrackingActionNode();
+
+		graph.AddNode(procNode);
+		graph.AddNode(onTrue);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			procNode.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			procNode.OutputPorts[ConditionNode.TruePort],
+			onTrue.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		onTrue.ExecutionCount.Should().Be(1);
+		captured.Should().ContainSingle().Which.Volume.Should().Be(12);
+
+		// Transient grant: the ability is removed after it ends.
+		owner.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle);
+		handle.Should().BeNull();
+	}
+
+	private sealed record Shout(int Volume);
+
+	private sealed class ShoutProvider : AbilityActivationDataProvider<Shout>
+	{
+		public override Shout CreateData(GraphContext graphContext, AbilityActivationDataInputs inputs)
+		{
+			graphContext.TryResolve("volume", out int volume);
+			return new Shout(volume);
+		}
+	}
+
+	private sealed class ShoutBehavior(List<Shout> captured) : IAbilityBehavior<Shout>
+	{
+		public void OnStarted(AbilityBehaviorContext context, Shout data)
+		{
+			captured.Add(data);
+			context.InstanceHandle.End();
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
+			// No-op.
+		}
+	}
+
+	private sealed class CountingBehavior(System.Action onStarted) : IAbilityBehavior
+	{
+		public void OnStarted(AbilityBehaviorContext context)
+		{
+			onStarted();
+			context.InstanceHandle.End();
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
+			// No-op.
+		}
 	}
 }

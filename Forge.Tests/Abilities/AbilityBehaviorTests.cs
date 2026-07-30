@@ -375,6 +375,96 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	}
 
 	[Fact]
+	[Trait("Ability Ended Event", null)]
+	public void Ability_is_granted_and_activated_once_with_typed_data()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		TestActivationData? capturedData = null;
+
+		AbilityData data = CreateAbilityData(
+			"TypedProc",
+			behaviorFactory: () => new TypedPayloadBehavior<TestActivationData>((_, x) => capturedData = x));
+
+		entity.Abilities.GrantAbilityAndActivateOnce(
+			data,
+			1,
+			LevelComparison.None,
+			new TestActivationData("Proc", 7),
+			out AbilityActivationFailures failureFlags);
+
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+		capturedData.Should().NotBeNull();
+		capturedData!.StringValue.Should().Be("Proc");
+		capturedData.IntValue.Should().Be(7);
+
+		// Transient grant: the behavior ends the instance, so the ability is removed again.
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("CustomContext", null)]
+	public void Activate_by_tag_passes_typed_data_to_matching_abilities()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		TagContainer abilityTags = new(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"]));
+		TestActivationData? capturedData = null;
+
+		AbilityData data = CreateAbilityData(
+			"TaggedTyped",
+			behaviorFactory: () => new TypedPayloadBehavior<TestActivationData>((_, x) => capturedData = x),
+			abilityTags: abilityTags);
+
+		Grant(entity, data).Should().NotBeNull();
+
+		entity.Abilities.TryActivateAbilitiesByTag(
+			abilityTags,
+			null,
+			new TestActivationData("ByTag", 3),
+			out _).Should().BeTrue();
+
+		capturedData.Should().NotBeNull();
+		capturedData!.StringValue.Should().Be("ByTag");
+		capturedData.IntValue.Should().Be(3);
+	}
+
+	[Fact]
+	[Trait("CustomContext", null)]
+	public void Activate_by_tag_activates_abilities_that_do_not_accept_the_data()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		TagContainer abilityTags = new(_tagsManager, TestUtils.StringToTag(_tagsManager, ["color.red"]));
+
+		AbilityBehaviorContext? matchingContext = null;
+		var mismatchedBehavior = new TrackingBehavior();
+
+		AbilityData matchingData = CreateAbilityData(
+			"AcceptsData",
+			behaviorFactory: () => new TypedPayloadBehavior<TestActivationData>((ctx, _) => matchingContext = ctx),
+			abilityTags: abilityTags);
+
+		// A behavior typed for a different payload, so the by-tag activation cannot hand it the data.
+		AbilityData mismatchedData = CreateAbilityData(
+			"IgnoresData",
+			behaviorFactory: () => mismatchedBehavior,
+			abilityTags: abilityTags);
+
+		Grant(entity, matchingData).Should().NotBeNull();
+		Grant(entity, mismatchedData).Should().NotBeNull();
+
+		entity.Abilities.TryActivateAbilitiesByTag(
+			abilityTags,
+			null,
+			new TestActivationData("Mixed", 1),
+			out _).Should().BeTrue();
+
+		// The matching ability received the typed context...
+		matchingContext.Should().BeOfType<AbilityBehaviorContext<TestActivationData>>();
+
+		// ...and the mismatched one still activated, just without the data.
+		mismatchedBehavior.StartCount.Should().Be(1);
+	}
+
+	[Fact]
 	[Trait("CustomContext", null)]
 	public void Generic_activate_creates_typed_context_with_payload()
 	{

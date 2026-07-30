@@ -14,8 +14,8 @@ namespace Gamesmiths.Forge.Statescript.Providers;
 /// </summary>
 /// <typeparam name="TPayload">The payload type produced and consumed by this provider.</typeparam>
 /// <remarks>
-/// Override <see cref="Inputs"/> and <see cref="Outputs"/> to expose authored resolvers and output bindings in the
-/// editor; read declared inputs from <see cref="EventPayloadInputs"/> and write declared outputs to
+/// Override <see cref="Members"/> to declare the payload's members once. They become authored resolvers on the raise
+/// node, read from <see cref="EventPayloadInputs"/>, and graph-variable bindings on the listener node, written through
 /// <see cref="EventPayloadOutputs"/>.
 /// </remarks>
 public abstract class EventPayloadProvider<TPayload> : IEventPayloadProvider
@@ -23,26 +23,23 @@ public abstract class EventPayloadProvider<TPayload> : IEventPayloadProvider
 	/// <summary>
 	/// Builds the payload for the current graph execution. Read whatever graph state the payload is derived from
 	/// (graph/shared variables, attributes, activation data, and so on) from <paramref name="graphContext"/>, and read
-	/// declared <see cref="Inputs"/> from <paramref name="inputs"/>.
+	/// declared <see cref="Members"/> from <paramref name="inputs"/>.
 	/// </summary>
 	/// <param name="graphContext">The graph execution context.</param>
-	/// <param name="inputs">The resolved values for the provider's declared <see cref="Inputs"/>.</param>
+	/// <param name="inputs">The resolved values for the provider's declared <see cref="Members"/>.</param>
 	/// <returns>The payload to attach to the raised event.</returns>
 	public abstract TPayload CreatePayload(GraphContext graphContext, EventPayloadInputs inputs);
 
 	/// <summary>
 	/// Writes the values of a received payload to the listener's bound graph variables through
-	/// <paramref name="outputs"/>.
+	/// <paramref name="outputs"/>, keyed by the declared <see cref="Members"/>.
 	/// </summary>
 	/// <param name="payload">The payload carried by the received event.</param>
 	/// <param name="outputs">The writer bound to the listener node's output variables.</param>
 	public abstract void WriteOutputs(TPayload payload, EventPayloadOutputs outputs);
 
 	/// <inheritdoc/>
-	public virtual IReadOnlyList<EventPayloadInput> Inputs => [];
-
-	/// <inheritdoc/>
-	public virtual IReadOnlyList<EventPayloadOutput> Outputs => [];
+	public virtual IReadOnlyList<EventPayloadMember> Members => [];
 
 	/// <inheritdoc/>
 	object IEventPayloadProvider.CreatePayload(GraphContext graphContext, EventPayloadInputs inputs)

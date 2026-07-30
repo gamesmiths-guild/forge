@@ -105,6 +105,35 @@ var behavior = new GraphAbilityBehavior<DashData>(graph, (data, variables) =>
 
 The data binder runs after variables are initialized from definitions but before the Entry node fires, ensuring nodes can read the activation data from their first message.
 
+### Sending Typed Activation Data from a Graph
+
+The examples above are the *receiving* side. A graph can also *produce* the activation data when it activates another ability, through an `IAbilityActivationDataProvider`:
+
+```csharp
+public sealed class DashDataProvider : AbilityActivationDataProvider<DashData>
+{
+    public override DashData CreateData(GraphContext graphContext, AbilityActivationDataInputs inputs)
+    {
+        graphContext.TryResolve("distance", out float distance);
+        graphContext.TryResolve("speed", out float speed);
+        return new DashData(distance, speed);
+    }
+}
+
+graph.VariableDefinitions.DefineObjectProperty("dashData",
+    new AbilityActivatorResolver(new DashDataProvider()));
+
+var tryActivate = new TryActivateAbilityNode();
+tryActivate.BindInput(TryActivateAbilityNode.AbilityInput, "dashAbility");
+tryActivate.BindInput(TryActivateAbilityNode.ActivationDataInput, "dashData");
+```
+
+The activated ability then receives the value through `IAbilityBehavior<DashData>.OnStarted` — including a `GraphAbilityBehavior<DashData>`, which makes the data readable in the *other* graph through `AbilityActivationDataResolver` or a data binder.
+
+The provider covers **both** directions from a single `Members` declaration: the same entries the sending node authors are the fields the receiving graph binds. So `DashDataProvider` is the whole contract for `DashData` — the reading examples earlier in this page are driven by that one list, not by a second declaration that could drift from it.
+
+The same **Activation Data** input exists on `TryActivateAbilitiesByTagNode` and `GrantAbilityAndActivateOnceNode`. Abilities whose behavior does not accept the provider's type still activate and ignore the data, which is what makes the by-tag node safe when one tag selects abilities with different activation-data types. See [AbilityActivatorResolver](resolvers/ability-activator-resolver.md) for details.
+
 ## Activation Context
 
 When a graph is driven by an ability, the `AbilityBehaviorContext` is stored in `GraphContext.ActivationContext`. Nodes can access it to interact with the ability system:

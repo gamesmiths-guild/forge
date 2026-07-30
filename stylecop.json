@@ -10,14 +10,19 @@
     "documentationRules": {
       "companyName": "Gamesmiths Guild",
       "copyrightText": "Copyright © {companyName}.",
-      "xmlHeader" : false,
-      "documentInterfaces" : true,
-      "documentExposedElements" : true,
-      "documentInternalElements" : false,
-      "documentPrivateElements" : false,
-      "documentPrivateFields" : false,
-      "documentationCulture" : "en-US",
-      "fileNamingConvention" : "stylecop"
+      "xmlHeader": false,
+      "documentInterfaces": true,
+      "documentExposedElements": true,
+      "documentInternalElements": false,
+      "documentPrivateElements": false,
+      "documentPrivateFields": false,
+      "documentationCulture": "en-US",
+      "fileNamingConvention": "stylecop"
+    },
+    "indentation": {
+      "useTabs": true,
+      "indentationSize": 4,
+      "tabSize": 4
     },
     "layoutRules": {
       "newlineAtEndOfFile": "require"

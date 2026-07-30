@@ -120,32 +120,65 @@ public class EntityAbilities(IForgeEntity owner)
 		IForgeEntity? target,
 		out AbilityActivationFailures[] failureFlags)
 	{
-		if (tagsToActivate is null)
+		if (!TryBeginActivationByTag(tagsToActivate, out AbilityHandle[] handles, out failureFlags))
 		{
-			failureFlags =
-				[.. Enumerable.Repeat(AbilityActivationFailures.InvalidTagConfiguration, GrantedAbilities.Count)];
 			return false;
 		}
 
 		bool anyActivated = false;
-		failureFlags =
-				[.. Enumerable.Repeat(AbilityActivationFailures.TargetTagNotPresent, GrantedAbilities.Count)];
 
-		AbilityHandle[] array = [.. GrantedAbilities];
-		for (int i = 0; i < array.Length; i++)
+		for (int i = 0; i < handles.Length; i++)
 		{
-			AbilityHandle? handle = array[i];
-			Ability? ability = handle?.Ability;
-			if (ability is null)
+			Ability? ability = handles[i]?.Ability;
+			if (ability is null || !MatchesTags(ability, tagsToActivate))
 			{
 				continue;
 			}
 
-			TagContainer? abilityTags = ability.AbilityData.AbilityTags;
-			if (abilityTags?.HasAny(tagsToActivate) == true)
+			anyActivated |= ability.TryActivateAbility(target, out failureFlags[i], 0f);
+		}
+
+		return anyActivated;
+	}
+
+	/// <summary>
+	/// Tries to activate all abilities whose AbilityTags overlap the provided tags, passing strongly-typed activation
+	/// data to each of them.
+	/// </summary>
+	/// <remarks>
+	/// Because a tag can select several abilities, <typeparamref name="TData"/> is not guaranteed to match every one of
+	/// them. Abilities whose behavior does not accept <typeparamref name="TData"/> simply ignore it and start through
+	/// the untyped path, so mismatched data is never an error.
+	/// </remarks>
+	/// <typeparam name="TData">The type of the data to pass to the ability behaviors.</typeparam>
+	/// <param name="tagsToActivate">Tags that identify abilities to activate.</param>
+	/// <param name="target">Optional target for the abilities.</param>
+	/// <param name="data">Additional data to pass to the behaviors.</param>
+	/// <param name="failureFlags">Flags indicating the failure reasons for the abilities activation.</param>
+	/// <returns>Returns <see langword="true"/> if any abilities were activated; otherwise, <see langword="false"/>.
+	/// </returns>
+	public bool TryActivateAbilitiesByTag<TData>(
+		TagContainer tagsToActivate,
+		IForgeEntity? target,
+		TData data,
+		out AbilityActivationFailures[] failureFlags)
+	{
+		if (!TryBeginActivationByTag(tagsToActivate, out AbilityHandle[] handles, out failureFlags))
+		{
+			return false;
+		}
+
+		bool anyActivated = false;
+
+		for (int i = 0; i < handles.Length; i++)
+		{
+			Ability? ability = handles[i]?.Ability;
+			if (ability is null || !MatchesTags(ability, tagsToActivate))
 			{
-				anyActivated |= ability.TryActivateAbility(target, out failureFlags[i], 0f);
+				continue;
 			}
+
+			anyActivated |= ability.TryActivateAbility(target, out failureFlags[i], data, 0f);
 		}
 
 		return anyActivated;
@@ -170,16 +203,56 @@ public class EntityAbilities(IForgeEntity owner)
 		IForgeEntity? targetEntity = null,
 		IForgeEntity? sourceEntity = null)
 	{
-		var grantSource = new TransientGrantSource();
-
-		AbilityHandle abilityHandle = GrantAbility(
+		AbilityHandle abilityHandle = GrantTransiently(
 			abilityData,
 			abilityLevel,
 			levelOverridePolicy,
-			grantSource,
-			sourceEntity);
+			sourceEntity,
+			out TransientGrantSource grantSource);
 
 		abilityHandle.Activate(out failureFlags, targetEntity);
+
+		RemoveGrantedAbility(abilityHandle, grantSource);
+
+		return abilityHandle.IsValid ? abilityHandle : null;
+	}
+
+	/// <summary>
+	/// Grants an ability and activates it once with strongly-typed activation data. The ability grant will be removed
+	/// if activation fails or after it ends.
+	/// </summary>
+	/// <remarks>
+	/// Unlike <see cref="TryActivateAbilitiesByTag{TData}"/>, the activated ability is known up front, so
+	/// <typeparamref name="TData"/> can be matched to it. An ability whose behavior does not accept
+	/// <typeparamref name="TData"/> still activates, ignoring the data.
+	/// </remarks>
+	/// <typeparam name="TData">The type of the data to pass to the ability behavior.</typeparam>
+	/// <param name="abilityData">The configuration data of the ability to grant and activate.</param>
+	/// <param name="abilityLevel">The level at which to grant the ability.</param>
+	/// <param name="levelOverridePolicy">The policy for overriding the level of an existing granted ability.</param>
+	/// <param name="data">Additional data to pass to the behavior.</param>
+	/// <param name="failureFlags">Flags indicating the failure reasons for the ability activation.</param>
+	/// <param name="targetEntity">The target entity for the ability activation, if any.</param>
+	/// <param name="sourceEntity">The source entity of the granted ability, if any.</param>
+	/// <returns>The handle of the granted and activated ability, or <see langword="null"/> if activation failed.
+	/// </returns>
+	public AbilityHandle? GrantAbilityAndActivateOnce<TData>(
+		AbilityData abilityData,
+		int abilityLevel,
+		LevelComparison levelOverridePolicy,
+		TData data,
+		out AbilityActivationFailures failureFlags,
+		IForgeEntity? targetEntity = null,
+		IForgeEntity? sourceEntity = null)
+	{
+		AbilityHandle abilityHandle = GrantTransiently(
+			abilityData,
+			abilityLevel,
+			levelOverridePolicy,
+			sourceEntity,
+			out TransientGrantSource grantSource);
+
+		abilityHandle.Activate(data, out failureFlags, targetEntity);
 
 		RemoveGrantedAbility(abilityHandle, grantSource);
 
@@ -357,6 +430,48 @@ public class EntityAbilities(IForgeEntity owner)
 	internal void NotifyAbilityEnded(AbilityEndedData abilityEndedData)
 	{
 		OnAbilityEnded?.Invoke(abilityEndedData);
+	}
+
+	private static bool MatchesTags(Ability ability, TagContainer tagsToActivate)
+	{
+		return ability.AbilityData.AbilityTags?.HasAny(tagsToActivate) == true;
+	}
+
+	// Snapshots the granted abilities and seeds the per-ability failure flags for a tag-driven activation. The snapshot
+	// keeps the indices stable while activations grant or remove other abilities.
+	private bool TryBeginActivationByTag(
+		TagContainer tagsToActivate,
+		out AbilityHandle[] handles,
+		out AbilityActivationFailures[] failureFlags)
+	{
+		if (tagsToActivate is null)
+		{
+			handles = [];
+			failureFlags =
+				[.. Enumerable.Repeat(AbilityActivationFailures.InvalidTagConfiguration, GrantedAbilities.Count)];
+			return false;
+		}
+
+		handles = [.. GrantedAbilities];
+		failureFlags = [.. Enumerable.Repeat(AbilityActivationFailures.TargetTagNotPresent, GrantedAbilities.Count)];
+		return true;
+	}
+
+	private AbilityHandle GrantTransiently(
+		AbilityData abilityData,
+		int abilityLevel,
+		LevelComparison levelOverridePolicy,
+		IForgeEntity? sourceEntity,
+		out TransientGrantSource grantSource)
+	{
+		grantSource = new TransientGrantSource();
+
+		return GrantAbility(
+			abilityData,
+			abilityLevel,
+			levelOverridePolicy,
+			grantSource,
+			sourceEntity);
 	}
 
 	private void InhibitAbilityBasedOnPolicy(Ability abilityToInhibit, AbilityDeactivationPolicy inhibitionPolicy)

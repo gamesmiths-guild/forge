@@ -137,6 +137,21 @@ else
 
 The ability grant is automatically removed when the ability ends. If activation fails, the grant is removed immediately and the method returns `null`.
 
+A generic overload passes strongly-typed activation data to the procced ability, the same data a behavior reads through `IAbilityBehavior<TData>.OnStarted`:
+
+```csharp
+AbilityHandle? handle = entity.Abilities.GrantAbilityAndActivateOnce(
+    abilityData: consumableAbility,
+    abilityLevel: 1,
+    levelOverridePolicy: LevelComparison.None,
+    data: new ConsumeData(itemId, stackCount),
+    out AbilityActivationFailures failureFlags,
+    targetEntity: enemy,
+    sourceEntity: item);
+```
+
+Because the ability is known up front, `TData` can be matched to it. An ability whose behavior does not accept `TData` still activates, ignoring the data. See [Strongly-Typed Activation Data](#strongly-typed-activation-data) for how behaviors consume it.
+
 ## Grant Sources and Policies
 
 Each time an ability is granted, a **grant source** is created that tracks how that specific grant should behave. An ability can have multiple grant sources if it's granted multiple times (e.g., by different effects or methods).
@@ -302,6 +317,18 @@ if (anyActivated)
 ```
 
 This is useful for input handling where a single button might activate different abilities based on context.
+
+A generic overload passes strongly-typed activation data to every activated ability:
+
+```csharp
+bool anyActivated = entity.Abilities.TryActivateAbilitiesByTag(
+    attackTags,
+    target: enemy,
+    data: new AttackData(comboStep, chargeTime),
+    out AbilityActivationFailures[] failures);
+```
+
+A tag usually selects several abilities, and they need not share an activation-data type. Only abilities whose behavior implements `IAbilityBehavior<TData>` receive the data; the rest still activate and simply ignore it, so mismatched data is never an error. When each ability needs its own payload, activate them individually through their handles instead.
 
 ### Canceling Abilities by Tag
 

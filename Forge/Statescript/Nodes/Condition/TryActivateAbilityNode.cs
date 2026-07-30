@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Statescript.Properties;
 
 namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 
@@ -13,6 +14,9 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 /// <para>The handle input must resolve to an <see cref="AbilityHandle"/>, typically produced by a GetAbilityHandle
 /// resolver or the output of a grant node. The optional target input is passed as the activation target.</para>
 /// <para>The magnitude input must resolve to a <see langword="double"/> and defaults to <c>0</c> when unbound.</para>
+/// <para>The optional activation-data input supplies an <see cref="AbilityActivator"/> (typically built by an
+/// <see cref="Providers.IAbilityActivationDataProvider"/>) carrying strongly-typed data for the activation. When the
+/// input is unbound, the ability is activated without custom data.</para>
 /// </remarks>
 public class TryActivateAbilityNode : ConditionNode
 {
@@ -31,6 +35,11 @@ public class TryActivateAbilityNode : ConditionNode
 	/// </summary>
 	public const byte MagnitudeInput = 2;
 
+	/// <summary>
+	/// Input property index for the optional custom activation data.
+	/// </summary>
+	public const byte ActivationDataInput = 3;
+
 	/// <inheritdoc/>
 	public override string Description => "Tries to activate an ability through its handle; True when activated.";
 
@@ -40,6 +49,7 @@ public class TryActivateAbilityNode : ConditionNode
 		inputProperties.Add(new InputProperty("Ability", typeof(AbilityHandle)));
 		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
 		inputProperties.Add(new InputProperty("Magnitude", typeof(double)));
+		inputProperties.Add(new InputProperty("Activation Data", typeof(AbilityActivator)));
 	}
 
 	/// <inheritdoc/>
@@ -63,6 +73,12 @@ public class TryActivateAbilityNode : ConditionNode
 			magnitude = 0;
 		}
 
-		return handle.Activate(out _, target, (float)magnitude);
+		AbilityActivator? activator = AbilityNodeUtilities.ResolveActivator(
+			graphContext,
+			InputProperties[ActivationDataInput].BoundName);
+
+		return activator is not null
+			? activator.Activate(handle, target, (float)magnitude, graphContext)
+			: handle.Activate(out _, target, (float)magnitude);
 	}
 }
