@@ -13,7 +13,7 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// <see cref="EventManager.Raise{TPayload}(in EventData{TPayload})"/>.
 /// </summary>
 /// <param name="provider">The provider that builds the payload.</param>
-/// <param name="inputResolvers">The resolvers for the provider's declared inputs, keyed by input name. May be
+/// <param name="inputResolvers">The resolvers for the provider's declared members, keyed by member name. May be
 /// <see langword="null"/> when the provider declares no inputs.</param>
 public sealed class EventPayloadRaiser(
 	IEventPayloadProvider provider,

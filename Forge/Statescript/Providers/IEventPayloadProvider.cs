@@ -74,7 +74,7 @@ public interface IEventPayloadProvider
 	/// <param name="target">The event target.</param>
 	/// <param name="magnitude">The event magnitude.</param>
 	/// <param name="graphContext">The graph execution context the payload is built from.</param>
-	/// <param name="inputResolvers">The resolvers for the provider's declared inputs, keyed by input name.</param>
+	/// <param name="inputResolvers">The resolvers for the provider's declared members, keyed by member name.</param>
 	void Raise(
 		EventManager manager,
 		TagContainer eventTags,
