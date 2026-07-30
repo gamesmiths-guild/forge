@@ -55,10 +55,11 @@ public class ExecuteCueNode : ActionNode
 	{
 		inputProperties.Add(new InputProperty("Cue Tags", typeof(Tag)));
 		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
-		inputProperties.Add(new InputProperty("Magnitude", typeof(int)));
-		inputProperties.Add(new InputProperty("Normalized Magnitude", typeof(float)));
-		inputProperties.Add(new InputProperty("Source", typeof(IForgeEntity)));
-		inputProperties.Add(new InputProperty("Custom Parameters", typeof(Dictionary<StringKey, object>)));
+		inputProperties.Add(new InputProperty("Magnitude", typeof(int), IsOptional: true));
+		inputProperties.Add(new InputProperty("Normalized Magnitude", typeof(float), IsOptional: true));
+		inputProperties.Add(new InputProperty("Source", typeof(IForgeEntity), IsOptional: true));
+		inputProperties.Add(
+			new InputProperty("Custom Parameters", typeof(Dictionary<StringKey, object>), IsOptional: true));
 	}
 
 	/// <inheritdoc/>

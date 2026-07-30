@@ -49,7 +49,7 @@ public class ApplyEffectNode : ActionNode
 	{
 		inputProperties.Add(new InputProperty("Effect", typeof(Effect)));
 		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
-		inputProperties.Add(new InputProperty("Context Data", typeof(EffectApplicationContext)));
+		inputProperties.Add(new InputProperty("Context Data", typeof(EffectApplicationContext), IsOptional: true));
 		outputVariables.Add(new OutputVariable("Active Effect", typeof(ActiveEffectHandle)));
 	}
 

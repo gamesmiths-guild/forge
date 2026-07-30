@@ -83,7 +83,7 @@ public class EventListenerNode(bool deactivateOnEvent = false) : StateNode<Event
 	{
 		inputProperties.Add(new InputProperty("Event Tags", typeof(Tag)));
 		inputProperties.Add(new InputProperty("Listen On", typeof(IForgeEntity)));
-		inputProperties.Add(new InputProperty("Payload", typeof(EventPayloadWriter)));
+		inputProperties.Add(new InputProperty("Payload", typeof(EventPayloadWriter), IsOptional: true));
 		outputVariables.Add(new OutputVariable("Source", typeof(IForgeEntity)));
 		outputVariables.Add(new OutputVariable("Target", typeof(IForgeEntity)));
 		outputVariables.Add(new OutputVariable("Magnitude", typeof(float)));

@@ -57,9 +57,9 @@ public class RaiseEventNode : ActionNode
 	{
 		inputProperties.Add(new InputProperty("Event Tags", typeof(Tag)));
 		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
-		inputProperties.Add(new InputProperty("Source", typeof(IForgeEntity)));
+		inputProperties.Add(new InputProperty("Source", typeof(IForgeEntity), IsOptional: true));
 		inputProperties.Add(new InputProperty("Magnitude", typeof(float)));
-		inputProperties.Add(new InputProperty("Payload", typeof(EventPayloadRaiser)));
+		inputProperties.Add(new InputProperty("Payload", typeof(EventPayloadRaiser), IsOptional: true));
 	}
 
 	/// <inheritdoc/>
