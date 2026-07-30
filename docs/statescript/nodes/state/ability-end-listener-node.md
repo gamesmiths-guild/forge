@@ -21,7 +21,7 @@ Standard state ports, plus:
 | Index | Label | Type | Description |
 |-------|-------|------|-------------|
 | 0 | Entity | `IForgeEntity` | Optional. The entity whose abilities are observed. Defaults to the ability context's owner. |
-| 1 | Ability Data | `AbilityData` | Optional. When bound, only that granted ability's ends are reported. |
+| 1 | Ability Data | `AbilityData` | Optional. When bound, only that granted ability's ends are reported; leave unbound to report every ability's ends. |
 
 **Output Variables:**
 

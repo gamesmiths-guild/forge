@@ -51,8 +51,8 @@ public class TryActivateAbilitiesByTagNode : ConditionNode
 	{
 		inputProperties.Add(new InputProperty("Tags", typeof(Tag)));
 		inputProperties.Add(new InputProperty("Entity", typeof(IForgeEntity)));
-		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
-		inputProperties.Add(new InputProperty("Activation Data", typeof(AbilityActivator)));
+		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity), IsOptional: true));
+		inputProperties.Add(new InputProperty("Activation Data", typeof(AbilityActivator), IsOptional: true));
 	}
 
 	/// <inheritdoc/>

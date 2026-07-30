@@ -57,7 +57,7 @@ public class GrantAbilityPermanentlyNode(LevelComparison levelOverridePolicy = L
 		inputProperties.Add(new InputProperty("Ability Data", typeof(AbilityData)));
 		inputProperties.Add(new InputProperty("Entity", typeof(IForgeEntity)));
 		inputProperties.Add(new InputProperty("Level", typeof(int)));
-		inputProperties.Add(new InputProperty("Source", typeof(IForgeEntity)));
+		inputProperties.Add(new InputProperty("Source", typeof(IForgeEntity), IsOptional: true));
 		outputVariables.Add(new OutputVariable("Ability", typeof(AbilityHandle)));
 	}
 

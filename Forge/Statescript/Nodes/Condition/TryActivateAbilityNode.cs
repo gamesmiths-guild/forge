@@ -47,9 +47,9 @@ public class TryActivateAbilityNode : ConditionNode
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
 	{
 		inputProperties.Add(new InputProperty("Ability", typeof(AbilityHandle)));
-		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
+		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity), IsOptional: true));
 		inputProperties.Add(new InputProperty("Magnitude", typeof(double)));
-		inputProperties.Add(new InputProperty("Activation Data", typeof(AbilityActivator)));
+		inputProperties.Add(new InputProperty("Activation Data", typeof(AbilityActivator), IsOptional: true));
 	}
 
 	/// <inheritdoc/>

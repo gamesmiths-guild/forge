@@ -27,9 +27,9 @@ Raises an event (`EventManager.Raise`) on one or more target entities' event bus
 |-------|-------|------|-------------|
 | 0 | Event Tags | `Tag` or `Tag[]` | The tag(s) combined into the event's `EventData.EventTags` container. |
 | 1 | Target | `IForgeEntity` or `IForgeEntity[]` | The entity or entities whose `Events` bus the event is raised on. |
-| 2 | Source | `IForgeEntity` | Optional. The source entity carried in `EventData.Source`. |
-| 3 | Magnitude | `float` | Optional. The `EventData.EventMagnitude`. |
-| 4 | Payload | `EventPayloadRaiser` | Optional. A typed payload built and raised by an `IEventPayloadProvider` (see [EventPayloadResolver](../../resolvers/event-payload-resolver.md)). |
+| 2 | Source | `IForgeEntity` | Optional. The source entity carried in `EventData.Source`; leave unbound to raise with no source. |
+| 3 | Magnitude | `float` | Optional. The `EventData.EventMagnitude` (defaults to `0`). |
+| 4 | Payload | `EventPayloadRaiser` | Optional. A typed payload built and raised by an `IEventPayloadProvider` (see [EventPayloadResolver](../../resolvers/event-payload-resolver.md)); leave unbound to raise a non-generic event with no payload. |
 
 This node has no output variables.
 

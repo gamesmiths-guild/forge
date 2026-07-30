@@ -62,7 +62,7 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
 	{
 		inputProperties.Add(new InputProperty("Entity", typeof(IForgeEntity)));
-		inputProperties.Add(new InputProperty("Ability Data", typeof(AbilityData)));
+		inputProperties.Add(new InputProperty("Ability Data", typeof(AbilityData), IsOptional: true));
 		outputVariables.Add(new OutputVariable("Ability", typeof(AbilityHandle)));
 		outputVariables.Add(new OutputVariable("Was Canceled", typeof(bool)));
 	}

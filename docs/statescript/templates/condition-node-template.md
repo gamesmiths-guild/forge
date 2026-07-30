@@ -31,6 +31,8 @@
 | {index} | {Label} | `{Type}` | {Description.} |
 
 > Remove the Input Properties table if the node has none.
+>
+> For an input the node declares `IsOptional: true` on, state what being unbound means ("; leave unbound to ...") — that state is authorable through the editor's `(None)` entry, so the reader needs to know what it does. For an input that merely falls back to a default when unbound, write "Optional. Defaults to ..." instead. See [Unbound Inputs](../README.md#unbound-inputs).
 
 ## Behavior
 

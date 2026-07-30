@@ -62,8 +62,8 @@ public class GrantAbilityAndActivateOnceNode(LevelComparison levelOverridePolicy
 		inputProperties.Add(new InputProperty("Ability Data", typeof(AbilityData)));
 		inputProperties.Add(new InputProperty("Entity", typeof(IForgeEntity)));
 		inputProperties.Add(new InputProperty("Level", typeof(int)));
-		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity)));
-		inputProperties.Add(new InputProperty("Activation Data", typeof(AbilityActivator)));
+		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity), IsOptional: true));
+		inputProperties.Add(new InputProperty("Activation Data", typeof(AbilityActivator), IsOptional: true));
 	}
 
 	/// <inheritdoc/>

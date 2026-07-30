@@ -33,7 +33,7 @@ Subscribes to one or more event tags on a chosen entity's event bus while active
 |-------|-------|------|-------------|
 | 0 | Event Tags | `Tag` or `Tag[]` | The tag(s) to subscribe to. The node subscribes to each. |
 | 1 | Listen On | `IForgeEntity` | The entity whose `Events` bus is observed. |
-| 2 | Payload | `EventPayloadWriter` | Optional. Decomposes the received `EventData.Payload` into graph variables via an `IEventPayloadProvider` (see [EventPayloadResolver](../../resolvers/event-payload-resolver.md)). |
+| 2 | Payload | `EventPayloadWriter` | Optional. Decomposes the received `EventData.Payload` into graph variables via an `IEventPayloadProvider` (see [EventPayloadResolver](../../resolvers/event-payload-resolver.md)); leave unbound to ignore payloads. |
 
 **Output Variables:**
 

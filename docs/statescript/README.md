@@ -72,6 +72,17 @@ Nodes read data through **input properties** resolved at runtime by **property r
 
 For details, see [Variables and Data](variables.md).
 
+### Unbound Inputs
+
+An input property that was never bound has an empty `BoundName`, and nodes read that emptiness as a state of its own. Two different kinds of input are both loosely called "optional", and the node docs distinguish them:
+
+- **Falls back to a default.** An unbound `Entity` resolves to the ability context's owner; an unbound `Level` resolves to the context level. The unbound result is reachable another way too (by binding the owner or level resolver explicitly), so nothing is lost by always binding these.
+- **Means "absent".** An unbound `Source` on a grant node means the grant has *no* source, not "the owner". An unbound cue `Magnitude` suppresses the cue's whole parameter set rather than passing zero. No binding can express this: an object resolver returning `null` is indistinguishable from a bound value, and the value lane (`Variant128`) has no `null` at all.
+
+Inputs of the second kind are declared with `IsOptional: true` on their `InputProperty`, which is the authoritative marker. Tooling uses it to offer an explicit way to leave the slot unbound — in the Godot editor, a `(None)` entry at the top of the input's resolver dropdown — and to leave a freshly created slot unbound instead of seeding it with a default resolver.
+
+When a filter needs three states rather than two, use a separate explicit flag instead of overloading absence. `GetAbilityHandleResolver` pairs its optional source with `exactSourceMatch`: no source matches any granting source, no source plus `exactSourceMatch` matches only grants made without a source, and a bound source plus `exactSourceMatch` matches only that source's grant.
+
 ## Ability Integration
 
 Statescript integrates with the Abilities system through `GraphAbilityBehavior`:
