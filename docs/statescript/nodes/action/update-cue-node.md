@@ -32,6 +32,8 @@ Updates one or more already-active cues (`CuesManager.UpdateCue`) on one or more
 | 4 | Source | `IForgeEntity` | Optional. The source entity carried in the cue parameters. |
 | 5 | Custom Parameters | `Dictionary<StringKey, object>` | Optional. Custom parameter bag built by an `ICueCustomParametersProvider` (see [CueCustomParametersResolver](../../resolvers/cue-custom-parameters-resolver.md)). |
 
+Inputs 2–5 read as absent when unbound, and leaving **all four** unbound updates the cue with no `CueParameters` at all — not the same as binding them to zero and no source. Bind only the ones the cue actually consumes. See [Unbound Inputs](../../README.md#unbound-inputs).
+
 This node has no output variables, cues are addressed entirely by tag.
 
 ## Behavior

@@ -27,9 +27,9 @@ Tries to activate an ability through its `AbilityHandle`, routing to the **True*
 | Index | Label | Type | Description |
 |-------|-------|------|-------------|
 | 0 | Ability | `AbilityHandle` | The ability handle to activate. |
-| 1 | Target | `IForgeEntity` | Optional. Passed as the activation target. |
+| 1 | Target | `IForgeEntity` | Optional. Passed as the activation target; leave unbound to activate with no target. |
 | 2 | Magnitude | `double` | Optional. The activation magnitude (defaults to `0`). |
-| 3 | Activation Data | `AbilityActivator` | Optional. Custom activation data passed to the ability. |
+| 3 | Activation Data | `AbilityActivator` | Optional. Custom activation data passed to the ability; leave unbound to activate without custom data. |
 
 ## Behavior
 

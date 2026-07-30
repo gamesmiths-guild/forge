@@ -39,8 +39,8 @@ new GrantAbilityAndActivateOnceNode(levelOverridePolicy = LevelComparison.None)
 | 0 | Ability Data | `AbilityData` | The ability to grant and activate. |
 | 1 | Entity | `IForgeEntity` | Optional. The entity to grant on. Defaults to the ability context's owner. |
 | 2 | Level | `int` | Optional. The grant level. Defaults to the context level, or `1`. |
-| 3 | Target | `IForgeEntity` | Optional. Passed as the activation target. |
-| 4 | Activation Data | `AbilityActivator` | Optional. Custom activation data passed to the ability. |
+| 3 | Target | `IForgeEntity` | Optional. Passed as the activation target; leave unbound to activate with no target. |
+| 4 | Activation Data | `AbilityActivator` | Optional. Custom activation data passed to the ability; leave unbound to activate without custom data. |
 
 ## Behavior
 

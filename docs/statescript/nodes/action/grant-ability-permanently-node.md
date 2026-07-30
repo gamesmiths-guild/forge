@@ -40,7 +40,7 @@ new GrantAbilityPermanentlyNode(levelOverridePolicy = LevelComparison.None)
 | 0 | Ability Data | `AbilityData` | The ability to grant. |
 | 1 | Entity | `IForgeEntity` | Optional. The entity to grant on. Defaults to the ability context's owner. |
 | 2 | Level | `int` | Optional. The grant level. Defaults to the ability context's level, or `1`. |
-| 3 | Source | `IForgeEntity` | Optional. The granting source entity. |
+| 3 | Source | `IForgeEntity` | Optional. The granting source entity; leave unbound for a grant with no source at all (not the owner). |
 
 **Output Variables:**
 

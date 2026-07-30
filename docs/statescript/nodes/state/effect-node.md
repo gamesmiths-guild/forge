@@ -33,7 +33,7 @@ Applies one or more effects, stays active while any applied instance remains act
 |-------|-------|------|-------------|
 | 0 | Effect | `Effect` or `Effect[]` | The effect instance(s) to apply on activation. |
 | 1 | Target | `IForgeEntity` or `IForgeEntity[]` | The entity or entities that receive the effect(s). |
-| 2 | Context Data | `EffectApplicationContext` | Optional. Custom context data passed through the effect pipeline. |
+| 2 | Context Data | `EffectApplicationContext` | Optional. Custom context data passed through the effect pipeline; leave unbound to apply with no custom context. |
 
 **Output Variables:**
 

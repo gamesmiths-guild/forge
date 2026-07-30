@@ -28,8 +28,8 @@ Tries to activate every granted ability on an entity whose ability tags match an
 |-------|-------|------|-------------|
 | 0 | Tags | `Tag` or `Tag[]` | The tag(s) selecting which abilities to activate. |
 | 1 | Entity | `IForgeEntity` | Optional. The entity whose abilities are activated. Defaults to the ability context's owner. |
-| 2 | Target | `IForgeEntity` | Optional. Passed as the activation target. |
-| 3 | Activation Data | `AbilityActivator` | Optional. Custom activation data passed to the abilities. |
+| 2 | Target | `IForgeEntity` | Optional. Passed as the activation target; leave unbound to activate with no target. |
+| 3 | Activation Data | `AbilityActivator` | Optional. Custom activation data passed to the abilities; leave unbound to activate without custom data. |
 
 ## Behavior
 
