@@ -79,17 +79,26 @@ public class EntityAbilities(IForgeEntity owner)
 	}
 
 	/// <summary>
-	/// Cancels all active abilities whose AbilityTags overlap the provided tags.
+	/// Cancels all active abilities that carry any of <paramref name="withTags"/> and none of
+	/// <paramref name="withoutTags"/>.
 	/// For PerEntity abilities, cancels the single active instance.
 	/// For per-execution abilities, cancels all active instances.
 	/// </summary>
-	/// <param name="tagsToCancel">Tags that identify abilities to cancel.</param>
-	public void CancelAbilitiesWithTag(TagContainer tagsToCancel)
+	/// <remarks>
+	/// <para>Each container is an independent filter: a <see langword="null"/> or empty container means "don't filter
+	/// on this side". Passing nothing for either one therefore cancels every active ability, so guard against empty
+	/// containers at the call site when they stand for "cancel nothing".</para>
+	/// <para>An ability with no AbilityTags is never matched by <paramref name="withTags"/>, but it always satisfies
+	/// <paramref name="withoutTags"/>, since it carries none of them.</para>
+	/// </remarks>
+	/// <param name="withTags">Abilities must have any of these tags to be canceled, or <see langword="null"/> to not
+	/// filter by required tags.</param>
+	/// <param name="withoutTags">Abilities having any of these tags are spared, or <see langword="null"/> to not filter
+	/// by blocking tags.</param>
+	public void CancelAbilities(TagContainer? withTags, TagContainer? withoutTags)
 	{
-		if (tagsToCancel is null)
-		{
-			return;
-		}
+		TagContainer? requiredTags = withTags?.IsEmpty == false ? withTags : null;
+		TagContainer? blockingTags = withoutTags?.IsEmpty == false ? withoutTags : null;
 
 		foreach (AbilityHandle? handle in GrantedAbilities.ToArray())
 		{
@@ -100,10 +109,18 @@ public class EntityAbilities(IForgeEntity owner)
 			}
 
 			TagContainer? abilityTags = ability.AbilityData.AbilityTags;
-			if (abilityTags?.HasAny(tagsToCancel) == true)
+
+			if (requiredTags is not null && abilityTags?.HasAny(requiredTags) != true)
 			{
-				ability.CancelAllInstances();
+				continue;
 			}
+
+			if (blockingTags is not null && abilityTags?.HasAny(blockingTags) == true)
+			{
+				continue;
+			}
+
+			ability.CancelAllInstances();
 		}
 	}
 

@@ -583,10 +583,11 @@ internal sealed class Ability
 
 	private AbilityInstance CreateInstance(IForgeEntity? abilityTarget)
 	{
-		// Cancel conflicting abilities before we start this one.
-		if (AbilityData.CancelAbilitiesWithTag is not null)
+		// Cancel conflicting abilities before we start this one. An empty container means this ability conflicts with
+		// nothing, so it must not reach CancelAbilities, where an empty filter would match every ability instead.
+		if (AbilityData.CancelAbilitiesWithTag?.IsEmpty == false)
 		{
-			Owner.Abilities.CancelAbilitiesWithTag(AbilityData.CancelAbilitiesWithTag);
+			Owner.Abilities.CancelAbilities(AbilityData.CancelAbilitiesWithTag, null);
 		}
 
 		if (AbilityData.InstancingPolicy == AbilityInstancingPolicy.PerEntity)
