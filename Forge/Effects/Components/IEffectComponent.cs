@@ -90,10 +90,12 @@ public interface IEffectComponent
 	/// <param name="target">The target whose the active effect is being removed.</param>
 	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect being removed.</param>>
 	/// <param name="removed">Whether the active effect was completely removed or just got a stack unapply.</param>>
+	/// <param name="reason">Whether the effect ended on its own or was taken away before expiring.</param>>
 	void OnActiveEffectUnapplied(
 		IForgeEntity target,
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData,
-		bool removed)
+		bool removed,
+		EffectRemovalReason reason)
 	{
 		// This method is intentionally left blank.
 	}

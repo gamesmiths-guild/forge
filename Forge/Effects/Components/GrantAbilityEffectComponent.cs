@@ -78,7 +78,8 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 	public void OnActiveEffectUnapplied(
 		IForgeEntity target,
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData,
-		bool removed)
+		bool removed,
+		EffectRemovalReason reason)
 	{
 		if (removed)
 		{

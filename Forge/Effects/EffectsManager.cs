@@ -111,7 +111,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		foreach (ActiveEffect expiredEffect in effectsToUpdate.Where(x => x.IsExpired).ToArray())
 		{
-			RemoveActiveEffect(expiredEffect, false);
+			RemoveActiveEffect(expiredEffect, EffectRemovalReason.Expired);
 		}
 	}
 
@@ -158,7 +158,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		_cuesManager.ExecuteCues(in executedEffectEvaluatedData);
 	}
 
-	internal void OnActiveEffectUnapplied_InternalCall(ActiveEffect removedEffect)
+	internal void OnActiveEffectUnapplied_InternalCall(ActiveEffect removedEffect, EffectRemovalReason reason)
 	{
 		foreach (IEffectComponent component in removedEffect.ComponentInstances)
 		{
@@ -170,7 +170,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 					removedEffect.RemainingDuration,
 					removedEffect.NextPeriodicTick,
 					removedEffect.ExecutionCount),
-				false);
+				false,
+				reason);
 		}
 	}
 
@@ -196,7 +197,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	internal void RemoveActiveEffect_InternalCall(ActiveEffect effect)
 	{
-		RemoveActiveEffect(effect, false);
+		RemoveActiveEffect(effect, EffectRemovalReason.Expired);
 	}
 
 	internal bool CanApplyEffect(Effect costEffect, int level)
@@ -231,7 +232,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 				componentInstances[i] = definitions[i].CreateInstance();
 			}
 
-			foreach (IEffectComponent component in effect.EffectData.EffectComponents)
+			foreach (IEffectComponent component in componentInstances)
 			{
 				component.OnEffectApplied(Owner, in evaluatedData);
 			}
@@ -384,27 +385,25 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			&& effectToRemove.EffectData.StackingData.Value.ExpirationPolicy
 			== StackExpirationPolicy.RemoveSingleStackAndRefreshDuration)
 		{
-			effectToRemove.RemoveStack();
+			effectToRemove.RemoveStack(EffectRemovalReason.Removed);
 			effectToRemove.RemainingDuration = effectToRemove.EffectEvaluatedData.Duration;
 
 			if (effectToRemove.StackCount == 0)
 			{
-				RemoveActiveEffect(effectToRemove, false);
+				RemoveActiveEffect(effectToRemove, EffectRemovalReason.Removed);
 			}
 
 			return;
 		}
 
-		if (effectToRemove.EffectData.DurationData.DurationType == DurationType.HasDuration)
-		{
-			forceRemoval = true;
-		}
-
 		effectToRemove.Unapply();
-		RemoveActiveEffect(effectToRemove, forceRemoval);
+
+		// This method is only ever reached through the public removal API, so the effect never got the chance to expire
+		// on its own, regardless of its duration type.
+		RemoveActiveEffect(effectToRemove, EffectRemovalReason.Removed);
 	}
 
-	private void RemoveActiveEffect(ActiveEffect effectToRemove, bool interrupted)
+	private void RemoveActiveEffect(ActiveEffect effectToRemove, EffectRemovalReason reason)
 	{
 		if (!_activeEffects.Contains(effectToRemove))
 		{
@@ -425,13 +424,14 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 					effectToRemove.RemainingDuration,
 					effectToRemove.NextPeriodicTick,
 					effectToRemove.ExecutionCount),
-				true);
+				true,
+				reason);
 		}
 
 		effectToRemove.Handle.Free();
 
 		effectToRemove.EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 
-		_cuesManager.RemoveCues(in effectEvaluatedData, interrupted);
+		_cuesManager.RemoveCues(in effectEvaluatedData, reason == EffectRemovalReason.Removed);
 	}
 }
