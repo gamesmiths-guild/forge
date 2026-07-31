@@ -478,9 +478,9 @@ var dotEffectData = new EffectData(
     ),
     modifiers: [/*...*/],
     periodicData: new PeriodicData(
-        period: new ScalableFloat(2.0f),  // Execute every 2 seconds
-        executeOnApplication: true,       // Apply damage immediately on application
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(2.0f),  // Execute every 2 seconds
+        ExecuteOnApplication: true,       // Apply damage immediately on application
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     )
 );
 ```
@@ -516,14 +516,14 @@ var componentBasedEffectData = new EffectData(
         // Only apply to targets with specific tags
         new TargetTagRequirementsEffectComponent(
             applicationTagRequirements: new TagRequirements(
-                requiredTags: tagsManager.RequestTagContainer(["entity.living"]),
-                ignoreTags: tagsManager.RequestTagContainer(["status.immune.slow"])
+                RequiredTags: tagsManager.RequestTagContainer(["entity.living"]),
+                IgnoreTags: tagsManager.RequestTagContainer(["status.immune.slow"])
             ),
             removalTagRequirements: new TagRequirements(
-                tagQuery: TagQuery.MakeQueryMatchTag(tagsManager, tagsManager.RequestTagContainer(["status.cleansed"]))
+                TagQuery: TagQuery.MakeQueryMatchTag(tagsManager, tagsManager.RequestTagContainer(["status.cleansed"]))
             ),
             ongoingTagRequirements: new TagRequirements(
-                ignoreTags: tagsManager.RequestTagContainer(["status.resistant"])
+                IgnoreTags: tagsManager.RequestTagContainer(["status.resistant"])
             )
         )
     ]
@@ -532,11 +532,14 @@ var componentBasedEffectData = new EffectData(
 
 **Built-in components:**
 
+- **[AttributeRequirementsEffectComponent](components/attribute-requirements-effect-component.md)**: Checks attribute values for application, removal, and inhibition.
 - **[BlockAbilityTagsEffectComponent](components/block-ability-tags-effect-component.md)**: Blocks abilities carrying the given tags from activating while the effect is active.
 - **[CancelAbilityTagsEffectComponent](components/cancel-ability-tags-effect-component.md)**: Cancels active abilities selected by tag, on application or on each execution.
 - **[ChanceToApplyEffectComponent](components/chance-to-apply-effect-component.md)**: Provides random chance for effect application.
 - **[GrantAbilityEffectComponent](components/grant-ability-effect-component.md)**: Grants abilities while the effect is active.
 - **[ModifierTagsEffectComponent](components/modifier-tags-effect-component.md)**: Adds tags while effect is active, which are automatically removed when the effect ends.
+- **[SourceAttributeRequirementsEffectComponent](components/source-attribute-requirements-effect-component.md)**: Checks attribute values on the effect's source rather than its target.
+- **[SourceTagRequirementsEffectComponent](components/source-tag-requirements-effect-component.md)**: Checks tag conditions on the effect's source rather than its target.
 - **[TargetTagRequirementsEffectComponent](components/target-tag-requirements-effect-component.md)**: Checks tag conditions for application, removal, and inhibition.
 
 You can also create custom components by implementing the `IEffectComponent` interface. See the

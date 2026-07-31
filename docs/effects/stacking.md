@@ -307,9 +307,9 @@ var bleedingEffectData = new EffectData(
         executeOnSuccessfulApplication: true
     ),
     new PeriodicData(
-        period: new ScalableFloat(2.0f),
-        executeOnApplication: true,
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(2.0f),
+        ExecuteOnApplication: true,
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     )
 );
 ```

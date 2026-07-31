@@ -126,6 +126,7 @@ public readonly record struct EffectData
 		}
 	}
 
+#pragma warning disable SA1118 // Parameter should not span multiple lines
 	private void ValidateData()
 	{
 		Validation.Assert(
@@ -144,20 +145,24 @@ public readonly record struct EffectData
 			!(StackingData.HasValue
 				&& (StackingData.Value.InitialStack.BaseValue > StackingData.Value.StackLimit.BaseValue
 				|| StackingData.Value.InitialStack.BaseValue == 0)),
-			"Shouldn't set InitialStack count to be higher than the StackLimit nor zero. It's probably a bad configuration.");
+			"Shouldn't set InitialStack count to be higher than the StackLimit nor zero. It's probably a bad " +
+			"configuration.");
 
 		Validation.Assert(
 			!(StackingData.HasValue
 			&& (StackingData.Value.StackPolicy == StackPolicy.AggregateByTarget !=
 				StackingData.Value.OwnerDenialPolicy.HasValue)),
-			$"If {nameof(StackPolicy)} is set {StackPolicy.AggregateByTarget}, {nameof(StackOwnerDenialPolicy)} must be defined. And not defined if otherwise.");
+			$"If {nameof(StackPolicy)} is set {StackPolicy.AggregateByTarget}, {nameof(StackOwnerDenialPolicy)} must" +
+			" be defined. And not defined if otherwise.");
 
 		Validation.Assert(
 			!(StackingData.HasValue
 			&& ((StackingData.Value.StackPolicy == StackPolicy.AggregateByTarget &&
 				StackingData.Value.OwnerDenialPolicy == StackOwnerDenialPolicy.AlwaysAllow) !=
 				StackingData.Value.OwnerOverridePolicy.HasValue)),
-			$"If {nameof(StackPolicy)} is set {StackPolicy.AggregateByTarget} and {nameof(StackOwnerDenialPolicy)} is set to {StackOwnerDenialPolicy.AlwaysAllow}, {nameof(StackOwnerOverridePolicy)} must be defined. And not defined if otherwise.");
+			$"If {nameof(StackPolicy)} is set {StackPolicy.AggregateByTarget} and {nameof(StackOwnerDenialPolicy)} " +
+			$"is set to {StackOwnerDenialPolicy.AlwaysAllow}, {nameof(StackOwnerOverridePolicy)} must be defined. " +
+			"And not defined if otherwise.");
 
 		Validation.Assert(
 			!(StackingData.HasValue
@@ -165,19 +170,22 @@ public readonly record struct EffectData
 				StackingData.Value.OwnerOverridePolicy.HasValue &&
 				StackingData.Value.OwnerOverridePolicy.Value == StackOwnerOverridePolicy.Override) !=
 				StackingData.Value.OwnerOverrideStackCountPolicy.HasValue)),
-			$"If {nameof(StackOwnerOverridePolicy)} is set {StackOwnerOverridePolicy.Override}, {nameof(StackOwnerOverrideStackCountPolicy)} must be defined. And not defined if otherwise.");
+			$"If {nameof(StackOwnerOverridePolicy)} is set {StackOwnerOverridePolicy.Override}, " +
+			$"{nameof(StackOwnerOverrideStackCountPolicy)} must be defined. And not defined if otherwise.");
 
 		Validation.Assert(
 			!(StackingData.HasValue
 				&& (StackingData.Value.StackLevelPolicy == StackLevelPolicy.AggregateLevels !=
 				StackingData.Value.LevelDenialPolicy.HasValue)),
-			$"If {nameof(StackLevelPolicy)} is set {StackLevelPolicy.AggregateLevels}, {nameof(LevelComparison)} must be defined. And not defined if otherwise.");
+			$"If {nameof(StackLevelPolicy)} is set {StackLevelPolicy.AggregateLevels}, {nameof(LevelComparison)} " +
+			"must be defined. And not defined if otherwise.");
 
 		Validation.Assert(
 			!(StackingData.HasValue
 				&& (StackingData.Value.StackLevelPolicy == StackLevelPolicy.AggregateLevels !=
 				StackingData.Value.LevelOverridePolicy.HasValue)),
-			$"If {nameof(StackLevelPolicy)} is set {StackLevelPolicy.AggregateLevels}, LevelOverridePolicy must be defined. And not defined if otherwise.");
+			$"If {nameof(StackLevelPolicy)} is set {StackLevelPolicy.AggregateLevels}, LevelOverridePolicy must be " +
+			"defined. And not defined if otherwise.");
 
 		Validation.Assert(
 			!(StackingData.HasValue
@@ -185,7 +193,8 @@ public readonly record struct EffectData
 				StackingData.Value.LevelOverridePolicy.HasValue &&
 				StackingData.Value.LevelOverridePolicy.Value != LevelComparison.None) !=
 				StackingData.Value.LevelOverrideStackCountPolicy.HasValue)),
-			$"If LevelOverridePolicy is different from {LevelComparison.None}, {nameof(StackLevelOverrideStackCountPolicy)} must be defined. And not defined if otherwise.");
+			$"If LevelOverridePolicy is different from {LevelComparison.None}, " +
+			$"{nameof(StackLevelOverrideStackCountPolicy)} must be defined. And not defined if otherwise.");
 
 		Validation.Assert(
 			!(StackingData.HasValue
@@ -193,13 +202,15 @@ public readonly record struct EffectData
 				StackingData.Value.LevelOverridePolicy.HasValue &&
 				StackingData.Value.LevelDenialPolicy.Value != LevelComparison.None &&
 				(StackingData.Value.LevelDenialPolicy.Value & StackingData.Value.LevelOverridePolicy.Value) != 0),
-			"LevelDenialPolicy and LevelOverridePolicy should't have the same value. If it's getting denied, how will it override?");
+			"LevelDenialPolicy and LevelOverridePolicy shouldn't have the same value. If it's getting denied, how " +
+			"will it override?");
 
 		Validation.Assert(
 			!(StackingData.HasValue
 				&& (DurationData.DurationType == DurationType.HasDuration !=
 				StackingData.Value.ApplicationRefreshPolicy.HasValue)),
-			$"Effects set as {DurationType.HasDuration} must define {nameof(StackApplicationRefreshPolicy)} and not define it if otherwise.");
+			$"Effects set as {DurationType.HasDuration} must define {nameof(StackApplicationRefreshPolicy)} and not " +
+			"define it if otherwise.");
 
 		Validation.Assert(
 			!(StackingData.HasValue
@@ -209,7 +220,8 @@ public readonly record struct EffectData
 		Validation.Assert(
 			!(StackingData.HasValue
 				&& (StackingData.Value.ApplicationResetPeriodPolicy.HasValue != PeriodicData.HasValue)),
-			$"Both {nameof(PeriodicData)} and {nameof(StackApplicationResetPeriodPolicy)} must be either defined or undefined.");
+			$"Both {nameof(PeriodicData)} and {nameof(StackApplicationResetPeriodPolicy)} must be either defined or " +
+			"undefined.");
 
 		Validation.Assert(
 			!(DurationData.DurationType == DurationType.Instant && Modifiers is not null && Array.Exists(
@@ -217,7 +229,8 @@ public readonly record struct EffectData
 				x => x.Magnitude.MagnitudeCalculationType == MagnitudeCalculationType.AttributeBased
 					&& x.Magnitude.AttributeBasedFloat.HasValue
 					&& !x.Magnitude.AttributeBasedFloat.Value.BackingAttribute.Snapshot)),
-			$"Effects set as {DurationType.Instant} and {MagnitudeCalculationType.AttributeBased} cannot be set as non Snapshot.");
+			$"Effects set as {DurationType.Instant} and {MagnitudeCalculationType.AttributeBased} cannot be set as " +
+			"non Snapshot.");
 
 		Validation.Assert(
 			!(DurationData.DurationType == DurationType.Instant && !SnapshotLevel),
@@ -246,14 +259,37 @@ public readonly record struct EffectData
 				}) ||
 			DurationData.DurationType == DurationType.Instant ||
 			PeriodicData.HasValue,
-			$"{nameof(CancelAbilityTagsPolicy)}.{nameof(CancelAbilityTagsPolicy.OnExecution)} never fires on a duration effect that isn't periodic.");
+			$"{nameof(CancelAbilityTagsPolicy)}.{nameof(CancelAbilityTagsPolicy.OnExecution)} never fires on a " +
+			"duration effect that isn't periodic.");
 
 		Validation.Assert(
 			EffectComponents is null ||
 			!Array.Exists(
 				EffectComponents,
 				x => x is CancelAbilityTagsEffectComponent { HasAnyFilter: false }),
-			$"{nameof(CancelAbilityTagsEffectComponent)} must define at least one of its tag filters. Leaving both empty is treated as a misconfiguration and is rejected.");
+			$"{nameof(CancelAbilityTagsEffectComponent)} must define at least one of its tag filters. Leaving both " +
+			"empty is treated as a misconfiguration and is rejected.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			!Array.Exists(
+				EffectComponents,
+				x => x is AttributeRequirementsEffectComponent { HasVacuousRequirement: true }
+					or SourceAttributeRequirementsEffectComponent { HasVacuousRequirement: true }),
+			$"Every {nameof(AttributeRequirement)} must define a {nameof(AttributeRequirement.MinValue)}, " +
+			$"a {nameof(AttributeRequirement.MaxValue)}, or both. One with neither bound always passes.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			DurationData.DurationType != DurationType.Instant ||
+			!Array.Exists(
+				EffectComponents,
+				x => x is TargetTagRequirementsEffectComponent { HasOngoingRequirements: true }
+					or SourceTagRequirementsEffectComponent { HasOngoingRequirements: true }
+					or AttributeRequirementsEffectComponent { HasOngoingRequirements: true }
+					or SourceAttributeRequirementsEffectComponent { HasOngoingRequirements: true }),
+			$"Ongoing requirements never fire on an {DurationType.Instant} effect, since inhibition acts on an " +
+			"active effect and instant effects never become one. Use application requirements instead.");
 
 		foreach (CueData cue in Cues)
 		{
@@ -279,4 +315,5 @@ public readonly record struct EffectData
 				"Attribute magnitudes type must have a configured MagnitudeAttribute, and not configured otherwise.");
 		}
 	}
+#pragma warning restore SA1118 // Parameter should not span multiple lines
 }

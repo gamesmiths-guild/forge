@@ -26,6 +26,9 @@ public class TargetTagRequirementsEffectComponent(
 {
 	private Action<TagContainer>? _handler;
 
+	// Ongoing requirements inhibit an active effect, which an instant effect never becomes. EffectData rejects it.
+	internal bool HasOngoingRequirements => OngoingTagRequirements?.IsEmpty == false;
+
 	private TagRequirements? ApplicationTagRequirements { get; } = applicationTagRequirements;
 
 	private TagRequirements? RemovalTagRequirements { get; } = removalTagRequirements;

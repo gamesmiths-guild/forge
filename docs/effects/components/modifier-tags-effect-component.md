@@ -50,9 +50,9 @@ var burningEffectData = new EffectData(
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
     },
     periodicData: new PeriodicData(
-        period: new ScalableFloat(2.0f),
-        executeOnApplication: true,
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(2.0f),
+        ExecuteOnApplication: true,
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     ),
     effectComponents: new[] {
         new ModifierTagsEffectComponent(

@@ -91,6 +91,10 @@ query.Build(new TagQueryExpression(tagsManager)
                         .AddTag("Metal"))));
 ```
 
+## Validation
+
+Ongoing requirements are rejected on an instant effect, since inhibition acts on an active effect and instant effects never become one.
+
 ## Usage
 
 ```csharp
@@ -110,15 +114,15 @@ var frostEffectData = new EffectData(
         new TargetTagRequirementsEffectComponent(
             // Application requirements: target must have "Wet" tag
             applicationTagRequirements: new TagRequirements(
-                requiredTags: tagsManager.RequestTagContainer(new[] { "Wet" })
+                RequiredTags: tagsManager.RequestTagContainer(new[] { "Wet" })
             ),
             // Removal requirements: effect is removed if target gets "Fire" tag
             removalTagRequirements: new TagRequirements(
-                tagQuery: new TagQuery(tagsManager, "Fire")
+                TagQuery: new TagQuery(tagsManager, "Fire")
             ),
             // Ongoing requirements: effect is inhibited if target has "Cold.Immune" tag
             ongoingTagRequirements: new TagRequirements(
-                ignoreTags: tagsManager.RequestTagContainer(new[] { "Cold.Immune" })
+                IgnoreTags: tagsManager.RequestTagContainer(new[] { "Cold.Immune" })
             )
         )
     }
@@ -132,9 +136,12 @@ var frostEffectData = new EffectData(
 - Automatically cleans up event subscriptions when the effect is removed.
 - Uses `TagRequirements` to define complex tag conditions.
 - Tag-driven removal always removes **all** stacks.
+- On an instant effect only `applicationTagRequirements` is fully meaningful. Ongoing requirements are rejected outright; removal requirements still deny application when already met, but nothing can be removed afterwards.
 
 ## See Also
 
 - [Effect Components Overview](README.md)
 - [Tags](../../tags.md)
 - [ModifierTagsEffectComponent](modifier-tags-effect-component.md)
+- [SourceTagRequirementsEffectComponent](source-tag-requirements-effect-component.md)
+- [AttributeRequirementsEffectComponent](attribute-requirements-effect-component.md)
