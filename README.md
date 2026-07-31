@@ -50,7 +50,7 @@ Forge supports a variety of gameplay mechanics through specialized subsystems:
 - **[Effect Stacking](docs/effects/stacking.md)**: Configure how multiple instances of effects combine.
 - **[Periodic Effects](docs/effects/periodic.md)**: Create effects that execute repeatedly on a schedule.
 - **[Modifiers](docs/effects/modifiers.md)**: Define how effects change attribute values.
-- **[Effect Components](docs/effects/components.md)**: Extend effects with custom behaviors.
+- **[Effect Components](docs/effects/components/README.md)**: Extend effects with custom behaviors.
 - **[Custom Calculators](docs/effects/calculators.md)**: Flexible logic execution within the effects pipeline.
 
 ## Project Status

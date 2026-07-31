@@ -499,7 +499,7 @@ var dotEffectData = new EffectData(
 
 ### Effect Components
 
-[Effect components](components.md) extend and customize effect behavior through lifecycle hooks, enabling conditional application, tag management, and other specialized behaviors. They are optional and can be included in any number within an effect.
+[Effect components](components/README.md) extend and customize effect behavior through lifecycle hooks, enabling conditional application, tag management, and other specialized behaviors. They are optional and can be included in any number within an effect.
 
 ```csharp
 var componentBasedEffectData = new EffectData(
@@ -532,11 +532,15 @@ var componentBasedEffectData = new EffectData(
 
 **Built-in components:**
 
-- **ChanceToApplyEffectComponent**: Provides random chance for effect application.
-- **ModifierTagsEffectComponent**: Adds tags while effect is active, which are automatically removed when the effect ends.
-- **TargetTagRequirementsEffectComponent**: Checks tag conditions for application, removal, and inhibition.
+- **[BlockAbilityTagsEffectComponent](components/block-ability-tags-effect-component.md)**: Blocks abilities carrying the given tags from activating while the effect is active.
+- **[CancelAbilityTagsEffectComponent](components/cancel-ability-tags-effect-component.md)**: Cancels active abilities selected by tag, on application or on each execution.
+- **[ChanceToApplyEffectComponent](components/chance-to-apply-effect-component.md)**: Provides random chance for effect application.
+- **[GrantAbilityEffectComponent](components/grant-ability-effect-component.md)**: Grants abilities while the effect is active.
+- **[ModifierTagsEffectComponent](components/modifier-tags-effect-component.md)**: Adds tags while effect is active, which are automatically removed when the effect ends.
+- **[TargetTagRequirementsEffectComponent](components/target-tag-requirements-effect-component.md)**: Checks tag conditions for application, removal, and inhibition.
 
-You can also create custom components by implementing the `IEffectComponent` interface.
+You can also create custom components by implementing the `IEffectComponent` interface. See the
+[Effect Components documentation](components/README.md) for the full reference.
 
 ### Custom Executions
 

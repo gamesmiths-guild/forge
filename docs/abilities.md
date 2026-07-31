@@ -270,6 +270,8 @@ HashSet<AbilityHandle> granted = abilities.GrantedAbilities;
 EntityTags blockedTags = abilities.BlockedAbilityTags;
 ```
 
+Abilities whose `AbilityTags` overlap `BlockedAbilityTags` fail activation with `AbilityActivationFailures.BlockedByTags`. The container is populated by `BlockAbilitiesWithTag` while an ability is running, and by [`BlockAbilityTagsEffectComponent`](effects/components/block-ability-tags-effect-component.md) while an effect is active.
+
 ### Finding Abilities
 
 Use `TryGetAbility` to find a granted ability by its data.
@@ -332,8 +334,7 @@ A tag usually selects several abilities, and they need not share an activation-d
 
 ### Canceling Abilities by Tag
 
-Use `CancelAbilities` to cancel active abilities selected by the tags they carry. It takes a required container and a
-blocking one, so you can cancel a whole category while sparing part of it:
+Use `CancelAbilities` to cancel active abilities selected by the tags they carry. It takes a required container and a blocking one, so you can cancel a whole category while sparing part of it:
 
 ```csharp
 var interruptibleTags = new TagContainer(tagsManager, [interruptibleTag]);
@@ -349,12 +350,11 @@ entity.Abilities.CancelAbilities(interruptibleTags, unstoppableTags);
 entity.Abilities.CancelAbilities(null, unstoppableTags);
 ```
 
-Each container is an independent filter, and a `null` or empty one means "don't filter on this side". An ability with
-no `AbilityTags` is never matched by the required container, but it always satisfies the blocking one, since it
-carries none of those tags.
+Each container is an independent filter, and a `null` or empty one means "don't filter on this side". An ability with no `AbilityTags` is never matched by the required container, but it always satisfies the blocking one, since it carries none of those tags.
 
-> Passing nothing for either container cancels **every** active ability. That is deliberate — it is how you ask for a
-> full wipe — but it means an empty container standing for "cancel nothing" has to be guarded at the call site.
+> Passing nothing for either container cancels **every** active ability. That is deliberate — it is how you ask for a full wipe — but it means an empty container standing for "cancel nothing" has to be guarded at the call site.
+
+To drive this from an effect instead of calling it directly, use [`CancelAbilityTagsEffectComponent`](effects/components/cancel-ability-tags-effect-component.md), which wraps `CancelAbilities` and can fire on application or on each periodic execution.
 
 ### Ability Events
 

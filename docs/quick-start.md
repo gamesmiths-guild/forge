@@ -1193,7 +1193,7 @@ Now that you've seen the basics of Forge, you can:
 3. Apply [Effect Durations](effects/duration.md) to create infinite, timed, or instant effects.
 4. Implement [Stacking](effects/stacking.md) for cumulative effects.
 5. Use [Periodic Effects](effects/periodic.md) for recurring gameplay mechanics.
-6. Extend effects with [Components](effects/components.md) for custom behaviors.
+6. Extend effects with [Components](effects/components/README.md) for custom behaviors.
 7. Integrate [Cues](cues.md) for visual and audio feedback.
 8. Orchestrate gameplay reactions with [Events](events.md).
 9. Define discrete actions and skills using [Abilities](abilities.md).

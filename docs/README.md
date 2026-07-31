@@ -138,7 +138,7 @@ For more detailed information about specific systems, refer to these documentati
 - [Duration](effects/duration.md): Controlling how long effects remain active.
 - [Stacking](effects/stacking.md): Configuring how multiple instances of effects combine.
 - [Periodic](effects/periodic.md): Creating effects that execute repeatedly over time.
-- [Components](effects/components.md): Extending effects with custom behaviors.
+- [Components](effects/components/README.md): Extending effects with custom behaviors.
 - [Custom Calculators](effects/calculators.md): Creating custom calculations for effects.
 
 ### Getting Started
