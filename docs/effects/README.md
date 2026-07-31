@@ -179,15 +179,19 @@ entity.EffectsManager.RemoveEffectData(effectData);
 Beyond `GetEffectStackData(effectData)` (which returns per-application `EffectStackInstanceData`), the manager can return live handles:
 
 ```csharp
-// Handles for every active application of a given EffectData
-foreach (ActiveEffectHandle handle in entity.EffectsManager.GetActiveEffects(effectData))
+// Handles for every active effect on the entity
+foreach (ActiveEffectHandle handle in entity.EffectsManager.GetActiveEffects())
 {
     // e.g. read handle.RemainingDuration, or dispel it
     entity.EffectsManager.RemoveEffect(handle, forceRemoval: true);
 }
+```
 
-// Handles for every active effect on the entity
-IEnumerable<ActiveEffectHandle> all = entity.EffectsManager.GetActiveEffects();
+To select a subset, pass an [`EffectQuery`](#effectquery) — including the "every application of this one effect" case, which is `EffectDefinition`:
+
+```csharp
+IEnumerable<ActiveEffectHandle> poisons =
+    entity.EffectsManager.GetActiveEffects(new EffectQuery(EffectDefinition: poisonData));
 ```
 
 This is the entry point for "dispel" patterns and for polling effects the caller did not apply itself. In Statescript, the same query is exposed as [`QueryActiveEffectsResolver`](../statescript/resolvers/query-active-effects-resolver.md).

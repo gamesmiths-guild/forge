@@ -48,9 +48,11 @@ Handles come from the **Active Effect** output of an [ApplyEffectNode](apply-eff
 ## Usage
 
 ```csharp
-// Dispel: query all debuffs on the target, then remove them
+// Dispel: query every application of one effect on the target, then remove them
 graph.VariableDefinitions.DefineObjectArrayProperty("debuffs",
-    new QueryActiveEffectsResolver(debuffData, new AbilityTargetResolver()));
+    new QueryActiveEffectsResolver(
+        new EffectQuery(EffectDefinition: debuffData),
+        new AbilityTargetResolver()));
 
 var remove = new RemoveEffectNode(forceRemoval: true);
 remove.BindInput(RemoveEffectNode.HandleInput, "debuffs");

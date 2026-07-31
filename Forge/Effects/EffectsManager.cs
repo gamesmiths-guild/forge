@@ -138,16 +138,6 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	}
 
 	/// <summary>
-	/// Queries and gets the handles for all active applications of a given <see cref="EffectData"/>.
-	/// </summary>
-	/// <param name="effectData">Which effect to query for.</param>
-	/// <returns>The handles for the currently active effects matching the given data.</returns>
-	public IEnumerable<ActiveEffectHandle> GetActiveEffects(EffectData effectData)
-	{
-		return FilterEffectsByData(effectData).Select(x => x.Handle);
-	}
-
-	/// <summary>
 	/// Queries and gets the handles for all effects currently active on the owner.
 	/// </summary>
 	/// <returns>The handles for all currently active effects.</returns>
@@ -159,6 +149,9 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <summary>
 	/// Queries and gets the handles for all active effects matching the given <see cref="EffectQuery"/>.
 	/// </summary>
+	/// <remarks>
+	/// To select the applications of one specific effect, set <see cref="EffectQuery.EffectDefinition"/>.
+	/// </remarks>
 	/// <param name="query">The query the active effects must match. An empty query matches every active effect.
 	/// </param>
 	/// <returns>The handles for the currently active effects matching the given query.</returns>

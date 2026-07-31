@@ -54,7 +54,7 @@ graph.VariableDefinitions.DefineProperty("debuffIsCurse",
 // Dispel every curse on the ability target
 graph.VariableDefinitions.DefineObjectArrayProperty("cursesToDispel",
     new ObjectWhereResolver<ActiveEffectHandle>(
-        new QueryActiveEffectsResolver(effectData: null, new AbilityTargetResolver()),
+        new QueryActiveEffectsResolver(default, new AbilityTargetResolver()),
         new ActiveEffectTagQueryResolver(
             new ElementResolver<ActiveEffectHandle>(),
             Tag.RequestTag(tagsManager, "effect.curse"),

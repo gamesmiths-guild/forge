@@ -164,7 +164,7 @@ public class EffectQueryResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 		new QueryActiveEffectsResolver(query, entityResolver)
 			.ResolveArray(context).Should().Equal(poisonHandle);
 
-		new QueryActiveEffectsResolver(default(EffectQuery), entityResolver)
+		new QueryActiveEffectsResolver(default, entityResolver)
 			.ResolveArray(context).Should().HaveCount(2);
 	}
 
@@ -184,7 +184,7 @@ public class EffectQueryResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 
 		// QueryActiveEffects -> ObjectWhere(ActiveEffectTagQuery) -> RemoveEffect, with no new nodes involved.
 		var dispelResolver = new ObjectWhereResolver<ActiveEffectHandle>(
-			new QueryActiveEffectsResolver(effectData: null, new EntityVariableResolver("entity")),
+			new QueryActiveEffectsResolver(default, new EntityVariableResolver("entity")),
 			new ActiveEffectTagQueryResolver(
 				new ElementResolver<ActiveEffectHandle>(),
 				Tag.RequestTag(_tagsManager, "color.dark"),

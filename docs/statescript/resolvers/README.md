@@ -43,7 +43,7 @@ These resolvers provide effect instances and application context to nodes such a
 | [EffectStackDataResolver](effect-stack-data-resolver.md) | `int` | Aggregates stack/instance/level data over the active applications of an effect on an entity. |
 | [EffectVariableResolver](effect-variable-resolver.md) | `Effect?` | Reads a stored `Effect` instance from graph or shared scope for reuse. |
 | [OwnershipResolver](ownership-resolver.md) | `EffectOwnership` | Composes an effect ownership value from nested entity resolvers. |
-| [QueryActiveEffectsResolver](query-active-effects-resolver.md) | `ActiveEffectHandle[]` | Queries the active effect handles on an entity, optionally filtered by `EffectData` or `EffectQuery`. |
+| [QueryActiveEffectsResolver](query-active-effects-resolver.md) | `ActiveEffectHandle[]` | Queries the active effect handles on an entity, filtered by an `EffectQuery`. |
 | [SetByCallerMagnitudeResolver](set-by-caller-magnitude-resolver.md) | `float` | Reads the SetByCaller magnitude stored on an `Effect` for an identifier tag. |
 
 ---

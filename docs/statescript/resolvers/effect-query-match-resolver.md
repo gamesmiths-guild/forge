@@ -39,7 +39,7 @@ graph.VariableDefinitions.DefineProperty("debuffCameFromTheBoss",
 // Strip only the health debuffs applied by whoever cast this ability
 graph.VariableDefinitions.DefineObjectArrayProperty("myHealthDebuffs",
     new ObjectWhereResolver<ActiveEffectHandle>(
-        new QueryActiveEffectsResolver(effectData: null, new AbilityTargetResolver()),
+        new QueryActiveEffectsResolver(default, new AbilityTargetResolver()),
         new EffectQueryMatchResolver(
             new ElementResolver<ActiveEffectHandle>(),
             new EffectQuery(
