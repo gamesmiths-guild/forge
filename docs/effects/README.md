@@ -532,11 +532,14 @@ var componentBasedEffectData = new EffectData(
 
 **Built-in components:**
 
+- **[AttributeRequirementsEffectComponent](components/attribute-requirements-effect-component.md)**: Checks attribute values for application, removal, and inhibition.
 - **[BlockAbilityTagsEffectComponent](components/block-ability-tags-effect-component.md)**: Blocks abilities carrying the given tags from activating while the effect is active.
 - **[CancelAbilityTagsEffectComponent](components/cancel-ability-tags-effect-component.md)**: Cancels active abilities selected by tag, on application or on each execution.
 - **[ChanceToApplyEffectComponent](components/chance-to-apply-effect-component.md)**: Provides random chance for effect application.
 - **[GrantAbilityEffectComponent](components/grant-ability-effect-component.md)**: Grants abilities while the effect is active.
 - **[ModifierTagsEffectComponent](components/modifier-tags-effect-component.md)**: Adds tags while effect is active, which are automatically removed when the effect ends.
+- **[SourceAttributeRequirementsEffectComponent](components/source-attribute-requirements-effect-component.md)**: Checks attribute values on the effect's source rather than its target.
+- **[SourceTagRequirementsEffectComponent](components/source-tag-requirements-effect-component.md)**: Checks tag conditions on the effect's source rather than its target.
 - **[TargetTagRequirementsEffectComponent](components/target-tag-requirements-effect-component.md)**: Checks tag conditions for application, removal, and inhibition.
 
 You can also create custom components by implementing the `IEffectComponent` interface. See the

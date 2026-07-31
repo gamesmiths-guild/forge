@@ -10,11 +10,14 @@ For a practical guide on using components, see the [Quick Start Guide](../../qui
 
 | Component | State | Applies to | Description |
 |-----------|-------|------------|-------------|
+| [AttributeRequirementsEffectComponent](attribute-requirements-effect-component.md) | Stateful | Any | Gates application, forces removal, and toggles inhibition from the target's attribute values. |
 | [BlockAbilityTagsEffectComponent](block-ability-tags-effect-component.md) | Stateful | Duration | Blocks abilities carrying the given tags from activating while the effect is active. |
 | [CancelAbilityTagsEffectComponent](cancel-ability-tags-effect-component.md) | Stateless | Any | Cancels active abilities selected by tag, on application or on each execution. |
 | [ChanceToApplyEffectComponent](chance-to-apply-effect-component.md) | Stateless | Any | Gives the effect a random chance to apply, optionally scaling with level. |
 | [GrantAbilityEffectComponent](grant-ability-effect-component.md) | Stateful | Any | Grants abilities for the effect's lifetime, or permanently from an instant effect. |
 | [ModifierTagsEffectComponent](modifier-tags-effect-component.md) | Stateless | Duration | Adds tags to the target while the effect is active. |
+| [SourceAttributeRequirementsEffectComponent](source-attribute-requirements-effect-component.md) | Stateful | Any | The same three gates as `AttributeRequirements`, evaluated against the effect's source or owner. |
+| [SourceTagRequirementsEffectComponent](source-tag-requirements-effect-component.md) | Stateful | Any | The same three gates as `TargetTagRequirements`, evaluated against the effect's source or owner. |
 | [TargetTagRequirementsEffectComponent](target-tag-requirements-effect-component.md) | Stateful | Any | Gates application, forces removal, and toggles inhibition from the target's tags. |
 
 To add a new component page, copy [effect-component-template.md](../../templates/effect-component-template.md) and add a row above.
