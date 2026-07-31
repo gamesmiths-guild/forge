@@ -202,7 +202,7 @@ public readonly record struct EffectData
 				StackingData.Value.LevelOverridePolicy.HasValue &&
 				StackingData.Value.LevelDenialPolicy.Value != LevelComparison.None &&
 				(StackingData.Value.LevelDenialPolicy.Value & StackingData.Value.LevelOverridePolicy.Value) != 0),
-			"LevelDenialPolicy and LevelOverridePolicy should't have the same value. If it's getting denied, how " +
+			"LevelDenialPolicy and LevelOverridePolicy shouldn't have the same value. If it's getting denied, how " +
 			"will it override?");
 
 		Validation.Assert(

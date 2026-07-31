@@ -287,9 +287,9 @@ var poisonEffectData = new EffectData(
         )
     },
     periodicData: new PeriodicData(
-        period: new ScalableFloat(2.0f),
-        executeOnApplication: true,
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(2.0f),
+        ExecuteOnApplication: true,
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     )
 );
 
@@ -333,9 +333,9 @@ var stackingPoisonEffectData = new EffectData(
         )
     },
     periodicData: new PeriodicData(
-        period: new ScalableFloat(2.0f),
-        executeOnApplication: false,
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(2.0f),
+        ExecuteOnApplication: false,
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     ),
     stackingData: new StackingData(
         stackLimit: new ScalableInt(3), // Max 3 stacks
@@ -496,7 +496,7 @@ var fireAttackData = new EffectData(
     effectComponents: new[] {
         new TargetTagRequirementsEffectComponent(
             applicationTagRequirements: new TagRequirements(
-                ignoreTags: tagsManager.RequestTagContainer(new[] { "status.immune.fire" }) // Prevent application if target has "status.immune.fire"
+                IgnoreTags: tagsManager.RequestTagContainer(new[] { "status.immune.fire" }) // Prevent application if target has "status.immune.fire"
             )
         )
     }
@@ -779,9 +779,9 @@ var burningEffectData = new EffectData(
         )
     },
     periodicData: new PeriodicData(
-        period: new ScalableFloat(1.0f), // Ticks every second
-        executeOnApplication: true,
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(1.0f), // Ticks every second
+        ExecuteOnApplication: true,
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     ),
     cues: new[] {
         new CueData(

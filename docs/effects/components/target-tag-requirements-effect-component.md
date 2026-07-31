@@ -114,15 +114,15 @@ var frostEffectData = new EffectData(
         new TargetTagRequirementsEffectComponent(
             // Application requirements: target must have "Wet" tag
             applicationTagRequirements: new TagRequirements(
-                requiredTags: tagsManager.RequestTagContainer(new[] { "Wet" })
+                RequiredTags: tagsManager.RequestTagContainer(new[] { "Wet" })
             ),
             // Removal requirements: effect is removed if target gets "Fire" tag
             removalTagRequirements: new TagRequirements(
-                tagQuery: new TagQuery(tagsManager, "Fire")
+                TagQuery: new TagQuery(tagsManager, "Fire")
             ),
             // Ongoing requirements: effect is inhibited if target has "Cold.Immune" tag
             ongoingTagRequirements: new TagRequirements(
-                ignoreTags: tagsManager.RequestTagContainer(new[] { "Cold.Immune" })
+                IgnoreTags: tagsManager.RequestTagContainer(new[] { "Cold.Immune" })
             )
         )
     }

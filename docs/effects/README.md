@@ -478,9 +478,9 @@ var dotEffectData = new EffectData(
     ),
     modifiers: [/*...*/],
     periodicData: new PeriodicData(
-        period: new ScalableFloat(2.0f),  // Execute every 2 seconds
-        executeOnApplication: true,       // Apply damage immediately on application
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(2.0f),  // Execute every 2 seconds
+        ExecuteOnApplication: true,       // Apply damage immediately on application
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     )
 );
 ```
@@ -516,14 +516,14 @@ var componentBasedEffectData = new EffectData(
         // Only apply to targets with specific tags
         new TargetTagRequirementsEffectComponent(
             applicationTagRequirements: new TagRequirements(
-                requiredTags: tagsManager.RequestTagContainer(["entity.living"]),
-                ignoreTags: tagsManager.RequestTagContainer(["status.immune.slow"])
+                RequiredTags: tagsManager.RequestTagContainer(["entity.living"]),
+                IgnoreTags: tagsManager.RequestTagContainer(["status.immune.slow"])
             ),
             removalTagRequirements: new TagRequirements(
-                tagQuery: TagQuery.MakeQueryMatchTag(tagsManager, tagsManager.RequestTagContainer(["status.cleansed"]))
+                TagQuery: TagQuery.MakeQueryMatchTag(tagsManager, tagsManager.RequestTagContainer(["status.cleansed"]))
             ),
             ongoingTagRequirements: new TagRequirements(
-                ignoreTags: tagsManager.RequestTagContainer(["status.resistant"])
+                IgnoreTags: tagsManager.RequestTagContainer(["status.resistant"])
             )
         )
     ]

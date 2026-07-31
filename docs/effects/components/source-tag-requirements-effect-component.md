@@ -67,10 +67,10 @@ var poisonEffectData = new EffectData(
     effectComponents: new[] {
         new SourceTagRequirementsEffectComponent(
             applicationTagRequirements: new TagRequirements(
-                requiredTags: tagsManager.RequestTagContainer(new[] { "trait.venomous" })
+                RequiredTags: tagsManager.RequestTagContainer(new[] { "trait.venomous" })
             ),
             removalTagRequirements: new TagRequirements(
-                requiredTags: tagsManager.RequestTagContainer(new[] { "status.cured" })
+                RequiredTags: tagsManager.RequestTagContainer(new[] { "status.cured" })
             )
         )
     }
@@ -87,7 +87,7 @@ var auraEffectData = new EffectData(
     effectComponents: new[] {
         new SourceTagRequirementsEffectComponent(
             ongoingTagRequirements: new TagRequirements(
-                ignoreTags: tagsManager.RequestTagContainer(new[] { "status.silenced" })
+                IgnoreTags: tagsManager.RequestTagContainer(new[] { "status.silenced" })
             ),
             ownershipEntity: OwnershipEntity.Owner
         )

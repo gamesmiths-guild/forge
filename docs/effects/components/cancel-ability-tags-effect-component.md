@@ -77,9 +77,9 @@ var suppressionFieldData = new EffectData(
         )
     ),
     periodicData: new PeriodicData(
-        period: new ScalableFloat(1.0f),
-        executeOnApplication: true,
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(1.0f),
+        ExecuteOnApplication: true,
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     ),
     effectComponents: new[] {
         new CancelAbilityTagsEffectComponent(

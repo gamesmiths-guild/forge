@@ -76,9 +76,9 @@ var poisonEffectData = new EffectData(
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
     },
     periodicData: new PeriodicData(
-        period: new ScalableFloat(2.0f),                           // Execute every 2 seconds
-        executeOnApplication: true,                                // Apply damage immediately
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(2.0f),                           // Execute every 2 seconds
+        ExecuteOnApplication: true,                                // Apply damage immediately
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     )
 );
 ```
@@ -103,13 +103,13 @@ var healingEffectData = new EffectData(
     },
     periodicData: new PeriodicData(
         // Period decreases as level increases (faster ticks at higher levels)
-        period: new ScalableFloat(2.0f, new Curve([
+        Period: new ScalableFloat(2.0f, new Curve([
             new CurveKey(1, 1.0f),   // Level 1: 2.0 seconds
             new CurveKey(5, 0.75f),  // Level 5: 1.5 seconds
             new CurveKey(10, 0.5f)   // Level 10: 1.0 second
         ])),
-        executeOnApplication: true,
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        ExecuteOnApplication: true,
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     )
 );
 ```
@@ -121,23 +121,23 @@ The `PeriodInhibitionRemovedPolicy` controls what happens when an inhibited effe
 ```csharp
 // Different inhibition handling policies
 var neverResetPolicy = new PeriodicData(
-    period: new ScalableFloat(5.0f),
-    executeOnApplication: false,
-    periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.NeverReset
+    Period: new ScalableFloat(5.0f),
+    ExecuteOnApplication: false,
+    PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.NeverReset
     // When re-enabled, continues with original timing - might execute immediately if period elapsed
 );
 
 var resetPolicy = new PeriodicData(
-    period: new ScalableFloat(5.0f),
-    executeOnApplication: false,
-    periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+    Period: new ScalableFloat(5.0f),
+    ExecuteOnApplication: false,
+    PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     // When re-enabled, restarts the period counter
 );
 
 var executeAndResetPolicy = new PeriodicData(
-    period: new ScalableFloat(5.0f),
-    executeOnApplication: false,
-    periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ExecuteAndResetPeriod
+    Period: new ScalableFloat(5.0f),
+    ExecuteOnApplication: false,
+    PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ExecuteAndResetPeriod
     // When re-enabled, executes immediately and restarts the period counter
 );
 ```
@@ -213,9 +213,9 @@ var stackingPeriodicEffect = new EffectData(
         applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
     ),
     periodicData: new PeriodicData(
-        period: new ScalableFloat(2.0f),
-        executeOnApplication: true,
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(2.0f),
+        ExecuteOnApplication: true,
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     )
 );
 ```
@@ -238,9 +238,9 @@ var burningEffectData = new EffectData(
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-8)))
     },
     periodicData: new PeriodicData(
-        period: new ScalableFloat(1.0f),
-        executeOnApplication: true, // Apply first tick immediately
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(1.0f),
+        ExecuteOnApplication: true, // Apply first tick immediately
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     )
 );
 ```
@@ -261,9 +261,9 @@ var regenerationEffectData = new EffectData(
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(15)))
     },
     periodicData: new PeriodicData(
-        period: new ScalableFloat(2.0f),
-        executeOnApplication: false, // First heal happens after 2 seconds
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(2.0f),
+        ExecuteOnApplication: false, // First heal happens after 2 seconds
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     )
 );
 ```
@@ -279,9 +279,9 @@ var manaRegenEffectData = new EffectData(
         new Modifier("ResourceAttributeSet.CurrentMana", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(5)))
     },
     periodicData: new PeriodicData(
-        period: new ScalableFloat(3.0f),
-        executeOnApplication: false,
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(3.0f),
+        ExecuteOnApplication: false,
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     )
 );
 ```
@@ -314,9 +314,9 @@ var bleedingEffectData = new EffectData(
         applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
     ),
     new PeriodicData(
-        period: new ScalableFloat(1.0f),
-        executeOnApplication: true,
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
+        Period: new ScalableFloat(1.0f),
+        ExecuteOnApplication: true,
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     )
 );
 ```
