@@ -2,7 +2,24 @@
 
 Effect Components in Forge allows developers to extend effect functionality through a modular, composable approach. Components can add custom behaviors, validation logic, and react to different events in an effect's lifecycle.
 
-For a practical guide on using components, see the [Quick Start Guide](../quick-start.md).
+For a practical guide on using components, see the [Quick Start Guide](../../quick-start.md). For how components fit into effects as a whole, see the [Effects overview](../README.md).
+
+---
+
+## Built-in Components
+
+| Component | State | Applies to | Description |
+|-----------|-------|------------|-------------|
+| [BlockAbilityTagsEffectComponent](block-ability-tags-effect-component.md) | Stateful | Duration | Blocks abilities carrying the given tags from activating while the effect is active. |
+| [CancelAbilityTagsEffectComponent](cancel-ability-tags-effect-component.md) | Stateless | Any | Cancels active abilities selected by tag, on application or on each execution. |
+| [ChanceToApplyEffectComponent](chance-to-apply-effect-component.md) | Stateless | Any | Gives the effect a random chance to apply, optionally scaling with level. |
+| [GrantAbilityEffectComponent](grant-ability-effect-component.md) | Stateful | Any | Grants abilities for the effect's lifetime, or permanently from an instant effect. |
+| [ModifierTagsEffectComponent](modifier-tags-effect-component.md) | Stateless | Duration | Adds tags to the target while the effect is active. |
+| [TargetTagRequirementsEffectComponent](target-tag-requirements-effect-component.md) | Stateful | Any | Gates application, forces removal, and toggles inhibition from the target's tags. |
+
+To add a new component page, copy [effect-component-template.md](../../templates/effect-component-template.md) and add a row above.
+
+---
 
 ## Core Concept
 
@@ -121,6 +138,8 @@ public void OnPostActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluate
 }
 ```
 
+This is also the earliest point at which `ActiveEffectHandle.IsInhibited` is settled, so any component whose initial behavior depends on inhibition must decide here rather than in `OnActiveEffectAdded`.
+
 Use cases:
 
 - Conditionally activating abilities granted by earlier components.
@@ -156,8 +175,7 @@ public void OnActiveEffectUnapplied(
 `reason` distinguishes an effect that ended on its own from one that was taken away:
 
 - `EffectRemovalReason.Expired` — the effect ran out of duration. Only `HasDuration` effects can expire.
-- `EffectRemovalReason.Removed` — the effect was removed through one of the `EffectsManager` removal methods before
-  it could expire. Since `Infinite` effects have no natural end, every removal of one reports `Removed`.
+- `EffectRemovalReason.Removed` — the effect was removed through one of the `EffectsManager` removal methods before it could expire. Since `Infinite` effects have no natural end, every removal of one reports `Removed`.
 
 The same value drives the `interrupted` flag that cue handlers receive in `ICueHandler.OnRemove`.
 
@@ -182,6 +200,8 @@ public void OnActiveEffectChanged(IForgeEntity target, in ActiveEffectEvaluatedD
     // React to effect changes
 }
 ```
+
+Because this fires for every one of those reasons, a component reacting to only one of them — inhibition, typically — has to compare against its own tracked state rather than assuming the callback means what it wants.
 
 Use cases:
 
@@ -278,6 +298,8 @@ public class DamageThresholdComponent : IEffectComponent
 }
 ```
 
+Once written, document it: copy [effect-component-template.md](../../templates/effect-component-template.md), fill it in, and add a row to the [Built-in Components](#built-in-components) table.
+
 ### Accessing Component Instances at Runtime
 
 When you apply a duration (non-instant) effect, you receive an `ActiveEffectHandle` from the `EffectsManager`. This handle provides access to the specific component instances that were created for this effect application.
@@ -319,7 +341,7 @@ if (handle is not null)
 - Inspecting or updating internal state on a custom component.
 - Coordinating follow-up logic or queries in gameplay systems.
 
-For more details on the structure of `ActiveEffectHandle`, see the [ActiveEffectHandle documentation](README.md#activeeffecthandle).
+For more details on the structure of `ActiveEffectHandle`, see the [ActiveEffectHandle documentation](../README.md#activeeffecthandle).
 
 ### Advanced Component Integration
 
@@ -330,311 +352,6 @@ Components can be used to implement complex systems that integrate with your gam
 - **Cross-Effect Coordination**: Components that coordinate between multiple active effects.
 - **Attribute Threshold Monitoring**: Components that trigger effects when attributes cross thresholds.
 - **AI Behavior Modification**: Components that adjust AI behavior when effects are active.
-
-## Built-in Components
-
-Forge includes several built-in components that demonstrate the component system's capabilities and provide ready-to-use functionality.
-
-### GrantAbilityEffectComponent
-
-Grants one or more abilities to the target entity. This is the primary bridge between the Effects system and the Abilities system.
-
-```csharp
-public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfigs) : IEffectComponent
-{
-    public IReadOnlyList<AbilityHandle> GrantedAbilities { get; }
-    // Implementation...
-}
-```
-
-#### Usage Example
-
-```csharp
-var grantConfig = new GrantAbilityConfig(
-    AbilityData: fireballData,
-    ScalableLevel: new ScalableInt(1), // Scales with effect level if a curve is defined
-    RemovalPolicy: AbilityDeactivationPolicy.CancelImmediately, // Cancels running instances immediately when effect ends
-    InhibitionPolicy: AbilityDeactivationPolicy.CancelImmediately, // Cancels running instances immediately if effect is inhibited
-    TryActivateOnGrant: false, // Do not try to activate automatically when granted
-    TryActivateOnEnable: false, // Do not try to activate automatically when enabled back from inhibition
-    LevelOverridePolicy: LevelComparison.Higher // Update level if higher than existing grant
-);
-
-// Keep a reference to the component if you need to access the granted ability handles later
-var grantComponent = new GrantAbilityEffectComponent([grantConfig]);
-
-var grantEffect = new EffectData(
-    "Grant Fireball",
-    new DurationData(DurationType.Infinite),
-    effectComponents: [grantComponent]
-);
-
-// Apply the effect
-entity.EffectsManager.ApplyEffect(new Effect(grantEffect, ownership));
-
-// Access the handle directly from the component instance
-AbilityHandle fireballHandle = grantComponent.GrantedAbilities[0];
-```
-
-Key points:
-
-- **Direct Handle Access**: You can keep a reference to the component instance to access its `GrantedAbilities`, which contains the `AbilityHandle`s created by this specific effect application. Alternatively, use the effect handle's `GetComponent<GrantAbilityEffectComponent>()` method to retrieve the runtime component instance when needed.
-- **Lifecycle Management**: Automatically handles granting, removing, and inhibiting abilities based on the effect's lifecycle and the configured policies.
-- **Permanent vs. Temporary**: 
-  - If used in an **Instant** effect, the ability is granted permanently.
-  - If used in a **Duration** effect, the ability exists only while the effect is active (unless removal policy is set to `Ignore`).
-
-### ChanceToApplyEffectComponent
-
-Adds a random chance for effects to be applied, with support for level-based scaling.
-
-```csharp
-public class ChanceToApplyEffectComponent(IRandom randomProvider, ScalableFloat chance) : IEffectComponent
-{
-    // Implementation...
-}
-```
-
-#### The IRandom Interface
-
-The `ChanceToApplyEffectComponent` uses the `IRandom` interface to generate random values for determining if an effect should be applied:
-
-```csharp
-public interface IRandom
-{
-    int NextInt();
-    int NextInt(int maxValue);
-    int NextInt(int minValue, int maxValue);
-    int NextIntInclusive(int minValue, int maxValue);
-    float NextSingle();
-    float NextSingleInclusive();
-    double NextDouble();
-    double NextDoubleInclusive();
-    long NextInt64();
-    long NextInt64(long maxValue);
-    long NextInt64(long minValue, long maxValue);
-    long NextInt64Inclusive(long minValue, long maxValue);
-    void NextBytes(byte[] buffer);
-    void NextBytes(Span<byte> buffer);
-}
-```
-
-The component specifically uses the `NextSingle()` method, which returns a random floating-point number between 0.0 (inclusive) and 1.0 (exclusive). The interface also exposes explicit inclusive methods for APIs that need closed ranges without relying on helper conversions. This allows for a consistent random number generation implementation that can be swapped or mocked for testing.
-
-#### Usage Example
-
-```csharp
-// Create a "Stun" effect with a 25% chance to apply
-var stunEffectData = new EffectData(
-    "Stun",
-    new DurationData(
-        DurationType.HasDuration,
-        new ModifierMagnitude(
-            MagnitudeCalculationType.ScalableFloat,
-            new ScalableFloat(3.0f)
-        )
-    ),
-    effectComponents: new[] {
-        new ChanceToApplyEffectComponent(
-            randomProvider,  // Your game's random number generator
-            new ScalableFloat(0.25f)  // 25% chance to apply
-        )
-    }
-);
-```
-
-Advanced usage with level scaling:
-
-```csharp
-// Create a "Critical Hit" effect with a chance that scales with level
-var criticalHitEffectData = new EffectData(
-    "Critical Hit",
-    new DurationData(DurationType.Instant),
-    [/*...*/],
-    effectComponents: new[] {
-        new ChanceToApplyEffectComponent(
-            randomProvider,
-            new ScalableFloat(
-                0.1f,  // Base 10% chance
-                new Curve([
-                    new CurveKey(1, 1.0f),   // Level 1: 10%
-                    new CurveKey(5, 2.0f),   // Level 5: 20%
-                    new CurveKey(10, 3.5f)   // Level 10: 35%
-                ])
-            )
-        )
-    }
-);
-```
-
-Key points:
-
-- Uses the provided random provider for chance determination.
-- Chance can scale with effect level using `ScalableFloat`.
-- Validates during `CanApplyEffect`, before any effect application logic.
-
-### ModifierTagsEffectComponent
-
-Adds tags to the target entity while the effect is active. These tags are automatically removed when the effect ends. See the [Tags documentation](../tags.md) for more on tags.
-
-```csharp
-public class ModifierTagsEffectComponent(TagContainer tagsToAdd) : IEffectComponent
-{
-    // Implementation...
-}
-```
-
-Usage example:
-
-```csharp
-// Create a "Burning" effect that adds the "Status.Burning" tag to the target
-var burningEffectData = new EffectData(
-    "Burning",
-    new DurationData(
-        DurationType.HasDuration,
-        new ModifierMagnitude(
-            MagnitudeCalculationType.ScalableFloat,
-            new ScalableFloat(10.0f)
-        )
-    ),
-    new[] {
-        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
-    },
-    periodicData: new PeriodicData(
-        period: new ScalableFloat(2.0f),
-        executeOnApplication: true,
-        periodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
-    ),
-    effectComponents: new[] {
-        new ModifierTagsEffectComponent(
-            tagsManager.RequestTagContainer(new[] { "status.burning" })
-        )
-    }
-);
-```
-
-Key points:
-
-- Only works with duration effects (not instant).
-- Tags are automatically added when the effect is applied.
-- Tags are automatically removed when the effect ends completely.
-- With stacked effects, tags remain until all stacks are removed.
-
-### TargetTagRequirementsEffectComponent
-
-Validates if a target meets tag requirements for effect application and manages ongoing effect states based on tags.
-
-```csharp
-public class TargetTagRequirementsEffectComponent(
-    TagRequirements applicationTagRequirements,
-    TagRequirements removalTagRequirements,
-    TagRequirements ongoingTagRequirements) : IEffectComponent
-{
-    // Implementation...
-}
-```
-
-#### The TagRequirements System
-
-The `TagRequirements` struct is a powerful mechanism for evaluating tag conditions on entities, used by the `TargetTagRequirementsEffectComponent`.
-
-```csharp
-public readonly struct TagRequirements(
-    TagContainer? requiredTags = null,
-    TagContainer? ignoreTags = null,
-    TagQuery? tagQuery = null)
-{
-    // Implementation...
-}
-```
-
-##### Components of TagRequirements
-
-- **RequiredTags**: Tags that must all be present on the target.
-- **IgnoreTags**: Tags that must not be present on the target (any match will fail).
-- **TagQuery**: A complex query expression for advanced tag matching.
-
-##### How TagRequirements Are Evaluated
-
-```csharp
-public bool RequirementsMet(in TagContainer targetContainer)
-{
-    var hasRequired = RequiredTags is null || targetContainer.HasAll(RequiredTags);
-    var hasIgnored = IgnoreTags is not null && targetContainer.HasAny(IgnoreTags);
-    var matchQuery = TagQuery is null || TagQuery.IsEmpty || TagQuery.Matches(targetContainer);
-
-    return hasRequired && !hasIgnored && matchQuery;
-}
-```
-
-For requirements to be met:
-
-1. Target must have ALL required tags.
-2. Target must have NONE of the ignore tags.
-3. Target must match the tag query (if one is provided).
-
-##### Tag Query Usage
-
-Tag queries allow for more complex expressions than simple "has all" and "has none" logic. See the [Tags documentation](../tags.md) for more on tag queries.
-
-```csharp
-// Create a query that matches if:
-// (Target has EITHER "Fire" OR "Ice") AND (Target does NOT have both "Water" AND "Metal")
-var query = new TagQuery();
-query.Build(new TagQueryExpression(tagsManager)
-    .AllExpressionsMatch()
-        .AddExpression(new TagQueryExpression(tagsManager)
-            .AnyTagsMatch()
-                .AddTag("Fire")
-                .AddTag("Ice"))
-        .AddExpression(new TagQueryExpression(tagsManager)
-            .NoExpressionsMatch()
-                .AddExpression(new TagQueryExpression(tagsManager)
-                    .AllTagsMatch()
-                        .AddTag("Water")
-                        .AddTag("Metal"))));
-```
-
-#### Usage Example
-
-```csharp
-// Create a "Frost" effect that only applies to targets with the "Wet" tag,
-// is removed if target gains the "Fire" tag, and is inhibited if target has the "Cold.Immune" tag
-var frostEffectData = new EffectData(
-    "Frost",
-    new DurationData(
-        DurationType.HasDuration,
-        new ModifierMagnitude(
-            MagnitudeCalculationType.ScalableFloat,
-            new ScalableFloat(8.0f)
-        )
-    ),
-    [/*...*/],
-    effectComponents: new[] {
-        new TargetTagRequirementsEffectComponent(
-            // Application requirements: target must have "Wet" tag
-            applicationTagRequirements: new TagRequirements(
-                requiredTags: tagsManager.RequestTagContainer(new[] { "Wet" })
-            ),
-            // Removal requirements: effect is removed if target gets "Fire" tag
-            removalTagRequirements: new TagRequirements(
-                tagQuery: new TagQuery(tagsManager, "Fire")
-            ),
-            // Ongoing requirements: effect is inhibited if target has "Cold.Immune" tag
-            ongoingTagRequirements: new TagRequirements(
-                ignoreTags: tagsManager.RequestTagContainer(new[] { "Cold.Immune" })
-            )
-        )
-    }
-);
-```
-
-Key points:
-
-- Dynamically monitors tag changes on the target.
-- Can prevent application, force removal, or toggle inhibition.
-- Automatically cleans up event subscriptions when the effect is removed.
-- Uses `TagRequirements` to define complex tag conditions.
 
 ## Combining Components
 
