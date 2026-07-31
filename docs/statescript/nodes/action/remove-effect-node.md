@@ -48,16 +48,33 @@ Handles come from the **Active Effect** output of an [ApplyEffectNode](apply-eff
 ## Usage
 
 ```csharp
-// Dispel: query all debuffs on the target, then remove them
+// Dispel: query every application of one effect on the target, then remove them
 graph.VariableDefinitions.DefineObjectArrayProperty("debuffs",
-    new QueryActiveEffectsResolver(debuffData, new AbilityTargetResolver()));
+    new QueryActiveEffectsResolver(
+        new EffectQuery(EffectDefinition: debuffData),
+        new AbilityTargetResolver()));
 
 var remove = new RemoveEffectNode(forceRemoval: true);
 remove.BindInput(RemoveEffectNode.HandleInput, "debuffs");
 ```
 
+```csharp
+// Dispel by category: every curse, whatever effect it happens to be
+graph.VariableDefinitions.DefineObjectArrayProperty("curses",
+    new QueryActiveEffectsResolver(
+        new EffectQuery(
+            EffectTagQuery: TagQuery.MakeQueryMatchTag(Tag.RequestTag(tagsManager, "effect.curse"))),
+        new AbilityTargetResolver()));
+
+var dispel = new RemoveEffectNode(forceRemoval: true);
+dispel.BindInput(RemoveEffectNode.HandleInput, "curses");
+```
+
+For predicates an `EffectQuery` cannot express, filter the unfiltered query through an [ObjectWhereResolver](../../resolvers/where-resolver.md) with an [ActiveEffectTagQueryResolver](../../resolvers/active-effect-tag-query-resolver.md) instead.
+
 ## See Also
 
 - [Action Nodes Overview](README.md)
 - [QueryActiveEffectsResolver](../../resolvers/query-active-effects-resolver.md)
+- [ActiveEffectTagQueryResolver](../../resolvers/active-effect-tag-query-resolver.md)
 - [SetEffectInhibitionNode](set-effect-inhibition-node.md)

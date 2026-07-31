@@ -43,6 +43,36 @@ While you can create `EffectData` at runtime, it's generally better to define th
 
 **Note:** If you'll apply an effect repeatedly, keep a reference to the `Effect` instance to maintain its level.
 
+#### Effect Tags
+
+`EffectData.EffectTags` classifies the effect **itself**. These tags are never granted to the target — they exist so systems can ask "what kind of effect is this?" and select effects by category.
+
+```csharp
+var poisonData = new EffectData(
+    "Poison",
+    new DurationData(DurationType.HasDuration, /* ... */),
+    modifiers,
+    effectTags: new TagContainer(tagsManager,
+    [
+        Tag.RequestTag(tagsManager, "effect.debuff.poison"),
+        Tag.RequestTag(tagsManager, "effect.curse")
+    ]));
+```
+
+There are two tag vocabularies in play, and keeping them apart matters:
+
+| | Granted tags (`ModifierTagsEffectComponent`) | Effect tags (`EffectData.EffectTags`) |
+|---|---|---|
+| Live on | the **target entity**, while the effect is active | the **effect definition**, always |
+| Answer | "what state is this entity in?" | "what kind of effect is this?" |
+| Visible to | anything reading `entity.Tags` | `EffectQuery` and the Statescript effect resolvers |
+
+**The rule: granted tags for entity state, effect tags for identity.**
+
+The distinction is what lets a Remove Curse strip a Slow without the Slow having to grant `status.curse` to its target — because granting it would mean the target genuinely *has* curse, and everything keying on `status.curse` would fire. With effect tags, an effect can **be** a curse without the target **having** curse.
+
+Effect tags also give identity to effects that grant nothing at all. A pure damage-over-time with no status tag is otherwise unclassifiable at runtime: no debuff-bar category, no way for a graph to select it.
+
 ### EffectsManager
 
 The `EffectsManager` is responsible for applying, tracking, and updating effects on an entity. Every `IForgeEntity` has an `EffectsManager` accessible through its interface.
@@ -149,18 +179,80 @@ entity.EffectsManager.RemoveEffectData(effectData);
 Beyond `GetEffectStackData(effectData)` (which returns per-application `EffectStackInstanceData`), the manager can return live handles:
 
 ```csharp
-// Handles for every active application of a given EffectData
-foreach (ActiveEffectHandle handle in entity.EffectsManager.GetActiveEffects(effectData))
+// Handles for every active effect on the entity
+foreach (ActiveEffectHandle handle in entity.EffectsManager.GetActiveEffects())
 {
     // e.g. read handle.RemainingDuration, or dispel it
     entity.EffectsManager.RemoveEffect(handle, forceRemoval: true);
 }
+```
 
-// Handles for every active effect on the entity
-IEnumerable<ActiveEffectHandle> all = entity.EffectsManager.GetActiveEffects();
+To select a subset, pass an [`EffectQuery`](#effectquery) — including the "every application of this one effect" case, which is `EffectDefinition`:
+
+```csharp
+IEnumerable<ActiveEffectHandle> poisons =
+    entity.EffectsManager.GetActiveEffects(new EffectQuery(EffectDefinition: poisonData));
 ```
 
 This is the entry point for "dispel" patterns and for polling effects the caller did not apply itself. In Statescript, the same query is exposed as [`QueryActiveEffectsResolver`](../statescript/resolvers/query-active-effects-resolver.md).
+
+#### EffectQuery
+
+Filtering by a single `EffectData` only reaches effects you can name. `EffectQuery` is the general selector: a `readonly record struct` where every field is optional and all defined fields are combined with **AND**, in the same shape as [`TagRequirements`](components/target-tag-requirements-effect-component.md).
+
+| Field | Matched against |
+|---|---|
+| `EffectData? EffectDefinition` | the effect's own `EffectData` |
+| `TagQuery? EffectTagQuery` | `EffectData.EffectTags` |
+| `TagQuery? GrantedTagQuery` | the tags the effect grants through `ModifierTagsEffectComponent` |
+| `TagQuery? OwningTagQuery` | the union of effect tags and granted tags |
+| `TagRequirements? SourceTagRequirements` | the tags of the entity that applied the effect |
+| `StringKey? ModifyingAttribute` | any of the effect's `Modifiers[].Attribute` |
+| `IForgeEntity? EffectSource` | the effect's `Ownership.Source` |
+| `Func<Effect, bool>? CustomMatch` | an arbitrary predicate, for anything the fields cannot express |
+
+```csharp
+var curseQuery = new EffectQuery(
+    EffectTagQuery: TagQuery.MakeQueryMatchTag(Tag.RequestTag(tagsManager, "effect.curse")));
+```
+
+An **empty query matches every effect**, so `GetActiveEffects(default)` is equivalent to `GetActiveEffects()`. Check `IsEmpty` before handing a designer-authored query to `RemoveEffects` if that is not what you want.
+
+An effect that carries no effect tags at all is matched as if it carried an *empty* container, so a negative query such as `NoTagsMatch(effect.curse)` still matches it.
+
+#### The Query API
+
+Four overloads take an `EffectQuery`:
+
+```csharp
+// Every matching handle
+IEnumerable<ActiveEffectHandle> curses = entity.EffectsManager.GetActiveEffects(curseQuery);
+
+// Per-application stack data, mirroring the EffectData overload
+IEnumerable<EffectStackInstanceData> stacks = entity.EffectsManager.GetEffectStackData(curseQuery);
+
+// Cheap early-out gate — the common UI/AI question
+if (entity.EffectsManager.HasAnyActiveEffect(curseQuery))
+{
+    ShowCurseIcon();
+}
+
+// Bulk removal; returns how many active effects matched
+int dispelled = entity.EffectsManager.RemoveEffects(curseQuery);
+```
+
+`RemoveEffects` takes two more optional arguments:
+
+```csharp
+entity.EffectsManager.RemoveEffects(
+    curseQuery,
+    stacksToRemove: 2,           // negative (the default) removes the effects entirely
+    ignoredHandles: [myHandle]); // never removed, even when they match
+```
+
+Unlike `RemoveEffect(handle, forceRemoval)`, partial removal here is explicit rather than driven by `StackExpirationPolicy`, and it never refreshes the remaining duration.
+
+In Statescript, the same query drives [`QueryActiveEffectsResolver`](../statescript/resolvers/query-active-effects-resolver.md) and [`EffectQueryMatchResolver`](../statescript/resolvers/effect-query-match-resolver.md).
 
 ## Effect Lifecycle
 
@@ -325,6 +417,21 @@ var effectData = new EffectData(
 
 - `true`: Fireball damage that's determined when cast, regardless of later effect level changes.
 - `false`: Blessing buff from an item that grows stronger as the effect gains levels.
+
+#### Effect Tags
+
+```csharp
+var effectData = new EffectData(
+    name: "Fireball",
+    durationData: new DurationData(DurationType.Instant),
+    modifiers: [/*...*/],
+    effectTags: new TagContainer(tagsManager, [Tag.RequestTag(tagsManager, "effect.damage.fire")])
+);
+```
+
+- **EffectTags**: Identity tags for the effect itself, never granted to the target. They are what [`EffectQuery`](#effectquery) selects on. Optional; defaults to none.
+
+See [Effect Tags](#effect-tags) for the identity-versus-state rule that keeps them apart from `ModifierTagsEffectComponent`.
 
 ### Duration Data
 

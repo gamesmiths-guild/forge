@@ -146,9 +146,9 @@ public class ActiveEffectResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : 
 		context.GraphVariables.DefineObjectVariable<IForgeEntity>("entity", target);
 		var entityResolver = new EntityVariableResolver("entity");
 
-		new QueryActiveEffectsResolver(buffData, entityResolver)
+		new QueryActiveEffectsResolver(new EffectQuery(EffectDefinition: buffData), entityResolver)
 			.ResolveArray(context).Should().BeEquivalentTo([firstHandle, secondHandle]);
-		new QueryActiveEffectsResolver(effectData: null, entityResolver)
+		new QueryActiveEffectsResolver(default, entityResolver)
 			.ResolveArray(context).Should().HaveCount(3);
 	}
 
@@ -160,7 +160,7 @@ public class ActiveEffectResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : 
 		context.GraphVariables.DefineObjectVariable<IForgeEntity>("entity");
 		var entityResolver = new EntityVariableResolver("entity");
 
-		new QueryActiveEffectsResolver(effectData: null, entityResolver)
+		new QueryActiveEffectsResolver(default, entityResolver)
 			.ResolveArray(context).Should().BeEmpty();
 	}
 

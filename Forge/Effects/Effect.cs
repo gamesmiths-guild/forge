@@ -15,6 +15,9 @@ namespace Gamesmiths.Forge.Effects;
 /// </summary>
 public class Effect
 {
+	private TagContainer? _owningTags;
+	private bool _owningTagsResolved;
+
 	/// <summary>
 	/// Event triggered when the level of this effect changes.
 	/// </summary>
@@ -188,6 +191,74 @@ public class Effect
 			componentInstances);
 
 		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
+	}
+
+	/// <summary>
+	/// Gets the union of this effect's own tags and the tags it grants to its target.
+	/// </summary>
+	/// <remarks>
+	/// Both inputs are fixed at construction, so the union is built once on first use and cached. Query filtering calls
+	/// this once per effect per pass, and the union is the only case that has to allocate.
+	/// </remarks>
+	/// <returns>A container with both sets of tags, or <see langword="null"/> when the effect has neither.</returns>
+	internal TagContainer? GetOwningTags()
+	{
+		if (_owningTagsResolved)
+		{
+			return _owningTags;
+		}
+
+		TagContainer? effectTags = EffectData.EffectTags;
+
+		if (effectTags is null)
+		{
+			_owningTags = CachedGrantedTags;
+		}
+		else if (CachedGrantedTags is null)
+		{
+			_owningTags = effectTags;
+		}
+		else
+		{
+			var owningTags = new TagContainer(effectTags);
+			owningTags.AppendTags(CachedGrantedTags);
+			_owningTags = owningTags;
+		}
+
+		_owningTagsResolved = true;
+		return _owningTags;
+	}
+
+	/// <summary>
+	/// Evaluates a query against one of this effect's tag containers.
+	/// </summary>
+	/// <remarks>
+	/// An effect that carries no container of its own is still evaluated, as an empty one, so that negative queries
+	/// behave the way they read. The tags manager only supplies tag indexing, so any reachable one gives the same
+	/// answer; when none is reachable the effect has no tag context at all and never matches.
+	/// </remarks>
+	/// <param name="query">The query to evaluate.</param>
+	/// <param name="container">The container to evaluate against, or <see langword="null"/> when the effect carries
+	/// none.</param>
+	/// <returns><see langword="true"/> if the query matches; <see langword="false"/> otherwise.</returns>
+	internal bool MatchesTagQuery(TagQuery query, TagContainer? container)
+	{
+		if (container is not null)
+		{
+			return query.Matches(container);
+		}
+
+		TagsManager? tagsManager = ResolveTagsManager();
+
+		return tagsManager is not null && query.Matches(new TagContainer(tagsManager));
+	}
+
+	internal TagsManager? ResolveTagsManager()
+	{
+		return EffectData.EffectTags?.TagsManager
+			?? CachedGrantedTags?.TagsManager
+			?? Ownership.Source?.Tags.BaseTags.TagsManager
+			?? Ownership.Owner?.Tags.BaseTags.TagsManager;
 	}
 
 	internal bool CanApply(IForgeEntity target)

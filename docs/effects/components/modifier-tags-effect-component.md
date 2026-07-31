@@ -69,10 +69,12 @@ var burningEffectData = new EffectData(
 - Tags are automatically removed when the effect ends completely.
 - With stacked effects, tags remain until all stacks are removed.
 - Granted tags represent **entity state**. They are what other systems key off — a debuff bar, a tag requirement, an AI check.
+- To classify the *effect* rather than change the target, use [`EffectData.EffectTags`](../README.md#effect-tags) instead. The rule: granted tags for entity state, effect tags for identity.
 
 ## See Also
 
 - [Effect Components Overview](README.md)
 - [Tags](../../tags.md)
+- [Effect Tags](../README.md#effect-tags)
 - [TargetTagRequirementsEffectComponent](target-tag-requirements-effect-component.md)
 - [BlockAbilityTagsEffectComponent](block-ability-tags-effect-component.md)

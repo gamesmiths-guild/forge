@@ -161,13 +161,15 @@ public class ActiveEffectHandleTests(TagsAndCuesFixture tagsAndCuesFixture) : IC
 		ActiveEffectHandle? secondHandle = ApplyEffect(target, buffData);
 		ApplyEffect(target, otherData);
 
-		target.EffectsManager.GetActiveEffects(buffData).Should()
+		var buffQuery = new EffectQuery(EffectDefinition: buffData);
+
+		target.EffectsManager.GetActiveEffects(buffQuery).Should()
 			.BeEquivalentTo([firstHandle, secondHandle]);
 		target.EffectsManager.GetActiveEffects().Should().HaveCount(3);
 
 		target.EffectsManager.RemoveEffect(firstHandle!, forceRemoval: true);
 
-		target.EffectsManager.GetActiveEffects(buffData).Should()
+		target.EffectsManager.GetActiveEffects(buffQuery).Should()
 			.BeEquivalentTo([secondHandle]);
 		target.EffectsManager.GetActiveEffects().Should().HaveCount(2);
 	}
