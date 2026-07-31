@@ -42,5 +42,5 @@ graph.AddConnection(new Connection(
 ## See Also
 
 - [Action Nodes Overview](README.md)
-- [CancelAbilitiesByTagNode](cancel-abilities-by-tag-node.md)
+- [CancelAbilitiesNode](cancel-abilities-node.md)
 - [Ability Integration](../../ability-integration.md)
