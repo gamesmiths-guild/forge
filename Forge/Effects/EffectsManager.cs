@@ -127,6 +127,17 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	}
 
 	/// <summary>
+	/// Queries and gets the stack data for the active effects matching the given <see cref="EffectQuery"/>.
+	/// </summary>
+	/// <param name="query">The query the active effects must match. An empty query matches every active effect.
+	/// </param>
+	/// <returns>An enumerable of <see cref="EffectStackInstanceData"/> grouped by their stack configuration.</returns>
+	public IEnumerable<EffectStackInstanceData> GetEffectStackData(EffectQuery query)
+	{
+		return ConvertToStackInstanceData(FilterEffectsByQuery(query));
+	}
+
+	/// <summary>
 	/// Queries and gets the handles for all active applications of a given <see cref="EffectData"/>.
 	/// </summary>
 	/// <param name="effectData">Which effect to query for.</param>
@@ -143,6 +154,68 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	public IEnumerable<ActiveEffectHandle> GetActiveEffects()
 	{
 		return _activeEffects.Select(x => x.Handle);
+	}
+
+	/// <summary>
+	/// Queries and gets the handles for all active effects matching the given <see cref="EffectQuery"/>.
+	/// </summary>
+	/// <param name="query">The query the active effects must match. An empty query matches every active effect.
+	/// </param>
+	/// <returns>The handles for the currently active effects matching the given query.</returns>
+	public IEnumerable<ActiveEffectHandle> GetActiveEffects(EffectQuery query)
+	{
+		return FilterEffectsByQuery(query).Select(x => x.Handle);
+	}
+
+	/// <summary>
+	/// Checks whether any effect matching the given <see cref="EffectQuery"/> is currently active on the owner.
+	/// </summary>
+	/// <remarks>
+	/// Cheaper than <see cref="GetActiveEffects(EffectQuery)"/> when only the answer matters, since it stops at the
+	/// first match.
+	/// </remarks>
+	/// <param name="query">The query the active effects must match. An empty query matches every active effect.
+	/// </param>
+	/// <returns><see langword="true"/> if at least one active effect matches; <see langword="false"/> otherwise.
+	/// </returns>
+	public bool HasAnyActiveEffect(EffectQuery query)
+	{
+		return _activeEffects.Exists(x => query.Matches(x.Handle));
+	}
+
+	/// <summary>
+	/// Removes every active effect matching the given <see cref="EffectQuery"/>.
+	/// </summary>
+	/// <remarks>
+	/// Unlike <see cref="RemoveEffect(ActiveEffectHandle, bool)"/>, partial removal here is explicit rather than driven
+	/// by <see cref="StackExpirationPolicy"/>, and it never refreshes the remaining duration.
+	/// </remarks>
+	/// <param name="query">The query the active effects must match. An empty query matches every active effect.
+	/// </param>
+	/// <param name="stacksToRemove">How many stacks to remove from each matching effect. Any negative value removes
+	/// the effects entirely, regardless of their stack count.</param>
+	/// <param name="ignoredHandles">Handles that are never removed, even when they match the query.</param>
+	/// <returns>The number of active effects that matched the query.</returns>
+	public int RemoveEffects(
+		EffectQuery query,
+		int stacksToRemove = -1,
+		IReadOnlyCollection<ActiveEffectHandle>? ignoredHandles = null)
+	{
+		if (stacksToRemove == 0)
+		{
+			return 0;
+		}
+
+		// Snapshotting is required: removal callbacks can apply or remove further effects.
+		ActiveEffect[] matchingEffects =
+			[.. _activeEffects.Where(x => query.Matches(x.Handle, ignoredHandles))];
+
+		foreach (ActiveEffect matchingEffect in matchingEffects)
+		{
+			RemoveStacks(matchingEffect, stacksToRemove);
+		}
+
+		return matchingEffects.Length;
 	}
 
 	internal void OnEffectExecuted_InternalCall(
@@ -311,6 +384,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return _activeEffects.Where(x => x.EffectEvaluatedData.Effect == effect);
 	}
 
+	private IEnumerable<ActiveEffect> FilterEffectsByQuery(EffectQuery query)
+	{
+		return _activeEffects.Where(x => query.Matches(x.Handle));
+	}
+
 	private ActiveEffect? FindStackableEffect(Effect effect)
 	{
 		return FilterEffectsByData(effect.EffectData).FirstOrDefault(x =>
@@ -401,6 +479,27 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		// This method is only ever reached through the public removal API, so the effect never got the chance to expire
 		// on its own, regardless of its duration type.
 		RemoveActiveEffect(effectToRemove, EffectRemovalReason.Removed);
+	}
+
+	private void RemoveStacks(ActiveEffect effectToRemove, int stacksToRemove)
+	{
+		if (stacksToRemove < 0)
+		{
+			effectToRemove.Unapply();
+			RemoveActiveEffect(effectToRemove, EffectRemovalReason.Removed);
+			return;
+		}
+
+		for (int i = 0; i < stacksToRemove && effectToRemove.StackCount > 0; i++)
+		{
+			effectToRemove.RemoveStack(EffectRemovalReason.Removed);
+
+			if (effectToRemove.StackCount == 0)
+			{
+				RemoveActiveEffect(effectToRemove, EffectRemovalReason.Removed);
+				return;
+			}
+		}
 	}
 
 	private void RemoveActiveEffect(ActiveEffect effectToRemove, EffectRemovalReason reason)
