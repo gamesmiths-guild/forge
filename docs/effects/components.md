@@ -31,7 +31,7 @@ public interface IEffectComponent
     bool CanApplyEffect(in IForgeEntity target, in Effect effect);
     bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData);
     void OnPostActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData);
-    void OnActiveEffectUnapplied(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData, bool removed);
+    void OnActiveEffectUnapplied(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData, bool removed, EffectRemovalReason reason);
     void OnActiveEffectChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData);
     void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData);
     void OnEffectExecuted(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData);
@@ -132,7 +132,11 @@ Use cases:
 Called when an effect is unapplied or a stack is removed.
 
 ```csharp
-public void OnActiveEffectUnapplied(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData, bool removed)
+public void OnActiveEffectUnapplied(
+    IForgeEntity target,
+    in ActiveEffectEvaluatedData activeEffectEvaluatedData,
+    bool removed,
+    EffectRemovalReason reason)
 {
     // Custom cleanup logic
     if (removed) {
@@ -140,8 +144,22 @@ public void OnActiveEffectUnapplied(IForgeEntity target, in ActiveEffectEvaluate
     } else {
         // Just a stack was removed
     }
+
+    if (reason == EffectRemovalReason.Expired) {
+        // The effect ran its course
+    } else {
+        // The effect was taken away early
+    }
 }
 ```
+
+`reason` distinguishes an effect that ended on its own from one that was taken away:
+
+- `EffectRemovalReason.Expired` — the effect ran out of duration. Only `HasDuration` effects can expire.
+- `EffectRemovalReason.Removed` — the effect was removed through one of the `EffectsManager` removal methods before
+  it could expire. Since `Infinite` effects have no natural end, every removal of one reports `Removed`.
+
+The same value drives the `interrupted` flag that cue handlers receive in `ICueHandler.OnRemove`.
 
 Use cases:
 
@@ -248,7 +266,8 @@ public class DamageThresholdComponent : IEffectComponent
     public void OnActiveEffectUnapplied(
         IForgeEntity target,
         in ActiveEffectEvaluatedData activeEffectEvaluatedData,
-        bool removed)
+        bool removed,
+        EffectRemovalReason reason)
     {
         if (removed && _damageEventToken is not null)
         {
