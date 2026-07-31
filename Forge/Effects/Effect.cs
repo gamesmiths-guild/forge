@@ -190,6 +190,61 @@ public class Effect
 		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 	}
 
+	/// <summary>
+	/// Builds the union of this effect's own tags and the tags it grants to its target.
+	/// </summary>
+	/// <returns>A container with both sets of tags, or <see langword="null"/> when the effect has neither.</returns>
+	internal TagContainer? BuildOwningTags()
+	{
+		TagContainer? effectTags = EffectData.EffectTags;
+
+		if (effectTags is null)
+		{
+			return CachedGrantedTags;
+		}
+
+		if (CachedGrantedTags is null)
+		{
+			return effectTags;
+		}
+
+		var owningTags = new TagContainer(effectTags);
+		owningTags.AppendTags(CachedGrantedTags);
+		return owningTags;
+	}
+
+	/// <summary>
+	/// Evaluates a query against one of this effect's tag containers.
+	/// </summary>
+	/// <remarks>
+	/// An effect that carries no container of its own is still evaluated, as an empty one, so that negative queries
+	/// behave the way they read. The tags manager only supplies tag indexing, so any reachable one gives the same
+	/// answer; when none is reachable the effect has no tag context at all and never matches.
+	/// </remarks>
+	/// <param name="query">The query to evaluate.</param>
+	/// <param name="container">The container to evaluate against, or <see langword="null"/> when the effect carries
+	/// none.</param>
+	/// <returns><see langword="true"/> if the query matches; <see langword="false"/> otherwise.</returns>
+	internal bool MatchesTagQuery(TagQuery query, TagContainer? container)
+	{
+		if (container is not null)
+		{
+			return query.Matches(container);
+		}
+
+		TagsManager? tagsManager = ResolveTagsManager();
+
+		return tagsManager is not null && query.Matches(new TagContainer(tagsManager));
+	}
+
+	internal TagsManager? ResolveTagsManager()
+	{
+		return EffectData.EffectTags?.TagsManager
+			?? CachedGrantedTags?.TagsManager
+			?? Ownership.Source?.Tags.BaseTags.TagsManager
+			?? Ownership.Owner?.Tags.BaseTags.TagsManager;
+	}
+
 	internal bool CanApply(IForgeEntity target)
 	{
 		foreach (IEffectComponent component in EffectData.EffectComponents)

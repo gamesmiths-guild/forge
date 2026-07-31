@@ -9,6 +9,7 @@ using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Effects.Stacking;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Effects;
 
@@ -80,6 +81,22 @@ public readonly record struct EffectData
 	public CueData[] Cues { get; }
 
 	/// <summary>
+	/// Gets the tags that identify this effect, or <see langword="null"/> when it carries none.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// These tags classify the effect itself; they are never granted to the target. Use them to answer "what kind of
+	/// effect is this?" — <c>effect.debuff.poison</c>, <c>effect.curse</c> — so that <see cref="EffectQuery"/> can
+	/// select effects by category without every effect having to also change the target's state.
+	/// </para>
+	/// <para>
+	/// This is the counterpart of <see cref="ModifierTagsEffectComponent"/>, which grants tags <i>to the target</i>.
+	/// The rule of thumb: granted tags for entity state, effect tags for identity.
+	/// </para>
+	/// </remarks>
+	public TagContainer? EffectTags { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="EffectData"/> struct.
 	/// </summary>
 	/// <param name="name">The name of this effect.</param>
@@ -95,6 +112,8 @@ public readonly record struct EffectData
 	/// <param name="suppressStackingCues">Whether or not to trigger cues when applying stacks.</param>
 	/// <param name="customExecutions">The list of custom executions for this effect.</param>
 	/// <param name="cues">The cues associated with this effect.</param>
+	/// <param name="effectTags">The tags identifying this effect, used by <see cref="EffectQuery"/>. These are never
+	/// granted to the target.</param>
 	public EffectData(
 		string name,
 		DurationData durationData,
@@ -106,7 +125,8 @@ public readonly record struct EffectData
 		CueTriggerRequirement requireModifierSuccessToTriggerCue = CueTriggerRequirement.None,
 		bool suppressStackingCues = false,
 		CustomExecution[]? customExecutions = null,
-		CueData[]? cues = null)
+		CueData[]? cues = null,
+		TagContainer? effectTags = null)
 	{
 		Name = name;
 		DurationData = durationData;
@@ -119,6 +139,7 @@ public readonly record struct EffectData
 		SuppressStackingCues = suppressStackingCues;
 		CustomExecutions = customExecutions ?? [];
 		Cues = cues ?? [];
+		EffectTags = effectTags;
 
 		if (Validation.Enabled)
 		{
