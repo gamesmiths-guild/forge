@@ -31,15 +31,19 @@ These resolvers provide effect instances and application context to nodes such a
 | [AbilityOwnershipResolver](ability-ownership-resolver.md) | `EffectOwnership` | Reads the current ability owner/source pair as an effect ownership value. |
 | [ActiveEffectDataResolver](active-effect-data-resolver.md) | `double`/`int`/`bool` | Reads a selected runtime value (remaining duration, stacks, level, ...) from an active effect handle. |
 | [ActiveEffectEffectResolver](active-effect-effect-resolver.md) | `Effect?` | Reads the live `Effect` instance behind an active effect handle. |
+| [ActiveEffectOwnerResolver](active-effect-owner-resolver.md) | `IForgeEntity?` | Reads the entity that triggered an active effect, from its handle. |
+| [ActiveEffectSourceResolver](active-effect-source-resolver.md) | `IForgeEntity?` | Reads the entity that applied an active effect, from its handle. |
+| [ActiveEffectTagQueryResolver](active-effect-tag-query-resolver.md) | `bool` | Evaluates a tag query against an active effect's own tags, granted tags, or both. |
 | [ActiveEffectTargetResolver](active-effect-target-resolver.md) | `IForgeEntity?` | Reads the entity an active effect is applied to, from its handle. |
 | [EffectArrayFromDataResolver](effect-array-from-data-resolver.md) | `Effect[]` | Builds an array of `Effect` instances sharing the same level, ownership, and SetByCaller magnitudes. |
 | [EffectArrayVariableResolver](effect-array-variable-resolver.md) | `Effect[]` | Reads a stored `Effect` instance array from graph or shared scope. |
 | [EffectContextDataResolver](effect-context-data-resolver.md) | `EffectApplicationContext` | Produces custom application context data for an effect via an `IEffectContextDataProvider`. |
 | [EffectFromDataResolver](effect-from-data-resolver.md) | `Effect` | Builds an `Effect` instance from an `EffectData` value plus optional level, ownership, and SetByCaller magnitudes. |
+| [EffectQueryMatchResolver](effect-query-match-resolver.md) | `bool` | Matches a full `EffectQuery` against an active effect handle. |
 | [EffectStackDataResolver](effect-stack-data-resolver.md) | `int` | Aggregates stack/instance/level data over the active applications of an effect on an entity. |
 | [EffectVariableResolver](effect-variable-resolver.md) | `Effect?` | Reads a stored `Effect` instance from graph or shared scope for reuse. |
 | [OwnershipResolver](ownership-resolver.md) | `EffectOwnership` | Composes an effect ownership value from nested entity resolvers. |
-| [QueryActiveEffectsResolver](query-active-effects-resolver.md) | `ActiveEffectHandle[]` | Queries the active effect handles on an entity, optionally filtered by `EffectData`. |
+| [QueryActiveEffectsResolver](query-active-effects-resolver.md) | `ActiveEffectHandle[]` | Queries the active effect handles on an entity, optionally filtered by `EffectData` or `EffectQuery`. |
 | [SetByCallerMagnitudeResolver](set-by-caller-magnitude-resolver.md) | `float` | Reads the SetByCaller magnitude stored on an `Effect` for an identifier tag. |
 
 ---
