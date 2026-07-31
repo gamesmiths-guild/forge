@@ -100,7 +100,8 @@ public class TargetTagRequirementsEffectComponent(
 	public void OnActiveEffectUnapplied(
 		IForgeEntity target,
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData,
-		bool removed)
+		bool removed,
+		EffectRemovalReason reason)
 	{
 		if (removed && _handler is not null)
 		{

@@ -310,7 +310,7 @@ internal sealed class ActiveEffect
 		return true;
 	}
 
-	internal void RemoveStack()
+	internal void RemoveStack(EffectRemovalReason reason)
 	{
 		bool removed = StackCount == 1;
 
@@ -320,7 +320,7 @@ internal sealed class ActiveEffect
 			return;
 		}
 
-		EffectEvaluatedData.Target.EffectsManager.OnActiveEffectUnapplied_InternalCall(this);
+		EffectEvaluatedData.Target.EffectsManager.OnActiveEffectUnapplied_InternalCall(this, reason);
 
 		StackCount--;
 		ReapplyEffect(Effect, isStackingCall: true);
@@ -342,7 +342,7 @@ internal sealed class ActiveEffect
 				{
 					while (StackCount >= 1 && RemainingDuration <= Epsilon)
 					{
-						RemoveStack();
+						RemoveStack(EffectRemovalReason.Expired);
 
 #pragma warning disable S2589 // Boolean expressions should not be gratuitous
 						if (StackCount > 0)

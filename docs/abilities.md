@@ -332,14 +332,29 @@ A tag usually selects several abilities, and they need not share an activation-d
 
 ### Canceling Abilities by Tag
 
-Use `CancelAbilitiesWithTag` to cancel all active abilities that match specific tags:
+Use `CancelAbilities` to cancel active abilities selected by the tags they carry. It takes a required container and a
+blocking one, so you can cancel a whole category while sparing part of it:
 
 ```csharp
 var interruptibleTags = new TagContainer(tagsManager, [interruptibleTag]);
+var unstoppableTags = new TagContainer(tagsManager, [unstoppableTag]);
 
 // Cancel all interruptible abilities (e.g., when stunned)
-entity.Abilities.CancelAbilitiesWithTag(interruptibleTags);
+entity.Abilities.CancelAbilities(interruptibleTags, null);
+
+// Cancel every interruptible ability except the ones flagged as unstoppable
+entity.Abilities.CancelAbilities(interruptibleTags, unstoppableTags);
+
+// Cancel everything that isn't unstoppable
+entity.Abilities.CancelAbilities(null, unstoppableTags);
 ```
+
+Each container is an independent filter, and a `null` or empty one means "don't filter on this side". An ability with
+no `AbilityTags` is never matched by the required container, but it always satisfies the blocking one, since it
+carries none of those tags.
+
+> Passing nothing for either container cancels **every** active ability. That is deliberate — it is how you ask for a
+> full wipe — but it means an empty container standing for "cancel nothing" has to be guarded at the call site.
 
 ### Ability Events
 
@@ -364,7 +379,7 @@ entity.Abilities.OnAbilityEnded += data =>
 };
 ```
 
-`OnAbilityEnded` fires **exactly once** each time an ability deactivates, when its last active instance ends. `WasCanceled` is `true` when the ability was canceled (via `AbilityHandle.Cancel()` or `CancelAbilitiesWithTag`) and `false` when it ended gracefully (reaching its natural end, or a Statescript Exit node).
+`OnAbilityEnded` fires **exactly once** each time an ability deactivates, when its last active instance ends. `WasCanceled` is `true` when the ability was canceled (via `AbilityHandle.Cancel()` or `CancelAbilities`) and `false` when it ended gracefully (reaching its natural end, or a Statescript Exit node).
 
 ## Ability Handle
 

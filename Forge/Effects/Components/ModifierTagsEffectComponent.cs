@@ -30,7 +30,8 @@ public class ModifierTagsEffectComponent(TagContainer tagsToAdd) : IEffectCompon
 	public void OnActiveEffectUnapplied(
 		IForgeEntity target,
 		in ActiveEffectEvaluatedData activeEffectEvaluatedData,
-		bool removed)
+		bool removed,
+		EffectRemovalReason reason)
 	{
 		if (!removed)
 		{

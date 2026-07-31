@@ -68,5 +68,5 @@ If you need each ability to receive a *different* payload, activate them individ
 
 - [Condition Nodes Overview](README.md)
 - [TryActivateAbilityNode](try-activate-ability-node.md)
-- [CancelAbilitiesByTagNode](../action/cancel-abilities-by-tag-node.md)
+- [CancelAbilitiesNode](../action/cancel-abilities-node.md)
 - [AbilityActivatorResolver](../../resolvers/ability-activator-resolver.md)
