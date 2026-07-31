@@ -230,6 +230,31 @@ public readonly record struct EffectData
 			DurationData.DurationType != DurationType.Instant),
 			$"Instant effects cannot apply tags from the {nameof(ModifierTagsEffectComponent)}.");
 
+		Validation.Assert(
+			EffectComponents is null ||
+			!Array.Exists(EffectComponents, x => x is BlockAbilityTagsEffectComponent) ||
+			DurationData.DurationType != DurationType.Instant,
+			$"Instant effects cannot block abilities from the {nameof(BlockAbilityTagsEffectComponent)}.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			!Array.Exists(
+				EffectComponents,
+				x => x is CancelAbilityTagsEffectComponent
+				{
+					Policy: CancelAbilityTagsPolicy.OnExecution
+				}) ||
+			DurationData.DurationType == DurationType.Instant ||
+			PeriodicData.HasValue,
+			$"{nameof(CancelAbilityTagsPolicy)}.{nameof(CancelAbilityTagsPolicy.OnExecution)} never fires on a duration effect that isn't periodic.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			!Array.Exists(
+				EffectComponents,
+				x => x is CancelAbilityTagsEffectComponent { HasAnyFilter: false }),
+			$"{nameof(CancelAbilityTagsEffectComponent)} must define at least one of its tag filters. Leaving both empty would cancel every active ability.");
+
 		foreach (CueData cue in Cues)
 		{
 			Validation.Assert(
