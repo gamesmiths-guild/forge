@@ -15,6 +15,9 @@ namespace Gamesmiths.Forge.Effects;
 /// </summary>
 public class Effect
 {
+	private TagContainer? _owningTags;
+	private bool _owningTagsResolved;
+
 	/// <summary>
 	/// Event triggered when the level of this effect changes.
 	/// </summary>
@@ -191,26 +194,39 @@ public class Effect
 	}
 
 	/// <summary>
-	/// Builds the union of this effect's own tags and the tags it grants to its target.
+	/// Gets the union of this effect's own tags and the tags it grants to its target.
 	/// </summary>
+	/// <remarks>
+	/// Both inputs are fixed at construction, so the union is built once on first use and cached. Query filtering calls
+	/// this once per effect per pass, and the union is the only case that has to allocate.
+	/// </remarks>
 	/// <returns>A container with both sets of tags, or <see langword="null"/> when the effect has neither.</returns>
-	internal TagContainer? BuildOwningTags()
+	internal TagContainer? GetOwningTags()
 	{
+		if (_owningTagsResolved)
+		{
+			return _owningTags;
+		}
+
 		TagContainer? effectTags = EffectData.EffectTags;
 
 		if (effectTags is null)
 		{
-			return CachedGrantedTags;
+			_owningTags = CachedGrantedTags;
 		}
-
-		if (CachedGrantedTags is null)
+		else if (CachedGrantedTags is null)
 		{
-			return effectTags;
+			_owningTags = effectTags;
+		}
+		else
+		{
+			var owningTags = new TagContainer(effectTags);
+			owningTags.AppendTags(CachedGrantedTags);
+			_owningTags = owningTags;
 		}
 
-		var owningTags = new TagContainer(effectTags);
-		owningTags.AppendTags(CachedGrantedTags);
-		return owningTags;
+		_owningTagsResolved = true;
+		return _owningTags;
 	}
 
 	/// <summary>

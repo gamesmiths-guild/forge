@@ -15,34 +15,24 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// </para>
 /// <para>Invalid or missing handles resolve to <see langword="false"/>.</para>
 /// </remarks>
-public class ActiveEffectTagQueryResolver : IPropertyResolver
+/// <param name="handleResolver">The resolver that produces the active effect handle to inspect.</param>
+/// <param name="query">The query to evaluate against the selected tags.</param>
+/// <param name="effectTagSource">Which set of the effect's tags to evaluate against. Defaults to the effect's own
+/// tags together with the tags it grants.</param>
+public class ActiveEffectTagQueryResolver(
+	IObjectResolver<ActiveEffectHandle> handleResolver,
+	TagQuery query,
+	EffectTagSource effectTagSource = EffectTagSource.OwningTags) : IPropertyResolver
 {
-	private readonly IObjectResolver<ActiveEffectHandle> _handleResolver;
-	private readonly TagQuery _query;
-	private readonly EffectTagSource _effectTagSource;
+	private readonly IObjectResolver<ActiveEffectHandle> _handleResolver = handleResolver
+		?? throw new ArgumentNullException(nameof(handleResolver));
+
+	private readonly TagQuery _query = query ?? throw new ArgumentNullException(nameof(query));
+
+	private readonly EffectTagSource _effectTagSource = effectTagSource;
 
 	/// <inheritdoc/>
 	public Type ValueType => typeof(bool);
-
-	/// <summary>
-	/// Initializes a new instance of the <see cref="ActiveEffectTagQueryResolver"/> class from a prebuilt query.
-	/// </summary>
-	/// <param name="handleResolver">The resolver that produces the active effect handle to inspect.</param>
-	/// <param name="query">The query to evaluate against the selected tags.</param>
-	/// <param name="effectTagSource">Which set of the effect's tags to evaluate against. Defaults to the effect's own
-	/// tags together with the tags it grants.</param>
-	public ActiveEffectTagQueryResolver(
-		IObjectResolver<ActiveEffectHandle> handleResolver,
-		TagQuery query,
-		EffectTagSource effectTagSource = EffectTagSource.OwningTags)
-	{
-		EnsureNotNull(handleResolver, nameof(handleResolver));
-		EnsureNotNull(query, nameof(query));
-
-		_handleResolver = handleResolver;
-		_query = query;
-		_effectTagSource = effectTagSource;
-	}
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="ActiveEffectTagQueryResolver"/> class from a query expression.
@@ -90,16 +80,15 @@ public class ActiveEffectTagQueryResolver : IPropertyResolver
 
 	private static TagQuery BuildQuery(TagQueryExpression queryExpression)
 	{
-		EnsureNotNull(queryExpression, nameof(queryExpression));
-
-		return TagQuery.BuildQuery(queryExpression);
+		return TagQuery.BuildQuery(
+			queryExpression ?? throw new ArgumentNullException(nameof(queryExpression)));
 	}
 
 	private static TagContainer? GetTagContainer(EffectTagSource effectTagSource, Effect effect)
 	{
 		return effectTagSource switch
 		{
-			EffectTagSource.OwningTags => effect.BuildOwningTags(),
+			EffectTagSource.OwningTags => effect.GetOwningTags(),
 			EffectTagSource.EffectTags => effect.EffectData.EffectTags,
 			EffectTagSource.GrantedTags => effect.CachedGrantedTags,
 			_ => throw new ArgumentOutOfRangeException(
@@ -107,19 +96,5 @@ public class ActiveEffectTagQueryResolver : IPropertyResolver
 				effectTagSource,
 				$"Unsupported {nameof(EffectTagSource)} value."),
 		};
-	}
-
-	private static void EnsureNotNull<T>(T value, string paramName)
-		where T : class
-	{
-#if NET8_0_OR_GREATER
-		_ = paramName;
-		ArgumentNullException.ThrowIfNull(value);
-#else
-		if (value is null)
-		{
-			throw new ArgumentNullException(paramName);
-		}
-#endif
 	}
 }

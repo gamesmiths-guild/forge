@@ -58,9 +58,10 @@ public readonly record struct EffectQuery(
 	/// <summary>
 	/// Checks whether the given effect satisfies every filter defined by this query.
 	/// </summary>
-	/// <param name="effect">The effect to be tested against this query.</param>
-	/// <returns><see langword="true"/> if the effect matches; <see langword="false"/> otherwise.</returns>
-	public bool Matches(Effect effect)
+	/// <param name="effect">The effect to be tested against this query, or <see langword="null"/>.</param>
+	/// <returns><see langword="true"/> if the effect matches; <see langword="false"/> otherwise.
+	/// A <see langword="null"/> effect never matches.</returns>
+	public bool Matches(Effect? effect)
 	{
 		if (effect is null)
 		{
@@ -90,7 +91,7 @@ public readonly record struct EffectQuery(
 		}
 
 		if (OwningTagQuery?.IsEmpty == false
-			&& !effect.MatchesTagQuery(OwningTagQuery, effect.BuildOwningTags()))
+			&& !effect.MatchesTagQuery(OwningTagQuery, effect.GetOwningTags()))
 		{
 			return false;
 		}
@@ -111,13 +112,14 @@ public readonly record struct EffectQuery(
 	/// <summary>
 	/// Checks whether the effect behind the given handle satisfies every filter defined by this query.
 	/// </summary>
-	/// <param name="handle">The handle of the active effect to be tested against this query.</param>
+	/// <param name="handle">The handle of the active effect to be tested against this query, or
+	/// <see langword="null"/>.</param>
 	/// <param name="ignoredHandles">Handles that never match, regardless of the query. Used by components that must
 	/// exclude their own effect from the results.</param>
-	/// <returns><see langword="true"/> if the active effect matches; <see langword="false"/> otherwise. Invalid handles
-	/// never match.</returns>
+	/// <returns><see langword="true"/> if the active effect matches; <see langword="false"/> otherwise.
+	/// <see langword="null"/> and invalid handles never match.</returns>
 	public bool Matches(
-		ActiveEffectHandle handle,
+		ActiveEffectHandle? handle,
 		IReadOnlyCollection<ActiveEffectHandle>? ignoredHandles = null)
 	{
 		if (handle?.Effect is null)

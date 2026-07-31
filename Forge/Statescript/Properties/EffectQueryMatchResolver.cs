@@ -31,8 +31,6 @@ public class EffectQueryMatchResolver(IObjectResolver<ActiveEffectHandle> handle
 	/// <inheritdoc/>
 	public Variant128 Resolve(GraphContext graphContext)
 	{
-		ActiveEffectHandle? handle = _handleResolver.Resolve(graphContext);
-
-		return new Variant128(handle is not null && _query.Matches(handle));
+		return new Variant128(_query.Matches(_handleResolver.Resolve(graphContext)));
 	}
 }
