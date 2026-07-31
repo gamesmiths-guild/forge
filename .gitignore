@@ -82,6 +82,8 @@ StyleCopReport.xml
 *.pgc
 *.pgd
 *.rsp
+# MSBuild response file for this repo - see the comments inside it.
+!Directory.Build.rsp
 *.sbr
 *.tlb
 *.tli
