@@ -190,6 +190,69 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 
 	[Fact]
 	[Trait("Graph", "GrantAbility")]
+	public void Cancel_abilities_node_spares_abilities_carrying_the_without_tags()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var channelTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		var unstoppableTag = Tag.RequestTag(_tagsManager, "other.tag");
+
+		AbilityHandle plainHandle = GrantAndActivateChannelingAbility(owner, "Channel", channelTag);
+		AbilityHandle unstoppableHandle = GrantAndActivateChannelingAbility(
+			owner,
+			"Unstoppable Channel",
+			channelTag,
+			unstoppableTag);
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable("withTag", channelTag);
+		graph.VariableDefinitions.DefineObjectVariable("withoutTag", unstoppableTag);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", owner);
+
+		var cancelNode = new CancelAbilitiesNode();
+		cancelNode.BindInput(CancelAbilitiesNode.WithTagsInput, "withTag");
+		cancelNode.BindInput(CancelAbilitiesNode.WithoutTagsInput, "withoutTag");
+		cancelNode.BindInput(CancelAbilitiesNode.TargetInput, "target");
+
+		graph.AddNode(cancelNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			cancelNode.InputPorts[ActionNode.InputPort]));
+
+		new GraphProcessor(graph).StartGraph();
+
+		plainHandle.IsActive.Should().BeFalse();
+		unstoppableHandle.IsActive.Should().BeTrue();
+	}
+
+	// Wiping every active ability is reachable through EntityAbilities.CancelAbilities, but it must not be what an
+	// unconfigured node does by accident.
+	[Fact]
+	[Trait("Graph", "GrantAbility")]
+	public void Cancel_abilities_node_with_both_tag_inputs_unbound_cancels_nothing()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var channelTag = Tag.RequestTag(_tagsManager, "simple.tag");
+
+		AbilityHandle handle = GrantAndActivateChannelingAbility(owner, "Channel", channelTag);
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", owner);
+
+		var cancelNode = new CancelAbilitiesNode();
+		cancelNode.BindInput(CancelAbilitiesNode.TargetInput, "target");
+
+		graph.AddNode(cancelNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			cancelNode.InputPorts[ActionNode.InputPort]));
+
+		new GraphProcessor(graph).StartGraph();
+
+		handle.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "GrantAbility")]
 	public void Cancel_abilities_by_tag_node_cancels_matching_active_abilities()
 	{
 		var owner = new TestEntity(_tagsManager, _cuesManager);
@@ -222,9 +285,9 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		graph.VariableDefinitions.DefineObjectVariable("tag", abilityTag);
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", owner);
 
-		var cancelNode = new CancelAbilitiesByTagNode();
-		cancelNode.BindInput(CancelAbilitiesByTagNode.TagInput, "tag");
-		cancelNode.BindInput(CancelAbilitiesByTagNode.TargetInput, "target");
+		var cancelNode = new CancelAbilitiesNode();
+		cancelNode.BindInput(CancelAbilitiesNode.WithTagsInput, "tag");
+		cancelNode.BindInput(CancelAbilitiesNode.TargetInput, "target");
 
 		graph.AddNode(cancelNode);
 		graph.AddConnection(new Connection(
@@ -519,6 +582,38 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		// Transient grant: the ability is removed after it ends.
 		owner.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle);
 		handle.Should().BeNull();
+	}
+
+	// Grants and activates an ability whose behavior parks on a long timer, so it stays active until something cancels
+	// it.
+	private AbilityHandle GrantAndActivateChannelingAbility(
+		TestEntity owner,
+		string abilityName,
+		params Tag[] abilityTags)
+	{
+		var behaviorGraph = new Graph();
+		behaviorGraph.VariableDefinitions.DefineVariable("duration", 100.0);
+		TimerNode timer = NodeBindings.CreateTimerNode("duration");
+		behaviorGraph.AddNode(timer);
+		behaviorGraph.AddConnection(new Connection(
+			behaviorGraph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[StateNode<TimerNodeContext>.InputPort]));
+
+		var abilityData = new AbilityData(
+			abilityName,
+			abilityTags: new TagContainer(_tagsManager, [.. abilityTags]),
+			behaviorFactory: () => new GraphAbilityBehavior(behaviorGraph));
+
+		AbilityHandle handle = owner.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		handle.Activate(out _).Should().BeTrue();
+		handle.IsActive.Should().BeTrue();
+
+		return handle;
 	}
 
 	private sealed record Shout(int Volume);

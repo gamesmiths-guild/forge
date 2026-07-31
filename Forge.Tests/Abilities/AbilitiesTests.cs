@@ -1961,6 +1961,97 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	}
 
 	[Fact]
+	[Trait("CancelAbilities", null)]
+	public void CancelAbilities_filters_by_with_and_without_tags()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityHandle redHandle = ActivateTaggedAbility(entity, "RedTarget", ["color.red"]);
+		AbilityHandle redAndBlueHandle = ActivateTaggedAbility(entity, "RedAndBlueTarget", ["color.red", "color.blue"]);
+		AbilityHandle greenHandle = ActivateTaggedAbility(entity, "GreenTarget", ["color.green"]);
+
+		entity.Abilities.CancelAbilities(TagsOf("color.red"), TagsOf("color.blue"));
+
+		redHandle.IsActive.Should().BeFalse();
+		redAndBlueHandle.IsActive.Should().BeTrue();
+		greenHandle.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("CancelAbilities", null)]
+	public void CancelAbilities_without_tags_only_spares_the_abilities_carrying_them()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityHandle redHandle = ActivateTaggedAbility(entity, "RedOnly", ["color.red"]);
+		AbilityHandle blueHandle = ActivateTaggedAbility(entity, "BlueOnly", ["color.blue"]);
+		AbilityHandle untaggedHandle = ActivateTaggedAbility(entity, "Untagged", []);
+
+		entity.Abilities.CancelAbilities(null, TagsOf("color.blue"));
+
+		redHandle.IsActive.Should().BeFalse();
+		blueHandle.IsActive.Should().BeTrue();
+
+		// An ability with no tags carries none of the blocking tags, so it is not spared.
+		untaggedHandle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("CancelAbilities", null)]
+	public void CancelAbilities_with_no_filters_cancels_everything()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityHandle redHandle = ActivateTaggedAbility(entity, "RedEverything", ["color.red"]);
+		AbilityHandle untaggedHandle = ActivateTaggedAbility(entity, "UntaggedEverything", []);
+
+		entity.Abilities.CancelAbilities(null, null);
+
+		redHandle.IsActive.Should().BeFalse();
+		untaggedHandle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("CancelAbilities", null)]
+	public void CancelAbilities_treats_an_empty_container_as_no_filter()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityHandle redHandle = ActivateTaggedAbility(entity, "RedEmptyFilter", ["color.red"]);
+
+		entity.Abilities.CancelAbilities(new TagContainer(_tagsManager), new TagContainer(_tagsManager));
+
+		redHandle.IsActive.Should().BeFalse();
+	}
+
+	// An ability configured with an empty CancelAbilitiesWithTag container conflicts with nothing. It must not reach
+	// CancelAbilities, where an empty filter would instead match every active ability.
+	[Fact]
+	[Trait("CancelAbilities", null)]
+	public void Activating_an_ability_with_an_empty_cancel_container_cancels_nothing()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityHandle redHandle = ActivateTaggedAbility(entity, "RedBystander", ["color.red"]);
+		AbilityHandle untaggedHandle = ActivateTaggedAbility(entity, "UntaggedBystander", []);
+
+		AbilityData canceller = CreateAbilityData(
+			"EmptyCanceller",
+			[],
+			[],
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			cancelAbilitiesWithTag: new TagContainer(_tagsManager));
+
+		AbilityHandle? cancellerHandle = SetupAbility(entity, canceller, new ScalableInt(1), out _);
+		cancellerHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		redHandle.IsActive.Should().BeTrue();
+		untaggedHandle.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
 	[Trait("CancelAbilitiesWithTag", null)]
 	public void CancelAbilitiesWithTag_cancels_all_instances_of_matching_abilities()
 	{
@@ -3296,6 +3387,33 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 			new EffectOwnership(entity, null));
 
 		return entity.EffectsManager.ApplyEffect(tagEffect);
+	}
+
+	private TagContainer TagsOf(params string[] tagKeys)
+	{
+		return new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, tagKeys));
+	}
+
+	// Grants a cooldown-free ability carrying the given ability tags and activates it, so cancellation tests only have
+	// to reason about the tag filtering.
+	private AbilityHandle ActivateTaggedAbility(TestEntity entity, string abilityName, string[] abilityTagKeys)
+	{
+		AbilityData abilityData = CreateAbilityData(
+			abilityName,
+			[],
+			[],
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			abilityTags: abilityTagKeys.Length > 0 ? TagsOf(abilityTagKeys) : null);
+
+		AbilityHandle? handle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
+
+		handle.Should().NotBeNull();
+		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+		handle.IsActive.Should().BeTrue();
+
+		return handle;
 	}
 
 	private AbilityData CreateAbilityData(
