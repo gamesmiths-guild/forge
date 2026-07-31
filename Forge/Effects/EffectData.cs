@@ -253,7 +253,7 @@ public readonly record struct EffectData
 			!Array.Exists(
 				EffectComponents,
 				x => x is CancelAbilityTagsEffectComponent { HasAnyFilter: false }),
-			$"{nameof(CancelAbilityTagsEffectComponent)} must define at least one of its tag filters. Leaving both empty would cancel every active ability.");
+			$"{nameof(CancelAbilityTagsEffectComponent)} must define at least one of its tag filters. Leaving both empty is treated as a misconfiguration and is rejected.");
 
 		foreach (CueData cue in Cues)
 		{

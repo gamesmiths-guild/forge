@@ -37,10 +37,10 @@ The component is **reactive**: it re-evaluates on every tag change on the target
 `TagRequirements` is the shared mechanism for evaluating tag conditions on entities.
 
 ```csharp
-public readonly struct TagRequirements(
-    TagContainer? requiredTags = null,
-    TagContainer? ignoreTags = null,
-    TagQuery? tagQuery = null)
+ public readonly record struct TagRequirements(
+     TagContainer? RequiredTags = null,
+     TagContainer? IgnoreTags = null,
+     TagQuery? TagQuery = null)
 {
     // Implementation...
 }
