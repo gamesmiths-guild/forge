@@ -141,7 +141,10 @@ var frostEffectData = new EffectData(
 ## See Also
 
 - [Effect Components Overview](README.md)
+- [Choosing between tag requirements and Immunity/RemoveOther](README.md#choosing-between-tag-requirements-and-immunityremoveother)
 - [Tags](../../tags.md)
 - [ModifierTagsEffectComponent](modifier-tags-effect-component.md)
+- [ImmunityEffectComponent](immunity-effect-component.md)
+- [RemoveOtherEffectComponent](remove-other-effect-component.md)
 - [SourceTagRequirementsEffectComponent](source-tag-requirements-effect-component.md)
 - [AttributeRequirementsEffectComponent](attribute-requirements-effect-component.md)

@@ -254,6 +254,46 @@ Unlike `RemoveEffect(handle, forceRemoval)`, partial removal here is explicit ra
 
 In Statescript, the same query drives [`QueryActiveEffectsResolver`](../statescript/resolvers/query-active-effects-resolver.md) and [`EffectQueryMatchResolver`](../statescript/resolvers/effect-query-match-resolver.md).
 
+#### Blocking Effect Application
+
+An effect's own `IEffectComponent.CanApplyEffect` is the *incoming* side of application control: the effect decides whether it lands. The blocker registry is the *target* side — the entity decides what it refuses, once, and covers effects it has never heard of.
+
+```csharp
+public interface IEffectApplicationBlocker
+{
+    bool AllowEffectApplication(in Effect effect);
+}
+```
+
+Register and unregister on the target's manager:
+
+```csharp
+var cutsceneGate = new CutsceneGate();
+
+entity.EffectsManager.RegisterApplicationBlocker(cutsceneGate);
+// ... nothing lands on this entity while the gate denies
+entity.EffectsManager.UnregisterApplicationBlocker(cutsceneGate);
+```
+
+- Blockers are consulted at the top of every application, right after the effect's own `CanApplyEffect` components, and **for instant effects too**.
+- They are asked in registration order and the first denial wins; the rest are not consulted.
+- Registering the same blocker twice is a no-op, so one `UnregisterApplicationBlocker` call always removes it.
+- Nothing registered costs nothing — the common case walks an empty list.
+- `AllowEffectApplication` runs on the application path, so keep it cheap and free of side effects.
+
+Every denial raises an event, whether it came from an effect component or from a system of your own:
+
+```csharp
+entity.EffectsManager.OnEffectApplicationBlocked += (blockedEffect, blocker) =>
+{
+    ShowResistedFloater(blockedEffect.EffectData.Name);
+};
+```
+
+Effects that deny themselves through their own components never reach the blockers and raise nothing.
+
+[`ImmunityEffectComponent`](components/immunity-effect-component.md) is the data-driven implementation of this interface: it registers while its effect is active and matches incoming effects against a set of `EffectQuery` filters.
+
 ## Effect Lifecycle
 
 ### Application vs. Execution
@@ -644,7 +684,9 @@ var componentBasedEffectData = new EffectData(
 - **[CancelAbilityTagsEffectComponent](components/cancel-ability-tags-effect-component.md)**: Cancels active abilities selected by tag, on application or on each execution.
 - **[ChanceToApplyEffectComponent](components/chance-to-apply-effect-component.md)**: Provides random chance for effect application.
 - **[GrantAbilityEffectComponent](components/grant-ability-effect-component.md)**: Grants abilities while the effect is active.
+- **[ImmunityEffectComponent](components/immunity-effect-component.md)**: Blocks incoming effects matching its queries while the effect is active.
 - **[ModifierTagsEffectComponent](components/modifier-tags-effect-component.md)**: Adds tags while effect is active, which are automatically removed when the effect ends.
+- **[RemoveOtherEffectComponent](components/remove-other-effect-component.md)**: Removes active effects matching its queries when applied, never itself.
 - **[SourceAttributeRequirementsEffectComponent](components/source-attribute-requirements-effect-component.md)**: Checks attribute values on the effect's source rather than its target.
 - **[SourceTagRequirementsEffectComponent](components/source-tag-requirements-effect-component.md)**: Checks tag conditions on the effect's source rather than its target.
 - **[TargetTagRequirementsEffectComponent](components/target-tag-requirements-effect-component.md)**: Checks tag conditions for application, removal, and inhibition.

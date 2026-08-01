@@ -15,12 +15,53 @@ For a practical guide on using components, see the [Quick Start Guide](../../qui
 | [CancelAbilityTagsEffectComponent](cancel-ability-tags-effect-component.md) | Stateless | Any | Cancels active abilities selected by tag, on application or on each execution. |
 | [ChanceToApplyEffectComponent](chance-to-apply-effect-component.md) | Stateless | Any | Gives the effect a random chance to apply, optionally scaling with level. |
 | [GrantAbilityEffectComponent](grant-ability-effect-component.md) | Stateful | Any | Grants abilities for the effect's lifetime, or permanently from an instant effect. |
+| [ImmunityEffectComponent](immunity-effect-component.md) | Stateful | Duration | Blocks incoming effects matching its queries while the effect is active. |
 | [ModifierTagsEffectComponent](modifier-tags-effect-component.md) | Stateless | Duration | Adds tags to the target while the effect is active. |
+| [RemoveOtherEffectComponent](remove-other-effect-component.md) | Stateful | Non-periodic | Removes active effects matching its queries when applied, never itself. |
 | [SourceAttributeRequirementsEffectComponent](source-attribute-requirements-effect-component.md) | Stateful | Any | The same three gates as `AttributeRequirements`, evaluated against the effect's source or owner. |
 | [SourceTagRequirementsEffectComponent](source-tag-requirements-effect-component.md) | Stateful | Any | The same three gates as `TargetTagRequirements`, evaluated against the effect's source or owner. |
 | [TargetTagRequirementsEffectComponent](target-tag-requirements-effect-component.md) | Stateful | Any | Gates application, forces removal, and toggles inhibition from the target's tags. |
 
 To add a new component page, copy [effect-component-template.md](../../templates/effect-component-template.md) and add a row above.
+
+---
+
+## Choosing between tag requirements and Immunity/RemoveOther
+
+[ImmunityEffectComponent](immunity-effect-component.md) and [RemoveOtherEffectComponent](remove-other-effect-component.md) overlap heavily with [TargetTagRequirementsEffectComponent](target-tag-requirements-effect-component.md), with the configuration inverted: the incoming effect declares its own vulnerability instead of the target declaring its reach.
+
+Both cases are already expressible with tags alone:
+
+```csharp
+// Immunity, the tag way: the ward grants immune.fire...
+new ModifierTagsEffectComponent(tagsManager.RequestTagContainer(new[] { "immune.fire" }));
+
+// ...and every fire effect ignores targets that carry it. Tags are hierarchical, so one
+// entry per effect covers the whole immune.fire.* tree.
+new TargetTagRequirementsEffectComponent(
+    applicationTagRequirements: new TagRequirements(
+        IgnoreTags: tagsManager.RequestTagContainer(new[] { "immune.fire" })));
+
+// Removal, the tag way: the cleanse grants status.cleansing...
+// ...and every poison removes itself when it sees it.
+new TargetTagRequirementsEffectComponent(
+    removalTagRequirements: new TagRequirements(
+        RequiredTags: tagsManager.RequestTagContainer(new[] { "status.cleansing" })));
+```
+
+**Start there.** It is less machinery, and tag requirements keep two capabilities the query components have no answer for:
+
+- **Ongoing requirements / inhibition.** "Burns are *suppressed* while Fire Shield is up, and resume when it drops" has no immunity equivalent — immunity only refuses effects on arrival.
+- **They are reactive.** Tag requirements re-evaluate on every tag change; Immunity and RemoveOther each fire once, at application. Different axis: "state changed, react" versus "something is arriving, decide".
+
+Reach for the query components when the tag approach genuinely cannot express the case:
+
+1. **An instant effect cannot remove through tags.** `ModifierTagsEffectComponent` is rejected on instant effects, so a Cleanse — naturally instant — has to become a short duration effect purely to hold a tag long enough. `RemoveOther` hangs off application and works on instants.
+2. **Tag requirements only see the target's own tags.** They cannot see the incoming effect's source, level, or modifiers. "Immune to further damage from the entity that just hit me", "immune to anything modifying Health", "dispel what that enemy applied" are inexpressible.
+3. **No partial stack removal.** Tag-driven removal always removes every stack; `RemoveOther` takes a stack count.
+4. **Content you don't own** — plugins, data packs, effects authored elsewhere — cannot be retrofitted with ignore-tags.
+
+Configuration volume is roughly a wash (50 effects each carrying one ignore-tag, versus 50 each carrying one effect tag plus a handful of queries). The real difference is qualitative: ignore-tags are single-purpose wiring, while [effect tags](../README.md#effect-tags) are reusable classification that queries, UI, and graphs can all key on.
 
 ---
 
