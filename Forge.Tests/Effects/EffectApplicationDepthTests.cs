@@ -67,6 +67,32 @@ public class EffectApplicationDepthTests(TagsAndCuesFixture tagsAndCuesFixture) 
 		target.EffectsManager.GetActiveEffects().Should().HaveCount(2);
 	}
 
+	[Fact]
+	[Trait("DepthGuard", null)]
+	public void A_cycle_bouncing_between_two_entities_is_cut_off_as_well()
+	{
+		var first = new TestEntity(_tagsManager, _cuesManager);
+		var second = new TestEntity(_tagsManager, _cuesManager);
+
+		var pingComponent = new ApplyOtherEffectComponent { ApplyTo = second };
+		var pongComponent = new ApplyOtherEffectComponent { ApplyTo = first };
+
+		EffectData pingData = CreateEffectData("Ping", pingComponent);
+
+		pingComponent.Other = CreateEffectData("Pong", pongComponent);
+		pongComponent.Other = pingData;
+
+		Action act = () => first.EffectsManager.ApplyEffect(
+			new Effect(pingData, new EffectOwnership(first, first)));
+
+		// The counter lives on each manager, but a cycle by definition comes back to one — and it comes back while the
+		// first call is still on the stack, so the decrement in its finally has not run and the depth keeps climbing.
+		act.Should().NotThrow();
+
+		first.EffectsManager.GetActiveEffects().Should().HaveCount(MaxApplicationDepth);
+		second.EffectsManager.GetActiveEffects().Should().HaveCount(MaxApplicationDepth);
+	}
+
 	private void ApplyCycle(TestEntity target)
 	{
 		// EffectData is immutable, so neither effect can name the other at construction. The components are wired up
@@ -96,11 +122,18 @@ public class EffectApplicationDepthTests(TagsAndCuesFixture tagsAndCuesFixture) 
 	{
 		public EffectData? Other { get; set; }
 
+		/// <summary>
+		/// Gets or sets the entity to apply to, or <see langword="null"/> to apply back to the same one. Stands in for
+		/// a component that can reach an entity of its own choosing, which is the only way to build a cascade that
+		/// crosses managers.
+		/// </summary>
+		public IForgeEntity? ApplyTo { get; set; }
+
 		public void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
 		{
 			if (Other.HasValue)
 			{
-				target.EffectsManager.ApplyEffect(
+				(ApplyTo ?? target).EffectsManager.ApplyEffect(
 					new Effect(Other.Value, effectEvaluatedData.Effect.Ownership));
 			}
 		}
