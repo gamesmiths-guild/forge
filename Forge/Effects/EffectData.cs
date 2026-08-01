@@ -303,6 +303,31 @@ public readonly record struct EffectData
 		Validation.Assert(
 			EffectComponents is null ||
 			DurationData.DurationType != DurationType.Instant ||
+			!Array.Exists(EffectComponents, x => x is ImmunityEffectComponent),
+			$"{nameof(ImmunityEffectComponent)} requires a non-{DurationType.Instant} effect, since the immunity " +
+			"lasts exactly as long as its effect is active and instant effects never become active.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			!PeriodicData.HasValue ||
+			!Array.Exists(EffectComponents, x => x is RemoveOtherEffectComponent),
+			$"{nameof(RemoveOtherEffectComponent)} removes effects when its own effect is applied, never on a " +
+			"periodic execution, so a periodic owner only ever removes once. Use " +
+			$"{nameof(TargetTagRequirementsEffectComponent)} removal requirements for a recurring removal instead.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			!Array.Exists(
+				EffectComponents,
+				x => x is ImmunityEffectComponent { HasEmptyQuery: true }
+					or RemoveOtherEffectComponent { HasEmptyQuery: true }),
+			$"An empty {nameof(EffectQuery)} matches every effect, so {nameof(ImmunityEffectComponent)} would block " +
+			$"everything the target could receive and {nameof(RemoveOtherEffectComponent)} would strip it of " +
+			"everything it has. Define at least one filter on every query.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			DurationData.DurationType != DurationType.Instant ||
 			!Array.Exists(
 				EffectComponents,
 				x => x is TargetTagRequirementsEffectComponent { HasOngoingRequirements: true }

@@ -20,6 +20,18 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private readonly List<ActiveEffect> _activeEffects = [];
 
+	private readonly List<IEffectApplicationBlocker> _applicationBlockers = [];
+
+	/// <summary>
+	/// Event triggered when a registered <see cref="IEffectApplicationBlocker"/> denies an effect application. Carries
+	/// the effect that was blocked and the blocker that denied it.
+	/// </summary>
+	/// <remarks>
+	/// Effects denied by their own <see cref="IEffectComponent.CanApplyEffect"/> never reach the blockers and do not
+	/// raise this event.
+	/// </remarks>
+	public event Action<Effect, IEffectApplicationBlocker>? OnEffectApplicationBlocked;
+
 	/// <summary>
 	/// Gets the owner of this effects manager.
 	/// </summary>
@@ -211,6 +223,33 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return matchingEffects.Length;
 	}
 
+	/// <summary>
+	/// Registers a blocker that gets to veto every effect applied to the owner from now on.
+	/// </summary>
+	/// <remarks>
+	/// Registering the same blocker twice has no effect, so a blocker is always removed by a single
+	/// <see cref="UnregisterApplicationBlocker(IEffectApplicationBlocker)"/> call.
+	/// </remarks>
+	/// <param name="blocker">The blocker to be consulted before each application.</param>
+	public void RegisterApplicationBlocker(IEffectApplicationBlocker blocker)
+	{
+		if (_applicationBlockers.Contains(blocker))
+		{
+			return;
+		}
+
+		_applicationBlockers.Add(blocker);
+	}
+
+	/// <summary>
+	/// Unregisters a previously registered blocker, which stops vetoing applications immediately.
+	/// </summary>
+	/// <param name="blocker">The blocker to stop consulting.</param>
+	public void UnregisterApplicationBlocker(IEffectApplicationBlocker blocker)
+	{
+		_applicationBlockers.Remove(blocker);
+	}
+
 	internal void OnEffectExecuted_InternalCall(
 		EffectEvaluatedData executedEffectEvaluatedData,
 		IEffectComponent[]? componentInstances)
@@ -282,6 +321,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	internal ActiveEffectHandle? ApplyEffectInternal(Effect effect, EffectApplicationContext? applicationContext)
 	{
 		if (!effect.CanApply(Owner))
+		{
+			return null;
+		}
+
+		if (IsApplicationBlocked(effect))
 		{
 			return null;
 		}
@@ -365,6 +409,35 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			evaluatedData.Effect.Ownership.Owner,
 			evaluatedData.Level,
 			evaluatedData.Stack);
+	}
+
+	private bool IsApplicationBlocked(Effect effect)
+	{
+		// Indexed rather than foreach so that a blocker unregistering itself while being consulted — an immunity effect
+		// that removes itself on its first block, say — doesn't invalidate the iteration. Costs nothing when the list
+		// is empty, which is the common case.
+		int i = 0;
+
+		while (i < _applicationBlockers.Count)
+		{
+			IEffectApplicationBlocker blocker = _applicationBlockers[i];
+
+			if (!blocker.AllowEffectApplication(in effect))
+			{
+				OnEffectApplicationBlocked?.Invoke(effect, blocker);
+				return true;
+			}
+
+			// Advance only when the list didn't shift underneath: a blocker that unregistered itself, or an earlier
+			// one, during the call moved its successor into this index, and skipping it would let through an effect
+			// that successor would have vetoed.
+			if (i < _applicationBlockers.Count && ReferenceEquals(_applicationBlockers[i], blocker))
+			{
+				i++;
+			}
+		}
+
+		return false;
 	}
 
 	private IEnumerable<ActiveEffect> FilterEffectsByData(EffectData effectData)
