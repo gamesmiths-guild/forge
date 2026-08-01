@@ -10,6 +10,7 @@ For a practical guide on using components, see the [Quick Start Guide](../../qui
 
 | Component | State | Applies to | Description |
 |-----------|-------|------------|-------------|
+| [AdditionalEffectsEffectComponent](additional-effects-effect-component.md) | Stateful | Any | Applies further effects when the effect lands and when it ends, each gated on the source, aimed at its own entity, and cleaned up on its own terms. |
 | [AttributeRequirementsEffectComponent](attribute-requirements-effect-component.md) | Stateful | Any | Gates application, forces removal, and toggles inhibition from the target's attribute values. |
 | [BlockAbilityTagsEffectComponent](block-ability-tags-effect-component.md) | Stateful | Duration | Blocks abilities carrying the given tags from activating while the effect is active. |
 | [CancelAbilityTagsEffectComponent](cancel-ability-tags-effect-component.md) | Stateless | Any | Cancels active abilities selected by tag, on application or on each execution. |
@@ -422,7 +423,22 @@ var complexEffectData = new EffectData(
 4. **Use Return Values Correctly**: Return `false` from validation methods only when you want to block behavior.
 5. **Leverage Existing Components**: Combine with built-in components when possible.
 6. **Component Composition**: Use multiple simple components instead of one complex component.
-7. **Avoid Circular Dependencies**: Be careful not to create recursive loops with components that apply effects.
+7. **Avoid Circular Dependencies**: Be careful not to create recursive loops with components that apply effects. See [Application cycles](#application-cycles) below.
 8. **Error Handling**: Components should be robust against unexpected states and not throw exceptions.
 9. **Documentation**: Document any requirements or assumptions your custom components make.
 10. **Testing**: Test components in isolation and in combination with other components.
+
+### Application cycles
+
+Any component that applies an effect can start a chain: A applies B, B applies C. That is the whole point of [AdditionalEffectsEffectComponent](additional-effects-effect-component.md), and it is fine as long as the chain ends. It stops being fine when it closes into a loop — A applies B while B applies A — because each application is a nested call on the same stack.
+
+`EffectsManager` cuts a cascade off once it nests more than 16 deep. The application that would have gone deeper is dropped and `Validation.Fail` reports it, so a development build throws a `ValidationException` naming the effect and a release build degrades to dropped applications rather than a stack overflow. The guard is a safety net, not a feature: a cycle that reaches it has already applied sixteen effects.
+
+The counter lives on each entity's own manager, which still catches a cycle that bounces between entities — `EffectApplicationTarget.Source` aimed back at whoever cast it, say. A cycle by definition returns to a manager it has already entered, and it returns while that first call is still on the stack, so the decrement guarding it has not run yet and the depth keeps climbing. What a longer loop buys is a looser bound: a three-entity cycle gets 16 laps, not 16 applications.
+
+Two things keep chains honest:
+
+- **Gate the loop.** If two effects genuinely need to reference each other, have one grant a tag and the other carry `applicationTagRequirements` with that tag in `IgnoreTags`, so the second pass refuses itself.
+- **Prefer one applier with several entries** over a chain of appliers. `onApplication` takes an array; three effects applied from one component are three applications at depth 1, not three levels of nesting.
+
+Effects cannot name each other at construction — `EffectData` is immutable and each needs the other to exist first — so a cycle takes deliberate wiring to build. Mutable component state that is assigned after construction is the usual way one appears.
