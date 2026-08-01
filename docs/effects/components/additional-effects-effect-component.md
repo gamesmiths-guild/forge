@@ -4,7 +4,7 @@
 > **State:** Stateful — returns a new instance from `CreateInstance`
 > **Applies to:** Any effect (the `onComplete` sets and `RemoveOnEnd` need a non-instant one)
 
-Applies further effects off the back of its own: one set when the effect lands, and three more when it ends. Each application entry is a [`ConditionalEffect`](#conditionaleffect), so it can be gated on the source's tags, pointed at an entity other than the target, and taken back when its applier ends.
+Applies further effects off the back of its own: one set when the effect lands, and three more when it ends. Every entry, on either side, is a [`ConditionalEffect`](#conditionaleffect), so it can be gated on the source's tags, pointed at an entity other than the target, and — on the application side — taken back when its applier ends.
 
 This is how one authored effect becomes a package — a fireball that also applies Burning, a poison that leaves a Weakened debuff behind when it wears off, a hit that heals whoever landed it — without writing a `CustomExecution` or a custom component.
 
@@ -22,9 +22,9 @@ new AdditionalEffectsEffectComponent(
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | onApplication | `ConditionalEffect[]?` | The effects to apply when this effect is applied. Defaults to none. |
-| onCompleteAlways | `EffectData[]?` | The effects to apply when this effect is removed, however it ended. Defaults to none. |
-| onCompleteNormal | `EffectData[]?` | The effects to apply when this effect ends by running out of duration. Defaults to none. |
-| onCompletePrematurely | `EffectData[]?` | The effects to apply when this effect is taken away before it could expire. Defaults to none. |
+| onCompleteAlways | `ConditionalEffect[]?` | The effects to apply when this effect is removed, however it ended. Defaults to none. |
+| onCompleteNormal | `ConditionalEffect[]?` | The effects to apply when this effect ends by running out of duration. Defaults to none. |
+| onCompletePrematurely | `ConditionalEffect[]?` | The effects to apply when this effect is taken away before it could expire. Defaults to none. |
 | copyDataFromOriginalEffect | `bool` | Whether the applied effects inherit this effect's `SetByCaller` magnitudes. Defaults to `false`. |
 
 ### ConditionalEffect
@@ -37,9 +37,11 @@ new ConditionalEffect(EffectData, SourceTagRequirements, RemovalPolicy, StacksTo
 |-------|------|-------------|
 | EffectData | `EffectData` | The effect to apply. |
 | SourceTagRequirements | `TagRequirements?` | Requirements the effect's **source** must meet. `null` or empty always applies. |
-| RemovalPolicy | `ConditionalEffectRemovalPolicy` | `Ignore` (the default) leaves the applied effect alone; `RemoveOnEnd` takes it back when the applier ends. |
+| RemovalPolicy | `ConditionalEffectRemovalPolicy` | `Ignore` (the default) leaves the applied effect alone; `RemoveOnEnd` takes it back when the applier ends. **Application entries only.** |
 | StacksToRemove | `int` | How many stacks `RemoveOnEnd` takes. Any negative value, the default, removes the effect entirely. Ignored under `Ignore`. |
 | Target | `EffectApplicationTarget` | `Target` (the default), `Source`, or `Owner`. |
+
+`RemovalPolicy` is the one field that means nothing on a completion entry: the end it would take the effect back at is the very one applying it. Validation rejects a completion entry asking for `RemoveOnEnd` rather than letting it read as configured.
 
 ## Lifecycle Hooks
 
@@ -63,7 +65,8 @@ new ConditionalEffect(EffectData, SourceTagRequirements, RemovalPolicy, StacksTo
 
 - Only full removal counts. Losing a stack leaves everything in place.
 - `EffectRemovalReason.Expired` selects `onCompleteNormal`; `EffectRemovalReason.Removed` selects `onCompletePrematurely`. `Infinite` effects have no natural end, so every removal of one is premature.
-- Completion effects always land on the **target**; they have no per-entry configuration.
+- `onCompleteAlways` is applied first, then whichever of the two reason-specific sets matches.
+- Source conditions and `EffectApplicationTarget` work exactly as they do on the application side, evaluated against the same ownership. A completion effect pointed at `Source` is how a debuff pays its caster back when it ends.
 - Completion effects are applied **before** the `RemoveOnEnd` clean-up, so a completion effect can replace something the applier was keeping alive without the clean-up pass taking its replacement away.
 
 ### What the applied effects inherit
@@ -127,7 +130,7 @@ new AdditionalEffectsEffectComponent(
     onApplication: [
         new ConditionalEffect(hasteData, RemovalPolicy: ConditionalEffectRemovalPolicy.RemoveOnEnd)
     ],
-    onCompletePrematurely: [exhaustionData]);
+    onCompletePrematurely: [new ConditionalEffect(exhaustionData)]);
 ```
 
 ## Key Points

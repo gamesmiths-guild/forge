@@ -258,8 +258,8 @@ public class AdditionalEffectsComponentTests(TagsAndCuesFixture tagsAndCuesFixtu
 		TestEntity target = CreateEntity();
 
 		Apply(target, CreateApplierData(
-			onCompleteNormal: [CreateAppliedData("color.red")],
-			onCompletePrematurely: [CreateAppliedData("color.blue")],
+			onCompleteNormal: [Conditional("color.red")],
+			onCompletePrematurely: [Conditional("color.blue")],
 			durationType: DurationType.HasDuration));
 
 		target.EffectsManager.UpdateEffects(10);
@@ -275,8 +275,8 @@ public class AdditionalEffectsComponentTests(TagsAndCuesFixture tagsAndCuesFixtu
 		TestEntity target = CreateEntity();
 
 		ActiveEffectHandle applier = Apply(target, CreateApplierData(
-			onCompleteNormal: [CreateAppliedData("color.red")],
-			onCompletePrematurely: [CreateAppliedData("color.blue")],
+			onCompleteNormal: [Conditional("color.red")],
+			onCompletePrematurely: [Conditional("color.blue")],
 			durationType: DurationType.HasDuration))!;
 
 		target.EffectsManager.RemoveEffect(applier, true);
@@ -294,7 +294,7 @@ public class AdditionalEffectsComponentTests(TagsAndCuesFixture tagsAndCuesFixtu
 		TestEntity target = CreateEntity();
 
 		ActiveEffectHandle applier = Apply(target, CreateApplierData(
-			onCompleteAlways: [CreateAppliedData("color.red")],
+			onCompleteAlways: [Conditional("color.red")],
 			durationType: DurationType.HasDuration))!;
 
 		if (letItExpire)
@@ -317,8 +317,8 @@ public class AdditionalEffectsComponentTests(TagsAndCuesFixture tagsAndCuesFixtu
 
 		// Infinite effects have no natural end, so every removal of one is premature.
 		ActiveEffectHandle applier = Apply(target, CreateApplierData(
-			onCompleteNormal: [CreateAppliedData("color.red")],
-			onCompletePrematurely: [CreateAppliedData("color.blue")]))!;
+			onCompleteNormal: [Conditional("color.red")],
+			onCompletePrematurely: [Conditional("color.blue")]))!;
 
 		target.EffectsManager.RemoveEffect(applier, true);
 
@@ -328,12 +328,98 @@ public class AdditionalEffectsComponentTests(TagsAndCuesFixture tagsAndCuesFixtu
 
 	[Fact]
 	[Trait("Completion", null)]
+	public void Completion_effects_can_be_pointed_back_at_the_source()
+	{
+		TestEntity target = CreateEntity();
+		TestEntity caster = CreateEntity();
+
+		// The curse shape: while it runs it works on its victim, and when it ends it pays its caster back.
+		ActiveEffectHandle curse = ApplyFrom(target, caster, CreateApplierData(
+			onCompleteAlways: [Conditional("color.red", applicationTarget: EffectApplicationTarget.Source)],
+			durationType: DurationType.HasDuration))!;
+
+		HasEffect(caster, "color.red").Should().BeFalse();
+
+		target.EffectsManager.RemoveEffect(curse, true);
+
+		HasEffect(caster, "color.red").Should().BeTrue();
+		HasEffect(target, "color.red").Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Completion", null)]
+	public void Completion_effects_are_gated_on_the_source_tags_too()
+	{
+		TestEntity target = CreateEntity();
+		TestEntity plainCaster = CreateEntity();
+		TestEntity venomousCaster = CreateEntity();
+
+		ApplyTagEffect(venomousCaster, MakeContainer("enemy.beast.wolf"));
+
+		ConditionalEffect[] onCompleteAlways =
+		[
+			Conditional("color.red", new TagRequirements(RequiredTags: MakeContainer("enemy.beast.wolf")))
+		];
+
+		ActiveEffectHandle plain = ApplyFrom(
+			target,
+			plainCaster,
+			CreateApplierData(onCompleteAlways: onCompleteAlways))!;
+		target.EffectsManager.RemoveEffect(plain, true);
+
+		HasEffect(target, "color.red").Should().BeFalse();
+
+		ActiveEffectHandle venomous = ApplyFrom(
+			target,
+			venomousCaster,
+			CreateApplierData(onCompleteAlways: onCompleteAlways))!;
+		target.EffectsManager.RemoveEffect(venomous, true);
+
+		HasEffect(target, "color.red").Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Completion", null)]
+	public void A_completion_effect_reads_the_magnitudes_the_effect_ended_with()
+	{
+		TestEntity target = CreateEntity();
+		TestEntity caster = CreateEntity();
+		var magnitudeTag = Tag.RequestTag(_tagsManager, "tag");
+
+		// What a damage tally would do: accumulate while the effect runs, and let the completion effect read the
+		// total. The copy happens at removal, so the last value written is the one that carries.
+		var curse = new Effect(
+			CreateApplierData(
+				onCompleteAlways:
+				[
+					Conditional(
+						"color.red",
+						applicationTarget: EffectApplicationTarget.Source,
+						setByCallerTag: magnitudeTag)
+				],
+				copyDataFromOriginalEffect: true),
+			new EffectOwnership(caster, caster));
+
+		curse.SetSetByCallerMagnitude(magnitudeTag, 3);
+
+		ActiveEffectHandle handle = target.EffectsManager.ApplyEffect(curse)!;
+
+		curse.SetSetByCallerMagnitude(magnitudeTag, 12);
+
+		target.EffectsManager.RemoveEffect(handle, true);
+
+		// The heal landed on the caster at the tally's final value, not the one it started with.
+		TestUtils.TestAttribute(caster, TargetAttribute, [13, 1, 12, 0]);
+	}
+
+	[Fact]
+	[Trait("Completion", null)]
 	public void Losing_a_stack_is_not_an_ending()
 	{
 		TestEntity target = CreateEntity();
 
 		EffectData applierData = CreateApplierData(
-			onCompleteAlways: [CreateAppliedData("color.red")],
+			onCompleteAlways: [Conditional("color.red")],
 			stackable: true);
 
 		ActiveEffectHandle applier = Apply(target, applierData)!;
@@ -553,9 +639,9 @@ public class AdditionalEffectsComponentTests(TagsAndCuesFixture tagsAndCuesFixtu
 
 	private static EffectData CreateApplierData(
 		ConditionalEffect[]? onApplication = null,
-		EffectData[]? onCompleteAlways = null,
-		EffectData[]? onCompleteNormal = null,
-		EffectData[]? onCompletePrematurely = null,
+		ConditionalEffect[]? onCompleteAlways = null,
+		ConditionalEffect[]? onCompleteNormal = null,
+		ConditionalEffect[]? onCompletePrematurely = null,
 		bool copyDataFromOriginalEffect = false,
 		DurationType durationType = DurationType.Infinite,
 		bool stackable = false)

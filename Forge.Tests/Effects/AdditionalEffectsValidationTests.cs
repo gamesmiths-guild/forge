@@ -28,7 +28,7 @@ public sealed class AdditionalEffectsValidationTests : IDisposable
 	{
 		Action act = () => _ = CreateApplierData(
 			DurationType.Instant,
-			new AdditionalEffectsEffectComponent(onCompleteAlways: [CreateAppliedData(DurationType.Infinite)]));
+			new AdditionalEffectsEffectComponent(onCompleteAlways: [Completion(DurationType.Infinite)]));
 
 		act.Should().Throw<ValidationException>();
 	}
@@ -42,9 +42,9 @@ public sealed class AdditionalEffectsValidationTests : IDisposable
 		Action act = () => _ = CreateApplierData(
 			durationType,
 			new AdditionalEffectsEffectComponent(
-				onCompleteAlways: [CreateAppliedData(DurationType.Infinite)],
-				onCompleteNormal: [CreateAppliedData(DurationType.Infinite)],
-				onCompletePrematurely: [CreateAppliedData(DurationType.Infinite)]));
+				onCompleteAlways: [Completion(DurationType.Infinite)],
+				onCompleteNormal: [Completion(DurationType.Infinite)],
+				onCompletePrematurely: [Completion(DurationType.Infinite)]));
 
 		act.Should().NotThrow();
 	}
@@ -131,6 +131,49 @@ public sealed class AdditionalEffectsValidationTests : IDisposable
 		act.Should().NotThrow();
 	}
 
+	[Theory]
+	[Trait("Completion", null)]
+	[InlineData("always")]
+	[InlineData("normal")]
+	[InlineData("prematurely")]
+	public void Remove_on_end_on_a_completion_effect_is_rejected(string completionSet)
+	{
+		// The end a completion effect would be taken back at is the one applying it, so the policy reads as configured
+		// while meaning nothing.
+		ConditionalEffect[] entries =
+		[
+			new ConditionalEffect(
+				CreateAppliedData(DurationType.Infinite),
+				RemovalPolicy: ConditionalEffectRemovalPolicy.RemoveOnEnd)
+		];
+
+		Action act = () => _ = CreateApplierData(
+			DurationType.Infinite,
+			new AdditionalEffectsEffectComponent(
+				onCompleteAlways: completionSet == "always" ? entries : null,
+				onCompleteNormal: completionSet == "normal" ? entries : null,
+				onCompletePrematurely: completionSet == "prematurely" ? entries : null));
+
+		act.Should().Throw<ValidationException>();
+	}
+
+	[Fact]
+	[Trait("Completion", null)]
+	public void A_completion_effect_with_a_source_condition_and_a_target_is_accepted()
+	{
+		Action act = () => _ = CreateApplierData(
+			DurationType.Infinite,
+			new AdditionalEffectsEffectComponent(
+				onCompleteAlways:
+				[
+					new ConditionalEffect(
+						CreateAppliedData(DurationType.Instant),
+						Target: EffectApplicationTarget.Source)
+				]));
+
+		act.Should().NotThrow();
+	}
+
 	private static DurationData CreateDurationData(DurationType durationType)
 	{
 		return durationType == DurationType.HasDuration
@@ -143,6 +186,11 @@ public sealed class AdditionalEffectsValidationTests : IDisposable
 	private static EffectData CreateAppliedData(DurationType durationType)
 	{
 		return new EffectData("Applied Effect", CreateDurationData(durationType));
+	}
+
+	private static ConditionalEffect Completion(DurationType durationType)
+	{
+		return new ConditionalEffect(CreateAppliedData(durationType));
 	}
 
 	private static EffectData CreateApplierData(DurationType durationType, IEffectComponent component)

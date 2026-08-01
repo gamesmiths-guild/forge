@@ -12,10 +12,11 @@ namespace Gamesmiths.Forge.Effects.Components;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Each entry in <paramref name="onApplication"/> is a <see cref="ConditionalEffect"/>, so it can be gated on the
-/// source's tags, pointed at an entity other than the target, and taken back when its applier ends. Pointing one at
-/// <see cref="EffectApplicationTarget.Source"/> is what expresses lifesteal, recoil, and thorns without writing a
-/// <see cref="Calculator.CustomExecution"/>.
+/// Every entry, on either side, is a <see cref="ConditionalEffect"/>: it can be gated on the source's tags and pointed
+/// at an entity other than the target. Pointing one at <see cref="EffectApplicationTarget.Source"/> is what expresses
+/// lifesteal, recoil, thorns, and "the curse pays its caster back when it ends" without writing a
+/// <see cref="Calculator.CustomExecution"/>. Only <see cref="ConditionalEffectRemovalPolicy.RemoveOnEnd"/> is specific
+/// to the application side, because only application effects have a later end at which they can be taken back.
 /// </para>
 /// <para>
 /// Applied effects inherit their applier's ownership and evaluated level, so they credit the same source and land at
@@ -50,20 +51,20 @@ namespace Gamesmiths.Forge.Effects.Components;
 /// <see cref="Magnitudes.SetByCallerFloat"/> magnitudes.</param>
 public class AdditionalEffectsEffectComponent(
 	ConditionalEffect[]? onApplication = null,
-	EffectData[]? onCompleteAlways = null,
-	EffectData[]? onCompleteNormal = null,
-	EffectData[]? onCompletePrematurely = null,
+	ConditionalEffect[]? onCompleteAlways = null,
+	ConditionalEffect[]? onCompleteNormal = null,
+	ConditionalEffect[]? onCompletePrematurely = null,
 	bool copyDataFromOriginalEffect = false) : IEffectComponent
 {
 	private readonly List<RemoveOnEndEffect> _removeOnEndEffects = [];
 
 	internal ConditionalEffect[] OnApplication { get; } = onApplication ?? [];
 
-	internal EffectData[] OnCompleteAlways { get; } = onCompleteAlways ?? [];
+	internal ConditionalEffect[] OnCompleteAlways { get; } = onCompleteAlways ?? [];
 
-	internal EffectData[] OnCompleteNormal { get; } = onCompleteNormal ?? [];
+	internal ConditionalEffect[] OnCompleteNormal { get; } = onCompleteNormal ?? [];
 
-	internal EffectData[] OnCompletePrematurely { get; } = onCompletePrematurely ?? [];
+	internal ConditionalEffect[] OnCompletePrematurely { get; } = onCompletePrematurely ?? [];
 
 	internal bool CopyDataFromOriginalEffect { get; } = copyDataFromOriginalEffect;
 
@@ -74,15 +75,19 @@ public class AdditionalEffectsEffectComponent(
 		|| OnCompletePrematurely.Length > 0;
 
 	// RemoveOnEnd needs an owner with an end to hook, which an instant effect has not. EffectData rejects it.
-	internal bool HasRemoveOnEndEffect => Array.Exists(
-		OnApplication,
-		x => x.RemovalPolicy == ConditionalEffectRemovalPolicy.RemoveOnEnd);
+	internal bool HasRemoveOnEndEffect => HasRemoveOnEnd(OnApplication);
 
 	// ...and an applied effect still around when that end arrives, which an instant one is not. EffectData rejects it.
 	internal bool HasInstantRemoveOnEndEffect => Array.Exists(
 		OnApplication,
 		x => x.RemovalPolicy == ConditionalEffectRemovalPolicy.RemoveOnEnd
 			&& x.EffectData.DurationData.DurationType == DurationType.Instant);
+
+	// A completion effect is applied as its applier ends, so there is no later end at which to take it back. The
+	// removal policy is meaningless on one and EffectData rejects it rather than letting it read as configured.
+	internal bool HasRemoveOnEndCompletionEffect => HasRemoveOnEnd(OnCompleteAlways)
+		|| HasRemoveOnEnd(OnCompleteNormal)
+		|| HasRemoveOnEnd(OnCompletePrematurely);
 
 	/// <inheritdoc/>
 	public IEffectComponent CreateInstance()
@@ -103,22 +108,11 @@ public class AdditionalEffectsEffectComponent(
 
 		foreach (ConditionalEffect conditionalEffect in OnApplication)
 		{
-			if (!SourceRequirementsMet(conditionalEffect, parentEffect))
-			{
-				continue;
-			}
-
-			IForgeEntity? appliedTo = ResolveTarget(conditionalEffect.Target, target, parentEffect.Ownership);
-
-			// A conditional pointed at an ownership entity the effect doesn't have — thorns on an effect with no
-			// source — has nowhere to land and is skipped rather than redirected back at the target.
-			if (appliedTo is null)
-			{
-				continue;
-			}
-
-			ActiveEffectHandle? handle = appliedTo.EffectsManager.ApplyEffect(
-				BuildEffect(conditionalEffect.EffectData, parentEffect, effectEvaluatedData.Level));
+			ActiveEffectHandle? handle = ApplyConditionalEffect(
+				conditionalEffect,
+				target,
+				parentEffect,
+				effectEvaluatedData.Level);
 
 			// Instant effects never become active and denied applications return nothing; neither leaves anything to
 			// take back later.
@@ -171,6 +165,13 @@ public class AdditionalEffectsEffectComponent(
 		};
 	}
 
+	private static bool HasRemoveOnEnd(ConditionalEffect[] conditionalEffects)
+	{
+		return Array.Exists(
+			conditionalEffects,
+			x => x.RemovalPolicy == ConditionalEffectRemovalPolicy.RemoveOnEnd);
+	}
+
 	private static bool SourceRequirementsMet(in ConditionalEffect conditionalEffect, Effect parentEffect)
 	{
 		if (conditionalEffect.SourceTagRequirements?.IsEmpty != false)
@@ -193,15 +194,41 @@ public class AdditionalEffectsEffectComponent(
 			: new Effect(effectData, parentEffect.Ownership, level);
 	}
 
-	private void ApplyCompletionEffects(
-		EffectData[] completionEffects,
+	private ActiveEffectHandle? ApplyConditionalEffect(
+		in ConditionalEffect conditionalEffect,
 		IForgeEntity target,
 		Effect parentEffect,
 		int level)
 	{
-		foreach (EffectData completionEffect in completionEffects)
+		if (!SourceRequirementsMet(conditionalEffect, parentEffect))
 		{
-			target.EffectsManager.ApplyEffect(BuildEffect(completionEffect, parentEffect, level));
+			return null;
+		}
+
+		IForgeEntity? appliedTo = ResolveTarget(conditionalEffect.Target, target, parentEffect.Ownership);
+
+		// A conditional pointed at an ownership entity the effect doesn't have — thorns on an effect with no source —
+		// has nowhere to land and is skipped rather than redirected back at the target.
+		if (appliedTo is null)
+		{
+			return null;
+		}
+
+		return appliedTo.EffectsManager.ApplyEffect(
+			BuildEffect(conditionalEffect.EffectData, parentEffect, level));
+	}
+
+	private void ApplyCompletionEffects(
+		ConditionalEffect[] completionEffects,
+		IForgeEntity target,
+		Effect parentEffect,
+		int level)
+	{
+		foreach (ConditionalEffect completionEffect in completionEffects)
+		{
+			// The removal policy is meaningless here — the effect that would take these back is the one ending — so a
+			// completion effect is never tracked. EffectData rejects one that asks for it.
+			ApplyConditionalEffect(completionEffect, target, parentEffect, level);
 		}
 	}
 

@@ -356,6 +356,16 @@ public readonly record struct EffectData
 
 		Validation.Assert(
 			EffectComponents is null ||
+			!Array.Exists(
+				EffectComponents,
+				x => x is AdditionalEffectsEffectComponent { HasRemoveOnEndCompletionEffect: true }),
+			$"{nameof(ConditionalEffectRemovalPolicy)}.{nameof(ConditionalEffectRemovalPolicy.RemoveOnEnd)} has no " +
+			"meaning on a completion effect, since the end it would be taken back at is the one applying it. Use " +
+			$"{ConditionalEffectRemovalPolicy.Ignore} there, and the application effects when something has to be " +
+			"taken back.");
+
+		Validation.Assert(
+			EffectComponents is null ||
 			DurationData.DurationType != DurationType.Instant ||
 			!Array.Exists(
 				EffectComponents,

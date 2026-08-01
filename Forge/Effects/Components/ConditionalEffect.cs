@@ -14,7 +14,10 @@ namespace Gamesmiths.Forge.Effects.Components;
 /// </para>
 /// <para>
 /// <paramref name="StacksToRemove"/> only means anything under
-/// <see cref="ConditionalEffectRemovalPolicy.RemoveOnEnd"/>.
+/// <see cref="ConditionalEffectRemovalPolicy.RemoveOnEnd"/>, and <paramref name="RemovalPolicy"/> itself only means
+/// anything on the application side. A completion effect is applied as its applier ends, so there is no later end at
+/// which to take it back; <see cref="EffectData"/> rejects one asking for
+/// <see cref="ConditionalEffectRemovalPolicy.RemoveOnEnd"/> rather than letting it read as configured.
 /// </para>
 /// </remarks>
 /// <param name="EffectData">The effect to apply.</param>

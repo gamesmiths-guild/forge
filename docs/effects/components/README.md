@@ -10,7 +10,7 @@ For a practical guide on using components, see the [Quick Start Guide](../../qui
 
 | Component | State | Applies to | Description |
 |-----------|-------|------------|-------------|
-| [AdditionalEffectsEffectComponent](additional-effects-effect-component.md) | Stateful | Any | Applies further effects when the effect lands and when it ends, each gated, targeted, and cleaned up on its own terms. |
+| [AdditionalEffectsEffectComponent](additional-effects-effect-component.md) | Stateful | Any | Applies further effects when the effect lands and when it ends, each gated on the source, aimed at its own entity, and cleaned up on its own terms. |
 | [AttributeRequirementsEffectComponent](attribute-requirements-effect-component.md) | Stateful | Any | Gates application, forces removal, and toggles inhibition from the target's attribute values. |
 | [BlockAbilityTagsEffectComponent](block-ability-tags-effect-component.md) | Stateful | Duration | Blocks abilities carrying the given tags from activating while the effect is active. |
 | [CancelAbilityTagsEffectComponent](cancel-ability-tags-effect-component.md) | Stateless | Any | Cancels active abilities selected by tag, on application or on each execution. |
@@ -432,7 +432,7 @@ var complexEffectData = new EffectData(
 
 Any component that applies an effect can start a chain: A applies B, B applies C. That is the whole point of [AdditionalEffectsEffectComponent](additional-effects-effect-component.md), and it is fine as long as the chain ends. It stops being fine when it closes into a loop — A applies B while B applies A — because each application is a nested call on the same stack.
 
-`EffectsManager` cuts a cascade off once it nests more than 16 deep. The application that would have gone deeper is dropped and `Validation.Assert` fails, so a development build reports the cycle and a release build degrades to dropped applications rather than a stack overflow. The guard is a safety net, not a feature: a cycle that reaches it has already applied sixteen effects.
+`EffectsManager` cuts a cascade off once it nests more than 16 deep. The application that would have gone deeper is dropped and `Validation.Fail` reports it, so a development build throws a `ValidationException` naming the effect and a release build degrades to dropped applications rather than a stack overflow. The guard is a safety net, not a feature: a cycle that reaches it has already applied sixteen effects.
 
 Two things keep chains honest:
 
