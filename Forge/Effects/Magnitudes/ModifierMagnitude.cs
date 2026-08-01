@@ -122,19 +122,37 @@ public readonly record struct ModifierMagnitude
 					SetByCallerFloat.HasValue,
 					$"{nameof(SetByCallerFloat)} should always have a value at this point.");
 
-				if (SetByCallerFloat.Value.Snapshot && effectEvaluatedData is not null)
-				{
-					if (effectEvaluatedData.SnapshotSetByCallers.TryGetValue(
-						SetByCallerFloat.Value.Tag, out float snapshotValue))
-					{
-						return snapshotValue;
-					}
+				SetByCallerFloat setByCaller = SetByCallerFloat.Value;
+				bool snapshots = setByCaller.Snapshot && effectEvaluatedData is not null;
 
-					effectEvaluatedData.SnapshotSetByCallers.Add(
-						SetByCallerFloat.Value.Tag, effect.DataTag[SetByCallerFloat.Value.Tag]);
+				if (snapshots && effectEvaluatedData!.SnapshotSetByCallers.TryGetValue(
+					setByCaller.Tag, out float snapshotValue))
+				{
+					return snapshotValue;
 				}
 
-				return effect.DataTag[SetByCallerFloat.Value.Tag];
+				if (!effect.DataTag.TryGetValue(setByCaller.Tag, out float callerMagnitude))
+				{
+					// A magnitude nobody set is a configuration error rather than a zero the author chose, and the
+					// dictionary indexer alone would only report the missing key. Left uncached, so a caller that sets
+					// it after this evaluation is still picked up.
+					Validation.Fail(
+						$"Effect '{effect.EffectData.Name}' has a {MagnitudeCalculationType.SetByCaller} magnitude " +
+						$"keyed on '{setByCaller.Tag}', but nothing ever set that tag on the effect. Either call " +
+						$"{nameof(Effect.SetSetByCallerMagnitude)} before applying it, or — if this effect is " +
+						"applied by a component such as AdditionalEffectsEffectComponent — turn on " +
+						"copyDataFromOriginalEffect so it inherits the magnitudes of the effect that applied it. " +
+						"Resolving to zero.");
+
+					return 0;
+				}
+
+				if (snapshots)
+				{
+					effectEvaluatedData!.SnapshotSetByCallers.Add(setByCaller.Tag, callerMagnitude);
+				}
+
+				return callerMagnitude;
 
 			default:
 				return 0;
