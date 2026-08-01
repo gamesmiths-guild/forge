@@ -43,6 +43,17 @@ While you can create `EffectData` at runtime, it's generally better to define th
 
 **Note:** If you'll apply an effect repeatedly, keep a reference to the `Effect` instance to maintain its level.
 
+#### Linked Effects
+
+An effect applied as a consequence of another one should usually read as that effect's doing rather than as an unrelated application. `Effect.CreateLinkedEffect` builds one that inherits the original's ownership, level, and `SetByCaller` magnitudes:
+
+```csharp
+// Same source, same level, same caller-set magnitudes
+Effect burning = Effect.CreateLinkedEffect(burningData, fireball, fireball.Level);
+```
+
+The magnitudes are copied, not shared, so setting one on the original afterwards does not reach the linked effect. This is the rule [AdditionalEffectsEffectComponent](components/additional-effects-effect-component.md) follows, exposed for custom components that spawn their own effects.
+
 #### Effect Tags
 
 `EffectData.EffectTags` classifies the effect **itself**. These tags are never granted to the target — they exist so systems can ask "what kind of effect is this?" and select effects by category.
@@ -163,6 +174,15 @@ These read-only getters let you poll live effect state, for example a buff's rem
         // Use abilities granted by this effect instance
     }
     ```
+
+A second overload takes stacks instead of a force flag, for weakening a specific application rather than clearing it:
+
+```csharp
+// Takes two stacks off this application, removing it outright once nothing is left
+entity.EffectsManager.RemoveEffect(bleedHandle, stacksToRemove: 2);
+```
+
+Partial removal here is explicit rather than driven by `StackExpirationPolicy`, and it never refreshes the remaining duration of what survives — the same semantics as [`RemoveEffects(query, stacksToRemove)`](#the-query-api), one handle at a time.
 
 Other removal methods exist but are less precise:
 
@@ -679,6 +699,7 @@ var componentBasedEffectData = new EffectData(
 
 **Built-in components:**
 
+- **[AdditionalEffectsEffectComponent](components/additional-effects-effect-component.md)**: Applies further effects when the effect lands and when it ends.
 - **[AttributeRequirementsEffectComponent](components/attribute-requirements-effect-component.md)**: Checks attribute values for application, removal, and inhibition.
 - **[BlockAbilityTagsEffectComponent](components/block-ability-tags-effect-component.md)**: Blocks abilities carrying the given tags from activating while the effect is active.
 - **[CancelAbilityTagsEffectComponent](components/cancel-ability-tags-effect-component.md)**: Cancels active abilities selected by tag, on application or on each execution.
