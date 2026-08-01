@@ -152,19 +152,6 @@ public class AdditionalEffectsEffectComponent(
 		RemoveTrackedEffects();
 	}
 
-	private static IForgeEntity? ResolveTarget(
-		EffectApplicationTarget applicationTarget,
-		IForgeEntity target,
-		in EffectOwnership ownership)
-	{
-		return applicationTarget switch
-		{
-			EffectApplicationTarget.Source => ownership.Source,
-			EffectApplicationTarget.Owner => ownership.Owner,
-			_ => target,
-		};
-	}
-
 	private static bool HasRemoveOnEnd(ConditionalEffect[] conditionalEffects)
 	{
 		return Array.Exists(
@@ -205,7 +192,7 @@ public class AdditionalEffectsEffectComponent(
 			return null;
 		}
 
-		IForgeEntity? appliedTo = ResolveTarget(conditionalEffect.Target, target, parentEffect.Ownership);
+		IForgeEntity? appliedTo = conditionalEffect.Target.Resolve(target, parentEffect.Ownership);
 
 		// A conditional pointed at an ownership entity the effect doesn't have — thorns on an effect with no source —
 		// has nowhere to land and is skipped rather than redirected back at the target.
