@@ -330,6 +330,35 @@ public readonly record struct EffectData
 			DurationData.DurationType != DurationType.Instant ||
 			!Array.Exists(
 				EffectComponents,
+				x => x is AdditionalEffectsEffectComponent { HasCompletionEffects: true }),
+			$"The completion effects of {nameof(AdditionalEffectsEffectComponent)} are applied when the effect is " +
+			$"removed, which an {DurationType.Instant} effect never is, since it never becomes active. Use the " +
+			"application effects instead.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			DurationData.DurationType != DurationType.Instant ||
+			!Array.Exists(
+				EffectComponents,
+				x => x is AdditionalEffectsEffectComponent { HasRemoveOnEndEffect: true }),
+			$"{nameof(ConditionalEffectRemovalPolicy)}.{nameof(ConditionalEffectRemovalPolicy.RemoveOnEnd)} takes an " +
+			$"applied effect back when the effect that applied it ends, and an {DurationType.Instant} effect never " +
+			$"becomes active, so it has no end to hook. Use {ConditionalEffectRemovalPolicy.Ignore} instead.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			!Array.Exists(
+				EffectComponents,
+				x => x is AdditionalEffectsEffectComponent { HasInstantRemoveOnEndEffect: true }),
+			$"{nameof(ConditionalEffectRemovalPolicy)}.{nameof(ConditionalEffectRemovalPolicy.RemoveOnEnd)} cannot " +
+			$"be used with an {DurationType.Instant} applied effect: it executes and is gone immediately, so there " +
+			"is nothing left to take back when the effect that applied it ends.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			DurationData.DurationType != DurationType.Instant ||
+			!Array.Exists(
+				EffectComponents,
 				x => x is TargetTagRequirementsEffectComponent { HasOngoingRequirements: true }
 					or SourceTagRequirementsEffectComponent { HasOngoingRequirements: true }
 					or AttributeRequirementsEffectComponent { HasOngoingRequirements: true }

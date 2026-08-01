@@ -142,22 +142,9 @@ public readonly record struct EffectQuery(
 
 	private bool MatchesSourceRequirements(Effect effect)
 	{
-		TagContainer? sourceTags = effect.Ownership.Source?.Tags.AllTags;
+		TagContainer? sourceTags = effect.ResolveSourceTags();
 
-		if (sourceTags is null)
-		{
-			TagsManager? tagsManager = effect.ResolveTagsManager();
-
-			if (tagsManager is null)
-			{
-				return false;
-			}
-
-			// Keeps the semantics honest: a missing source cannot satisfy required tags, but trivially satisfies
-			// ignored ones.
-			sourceTags = new TagContainer(tagsManager);
-		}
-
-		return SourceTagRequirements!.Value.RequirementsMet(sourceTags);
+		// An effect with no tag context at all cannot be judged against source requirements, so it never matches.
+		return sourceTags is not null && SourceTagRequirements!.Value.RequirementsMet(sourceTags);
 	}
 }

@@ -78,6 +78,37 @@ public class Effect
 	}
 
 	/// <summary>
+	/// Creates an effect that continues another one: same ownership, same level, and the same
+	/// <see cref="SetByCallerFloat"/> magnitudes.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// This is how a component spawns a child effect that should read as the parent's doing rather than as an unrelated
+	/// application — a debuff riding a damage effect, or the aftermath a buff leaves behind when it ends. Ownership
+	/// carries over so the child credits the same source, and the magnitudes carry over so a child keyed on the same
+	/// <see cref="Tag"/> resolves to the value the caller set on the parent.
+	/// </para>
+	/// <para>
+	/// The magnitudes are copied, not shared: setting one on the parent afterwards does not reach the child.
+	/// </para>
+	/// </remarks>
+	/// <param name="effectData">The configuration data for the new effect.</param>
+	/// <param name="parentEffect">The effect whose context the new one inherits.</param>
+	/// <param name="level">The level for the new effect, usually the parent's evaluated level.</param>
+	/// <returns>A new effect carrying the parent's context.</returns>
+	public static Effect CreateLinkedEffect(EffectData effectData, Effect parentEffect, int level)
+	{
+		var linkedEffect = new Effect(effectData, parentEffect.Ownership, level);
+
+		foreach (KeyValuePair<Tag, float> setByCaller in parentEffect.DataTag)
+		{
+			linkedEffect.DataTag[setByCaller.Key] = setByCaller.Value;
+		}
+
+		return linkedEffect;
+	}
+
+	/// <summary>
 	/// Level up this effect by exactly one level.
 	/// </summary>
 	public void LevelUp()
@@ -259,6 +290,31 @@ public class Effect
 			?? CachedGrantedTags?.TagsManager
 			?? Ownership.Source?.Tags.BaseTags.TagsManager
 			?? Ownership.Owner?.Tags.BaseTags.TagsManager;
+	}
+
+	/// <summary>
+	/// Gets the tags of the entity that applied this effect, for requirements evaluated against the source.
+	/// </summary>
+	/// <remarks>
+	/// A missing source falls back to an empty container rather than to no evaluation at all, which keeps the semantics
+	/// honest: it cannot satisfy required tags, but it trivially satisfies ignored ones. Building even an empty
+	/// container needs a tags manager, so an effect with no tag context anywhere returns <see langword="null"/> and its
+	/// caller decides what a source it cannot see means.
+	/// </remarks>
+	/// <returns>The source's tags, an empty container when there is no source, or <see langword="null"/> when the
+	/// effect has no reachable <see cref="TagsManager"/>.</returns>
+	internal TagContainer? ResolveSourceTags()
+	{
+		TagContainer? sourceTags = Ownership.Source?.Tags.AllTags;
+
+		if (sourceTags is not null)
+		{
+			return sourceTags;
+		}
+
+		TagsManager? tagsManager = ResolveTagsManager();
+
+		return tagsManager is null ? null : new TagContainer(tagsManager);
 	}
 
 	internal bool CanApply(IForgeEntity target)

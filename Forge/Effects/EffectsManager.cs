@@ -16,11 +16,23 @@ namespace Gamesmiths.Forge.Effects;
 /// <param name="cuesManager">The cues manager to be used to trigger cues by this effects manager.</param>
 public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 {
+	/// <summary>
+	/// How deep an effect application may cascade into further applications before the chain is treated as a cycle.
+	/// </summary>
+	/// <remarks>
+	/// Components that apply effects — <see cref="AdditionalEffectsEffectComponent"/> above all — make it possible for
+	/// A to apply B while B applies A. The limit is high enough that no honest chain of effects reaches it and low
+	/// enough to stop a cycle long before the call stack does.
+	/// </remarks>
+	private const int MaxApplicationDepth = 16;
+
 	private readonly CuesManager _cuesManager = cuesManager;
 
 	private readonly List<ActiveEffect> _activeEffects = [];
 
 	private readonly List<IEffectApplicationBlocker> _applicationBlockers = [];
+
+	private int _applicationDepth;
 
 	/// <summary>
 	/// Event triggered when a registered <see cref="IEffectApplicationBlocker"/> denies an effect application. Carries
@@ -77,6 +89,28 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	public void RemoveEffect(ActiveEffectHandle activeEffect, bool forceRemoval = false)
 	{
 		RemoveStackOrUnapply(activeEffect.ActiveEffect, forceRemoval);
+	}
+
+	/// <summary>
+	/// Removes a set number of stacks from an <see cref="ActiveEffect"/>, removing it outright once nothing is left.
+	/// </summary>
+	/// <remarks>
+	/// The handle counterpart of
+	/// <see cref="RemoveEffects(EffectQuery, int, IReadOnlyCollection{ActiveEffectHandle})"/>: partial removal is
+	/// explicit rather than driven by <see cref="StackExpirationPolicy"/>, and it never refreshes the remaining
+	/// duration of what survives.
+	/// </remarks>
+	/// <param name="activeEffect">The instance of the active effect to take stacks from.</param>
+	/// <param name="stacksToRemove">How many stacks to remove. Any negative value removes the effect entirely,
+	/// regardless of its stack count.</param>
+	public void RemoveEffect(ActiveEffectHandle activeEffect, int stacksToRemove)
+	{
+		if (activeEffect.ActiveEffect is null || stacksToRemove == 0)
+		{
+			return;
+		}
+
+		RemoveStacks(activeEffect.ActiveEffect, stacksToRemove);
 	}
 
 	/// <summary>
@@ -320,6 +354,68 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	internal ActiveEffectHandle? ApplyEffectInternal(Effect effect, EffectApplicationContext? applicationContext)
 	{
+		// Applications can cascade: a component reacting to one effect landing can apply another, which can apply
+		// another. The chain is cut here rather than left to overflow the stack, so a build with validation disabled
+		// drops the offending application instead of taking the process down with it.
+		if (_applicationDepth >= MaxApplicationDepth)
+		{
+			Validation.Fail(
+				$"Effect application exceeded {MaxApplicationDepth} levels of nesting while applying " +
+				$"'{effect.EffectData.Name}', which means two or more effects are applying each other in a cycle. " +
+				"Break the cycle, usually by gating one of the applications on a tag the other grants.");
+
+			return null;
+		}
+
+		_applicationDepth++;
+
+		try
+		{
+			return ApplyEffectUnguarded(effect, applicationContext);
+		}
+		finally
+		{
+			_applicationDepth--;
+		}
+	}
+
+	private static bool MatchesStackPolicy(ActiveEffect existingEffect, Effect newEffect)
+	{
+		Validation.Assert(
+			newEffect.EffectData.StackingData.HasValue,
+			"StackingData should always be valid at this point.");
+
+		return newEffect.EffectData.StackingData.Value.StackPolicy == StackPolicy.AggregateByTarget
+			|| existingEffect.EffectEvaluatedData.Effect.Ownership.Owner == newEffect.Ownership.Owner;
+	}
+
+	private static bool MatchesStackLevelPolicy(ActiveEffect existingEffect, Effect newEffect)
+	{
+		Validation.Assert(
+			newEffect.EffectData.StackingData.HasValue,
+			"StackingData should always be valid at this point.");
+
+		return newEffect.EffectData.StackingData.Value.StackLevelPolicy == StackLevelPolicy.AggregateLevels
+			|| existingEffect.EffectEvaluatedData.Effect.Level == newEffect.Level;
+	}
+
+	private static IEnumerable<EffectStackInstanceData> ConvertToStackInstanceData(
+		IEnumerable<ActiveEffect> filteredEffects)
+	{
+		return filteredEffects.Select(CreateStackInstanceData);
+	}
+
+	private static EffectStackInstanceData CreateStackInstanceData(ActiveEffect effect)
+	{
+		EffectEvaluatedData evaluatedData = effect.EffectEvaluatedData;
+		return new EffectStackInstanceData(
+			evaluatedData.Effect.Ownership.Owner,
+			evaluatedData.Level,
+			evaluatedData.Stack);
+	}
+
+	private ActiveEffectHandle? ApplyEffectUnguarded(Effect effect, EffectApplicationContext? applicationContext)
+	{
 		if (!effect.CanApply(Owner))
 		{
 			return null;
@@ -374,41 +470,6 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		}
 
 		return ApplyNewEffect(effect, applicationContext).Handle;
-	}
-
-	private static bool MatchesStackPolicy(ActiveEffect existingEffect, Effect newEffect)
-	{
-		Validation.Assert(
-			newEffect.EffectData.StackingData.HasValue,
-			"StackingData should always be valid at this point.");
-
-		return newEffect.EffectData.StackingData.Value.StackPolicy == StackPolicy.AggregateByTarget ||
-			   existingEffect.EffectEvaluatedData.Effect.Ownership.Owner == newEffect.Ownership.Owner;
-	}
-
-	private static bool MatchesStackLevelPolicy(ActiveEffect existingEffect, Effect newEffect)
-	{
-		Validation.Assert(
-			newEffect.EffectData.StackingData.HasValue,
-			"StackingData should always be valid at this point.");
-
-		return newEffect.EffectData.StackingData.Value.StackLevelPolicy == StackLevelPolicy.AggregateLevels ||
-			   existingEffect.EffectEvaluatedData.Effect.Level == newEffect.Level;
-	}
-
-	private static IEnumerable<EffectStackInstanceData> ConvertToStackInstanceData(
-		IEnumerable<ActiveEffect> filteredEffects)
-	{
-		return filteredEffects.Select(CreateStackInstanceData);
-	}
-
-	private static EffectStackInstanceData CreateStackInstanceData(ActiveEffect effect)
-	{
-		EffectEvaluatedData evaluatedData = effect.EffectEvaluatedData;
-		return new EffectStackInstanceData(
-			evaluatedData.Effect.Ownership.Owner,
-			evaluatedData.Level,
-			evaluatedData.Stack);
 	}
 
 	private bool IsApplicationBlocked(Effect effect)
