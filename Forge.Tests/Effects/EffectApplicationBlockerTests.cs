@@ -213,6 +213,26 @@ public class EffectApplicationBlockerTests(TagsAndCuesFixture tagsAndCuesFixture
 		blocker.Calls.Should().Be(1);
 	}
 
+	[Fact]
+	[Trait("Registry", null)]
+	public void A_blocker_unregistering_itself_does_not_skip_the_next_one()
+	{
+		TestEntity target = CreateEntity();
+
+		// The first blocker allows and takes itself out of the registry, shifting the denying one down into the index
+		// the loop is standing on. Advancing blindly there would let the effect through unvetoed.
+		var allowing = new SelfUnregisteringBlocker(target.EffectsManager, allow: true);
+		var denying = new RecordingBlocker(allow: false);
+
+		target.EffectsManager.RegisterApplicationBlocker(allowing);
+		target.EffectsManager.RegisterApplicationBlocker(denying);
+
+		target.EffectsManager.ApplyEffect(CreateEffect(target)).Should().BeNull();
+
+		allowing.Calls.Should().Be(1);
+		denying.Calls.Should().Be(1);
+	}
+
 	private static Modifier[] CreateModifiers()
 	{
 		return
@@ -255,7 +275,8 @@ public class EffectApplicationBlockerTests(TagsAndCuesFixture tagsAndCuesFixture
 		}
 	}
 
-	private sealed class SelfUnregisteringBlocker(EffectsManager effectsManager) : IEffectApplicationBlocker
+	private sealed class SelfUnregisteringBlocker(EffectsManager effectsManager, bool allow = false)
+		: IEffectApplicationBlocker
 	{
 		public int Calls { get; private set; }
 
@@ -263,7 +284,7 @@ public class EffectApplicationBlockerTests(TagsAndCuesFixture tagsAndCuesFixture
 		{
 			Calls++;
 			effectsManager.UnregisterApplicationBlocker(this);
-			return false;
+			return allow;
 		}
 	}
 }

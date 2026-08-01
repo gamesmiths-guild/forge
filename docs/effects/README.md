@@ -281,7 +281,7 @@ entity.EffectsManager.UnregisterApplicationBlocker(cutsceneGate);
 - Nothing registered costs nothing — the common case walks an empty list.
 - `AllowEffectApplication` runs on the application path, so keep it cheap and free of side effects.
 
-Every denial raises an event, whether it came from an effect component or from a system of your own:
+Every denial by a blocker raises an event, whether that blocker is an effect component or a system of your own:
 
 ```csharp
 entity.EffectsManager.OnEffectApplicationBlocked += (blockedEffect, blocker) =>

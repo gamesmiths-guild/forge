@@ -416,17 +416,25 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		// Indexed rather than foreach so that a blocker unregistering itself while being consulted — an immunity effect
 		// that removes itself on its first block, say — doesn't invalidate the iteration. Costs nothing when the list
 		// is empty, which is the common case.
-		for (int i = 0; i < _applicationBlockers.Count; i++)
+		int i = 0;
+
+		while (i < _applicationBlockers.Count)
 		{
 			IEffectApplicationBlocker blocker = _applicationBlockers[i];
 
-			if (blocker.AllowEffectApplication(in effect))
+			if (!blocker.AllowEffectApplication(in effect))
 			{
-				continue;
+				OnEffectApplicationBlocked?.Invoke(effect, blocker);
+				return true;
 			}
 
-			OnEffectApplicationBlocked?.Invoke(effect, blocker);
-			return true;
+			// Advance only when the list didn't shift underneath: a blocker that unregistered itself, or an earlier
+			// one, during the call moved its successor into this index, and skipping it would let through an effect
+			// that successor would have vetoed.
+			if (i < _applicationBlockers.Count && ReferenceEquals(_applicationBlockers[i], blocker))
+			{
+				i++;
+			}
 		}
 
 		return false;
