@@ -366,6 +366,148 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 	}
 
 	[Fact]
+	[Trait("Instant", null)]
+	public void Custom_calculator_can_capture_from_the_ownership_source()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var weapon = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		// Attribute5 is 5 everywhere by default, so raise the weapon's to tell the three entities apart.
+		var enchantmentData = new EffectData(
+			"Weapon Enchantment",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute5",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(4)))
+			]);
+
+		weapon.EffectsManager.ApplyEffect(
+			new Effect(enchantmentData, new EffectOwnership(weapon, weapon)));  // 5 -> 9
+
+		var customCalculatorClass = new CustomMagnitudeCalculator(
+			"TestAttributeSet.Attribute5",
+			AttributeCaptureSource.Source,
+			true,
+			1);
+
+		var effectData = new EffectData(
+			"Weapon Strike",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.CustomCalculatorClass,
+						customCalculationBasedFloat: new CustomCalculationBasedFloat(
+							customCalculatorClass,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			]);
+
+		var effect = new Effect(effectData, new EffectOwnership(owner, weapon));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		// 1 + 9 from the weapon; the owner and the target would both have contributed 5.
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [10, 10, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Execution", null)]
+	public void Custom_execution_source_captures_read_the_ownership_owner()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		// The sourcing object carries none of the captured attributes: an effect owned by a character but sourced from
+		// an item. Source captures must still resolve against the owner.
+		var sourceItem = new VitalTestEntity(_tagsManager, _cuesManager);
+
+		var customCalculatorClass = new CustomTestExecutionClass(true);
+
+		var effectData = new EffectData(
+			"Test Effect",
+			new DurationData(DurationType.Instant),
+			customExecutions:
+			[
+				customCalculatorClass
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				owner,
+				sourceItem));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		// Same results as an effect whose owner and source are the same entity: Attribute3 (3) and Attribute5 (5) are
+		// read from the owner, not from the item.
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 16, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 11, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Execution", null)]
+	public void Custom_execution_non_snapshot_source_captures_track_the_ownership_owner()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		var sourceItem = new TestEntity(_tagsManager, _cuesManager);
+
+		var customCalculatorClass = new CustomTestExecutionClass(false);
+
+		var effectData = new EffectData(
+			"Test Effect",
+			new DurationData(DurationType.Infinite),
+			customExecutions:
+			[
+				customCalculatorClass
+			]);
+
+		var backingAttributeEffectData = new EffectData(
+			"Backing Attribute Effect",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute3",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(1)))
+			]);
+
+		var effect = new Effect(
+			effectData,
+			new EffectOwnership(
+				owner,
+				sourceItem));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
+
+		// Buffing the OWNER's backing attribute must re-evaluate the execution; the live capture has to be registered
+		// against the owner rather than against the sourcing item.
+		ActiveEffectHandle? backingEffectHandle = owner.EffectsManager.ApplyEffect(
+			new Effect(backingAttributeEffectData, new EffectOwnership(owner, owner)));
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [21, 1, 20, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [12, 2, 10, 0]);
+
+		owner.EffectsManager.RemoveEffect(backingEffectHandle!);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [16, 1, 15, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [11, 2, 9, 0]);
+	}
+
+	[Fact]
 	[Trait("Execution", null)]
 	public void Custom_executions_modifies_update_with_non_snapshot_attributes()
 	{
