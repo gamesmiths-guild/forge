@@ -59,10 +59,10 @@ public class EventPayloadOutputResolverTests
 
 	[Fact]
 	[Trait("Resolver", "EventPayloadOutput")]
-	public void Writer_widens_float_outputs_to_double()
+	public void Writer_stores_float_outputs_as_floats()
 	{
 		var context = new GraphContext();
-		context.GraphVariables.DefineVariable("floatVar", 0.0);
+		context.GraphVariables.DefineVariable("floatVar", 0.0f);
 		var resolver = new EventPayloadOutputResolver(
 			new FloatPayloadProvider(),
 			new Dictionary<string, EventOutputBinding>
@@ -72,8 +72,11 @@ public class EventPayloadOutputResolverTests
 
 		resolver.Resolve(context).Write(11.0f, context);
 
-		context.GraphVariables.TryGetVar("floatVar", out double value).Should().BeTrue();
-		value.Should().Be(11.0);
+		// Stored under the type the provider declares. A Statescript Float variable is backed by System.Single, and
+		// Variant128 is a union keyed on the type read back out, so storing it as a double would hand a float reader
+		// the low four bytes of the double — zero for a value like this one.
+		context.GraphVariables.TryGetVar("floatVar", out float value).Should().BeTrue();
+		value.Should().Be(11f);
 	}
 
 	[Fact]

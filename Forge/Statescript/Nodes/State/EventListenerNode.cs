@@ -174,8 +174,10 @@ public class EventListenerNode(bool deactivateOnEvent = false) : StateNode<Event
 			? graphContext.SharedVariables
 			: graphContext.GraphVariables;
 
-		// Floating-point graph variables are double-backed, so widen the float magnitude before storing it.
-		variables?.SetVar(output.BoundName, (double)value);
+		// Stored as the float the output variable declares. Variant128 is a union keyed on the type read back out, so
+		// widening to double here would hand a Float-typed reader the low four bytes of the double instead — exactly
+		// zero for any value with few significant bits, which is most of them.
+		variables?.SetVar(output.BoundName, value);
 	}
 
 	private void OnTypedEventReceived(

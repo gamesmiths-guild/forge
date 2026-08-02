@@ -31,35 +31,9 @@ public sealed class EventPayloadOutputs
 	{
 		Variables? variables = ResolveBinding(name, out StringKey variableName);
 
-		if (variables is null)
-		{
-			return;
-		}
-
-		// Floating-point graph variables are double-backed, so widen single-precision values before storing them.
-		if (typeof(T) == typeof(float))
-		{
-			variables.SetVar(variableName, (double)(float)(object)value);
-		}
-		else
-		{
-			variables.SetVar(variableName, value);
-		}
-	}
-
-	/// <summary>
-	/// Writes a single-precision float to the variable bound to the named output, widening it to the double-backed
-	/// graph variable. Providers writing a <see langword="float"/> bind to this overload, which avoids the boxing the
-	/// generic <see cref="Set{T}"/> incurs when it special-cases <see langword="float"/>.
-	/// </summary>
-	/// <param name="name">The declared output name.</param>
-	/// <param name="value">The value to write.</param>
-	public void Set(string name, float value)
-	{
-		Variables? variables = ResolveBinding(name, out StringKey variableName);
-
-		// Floating-point graph variables are double-backed, so widen single-precision values before storing them.
-		variables?.SetVar(variableName, (double)value);
+		// Stored as the declared type. Variant128 is a union keyed on the type read back out, so writing a value under
+		// any other type hands the reader a reinterpretation of the same sixteen bytes rather than the value.
+		variables?.SetVar(variableName, value);
 	}
 
 	/// <summary>

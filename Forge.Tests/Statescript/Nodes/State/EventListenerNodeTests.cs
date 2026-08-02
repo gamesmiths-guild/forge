@@ -22,6 +22,42 @@ public class EventListenerNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 
 	[Fact]
 	[Trait("Graph", "EventListener")]
+	public void A_magnitude_survives_a_round_trip_through_a_float_graph_variable()
+	{
+		var cuesManager = new CuesManager();
+		var entity = new TestEntity(_tagsManager, cuesManager);
+		var eventTag = Tag.RequestTag(_tagsManager, "test.cue1");
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable("eventTag", eventTag);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("listenOn", entity);
+		graph.VariableDefinitions.DefineVariable("magOut", 0f);
+
+		EventListenerNode listener = CreateEventListenerNode("eventTag", "listenOn");
+		listener.BindOutput(EventListenerNode.MagnitudeOutput, "magOut", VariableScope.Graph);
+		graph.AddNode(listener);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			listener.InputPorts[StateNode<EventListenerNodeContext>.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		// A whole number is the case that fails loudest when the write and the read disagree on the type: the low four
+		// bytes of the double are all zero, so a float reader sees exactly zero rather than something merely wrong.
+		entity.Events.Raise(new EventData
+		{
+			EventTags = eventTag.GetSingleTagContainer()!,
+			Target = entity,
+			EventMagnitude = 10f,
+		});
+
+		processor.GraphContext.GraphVariables.TryGetVar("magOut", out float magnitude).Should().BeTrue();
+		magnitude.Should().Be(10f);
+	}
+
+	[Fact]
+	[Trait("Graph", "EventListener")]
 	public void Listener_emits_on_event_and_writes_built_in_outputs_when_a_matching_event_fires()
 	{
 		var cuesManager = new CuesManager();
@@ -34,7 +70,7 @@ public class EventListenerNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		graph.VariableDefinitions.DefineObjectVariable("eventTag", eventTag);
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("listenOn", entity);
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("sourceOut", null!);
-		graph.VariableDefinitions.DefineVariable("magOut", 0.0);
+		graph.VariableDefinitions.DefineVariable("magOut", 0f);
 
 		EventListenerNode listener = CreateEventListenerNode("eventTag", "listenOn");
 		listener.BindOutput(EventListenerNode.SourceOutput, "sourceOut", VariableScope.Graph);
@@ -64,8 +100,11 @@ public class EventListenerNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		processor.GraphContext.GraphVariables.TryGetObject("sourceOut", out IForgeEntity? capturedSource)
 			.Should().BeTrue();
 		capturedSource.Should().BeSameAs(source);
-		processor.GraphContext.GraphVariables.TryGetVar("magOut", out double magnitude).Should().BeTrue();
-		magnitude.Should().Be(5.0);
+
+		// Read back as the float the Magnitude output declares. Variant128 is a union keyed on the type, so reading it
+		// as anything else reinterprets the same bytes rather than converting them.
+		processor.GraphContext.GraphVariables.TryGetVar("magOut", out float magnitude).Should().BeTrue();
+		magnitude.Should().Be(5f);
 	}
 
 	[Fact]
