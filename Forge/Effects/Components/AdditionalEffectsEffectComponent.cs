@@ -2,7 +2,6 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Duration;
-using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Effects.Components;
 
@@ -108,15 +107,15 @@ public class AdditionalEffectsEffectComponent(
 
 		foreach (ConditionalEffect conditionalEffect in OnApplication)
 		{
-			ActiveEffectHandle? handle = ApplyConditionalEffect(
-				conditionalEffect,
+			ActiveEffectHandle? handle = conditionalEffect.TryApply(
 				target,
 				parentEffect,
-				effectEvaluatedData.Level);
+				effectEvaluatedData.Level,
+				CopyDataFromOriginalEffect);
 
 			// Instant effects never become active and denied applications return nothing; neither leaves anything to
 			// take back later.
-			if (handle is not null && conditionalEffect.RemovalPolicy == ConditionalEffectRemovalPolicy.RemoveOnEnd)
+			if (handle is not null && conditionalEffect.IsTakenBack)
 			{
 				_removeOnEndEffects.Add(new RemoveOnEndEffect(handle, conditionalEffect.StacksToRemove));
 			}
@@ -154,55 +153,7 @@ public class AdditionalEffectsEffectComponent(
 
 	private static bool HasRemoveOnEnd(ConditionalEffect[] conditionalEffects)
 	{
-		return Array.Exists(
-			conditionalEffects,
-			x => x.RemovalPolicy == ConditionalEffectRemovalPolicy.RemoveOnEnd);
-	}
-
-	private static bool SourceRequirementsMet(in ConditionalEffect conditionalEffect, Effect parentEffect)
-	{
-		if (conditionalEffect.SourceTagRequirements?.IsEmpty != false)
-		{
-			return true;
-		}
-
-		TagContainer? sourceTags = parentEffect.ResolveSourceTags();
-
-		// An effect with no tag context anywhere cannot satisfy requirements it has no way to evaluate.
-		return sourceTags is not null && conditionalEffect.SourceTagRequirements.Value.RequirementsMet(sourceTags);
-	}
-
-	private Effect BuildEffect(EffectData effectData, Effect parentEffect, int level)
-	{
-		// Ownership and level always carry over — the applied effect is this one's doing, at this one's power. Only the
-		// SetByCaller magnitudes are opt-in, since most applied effects have no use for the caller's data.
-		return CopyDataFromOriginalEffect
-			? Effect.CreateLinkedEffect(effectData, parentEffect, level)
-			: new Effect(effectData, parentEffect.Ownership, level);
-	}
-
-	private ActiveEffectHandle? ApplyConditionalEffect(
-		in ConditionalEffect conditionalEffect,
-		IForgeEntity target,
-		Effect parentEffect,
-		int level)
-	{
-		if (!SourceRequirementsMet(conditionalEffect, parentEffect))
-		{
-			return null;
-		}
-
-		IForgeEntity? appliedTo = conditionalEffect.Target.Resolve(target, parentEffect.Ownership);
-
-		// A conditional pointed at an ownership entity the effect doesn't have — thorns on an effect with no source —
-		// has nowhere to land and is skipped rather than redirected back at the target.
-		if (appliedTo is null)
-		{
-			return null;
-		}
-
-		return appliedTo.EffectsManager.ApplyEffect(
-			BuildEffect(conditionalEffect.EffectData, parentEffect, level));
+		return Array.Exists(conditionalEffects, x => x.IsTakenBack);
 	}
 
 	private void ApplyCompletionEffects(
@@ -215,7 +166,7 @@ public class AdditionalEffectsEffectComponent(
 		{
 			// The removal policy is meaningless here — the effect that would take these back is the one ending — so a
 			// completion effect is never tracked. EffectData rejects one that asks for it.
-			ApplyConditionalEffect(completionEffect, target, parentEffect, level);
+			completionEffect.TryApply(target, parentEffect, level, CopyDataFromOriginalEffect);
 		}
 	}
 
