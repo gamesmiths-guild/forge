@@ -54,6 +54,20 @@ Effect burning = Effect.CreateLinkedEffect(burningData, fireball, fireball.Level
 
 The magnitudes are copied, not shared, so setting one on the original afterwards does not reach the linked effect. This is the rule [AdditionalEffectsEffectComponent](components/additional-effects-effect-component.md) follows, exposed for custom components that spawn their own effects.
 
+#### A magnitude nobody set
+
+A `SetByCaller` magnitude names a tag that something is expected to have written onto the `Effect` before it is applied. When nothing has, the magnitude cannot resolve, and Forge treats that as a configuration error rather than as a zero the author chose:
+
+- With [validation](../README.md#validation-and-debugging) enabled — editor, tests, debug builds — it raises a `ValidationException` naming the effect and the tag.
+- With validation disabled, it resolves to **zero** and the application carries on, so a release build degrades rather than throwing out of the middle of an effect.
+
+The failed read is not cached, so a caller that sets the magnitude afterwards is picked up on the next evaluation.
+
+Two things reach this in practice:
+
+1. **The caller never set it.** Call `effect.SetSetByCallerMagnitude(tag, value)` before applying.
+2. **A component applied the effect without copying the data across.** [AdditionalEffectsEffectComponent](components/additional-effects-effect-component.md) and [StackThresholdEffectComponent](components/stack-threshold-effect-component.md) build their child effects with an empty magnitude dictionary unless `copyDataFromOriginalEffect` is on. If the child's magnitude is keyed on something the parent publishes — a tally from an [AttributeAccumulatorEffectComponent](components/attribute-accumulator-effect-component.md), say — that flag is what carries it over.
+
 #### Effect Tags
 
 `EffectData.EffectTags` classifies the effect **itself**. These tags are never granted to the target — they exist so systems can ask "what kind of effect is this?" and select effects by category.
@@ -700,6 +714,7 @@ var componentBasedEffectData = new EffectData(
 **Built-in components:**
 
 - **[AdditionalEffectsEffectComponent](components/additional-effects-effect-component.md)**: Applies further effects when the effect lands and when it ends.
+- **[AttributeAccumulatorEffectComponent](components/attribute-accumulator-effect-component.md)**: Tallies how much this application actually moved an attribute, and publishes the total as a `SetByCaller` magnitude.
 - **[AttributeRequirementsEffectComponent](components/attribute-requirements-effect-component.md)**: Checks attribute values for application, removal, and inhibition.
 - **[BlockAbilityTagsEffectComponent](components/block-ability-tags-effect-component.md)**: Blocks abilities carrying the given tags from activating while the effect is active.
 - **[CancelAbilityTagsEffectComponent](components/cancel-ability-tags-effect-component.md)**: Cancels active abilities selected by tag, on application or on each execution.
@@ -707,9 +722,11 @@ var componentBasedEffectData = new EffectData(
 - **[GrantAbilityEffectComponent](components/grant-ability-effect-component.md)**: Grants abilities while the effect is active.
 - **[ImmunityEffectComponent](components/immunity-effect-component.md)**: Blocks incoming effects matching its queries while the effect is active.
 - **[ModifierTagsEffectComponent](components/modifier-tags-effect-component.md)**: Adds tags while effect is active, which are automatically removed when the effect ends.
+- **[RaiseEventEffectComponent](components/raise-event-effect-component.md)**: Raises a Forge event on the target and/or source at chosen points in the effect's lifetime.
 - **[RemoveOtherEffectComponent](components/remove-other-effect-component.md)**: Removes active effects matching its queries when applied, never itself.
 - **[SourceAttributeRequirementsEffectComponent](components/source-attribute-requirements-effect-component.md)**: Checks attribute values on the effect's source rather than its target.
 - **[SourceTagRequirementsEffectComponent](components/source-tag-requirements-effect-component.md)**: Checks tag conditions on the effect's source rather than its target.
+- **[StackThresholdEffectComponent](components/stack-threshold-effect-component.md)**: Applies further effects once the stack count reaches a threshold.
 - **[TargetTagRequirementsEffectComponent](components/target-tag-requirements-effect-component.md)**: Checks tag conditions for application, removal, and inhibition.
 
 You can also create custom components by implementing the `IEffectComponent` interface. See the
