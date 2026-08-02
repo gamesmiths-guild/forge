@@ -253,7 +253,7 @@ public class RaiseEventComponentTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 		List<EventData> received = Listen(target, eventTag);
 
 		// No source on the ownership, so the Source entry has nowhere to raise; the Target entry still does.
-		var effectData = CreateEffectData(
+		EffectData effectData = CreateEffectData(
 			eventTag,
 			EffectEventTrigger.Applied,
 			raiseOn: [EffectApplicationTarget.Source, EffectApplicationTarget.Target]);
@@ -289,7 +289,7 @@ public class RaiseEventComponentTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 	{
 		var target = new TestEntity(_tagsManager, _cuesManager);
 		Tag eventTag = EventTag();
-		Tag tallyTag = Tag.RequestTag(_tagsManager, "color.red");
+		var tallyTag = Tag.RequestTag(_tagsManager, "color.red");
 		List<EventData> received = Listen(target, eventTag);
 
 		// The accumulator publishes what the tick took off, and the event reports it. Two things have to line up: the
