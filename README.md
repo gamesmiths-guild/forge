@@ -67,11 +67,11 @@ Forge supports a variety of gameplay mechanics through specialized subsystems:
 - **Abilities System**: Ability granting, activation, instancing, costs, cooldowns, and tag-based requirements.
 - **Events System**: Gameplay event handling, tagging, and trigger support.
 - **Statescript**: State-based scripting system for defining ability behaviors through node graphs.
+- **Built-in Content**: A complete library of effect components, Statescript nodes, and resolvers.
 
 ### Planned Features 🚧
 
-- **Multiplayer Support**: Network replication for all systems.
-- **More Built-in Content**: More built-in components, nodes and resolvers.
+- **Multiplayer Support**: Network replication and prediction for all systems.
 
 ## Installation
 

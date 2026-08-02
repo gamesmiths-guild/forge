@@ -44,12 +44,12 @@ var tagsManager = new TagsManager([
 // Configure a cue for a damage effect
 var cueTags = tagsManager.RequestTagContainer(["cues.damage.physical"]);
 var cueData = new CueData(
-    cueTags: cueTags,
-    minValue: 0,
-    maxValue: 100,
-    magnitudeType: CueMagnitudeType.AttributeValueChange,
-    magnitudeAttribute: "CombatAttributeSet.CurrentHealth",  // Required for attribute-based magnitude types
-    finalChannel: 0  // Required for AttributeMagnitudeEvaluatedUpToChannel type
+    CueTags: cueTags,
+    MinValue: 0,
+    MaxValue: 100,
+    MagnitudeType: CueMagnitudeType.AttributeValueChange,
+    MagnitudeAttribute: "CombatAttributeSet.CurrentHealth",  // Required for attribute-based magnitude types
+    FinalChannel: 0  // Required for AttributeMagnitudeEvaluatedUpToChannel type
 );
 ```
 
@@ -72,38 +72,38 @@ var cueData = new CueData(
 ```csharp
 // Magnitude based on effect level
 var levelBasedCue = new CueData(
-    cueTags: effectLevelTags,
-    minValue: 1,
-    maxValue: 10,
-    magnitudeType: CueMagnitudeType.EffectLevel  // No attribute needed
+    CueTags: effectLevelTags,
+    MinValue: 1,
+    MaxValue: 10,
+    MagnitudeType: CueMagnitudeType.EffectLevel  // No attribute needed
 );
 
 // Magnitude based on health change
 var healthChangeCue = new CueData(
-    cueTags: healthChangeTags,
-    minValue: 0,
-    maxValue: 100,
-    magnitudeType: CueMagnitudeType.AttributeValueChange,
-    magnitudeAttribute: "CombatAttributeSet.CurrentHealth"  // Required parameter
+    CueTags: healthChangeTags,
+    MinValue: 0,
+    MaxValue: 100,
+    MagnitudeType: CueMagnitudeType.AttributeValueChange,
+    MagnitudeAttribute: "CombatAttributeSet.CurrentHealth"  // Required parameter
 );
 
 // Magnitude based on valid modifier (without overflow)
 var modifierCue = new CueData(
-    cueTags: modifierTags,
-    minValue: -50,
-    maxValue: 50,
-    magnitudeType: CueMagnitudeType.AttributeValidModifier,
-    magnitudeAttribute: "CombatAttributeSet.AttackPower"  // Required parameter
+    CueTags: modifierTags,
+    MinValue: -50,
+    MaxValue: 50,
+    MagnitudeType: CueMagnitudeType.AttributeValidModifier,
+    MagnitudeAttribute: "CombatAttributeSet.AttackPower"  // Required parameter
 );
 
 // Magnitude based on calculation up to channel 2
 var channelMagnitudeCue = new CueData(
-    cueTags: calculationTags,
-    minValue: 0,
-    maxValue: 200,
-    magnitudeType: CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel,
-    magnitudeAttribute: "CombatAttributeSet.DamageOutput",  // Required parameter
-    finalChannel: 2  // Required for this magnitude type
+    CueTags: calculationTags,
+    MinValue: 0,
+    MaxValue: 200,
+    MagnitudeType: CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel,
+    MagnitudeAttribute: "CombatAttributeSet.DamageOutput",  // Required parameter
+    FinalChannel: 2  // Required for this magnitude type
 );
 ```
 
@@ -118,10 +118,10 @@ var channelMagnitudeCue = new CueData(
 
 ```csharp
 var parameters = new CueParameters(
-    magnitude: 25,              // Raw magnitude value
-    normalizedMagnitude: 0.25f, // Normalized magnitude (0-1)
-    source: attacker,           // Source entity (optional)
-    customParameters: new Dictionary<StringKey, object>
+    Magnitude: 25,              // Raw magnitude value
+    NormalizedMagnitude: 0.25f, // Normalized magnitude (0-1)
+    Source: attacker,           // Source entity (optional)
+    CustomParameters: new Dictionary<StringKey, object>
     {
         { "DamageType", "Fire" },
         { "IsCritical", true }

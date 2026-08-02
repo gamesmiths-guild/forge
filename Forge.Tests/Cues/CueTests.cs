@@ -2347,7 +2347,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			"TestAttributeSet.Attribute1",
-			AttributeCaptureSource.Source,
+			AttributeCaptureSource.Owner,
 			1);
 
 		var effectData = new EffectData(
@@ -2475,7 +2475,7 @@ public class CueTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<Tag
 
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			"TestAttributeSet.Attribute1",
-			AttributeCaptureSource.Source,
+			AttributeCaptureSource.Owner,
 			1);
 
 		var effectData = new EffectData(

@@ -9,7 +9,7 @@ namespace Gamesmiths.Forge.Abilities;
 /// This enumeration defines the possible ways an ability can be triggered, such as through explicit events or changes
 /// in the entity's state (e.g., the addition or presence of specific tags).
 /// </remarks>
-public enum AbitityTriggerSource : byte
+public enum AbilityTriggerSource : byte
 {
 	/// <summary>
 	/// Ability is triggered by an explicit event call.

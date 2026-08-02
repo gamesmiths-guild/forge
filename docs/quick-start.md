@@ -338,18 +338,18 @@ var stackingPoisonEffectData = new EffectData(
         PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.ResetPeriod
     ),
     stackingData: new StackingData(
-        stackLimit: new ScalableInt(3), // Max 3 stacks
-        initialStack: new ScalableInt(1), // Starts with 1 stack
-        overflowPolicy: StackOverflowPolicy.DenyApplication, // Deny if max stacks reached
-        magnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
-        expirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
-        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
-        stackPolicy: StackPolicy.AggregateBySource, // Aggregate stacks from the same source
-        stackLevelPolicy: StackLevelPolicy.SegregateLevels, // Each stack can have its own level
+        StackLimit: new ScalableInt(3), // Max 3 stacks
+        InitialStack: new ScalableInt(1), // Starts with 1 stack
+        OverflowPolicy: StackOverflowPolicy.DenyApplication, // Deny if max stacks reached
+        MagnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
+        ExpirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
+        ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
+        StackPolicy: StackPolicy.AggregateBySource, // Aggregate stacks from the same source
+        StackLevelPolicy: StackLevelPolicy.SegregateLevels, // Each stack can have its own level
 
         // The next two values must be defined because this is a periodic effect with stacking
-        executeOnSuccessfulApplication: false, // Do not execute on successful application
-        applicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication // Reset period on successful application
+        ExecuteOnSuccessfulApplication: false, // Do not execute on successful application
+        ApplicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication // Reset period on successful application
     )
 );
 
@@ -400,20 +400,20 @@ var uniqueEffectData = new EffectData(
         )
     },
     stackingData: new StackingData(
-        stackLimit: new ScalableInt(1), // Only 1 instance allowed
-        initialStack: new ScalableInt(1), // Starts with 1 stack
-        overflowPolicy: StackOverflowPolicy.AllowApplication, // Allow application even if max stacks reached
-        magnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
-        expirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
-        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
-        stackPolicy: StackPolicy.AggregateByTarget, // Only one effect per target
-        ownerDenialPolicy: StackOwnerDenialPolicy.AlwaysAllow, // Always allow application regardless of owner
-        ownerOverridePolicy: StackOwnerOverridePolicy.Override, // Override existing effect if applied again
-        ownerOverrideStackCountPolicy: StackOwnerOverrideStackCountPolicy.ResetStacks, // Reset stack count on override
-        stackLevelPolicy: StackLevelPolicy.AggregateLevels, // Aggregate levels of the effect
-        levelOverridePolicy: LevelComparison.Equal | LevelComparison.Higher, // Allow equal or higher-level effects to override
-        levelDenialPolicy: LevelComparison.Lower, // Deny lower-level effects
-        levelOverrideStackCountPolicy: StackLevelOverrideStackCountPolicy.ResetStacks // Reset stack count on override
+        StackLimit: new ScalableInt(1), // Only 1 instance allowed
+        InitialStack: new ScalableInt(1), // Starts with 1 stack
+        OverflowPolicy: StackOverflowPolicy.AllowApplication, // Allow application even if max stacks reached
+        MagnitudePolicy: StackMagnitudePolicy.Sum, // Total damage increases with stacks
+        ExpirationPolicy: StackExpirationPolicy.ClearEntireStack, // All stacks expire together
+        ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
+        StackPolicy: StackPolicy.AggregateByTarget, // Only one effect per target
+        OwnerDenialPolicy: StackOwnerDenialPolicy.AlwaysAllow, // Always allow application regardless of owner
+        OwnerOverridePolicy: StackOwnerOverridePolicy.Override, // Override existing effect if applied again
+        OwnerOverrideStackCountPolicy: StackOwnerOverrideStackCountPolicy.ResetStacks, // Reset stack count on override
+        StackLevelPolicy: StackLevelPolicy.AggregateLevels, // Aggregate levels of the effect
+        LevelOverridePolicy: LevelComparison.Equal | LevelComparison.Higher, // Allow equal or higher-level effects to override
+        LevelDenialPolicy: LevelComparison.Lower, // Deny lower-level effects
+        LevelOverrideStackCountPolicy: StackLevelOverrideStackCountPolicy.ResetStacks // Reset stack count on override
     )
 );
 
@@ -665,13 +665,13 @@ public class StrengthDamageCalculator : CustomModifierMagnitudeCalculator
     {
         StrengthAttribute = new AttributeCaptureDefinition(
             "PlayerAttributeSet.Strength",
-            AttributeCaptureSource.Source,
-            snapshot: true);
+            AttributeCaptureSource.Owner,
+            Snapshot: true);
 
         SpeedAttribute = new AttributeCaptureDefinition(
             "PlayerAttributeSet.Speed",
-            AttributeCaptureSource.Source,
-            snapshot: true);
+            AttributeCaptureSource.Owner,
+            Snapshot: true);
 
         AttributesToCapture.Add(StrengthAttribute);
         AttributesToCapture.Add(SpeedAttribute);
@@ -737,17 +737,17 @@ public class HealthDrainExecution : CustomExecution
         TargetHealth = new AttributeCaptureDefinition(
             "PlayerAttributeSet.Health",
             AttributeCaptureSource.Target,
-            snapshot: false);
+            Snapshot: false);
 
         SourceHealth = new AttributeCaptureDefinition(
             "PlayerAttributeSet.Health",
-            AttributeCaptureSource.Source,
-            snapshot: false);
+            AttributeCaptureSource.Owner,
+            Snapshot: false);
 
         SourceStrength = new AttributeCaptureDefinition(
             "PlayerAttributeSet.Strength",
-            AttributeCaptureSource.Source,
-            snapshot: false);
+            AttributeCaptureSource.Owner,
+            Snapshot: false);
 
         // Register attributes for capture
         AttributesToCapture.Add(TargetHealth);
@@ -862,11 +862,11 @@ var burningEffectData = new EffectData(
     ),
     cues: new[] {
         new CueData(
-            cueTags: tagsManager.RequestTagContainer(new[] { "cues.damage.fire" }),
-            minValue: 0,
-            maxValue: 100,
-            magnitudeType: CueMagnitudeType.AttributeValueChange,
-            magnitudeAttribute: "PlayerAttributeSet.Health" // Tracks health changes
+            CueTags: tagsManager.RequestTagContainer(new[] { "cues.damage.fire" }),
+            MinValue: 0,
+            MaxValue: 100,
+            MagnitudeType: CueMagnitudeType.AttributeValueChange,
+            MagnitudeAttribute: "PlayerAttributeSet.Health" // Tracks health changes
         )
     }
 );
@@ -886,10 +886,10 @@ You can trigger cues directly through the CuesManager:
 ```csharp
 // Manually trigger a fire damage cue with custom parameters
 var cueParameters = new CueParameters(
-    magnitude: 25, // Raw damage value
-    normalizedMagnitude: 0.25f, // Normalized between 0-1
-    source: player,
-    customParameters: new Dictionary<StringKey, object>
+    Magnitude: 25, // Raw damage value
+    NormalizedMagnitude: 0.25f, // Normalized between 0-1
+    Source: player,
+    CustomParameters: new Dictionary<StringKey, object>
     {
         { "DamageType", "Fire" },
         { "IsCritical", true }
@@ -979,13 +979,14 @@ You can also instantiate your own `EventManager` and use it in any part of your 
 You can optimize events to avoid boxing by using generic `EventData`.
 
 ```csharp
-// Define a strongly typed payload
+// Define a strongly typed payload (DamageType is your own game enum)
 public record struct DamageInfo(int Value, DamageType DamageType, bool IsCritical);
 
 var damageTag = Tag.RequestTag(tagsManager, "events.combat.damage");
 
-// Subscribe using the specific payload type
-player.Events.Subscribe<CombatLogPayload>(damageTag, eventData =>
+// Subscribe using the specific payload type.
+// The type argument must match the payload the event is raised with, otherwise the handler never fires.
+player.Events.Subscribe<DamageInfo>(damageTag, eventData =>
 {
     Console.WriteLine(
         $"[Combat Log] Damage: {eventData.Payload.Value}, " +
@@ -997,10 +998,10 @@ player.Events.Subscribe<CombatLogPayload>(damageTag, eventData =>
 // Raise the event with the typed payload
 player.Events.Raise(new EventData<DamageInfo>
 {
-	EventTags = damageTag.GetSingleTagContainer(),
-	Source = null,
-	Target = player,
-	Payload = new DamageInfo(120, DamageType.Physical, true)
+    EventTags = damageTag.GetSingleTagContainer(),
+    Source = null,
+    Target = player,
+    Payload = new DamageInfo(120, DamageType.Physical, true)
 });
 ```
 
@@ -1208,10 +1209,7 @@ var hitTag = Tag.RequestTag(tagsManager, "events.combat.hit");
 var autoShieldData = new AbilityData(
     name: "Auto Shield",
     // Configure the trigger
-    abilityTriggerData: new AbilityTriggerData(
-        TriggerTag: hitTag,
-        TriggerSource: AbilityTriggerSource.Event
-    ),
+    abilityTriggerData: AbilityTriggerData.ForEvent(hitTag),
     instancingPolicy: AbilityInstancingPolicy.PerEntity,
     behaviorFactory: () => new ShieldBehavior()); // Assumes ShieldBehavior exists
 
@@ -1236,9 +1234,8 @@ In this example, a granted ability (like a passive aura) is activated automatica
 // Define an ability that triggers when the "status.enraged" tag is present
 var rageAbilityData = new AbilityData(
     "Rage Aura",
-    abilityTriggerData: new AbilityTriggerData(
-        TriggerTag: Tag.RequestTag(tagsManager, "status.enraged"),
-        TriggerSource: AbilityTriggerSource.TagPresent),
+    abilityTriggerData: AbilityTriggerData.ForTagPresent(
+        Tag.RequestTag(tagsManager, "status.enraged")),
     instancingPolicy: AbilityInstancingPolicy.PerEntity,
     behaviorFactory: () => new RageBehavior());
 

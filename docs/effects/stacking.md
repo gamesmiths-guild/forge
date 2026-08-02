@@ -232,14 +232,14 @@ var poisonEffectData = new EffectData(
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
     },
     new StackingData(
-        stackLimit: new ScalableInt(5),
-        initialStack: new ScalableInt(1),
-        stackPolicy: StackPolicy.AggregateBySource,
-        stackLevelPolicy: StackLevelPolicy.SegregateLevels,
-        magnitudePolicy: StackMagnitudePolicy.Sum,
-        overflowPolicy: StackOverflowPolicy.DenyApplication,
-        expirationPolicy: StackExpirationPolicy.ClearEntireStack,
-        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
+        StackLimit: new ScalableInt(5),
+        InitialStack: new ScalableInt(1),
+        StackPolicy: StackPolicy.AggregateBySource,
+        StackLevelPolicy: StackLevelPolicy.SegregateLevels,
+        MagnitudePolicy: StackMagnitudePolicy.Sum,
+        OverflowPolicy: StackOverflowPolicy.DenyApplication,
+        ExpirationPolicy: StackExpirationPolicy.ClearEntireStack,
+        ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
     )
 );
 ```
@@ -259,22 +259,22 @@ var hierarchicalBuffEffect = new EffectData(
         new Modifier("CombatAttributeSet.AttackPower", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
     },
     new StackingData(
-        stackLimit: new ScalableInt(3),
-        initialStack: new ScalableInt(1),
-        stackPolicy: StackPolicy.AggregateByTarget,
-        stackLevelPolicy: StackLevelPolicy.AggregateLevels,
-        magnitudePolicy: StackMagnitudePolicy.Sum,
-        overflowPolicy: StackOverflowPolicy.DenyApplication,
-        expirationPolicy: StackExpirationPolicy.RemoveSingleStackAndRefreshDuration,
+        StackLimit: new ScalableInt(3),
+        InitialStack: new ScalableInt(1),
+        StackPolicy: StackPolicy.AggregateByTarget,
+        StackLevelPolicy: StackLevelPolicy.AggregateLevels,
+        MagnitudePolicy: StackMagnitudePolicy.Sum,
+        OverflowPolicy: StackOverflowPolicy.DenyApplication,
+        ExpirationPolicy: StackExpirationPolicy.RemoveSingleStackAndRefreshDuration,
         // Control how different owners interact
-        ownerDenialPolicy: StackOwnerDenialPolicy.AlwaysAllow,
-        ownerOverridePolicy: StackOwnerOverridePolicy.Override,
-        ownerOverrideStackCountPolicy: StackOwnerOverrideStackCountPolicy.IncreaseStacks,
+        OwnerDenialPolicy: StackOwnerDenialPolicy.AlwaysAllow,
+        OwnerOverridePolicy: StackOwnerOverridePolicy.Override,
+        OwnerOverrideStackCountPolicy: StackOwnerOverrideStackCountPolicy.IncreaseStacks,
         // Control how different levels interact
-        levelDenialPolicy: LevelComparison.None,
-        levelOverridePolicy: LevelComparison.Higher,
-        levelOverrideStackCountPolicy: StackLevelOverrideStackCountPolicy.ResetStacks,
-        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
+        LevelDenialPolicy: LevelComparison.None,
+        LevelOverridePolicy: LevelComparison.Higher,
+        LevelOverrideStackCountPolicy: StackLevelOverrideStackCountPolicy.ResetStacks,
+        ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
     )
 );
 ```
@@ -294,17 +294,17 @@ var bleedingEffectData = new EffectData(
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-3)))
     },
     new StackingData(
-        stackLimit: new ScalableInt(3),
-        initialStack: new ScalableInt(1),
-        stackPolicy: StackPolicy.AggregateBySource,
-        stackLevelPolicy: StackLevelPolicy.SegregateLevels,
-        magnitudePolicy: StackMagnitudePolicy.Sum,
-        overflowPolicy: StackOverflowPolicy.AllowApplication,
-        expirationPolicy: StackExpirationPolicy.ClearEntireStack,
-        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
+        StackLimit: new ScalableInt(3),
+        InitialStack: new ScalableInt(1),
+        StackPolicy: StackPolicy.AggregateBySource,
+        StackLevelPolicy: StackLevelPolicy.SegregateLevels,
+        MagnitudePolicy: StackMagnitudePolicy.Sum,
+        OverflowPolicy: StackOverflowPolicy.AllowApplication,
+        ExpirationPolicy: StackExpirationPolicy.ClearEntireStack,
+        ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
         // Required for periodic effects
-        applicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication,
-        executeOnSuccessfulApplication: true
+        ApplicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication,
+        ExecuteOnSuccessfulApplication: true
     ),
     new PeriodicData(
         Period: new ScalableFloat(2.0f),
@@ -333,8 +333,8 @@ Stacking effects have several constraints and required relationships:
    ```csharp
    // VALID - Initial stack and limit relationship
    new StackingData(
-       stackLimit: new ScalableInt(5),
-       initialStack: new ScalableInt(1)
+       StackLimit: new ScalableInt(5),
+       InitialStack: new ScalableInt(1)
        // ...
    );
    ```
@@ -344,7 +344,7 @@ Stacking effects have several constraints and required relationships:
    // VALID - HasDuration requires ApplicationRefreshPolicy
    new StackingData(
        // ...
-       applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
+       ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
    );
    ```
 

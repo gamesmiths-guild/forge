@@ -352,7 +352,7 @@ public class EntityAbilities(IForgeEntity owner)
 			_grantSources[existingAbility].Add(grantSource);
 
 			// If the ability was fully inhibited, this new grant may need to re-enable it.
-			existingAbility.IsInhibited = CheckIsInhibited();
+			existingAbility.IsInhibited = CheckIsInhibited(existingAbility);
 
 			bool shouldOverride =
 				(levelOverridePolicy.HasFlag(LevelComparison.Higher) && abilityLevel > existingAbility.Level) ||
@@ -394,7 +394,7 @@ public class EntityAbilities(IForgeEntity owner)
 
 		if (grantSources.Count > 0)
 		{
-			if (CheckIsInhibited())
+			if (CheckIsInhibited(abilityToRemove))
 			{
 				InhibitAbilityBasedOnPolicy(abilityToRemove, grantSource.InhibitionPolicy);
 			}
@@ -545,14 +545,17 @@ public class EntityAbilities(IForgeEntity owner)
 			_inhibitAbility = null;
 		}
 
-		abilityToInhibit.IsInhibited = CheckIsInhibited();
+		abilityToInhibit.IsInhibited = CheckIsInhibited(abilityToInhibit);
 	}
 
-	private bool CheckIsInhibited()
+	private bool CheckIsInhibited(Ability ability)
 	{
-		return _grantSources.Values.All(x =>
-		{
-			return x.TrueForAll(source => source.IsInhibited);
-		});
+		// Whether an ability is inhibited is decided by its own grant sources, never by the other abilities on the
+		// entity. A source that is not inhibited keeps the ability enabled, and so does one whose InhibitionPolicy is
+		// Ignore, since that policy means the grant does not react to its effect being inhibited at all.
+		return _grantSources.TryGetValue(ability, out List<IAbilityGrantSource>? grantSources)
+			&& grantSources.Count > 0
+			&& grantSources.TrueForAll(
+				source => source.IsInhibited && source.InhibitionPolicy != AbilityDeactivationPolicy.Ignore);
 	}
 }

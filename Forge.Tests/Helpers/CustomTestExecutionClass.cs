@@ -27,15 +27,15 @@ public class CustomTestExecutionClass : CustomExecution
 	{
 		SourceAttribute1 = new AttributeCaptureDefinition(
 			"TestAttributeSet.Attribute3",
-			AttributeCaptureSource.Source,
+			AttributeCaptureSource.Owner,
 			snapshot);
 		SourceAttribute2 = new AttributeCaptureDefinition(
 			"TestAttributeSet.Attribute5",
-			AttributeCaptureSource.Source,
+			AttributeCaptureSource.Owner,
 			snapshot);
 		SourceAttribute3 = new AttributeCaptureDefinition(
 			"TestAttributeSet.Attribute90",
-			AttributeCaptureSource.Source,
+			AttributeCaptureSource.Owner,
 			true);
 		TargetAttribute1 = new AttributeCaptureDefinition(
 			"TestAttributeSet.Attribute1",

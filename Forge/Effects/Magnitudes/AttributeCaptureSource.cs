@@ -3,17 +3,27 @@
 namespace Gamesmiths.Forge.Effects.Magnitudes;
 
 /// <summary>
-/// The types of sources an attribute can be captured from.
+/// Which entity involved in an effect an attribute is captured from.
 /// </summary>
+/// <remarks>
+/// The naming matches <see cref="Components.EffectApplicationTarget"/> and
+/// <see cref="Components.OwnershipEntity"/>: each member that names an ownership entity resolves to the matching
+/// <see cref="EffectOwnership"/> property.
+/// </remarks>
 public enum AttributeCaptureSource : byte
 {
 	/// <summary>
-	/// The source owner of the effect.
-	/// </summary>
-	Source = 0,
-
-	/// <summary>
 	/// The target entity of the effect.
 	/// </summary>
-	Target = 1,
+	Target = 0,
+
+	/// <summary>
+	/// <see cref="EffectOwnership.Source"/> — what actually caused the effect.
+	/// </summary>
+	Source = 1,
+
+	/// <summary>
+	/// <see cref="EffectOwnership.Owner"/> — who triggered the action that caused the effect.
+	/// </summary>
+	Owner = 2,
 }

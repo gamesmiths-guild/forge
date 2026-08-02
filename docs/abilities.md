@@ -71,8 +71,8 @@ var grantAbilityConfig = new GrantAbilityConfig(
     ScalableLevel: new ScalableInt(1, ScalingCurve: myLevelCurve),
     RemovalPolicy: AbilityDeactivationPolicy.CancelImmediately,
     InhibitionPolicy: AbilityDeactivationPolicy.CancelImmediately,
-    TryActivateOnGrant = false,
-    TryActivateOnEnable = false,
+    TryActivateOnGrant: false,
+    TryActivateOnEnable: false,
     LevelOverridePolicy: LevelComparison.Higher);
 
 var grantComponent = new GrantAbilityEffectComponent([grantAbilityConfig]);
@@ -165,17 +165,19 @@ If an ability is granted by multiple sources, it remains granted until all sourc
 ActiveEffectHandle? effectHandle0 = entity.EffectsManager.ApplyEffect(grantEffect1);
 ActiveEffectHandle? effectHandle1 = entity.EffectsManager.ApplyEffect(grantEffect2);
 
-// Only one ability instance exists
-entity.Abilities.GrantedAbilities.Count; // 0
+// Only one ability instance exists, with two grant sources behind it
+entity.Abilities.GrantedAbilities.Count; // 1
 
 // Remove first grant - ability still exists
 entity.EffectsManager.RemoveEffect(effectHandle0);
-entity.Abilities.GrantedAbilities.Count; // 0
+entity.Abilities.GrantedAbilities.Count; // 1
 
 // Remove second grant - now the ability is removed
 entity.EffectsManager.RemoveEffect(effectHandle1);
-entity.Abilities.GrantedAbilities.Count; // -1
+entity.Abilities.GrantedAbilities.Count; // 0
 ```
+
+Grant sources are only shared when both grants target the same `AbilityData` **and** carry the same source entity. Granting the same `AbilityData` from two different source entities produces two separate abilities, each with its own handle, level and grant sources.
 
 ### Level Override Policy
 
@@ -191,7 +193,7 @@ entity.EffectsManager.ApplyEffect(grantEffect1);
 var config2 = new GrantAbilityConfig(
     abilityData,
     new ScalableInt(3),
-    levelOverridePolicy: LevelComparison.Higher, ...);
+    LevelOverridePolicy: LevelComparison.Higher, ...);
 entity.EffectsManager.ApplyEffect(grantEffect2);
 // handle.Level == 3
 
@@ -199,7 +201,7 @@ entity.EffectsManager.ApplyEffect(grantEffect2);
 var config3 = new GrantAbilityConfig(
     abilityData,
     new ScalableInt(1),
-    levelOverridePolicy: LevelComparison.Higher, ...);
+    LevelOverridePolicy: LevelComparison.Higher, ...);
 entity.EffectsManager.ApplyEffect(grantEffect3);
 // handle.Level == 3
 ```
@@ -221,14 +223,14 @@ When an ability has multiple grant sources, each source has its own policies. Th
 var grantConfig1 = new GrantAbilityConfig(
     abilityData,
     new ScalableInt(1),
-    removalPolicy: AbilityDeactivationPolicy.RemoveOnEnd,
-    inhibitionPolicy: AbilityDeactivationPolicy.Ignore);
+    RemovalPolicy: AbilityDeactivationPolicy.RemoveOnEnd,
+    InhibitionPolicy: AbilityDeactivationPolicy.Ignore);
 
 var grantConfig2 = new GrantAbilityConfig(
     abilityData,
     new ScalableInt(1),
-    removalPolicy: AbilityDeactivationPolicy.CancelImmediately,
-    inhibitionPolicy: AbilityDeactivationPolicy.Ignore);
+    RemovalPolicy: AbilityDeactivationPolicy.CancelImmediately,
+    InhibitionPolicy: AbilityDeactivationPolicy.Ignore);
 
 // Assume grantEffect1 and grantEffect2 are created using the configs above...
 
@@ -253,7 +255,7 @@ entity.EffectsManager.RemoveEffect(effectHandle2);
 
 1. **Multiple sources, one removed**: The ability remains granted as long as at least one grant source exists.
 2. **CancelImmediately takes precedence**: If any remaining grant source has `CancelImmediately` policy when removed, it will cancel the ability immediately regardless of other sources' policies.
-3. **Inhibition is cumulative**: The ability is only inhibited when ALL non-ignored grant sources are inhibited.
+3. **Inhibition is cumulative**: an ability is inhibited only once **every one of its own** grant sources has stopped providing it. A source keeps the ability enabled while it is not inhibited, and also whenever its `InhibitionPolicy` is `Ignore` — that policy means the grant does not react to its effect being inhibited at all. Grant sources belonging to *other* abilities on the same entity never affect this.
 
 ## Entity Abilities Manager
 
@@ -520,6 +522,40 @@ var abilityData = new AbilityData(
     cooldownEffects: [dashCooldownEffect, globalCooldownEffect]);
 ```
 
+### Cooldown Reduction
+
+There is no dedicated "cooldown reduction" primitive, and none is needed: a cooldown is a duration effect, and durations accept every [`ModifierMagnitude`](effects/modifiers.md#magnitude-calculation) type. Make the cooldown's duration `AttributeBased`, point it at a CDR attribute, and the reduction falls out of the existing machinery.
+
+```csharp
+// StatAttributeSet.CooldownReduction holds whole percent: 15 means 15% CDR.
+// Base cooldown 5s, so each point of CDR removes 5 / 100 = 0.05s.
+var fireballCooldown = new EffectData(
+    "Fireball Cooldown",
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(
+            MagnitudeCalculationType.AttributeBased,
+            attributeBasedFloat: new AttributeBasedFloat(
+                new AttributeCaptureDefinition(
+                    "StatAttributeSet.CooldownReduction",
+                    AttributeCaptureSource.Target,
+                    Snapshot: false),               // live: see below
+                AttributeCalculationType.CurrentValue,
+                Coefficient: new ScalableFloat(-0.05f),
+                PreMultiplyAdditiveValue: new ScalableFloat(0),
+                PostMultiplyAdditiveValue: new ScalableFloat(5f)))),   // the base cooldown
+    effectComponents: [new ModifierTagsEffectComponent(cooldownTags)]);
+```
+
+The magnitude formula is `(coefficient * (CDR + preMultiply)) + postMultiply`, so `postMultiply` carries the base cooldown and `coefficient` is `-baseCooldown / 100`. Pass a `LookupCurve` if you need to floor the result, so stacked CDR cannot drive a cooldown to zero.
+
+Two details make this behave the way players expect:
+
+- **Capture from `Target`.** Cooldown effects are applied to the ability's owner, so the owner is the effect's target and their CDR attribute is the one being read.
+- **`Snapshot: false` re-evaluates while the cooldown is running.** Gaining CDR mid-cooldown shortens the *remaining* time immediately, and losing it lengthens it; a cooldown whose remaining time drops to zero this way ends right there. Use `Snapshot: true` instead if the cooldown should be locked in at the moment it was committed.
+
+The same composition covers haste, recharge and "reduce cooldown by X on crit" mechanics — the last one by having the proc effect modify the CDR attribute rather than by reaching into the cooldown itself.
+
 ### Querying Cooldown State
 
 ```csharp
@@ -684,6 +720,15 @@ var abilityData = new AbilityData(
 
 Abilities can be automatically activated in response to events or tag changes. Use the static factory methods on `AbilityTriggerData` to create trigger configurations:
 
+| Factory method | Trigger |
+|---|---|
+| `AbilityTriggerData.ForEvent(tag, priority = 0)` | An event carrying `tag` is raised |
+| `AbilityTriggerData.ForEvent<TPayload>(tag, priority = 0)` | An event carrying `tag` **and** a `TPayload` payload is raised |
+| `AbilityTriggerData.ForTagAdded(tag)` | `tag` is added to the entity |
+| `AbilityTriggerData.ForTagPresent(tag)` | `tag` is present on the entity (activates on add, cancels on remove) |
+
+`AbilityTriggerData` has no public constructor — the factory methods are the only way to build one, which is what keeps the trigger tag and trigger source consistent with each other. The `AbilityTriggerSource` enum behind them is internal to that decision; you should never need to name it.
+
 ### Event Trigger
 
 Activate when a specific event is raised:
@@ -793,7 +838,13 @@ var grantEffect = new EffectData(
 // Activation fails with AbilityActivationFailures.Inhibited
 ```
 
-With `GrantedAbilityInhibitionPolicy.RemoveOnEnd`, an active ability continues running but becomes inhibited after it ends.
+The grant's `InhibitionPolicy` — an [`AbilityDeactivationPolicy`](#deactivation-policies), set on `GrantAbilityConfig` — decides what happens to an ability that is already running when its grant becomes inhibited:
+
+- **CancelImmediately**: the active instances are canceled and the ability is inhibited right away.
+- **RemoveOnEnd**: the active ability keeps running and only becomes inhibited once it ends.
+- **Ignore**: the grant source ignores inhibition entirely.
+
+Inhibition is cumulative across grant sources — see [Policy Interactions Between Grant Sources](#policy-interactions-between-grant-sources). Adding a new grant to an inhibited ability re-enables it.
 
 Abilities granted permanently via `GrantAbilityPermanently` cannot be inhibited.
 

@@ -88,7 +88,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source),
+							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Owner),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
@@ -102,6 +102,137 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		target.EffectsManager.ApplyEffect(effect);
 
 		TestUtils.TestAttribute(target, targetAttribute, [expectedResult, expectedResult, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Instant", null)]
+	public void Attribute_based_effect_can_capture_from_the_ownership_source()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var weapon = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		// Give all three entities a distinct backing value, so the result can only match one of them. The owner keeps
+		// the default 3.
+		ExecuteFlatBonus(weapon, "TestAttributeSet.Attribute3", 7);   // 3 -> 10
+		ExecuteFlatBonus(target, "TestAttributeSet.Attribute3", 20);  // 3 -> 23
+
+		var effectData = new EffectData(
+			"Weapon Strike",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition(
+								"TestAttributeSet.Attribute3",
+								AttributeCaptureSource.Source),
+							AttributeCalculationType.BaseValue,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			]);
+
+		// The character owns the effect, the weapon is what caused it.
+		var effect = new Effect(effectData, new EffectOwnership(owner, weapon));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		// 1 + 10 from the weapon. Capturing from the owner would give 4, from the target 24.
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 11, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Infinite", null)]
+	public void Attribute_based_effect_capturing_from_source_updates_when_not_snapshot()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var weapon = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var effectData = new EffectData(
+			"Weapon Aura",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition(
+								"TestAttributeSet.Attribute3",
+								AttributeCaptureSource.Source,
+								Snapshot: false),
+							AttributeCalculationType.CurrentValue,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			]);
+
+		var enchantmentData = new EffectData(
+			"Weapon Enchantment",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute3",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(5)))
+			]);
+
+		target.EffectsManager.ApplyEffect(new Effect(effectData, new EffectOwnership(owner, weapon)));
+
+		// The weapon's Attribute3 is 3.
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [4, 1, 3, 0]);
+
+		// Enchanting the weapon while the aura is active must re-evaluate the captured magnitude.
+		ActiveEffectHandle? enchantmentHandle = weapon.EffectsManager.ApplyEffect(
+			new Effect(enchantmentData, new EffectOwnership(weapon, weapon)));
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [9, 1, 8, 0]);
+
+		weapon.EffectsManager.RemoveEffect(enchantmentHandle!);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [4, 1, 3, 0]);
+	}
+
+	[Fact]
+	[Trait("Instant", null)]
+	public void Attribute_based_effect_capturing_from_a_missing_source_captures_zero()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var effectData = new EffectData(
+			"Sourceless Strike",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition(
+								"TestAttributeSet.Attribute3",
+								AttributeCaptureSource.Source),
+							AttributeCalculationType.BaseValue,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(2))))
+			]);
+
+		// No sourcing object at all.
+		var effect = new Effect(effectData, new EffectOwnership(owner, null));
+
+		target.EffectsManager.ApplyEffect(effect);
+
+		// The capture contributes 0 rather than falling back to another entity, so only the post-multiply
+		// value lands: 1 + (0 * 1) + 2. Falling back to the owner would have given 6.
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [3, 3, 0, 0]);
 	}
 
 	[Theory]
@@ -134,7 +265,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source),
+							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Owner),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
@@ -1348,7 +1479,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source, false),
+							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Owner, false),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
@@ -1515,7 +1646,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source, false),
+							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Owner, false),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
@@ -2131,7 +2262,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		"TestAttributeSet.Attribute1",
 		"TestAttributeSet.Attribute2",
 		3,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		AttributeCalculationType.CurrentValue,
 		new float[] { 1, 0, 0 },
 		5,
@@ -2160,7 +2291,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		"Invalid.Attribute",
 		"Invalid.Attribute",
 		3,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		AttributeCalculationType.CurrentValue,
 		new float[] { 1, 0, 0 },
 		5,
@@ -2189,7 +2320,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		"TestAttributeSet.Attribute1",
 		"Invalid.Attribute",
 		3,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		AttributeCalculationType.CurrentValue,
 		new float[] { 1, 0, 0 },
 		5,
@@ -2218,7 +2349,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		"Invalid.Attribute",
 		"TestAttributeSet.Attribute2",
 		3,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		AttributeCalculationType.CurrentValue,
 		new float[] { 1, 0, 0 },
 		5,
@@ -3302,7 +3433,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 						attributeBasedFloat: new AttributeBasedFloat(
 							new AttributeCaptureDefinition(
 								"TestAttributeSet.Attribute5",
-								AttributeCaptureSource.Source),
+								AttributeCaptureSource.Owner),
 							AttributeCalculationType.CurrentValue,
 							new ScalableFloat(1),
 							new ScalableFloat(0),
@@ -3329,7 +3460,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		var durationMagnitude = new ModifierMagnitude(
 			MagnitudeCalculationType.AttributeBased,
 			attributeBasedFloat: new AttributeBasedFloat(
-				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Source),
+				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Owner),
 				AttributeCalculationType.BaseValue,
 				new ScalableFloat(2f), // coefficient
 				new ScalableFloat(0f), // pre-add
@@ -3450,7 +3581,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		var durationMagnitude = new ModifierMagnitude(
 			MagnitudeCalculationType.AttributeBased,
 			attributeBasedFloat: new AttributeBasedFloat(
-				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Source, false),
+				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Owner, false),
 				AttributeCalculationType.BaseValue,
 				new ScalableFloat(2f), // coefficient
 				new ScalableFloat(0f), // pre-add
@@ -3510,7 +3641,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		var durationMagnitude = new ModifierMagnitude(
 			MagnitudeCalculationType.AttributeBased,
 			attributeBasedFloat: new AttributeBasedFloat(
-				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Source, false),
+				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Owner, false),
 				AttributeCalculationType.BaseValue,
 				new ScalableFloat(2f), // coefficient
 				new ScalableFloat(0f), // pre-add
@@ -3611,7 +3742,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Source, true),
+							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Owner, true),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(1),
 							new ScalableFloat(0),
@@ -3675,7 +3806,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Source, true),
+							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Owner, true),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(1),
 							new ScalableFloat(0),
@@ -3686,7 +3817,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Source, false),
+							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Owner, false),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(1),
 							new ScalableFloat(0),
@@ -3865,6 +3996,22 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		target.VitalAttributeSet.CurrentHealth.CurrentValue.Should().Be(20);
 	}
 
+	private static void ExecuteFlatBonus(TestEntity entity, string attribute, int value)
+	{
+		// Permanently shifts an entity's base value, so entities involved in a test can hold distinct backing values.
+		var effectData = new EffectData(
+			"Base Value Setup",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					attribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(value)))
+			]);
+
+		entity.EffectsManager.ApplyEffect(new Effect(effectData, new EffectOwnership(entity, entity)));
+	}
+
 	private sealed class DurationFromSourceAttributeCalculator : CustomModifierMagnitudeCalculator
 	{
 		private readonly AttributeCaptureDefinition _sourceAttr;
@@ -3874,7 +4021,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			// Use owner's Attribute2 (base 2), duration = captured * 0.5 => 1.0 second
 			_sourceAttr = new AttributeCaptureDefinition(
 				"TestAttributeSet.Attribute2",
-				AttributeCaptureSource.Source,
+				AttributeCaptureSource.Owner,
 				Snapshot: false);
 			AttributesToCapture.Add(_sourceAttr);
 		}

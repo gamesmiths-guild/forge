@@ -773,6 +773,121 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 	[Fact]
 	[Trait("Inhibit ability", null)]
+	public void Inhibition_is_scoped_to_the_ability_own_grant_sources()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData inhibitedAbilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["item.consumable.potion.health"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityData untouchedAbilityData = CreateAbilityData(
+			"Frostbolt",
+			[new ScalableFloat(3f)],
+			["item.consumable.potion.mana"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "Simple.Tag").GetSingleTagContainer();
+		TagContainer? otherIgnoreTags = Tag.RequestTag(_tagsManager, "Other.Tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
+		otherIgnoreTags.Should().NotBeNull();
+
+		AbilityHandle? inhibitedHandle = SetupAbility(
+			entity,
+			inhibitedAbilityData,
+			new ScalableInt(1),
+			out _,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(
+					IgnoreTags: ignoreTags)));
+
+		AbilityHandle? untouchedHandle = SetupAbility(
+			entity,
+			untouchedAbilityData,
+			new ScalableInt(1),
+			out _,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(
+					IgnoreTags: otherIgnoreTags)));
+
+		inhibitedHandle.Should().NotBeNull();
+		untouchedHandle.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().HaveCount(2);
+
+		// Inhibit every grant source of the first ability only.
+		CreateAndApplyTagEffect(entity, ignoreTags!);
+
+		// The first ability is fully inhibited even though the second ability's grant is still active.
+		inhibitedHandle!.IsInhibited.Should().BeTrue();
+		untouchedHandle!.IsInhibited.Should().BeFalse();
+
+		inhibitedHandle.Activate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.Inhibited);
+
+		bool activated = untouchedHandle.Activate(out failureFlags);
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+		activated.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Inhibit ability", null)]
+	public void Grant_source_with_Ignore_inhibition_policy_keeps_ability_enabled()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["item.equipment.weapon.sword"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		TagContainer? ignoreTags1 = Tag.RequestTag(_tagsManager, "Color.Red").GetSingleTagContainer();
+		TagContainer? ignoreTags2 = Tag.RequestTag(_tagsManager, "Color.Blue").GetSingleTagContainer();
+		ignoreTags1.Should().NotBeNull();
+		ignoreTags2.Should().NotBeNull();
+
+		// One grant reacts to inhibition, the other ignores it entirely.
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			grantedAbilityInhibitionPolicy: AbilityDeactivationPolicy.CancelImmediately,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(
+					IgnoreTags: ignoreTags1)));
+
+		SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			grantedAbilityInhibitionPolicy: AbilityDeactivationPolicy.Ignore,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(
+					IgnoreTags: ignoreTags2)));
+
+		abilityHandle.Should().NotBeNull();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		// Inhibit both granting effects, the Ignore one first so that the reacting grant is the one that
+		// re-evaluates the ability while every source is already inhibited.
+		CreateAndApplyTagEffect(entity, ignoreTags2!);
+		CreateAndApplyTagEffect(entity, ignoreTags1!);
+
+		// The Ignore grant does not react to its effect being inhibited, so it keeps the ability enabled.
+		abilityHandle!.IsInhibited.Should().BeFalse();
+		abilityHandle.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+	}
+
+	[Fact]
+	[Trait("Inhibit ability", null)]
 	public void Inhibited_ability_becomes_active_if_new_non_inhibited_source_is_added()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);

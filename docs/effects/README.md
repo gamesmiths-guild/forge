@@ -569,7 +569,7 @@ var effectData = new EffectData(
                 MagnitudeCalculationType.ScalableFloat,
                 new ScalableFloat(5, strengthCurve)
             ),
-            channel: 0                          // Optional channel (default 0)
+            Channel: 0                          // Optional channel (default 0)
         ),
         // Second modifier - percentage health bonus
         new Modifier(
@@ -618,14 +618,14 @@ var stackingEffectData = new EffectData(
     ),
     modifiers: [/*...*/],
     stackingData: new StackingData(
-        stackLimit: new ScalableInt(3),              // Max 3 stacks
-        initialStack: new ScalableInt(1),            // Start with 1 stack
-        stackPolicy: StackPolicy.AggregateBySource,  // Same source stacks together
-        stackLevelPolicy: StackLevelPolicy.AggregateLevels, // Different levels can stack
-        magnitudePolicy: StackMagnitudePolicy.Sum,   // Add magnitude for each stack
-        overflowPolicy: StackOverflowPolicy.AllowApplication, // Allow applying at max stacks
-        expirationPolicy: StackExpirationPolicy.RemoveSingleStackAndRefreshDuration, // Remove one stack at a time
-        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
+        StackLimit: new ScalableInt(3),              // Max 3 stacks
+        InitialStack: new ScalableInt(1),            // Start with 1 stack
+        StackPolicy: StackPolicy.AggregateBySource,  // Same source stacks together
+        StackLevelPolicy: StackLevelPolicy.AggregateLevels, // Different levels can stack
+        MagnitudePolicy: StackMagnitudePolicy.Sum,   // Add magnitude for each stack
+        OverflowPolicy: StackOverflowPolicy.AllowApplication, // Allow applying at max stacks
+        ExpirationPolicy: StackExpirationPolicy.RemoveSingleStackAndRefreshDuration, // Remove one stack at a time
+        ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
     )
 );
 ```
@@ -633,7 +633,7 @@ var stackingEffectData = new EffectData(
 **Important notes:**
 
 - Instant effects cannot have stacking data.
-- For truly unique effects that can only be applied once, use `stackLimit: new ScalableInt(1)`.
+- For truly unique effects that can only be applied once, use `StackLimit: new ScalableInt(1)`.
 
 **Example use cases:**
 

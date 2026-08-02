@@ -42,12 +42,7 @@ public abstract class CustomCalculator
 		AttributeCalculationType calculationType = AttributeCalculationType.CurrentValue,
 		int finalChannel = 0)
 	{
-		IForgeEntity? captureTarget = capturedAttribute.Source switch
-		{
-			AttributeCaptureSource.Source => effect.Ownership.Owner,
-			AttributeCaptureSource.Target => target,
-			_ => null,
-		};
+		IForgeEntity? captureTarget = capturedAttribute.Source.Resolve(target, effect.Ownership);
 
 		if (captureTarget is null)
 		{
