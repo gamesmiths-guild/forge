@@ -29,6 +29,8 @@ Entities serve as containers for these components, allowing for modular construc
 
 Attributes can have minimum and maximum limits and support automatic recalculation when dependencies change.
 
+All attribute values are **integers**, a deliberate choice in service of determinism; see [Attribute Values Are Integers](attributes.md#attribute-values-are-integers) for the reasoning and for the scaled-integer convention used to represent fractional stats.
+
 ### Tag System
 
 [Tags](tags.md) in Forge are lightweight identifiers that mark entities with specific characteristics:

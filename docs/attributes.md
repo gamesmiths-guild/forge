@@ -18,6 +18,44 @@ An `EntityAttribute` represents a single numeric property with constraints and m
 - **Overflow**: Value that exceeds Min/Max constraints (useful for effects like shield overflow).
 - **ValidModifier**: The effective modifier value that isn't causing overflow (Modifier - Overflow).
 
+### Attribute Values Are Integers
+
+**Every attribute value in Forge is an `int`.** `BaseValue`, `CurrentValue`, `Min`, `Max`, `Modifier`, `Overflow` and `ValidModifier` are all integers, and so are the values written by `SetAttributeBaseValue`, `AddToAttributeBaseValue`, `SetAttributeMinValue` and `SetAttributeMaxValue`.
+
+This is a deliberate design decision, not a limitation waiting to be lifted: integer arithmetic is exactly reproducible across machines and platforms, which the planned networking model depends on. Floating-point attribute state would make two clients running the same simulation drift apart.
+
+Magnitudes are still authored as floats — `ScalableFloat`, `AttributeBasedFloat`, `SetByCallerFloat` and custom calculators all compute in `float`/`double`. The result is **truncated toward zero** when it lands on the attribute, and the attribute's final value is clamped between `Min` and `Max`.
+
+```csharp
+// Authored as a float, stored as an int
+var healthAttribute = entity.Attributes["CombatAttributeSet.CurrentHealth"];
+// A magnitude of -7.9 removes 7 points, not 8: the fractional part is truncated.
+```
+
+#### Representing Fractional Values
+
+When a stat conceptually needs decimals (movement speed of `4.75`, a critical chance of `27.5%`), store it **scaled** and divide only for display:
+
+```csharp
+public class MovementAttributeSet : AttributeSet
+{
+    // Speed is stored in hundredths: 475 means 4.75 units/second.
+    public EntityAttribute Speed { get; }
+
+    public MovementAttributeSet()
+    {
+        Speed = InitializeAttribute(nameof(Speed), 475, 0, 10_000);
+    }
+}
+
+// Presentation code converts on the way out
+var displaySpeed = entity.Attributes["MovementAttributeSet.Speed"].CurrentValue / 100f; // 4.75
+```
+
+Pick one scale per attribute, keep it consistent across every effect that touches it, and document it next to the attribute. Because all modifiers operate on the same raw integers, a `FlatBonus` of `+50` on the example above is a `+0.5` speed bonus — no conversion is needed anywhere inside the simulation, only at the presentation boundary.
+
+Percent-based modifiers are unaffected by the scale: `PercentBonus` multiplies whatever integer is stored, so `+20%` means the same thing whether `Speed` holds `475` or `4`. Prefer a larger scale for attributes that receive percentage modifiers, since truncation on a small integer loses proportionally more precision.
+
 ### AttributeSet
 
 AttributeSets group related attributes together and can establish relationships between them:
@@ -90,9 +128,8 @@ Channels provide powerful, layered attribute calculation with clearly defined or
 ### How Channels Work
 
 1. Each channel processes modifiers in this order:
-   - Apply override (if present).
-   - Apply flat modifiers (addition/subtraction).
-   - Apply percentage modifiers (multiplication).
+   - If an override is active on the channel, it **replaces** the incoming value and the channel's flat and percentage modifiers are skipped. There is no priority between overrides — the most recently applied one wins. See [Modifier Operations](effects/modifiers.md#operation-types).
+   - Otherwise, apply flat modifiers (addition/subtraction), then percentage modifiers (multiplication).
 
 2. Channels are processed in sequence, where the output of one channel becomes the input of the next:
 
@@ -101,6 +138,8 @@ Channel 1:  (BaseValue + FlatMod1) * PercentMod1  →  Result1
 Channel 2:  (Result1 + FlatMod2) * PercentMod2    →  Result2
 Channel 3:  (Result2 + FlatMod3) * PercentMod3    →  FinalValue
 ```
+
+3. The result is clamped between `Min` and `Max` to produce `CurrentValue`; anything outside those bounds is reported through `Overflow`.
 
 ### Channel Configuration
 
@@ -257,7 +296,11 @@ target.EffectsManager.ApplyEffect(effect);
 
 ## Attribute Events
 
-Attributes dispatch events when their values change, which can be handled within the `AttributeSet`:
+Attributes dispatch an event whenever their `CurrentValue` changes. There are two ways to observe it.
+
+### Inside the AttributeSet
+
+Override `AttributeOnValueChanged`. `InitializeAttribute` subscribes this override to every attribute it creates, so it receives changes for all attributes in the set:
 
 ```csharp
 // Within an AttributeSet
@@ -281,6 +324,46 @@ protected override void AttributeOnValueChanged(EntityAttribute attribute, int c
     }
 }
 ```
+
+### From Outside the AttributeSet
+
+`EntityAttribute.OnValueChanged` is a public event, so UI, presentation code and [effect components](effects/components/README.md) can subscribe to a single attribute without owning its set:
+
+```csharp
+public event Action<EntityAttribute, int>? OnValueChanged;
+```
+
+```csharp
+// A health bar that only cares about one attribute
+public sealed class HealthBar : IDisposable
+{
+    private readonly EntityAttribute _health;
+
+    public HealthBar(IForgeEntity entity)
+    {
+        _health = entity.Attributes["CombatAttributeSet.CurrentHealth"];
+        _health.OnValueChanged += HandleHealthChanged;
+    }
+
+    private void HandleHealthChanged(EntityAttribute attribute, int change)
+    {
+        // 'change' is the delta; attribute.CurrentValue is the new value
+        Redraw(attribute.CurrentValue, attribute.Max);
+    }
+
+    // Always unsubscribe: the attribute outlives the observer
+    public void Dispose() => _health.OnValueChanged -= HandleHealthChanged;
+}
+```
+
+Both paths receive the same notification — `AttributeOnValueChanged` is simply a handler that `InitializeAttribute` attaches to `OnValueChanged` on your behalf.
+
+Two behaviors are worth knowing about:
+
+- **A change that is fully clamped does not fire the event.** If an attribute is already at `Max` and a modifier pushes it further up, `CurrentValue` never moves, so no notification is dispatched. Watch `Overflow` if you need to react to wasted magnitude.
+- **Changing `Min` or `Max` can fire the event**, because moving a bound can force `CurrentValue` to move with it.
+
+Notifications are also **batched**. Changes accumulate while an effect is being applied, removed or executed, and are flushed once that operation finishes, so a handler sees the net delta and a consistent attribute state rather than every intermediate step of a multi-modifier effect.
 
 ## Advanced Concepts
 
@@ -358,3 +441,5 @@ While detailed relationships with other systems are covered in their respective 
 6. **Consistent Naming**: Use clear, consistent naming conventions for attributes.
 7. **Respect Encapsulation**: Never attempt to directly modify attributes outside of AttributeSets or the Effects system.
 8. **Use ValidModifier for UI**: When showing modifier values in UI, consider whether to show the total modifier or the ValidModifier.
+9. **Pick a Scale and Document It**: Attributes are integers. For stats that need decimals, choose a fixed scale (x10, x100, ...), apply it consistently to every effect touching that attribute, and convert only when displaying.
+10. **Unsubscribe from `OnValueChanged`**: Attributes live as long as the entity, so an observer that subscribes must detach when it goes away.

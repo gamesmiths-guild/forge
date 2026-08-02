@@ -204,13 +204,13 @@ var stackingPeriodicEffect = new EffectData(
     ),
     [/*...*/],
     stackingData: new StackingData(
-        stackLimit: new ScalableInt(3),
-        initialStack: new ScalableInt(1),
-        executeOnSuccessfulApplication: true,
+        StackLimit: new ScalableInt(3),
+        InitialStack: new ScalableInt(1),
+        ExecuteOnSuccessfulApplication: true,
         // ... other stacking data
         // Required for periodic effects with stacking
-        applicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication,
-        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
+        ApplicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication,
+        ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
     ),
     periodicData: new PeriodicData(
         Period: new ScalableFloat(2.0f),
@@ -302,16 +302,16 @@ var bleedingEffectData = new EffectData(
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-3)))
     },
     new StackingData(
-        stackLimit: new ScalableInt(3),
-        initialStack: new ScalableInt(1),
-        stackPolicy: StackPolicy.AggregateBySource,
-        stackLevelPolicy: StackLevelPolicy.AggregateLevels,
-        magnitudePolicy: StackMagnitudePolicy.Sum, // Each stack adds to the damage
-        overflowPolicy: StackOverflowPolicy.AllowApplication,
-        expirationPolicy: StackExpirationPolicy.ClearEntireStack,
-        executeOnSuccessfulApplication: true,
-        applicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication,
-        applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
+        StackLimit: new ScalableInt(3),
+        InitialStack: new ScalableInt(1),
+        StackPolicy: StackPolicy.AggregateBySource,
+        StackLevelPolicy: StackLevelPolicy.AggregateLevels,
+        MagnitudePolicy: StackMagnitudePolicy.Sum, // Each stack adds to the damage
+        OverflowPolicy: StackOverflowPolicy.AllowApplication,
+        ExpirationPolicy: StackExpirationPolicy.ClearEntireStack,
+        ExecuteOnSuccessfulApplication: true,
+        ApplicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.ResetOnSuccessfulApplication,
+        ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
     ),
     new PeriodicData(
         Period: new ScalableFloat(1.0f),

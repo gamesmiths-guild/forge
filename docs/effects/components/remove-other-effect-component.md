@@ -69,6 +69,52 @@ new RemoveOtherEffectComponent([new EffectQuery(EffectDefinition: bleedData)], s
 new RemoveOtherEffectComponent([new EffectQuery(EffectSource: enemyCaster)]);
 ```
 
+## Reacting to a Dispel
+
+[`EffectRemovalReason`](README.md#onactiveeffectunapplied) is deliberately two-valued: `Expired` or `Removed`. A dispelled effect reports `Removed`, exactly like a manual `RemoveEffect` call or a tag-driven removal, so the removal reason alone cannot tell you that a *dispel specifically* happened, nor who did it.
+
+The idiom is to stop asking the removed effect and let the dispel announce itself instead — **a dispel is just an effect**, so give it the two things a reaction needs: an event tag, and the dispeller as its `Source`.
+
+```csharp
+// The dispel announces itself, then strips the curses.
+// Component order matters: the event is raised before the removal pass runs, so a listener
+// can still inspect what is about to be taken off.
+var dispelData = new EffectData(
+    "Dispel Magic",
+    new DurationData(DurationType.Instant),
+    effectComponents: new IEffectComponent[] {
+        new RaiseEventEffectComponent(
+            tagsManager.RequestTagContainer(new[] { "events.dispel" }),
+            EffectEventTrigger.Applied),
+        new RemoveOtherEffectComponent([
+            new EffectQuery(
+                EffectTagQuery: TagQuery.MakeQueryMatchAnyTags(
+                    tagsManager.RequestTagContainer(new[] { "effect.curse" })))
+        ])
+    }
+);
+
+// Ownership carries the attribution: the dispeller is the Source
+var dispel = new Effect(dispelData, new EffectOwnership(dispeller, dispeller));
+victim.EffectsManager.ApplyEffect(dispel);
+```
+
+The raised [event](../../events.md) reaches the victim's bus with `Target` set to the victim and `Source` set to the dispeller, which is everything a punish mechanic needs:
+
+```csharp
+// Unstable Affliction: dispelling the curse damages whoever dispelled it
+victim.Events.Subscribe(Tag.RequestTag(tagsManager, "events.dispel"), eventData =>
+{
+    if (eventData.Source is not null)
+    {
+        eventData.Source.EffectsManager.ApplyEffect(
+            new Effect(backlashData, new EffectOwnership(victim, victim)));
+    }
+});
+```
+
+The same shape works from a graph — an `EventListenerNode` on `events.dispel` exposes `Source` — or from an ability triggered by [`AbilityTriggerData.ForEvent`](../../abilities.md#event-trigger). Because the reaction keys off the tag rather than off a removal reason, several dispel flavors (purge, cleanse, steal) can be distinguished by giving each its own event tag, all without growing `EffectRemovalReason`.
+
 ## Key Points
 
 - The one thing tag-driven removal cannot do: dispel from an instant effect. `ModifierTagsEffectComponent` is rejected on instant effects, so the tag-based alternative forces a cleanse to become a short duration effect purely to hold a tag long enough for the target to see it.
@@ -81,6 +127,7 @@ new RemoveOtherEffectComponent([new EffectQuery(EffectSource: enemyCaster)]);
 
 - [Effect Components Overview](README.md)
 - [Choosing between tag requirements and Immunity/RemoveOther](README.md#choosing-between-tag-requirements-and-immunityremoveother)
+- [RaiseEventEffectComponent](raise-event-effect-component.md)
 - [ImmunityEffectComponent](immunity-effect-component.md)
 - [TargetTagRequirementsEffectComponent](target-tag-requirements-effect-component.md)
 - [EffectQuery](../README.md#effectquery)

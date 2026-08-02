@@ -121,11 +121,11 @@ var attributeDurationEffectData = new EffectData(
         new ModifierMagnitude(
             MagnitudeCalculationType.AttributeBased,
             attributeBasedFloat: new AttributeBasedFloat(
-                new AttributeCaptureDefinition("StatAttributeSet.Strength", AttributeCaptureSource.Source, snapshot: false),
+                new AttributeCaptureDefinition("StatAttributeSet.Strength", AttributeCaptureSource.Source, Snapshot: false),
                 AttributeCalculationType.CurrentValue,
-                coefficient: new ScalableFloat(0.2f),
-                preMultiplyAdditiveValue: new ScalableFloat(0),
-                postMultiplyAdditiveValue: new ScalableFloat(5)))),
+                Coefficient: new ScalableFloat(0.2f),
+                PreMultiplyAdditiveValue: new ScalableFloat(0),
+                PostMultiplyAdditiveValue: new ScalableFloat(5)))),
     new[] {
         new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.FlatBonus, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(25)))
     }
@@ -217,10 +217,10 @@ When working with durations, several constraints apply to ensure effects behave 
                       scalableFloatMagnitude: new ScalableFloat(10.0f))),
        [/*...*/],
        stackingData: new StackingData(
-           stackLimit: new ScalableInt(3),
-           initialStack: new ScalableInt(1),
+           StackLimit: new ScalableInt(3),
+           InitialStack: new ScalableInt(1),
            // ... other stacking data
-       applicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
+       ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication
        )
    );
    ```

@@ -9,7 +9,7 @@ For a practical guide on using modifiers, see the [Quick Start Guide](../quick-s
 At its core, a modifier represents a mathematical operation that changes the value of a specific attribute on a target entity. Each modifier consists of:
 
 ```csharp
-public readonly struct Modifier(
+public readonly record struct Modifier(
     StringKey Attribute,
     ModifierOperation Operation,
     ModifierMagnitude Magnitude,
@@ -18,6 +18,8 @@ public readonly struct Modifier(
     // Implementation...
 }
 ```
+
+> Most of the magnitude types below are **positional records**, so their parameter names are PascalCase. When you pass them as named arguments, write `Snapshot: false` and `Coefficient: ...`, not `snapshot:` / `coefficient:`. `ModifierMagnitude`, `EffectData` and `AbilityData` declare explicit constructors instead, so those take the usual camelCase names.
 
 - **Attribute**: The target attribute to modify (using a string key).
 - **Operation**: How the modifier affects the attribute (flat, percentage, or override).
@@ -55,24 +57,27 @@ public enum ModifierOperation : byte
 - **Override**: Replaces the attribute's value entirely.
   - Example: `Set Max Health to 100`.
   - Calculation: `NewValue` (ignores current value entirely).
-  - Overrides from higher priority sources take precedence.
+  - There is no priority system for overrides: the **most recently applied** override on a channel wins.
+  - Overrides are tracked as a stack per channel. When the active override is removed, the previously applied override on that channel (if one is still active) takes over again; the attribute only stops being overridden once every override on that channel is gone.
 
 ## Evaluation Order
 
-When calculating the final value of an attribute:
+Evaluation happens per [channel](../attributes.md#attribute-channels), and the result of each channel feeds the next. Within a single Channel:
 
-1. First, overrides are checked (highest priority override wins).
-2. If no override exists, flat bonuses are summed and applied.
+1. First, the channel's override is checked. If an override is active, it **replaces** the value entering the channel and the channel's flat and percentage modifiers are skipped entirely.
+2. If no override is active on the channel, flat bonuses are summed and added.
 3. Finally, percentage modifiers are applied to the result.
 
-This order can be customized using [Attribute Channels](../attributes.md#attribute-channels).
+The final value is then clamped between the attribute's `Min` and `Max`.
+
+An override only short-circuits the channel it belongs to. Modifiers in later channels still apply on top of the overridden value, which is how you compose "set to X, then apply a penalty" without a dedicated primitive.
 
 ## Magnitude Calculation
 
 The `ModifierMagnitude` struct determines how the magnitude of a modifier is calculated. This value is what gets used in the operation to modify the target attribute.
 
 ```csharp
-public readonly struct ModifierMagnitude
+public readonly record struct ModifierMagnitude
 {
     public readonly MagnitudeCalculationType MagnitudeCalculationType { get; }
     public readonly ScalableFloat? ScalableFloatMagnitude { get; }
@@ -139,13 +144,13 @@ When evaluated, the formula is: `BaseValue * ScalingCurve.Evaluate(level)`, or j
 `AttributeBasedFloat` computes its magnitude from another attribute (including snapshot logic for effect context).
 
 ```csharp
-public readonly struct AttributeBasedFloat(
+public readonly record struct AttributeBasedFloat(
     AttributeCaptureDefinition BackingAttribute,
     AttributeCalculationType AttributeCalculationType,
     ScalableFloat Coefficient,
     ScalableFloat PreMultiplyAdditiveValue,
     ScalableFloat PostMultiplyAdditiveValue,
-    int? FinalChannel = null,
+    int FinalChannel = 0,
     ICurve? LookupCurve = null)
 {
     // Implementation...
@@ -223,13 +228,15 @@ public enum AttributeCaptureSource : byte
 }
 ```
 
+> **Mind the naming.** `AttributeCaptureSource.Source` resolves to `EffectOwnership.Owner` — the entity that triggered the effect — **not** to `EffectOwnership.Source`. That distinction matters when the two differ, as they do for an effect owned by a character but sourced from a weapon or a scroll: the capture reads the character's attributes. If you need to read attributes off the sourcing object, capture from `Target` on an effect applied to it, or reach it explicitly from a [custom calculator](calculators.md).
+
 The `AttributeCaptureDefinition` struct controls how attributes are captured:
 
 ```csharp
-public readonly struct AttributeCaptureDefinition(
-    StringKey attribute,
-    AttributeCaptureSource source,
-    bool snapshot = true)
+public readonly record struct AttributeCaptureDefinition(
+    StringKey Attribute,
+    AttributeCaptureSource Source,
+    bool Snapshot = true)
 {
     // Implementation...
 }
@@ -244,7 +251,7 @@ public readonly struct AttributeCaptureDefinition(
 For complex calculations requiring custom logic, see the [Custom Calculators documentation](calculators.md).
 
 ```csharp
-public readonly struct CustomCalculationBasedFloat(
+public readonly record struct CustomCalculationBasedFloat(
     CustomModifierMagnitudeCalculator MagnitudeCalculatorClass,
     ScalableFloat Coefficient,
     ScalableFloat PreMultiplyAdditiveValue,
@@ -314,10 +321,7 @@ var missingHealthDamage = new Modifier(
 `SetByCallerFloat` is a magnitude type that allows the caller to provide a custom value when applying an effect.
 
 ```csharp
-public readonly struct SetByCallerFloat(Tag tag, bool Snapshot = true)
-{
-    // Implementation...
-}
+public readonly record struct SetByCallerFloat(Tag Tag, bool Snapshot = true);
 ```
 
 #### Tag
@@ -388,7 +392,7 @@ var weaponDamage = new Modifier(
     "CombatAttributeSet.DamageOutput",
     ModifierOperation.FlatBonus,
     new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, scalableFloatMagnitude: new ScalableFloat(20)),
-    channel: 0
+    Channel: 0
 );
 
 // Channel 1: Apply skill damage bonus (percentage)
@@ -396,7 +400,7 @@ var skillDamageBonus = new Modifier(
     "CombatAttributeSet.DamageOutput",
     ModifierOperation.PercentBonus,
     new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, scalableFloatMagnitude: new ScalableFloat(0.5f)),
-    channel: 1
+    Channel: 1
 );
 
 // Channel 2: Apply flat bonus from passive ability (flat bonus applied AFTER percentage from channel 1)
@@ -404,7 +408,7 @@ var passiveDamageBonus = new Modifier(
     "CombatAttributeSet.DamageOutput",
     ModifierOperation.FlatBonus,
     new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, scalableFloatMagnitude: new ScalableFloat(10)),
-    channel: 2
+    Channel: 2
 );
 
 // Channel 3: Apply critical hit multiplier (percentage applied to the result of channels 0-2)
@@ -412,7 +416,7 @@ var criticalHitMultiplier = new Modifier(
     "CombatAttributeSet.DamageOutput",
     ModifierOperation.PercentBonus,
     new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, scalableFloatMagnitude: new ScalableFloat(1.0f)),
-    channel: 3
+    Channel: 3
 );
 ```
 
