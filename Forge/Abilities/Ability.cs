@@ -107,15 +107,15 @@ internal sealed class Ability
 
 			switch (triggerData.TriggerSource)
 			{
-				case AbitityTriggerSource.TagAdded:
+				case AbilityTriggerSource.TagAdded:
 					_tagChangedHandler = TagAdded_OnTagChanged;
 					owner.Tags.OnTagsChanged += _tagChangedHandler;
 					break;
-				case AbitityTriggerSource.TagPresent:
+				case AbilityTriggerSource.TagPresent:
 					_tagChangedHandler = TagPresent_OnTagChanged;
 					owner.Tags.OnTagsChanged += _tagChangedHandler;
 					break;
-				case AbitityTriggerSource.Event:
+				case AbilityTriggerSource.Event:
 					if (triggerData.PayloadType is not null)
 					{
 						_eventSubscriptionToken = SubscribeTypedEvent(triggerData);

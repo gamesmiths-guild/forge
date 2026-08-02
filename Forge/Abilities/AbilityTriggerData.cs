@@ -9,7 +9,7 @@ namespace Gamesmiths.Forge.Abilities;
 /// </summary>
 public readonly record struct AbilityTriggerData
 {
-	internal AbitityTriggerSource TriggerSource { get; }
+	internal AbilityTriggerSource TriggerSource { get; }
 
 	internal Tag TriggerTag { get; }
 
@@ -18,7 +18,7 @@ public readonly record struct AbilityTriggerData
 	internal Type? PayloadType { get; }
 
 	private AbilityTriggerData(
-		AbitityTriggerSource triggerSource,
+		AbilityTriggerSource triggerSource,
 		Tag triggerTag,
 		int priority,
 		Type? payloadType = null)
@@ -42,7 +42,7 @@ public readonly record struct AbilityTriggerData
 	/// <returns>Configured trigger data for typed event handling.</returns>
 	public static AbilityTriggerData ForEvent<TPayload>(Tag triggerTag, int priority = 0)
 	{
-		return new AbilityTriggerData(AbitityTriggerSource.Event, triggerTag, priority, typeof(TPayload));
+		return new AbilityTriggerData(AbilityTriggerSource.Event, triggerTag, priority, typeof(TPayload));
 	}
 
 	/// <summary>
@@ -53,7 +53,7 @@ public readonly record struct AbilityTriggerData
 	/// <returns>Configured trigger data for non-typed event handling.</returns>
 	public static AbilityTriggerData ForEvent(Tag triggerTag, int priority = 0)
 	{
-		return new AbilityTriggerData(AbitityTriggerSource.Event, triggerTag, priority);
+		return new AbilityTriggerData(AbilityTriggerSource.Event, triggerTag, priority);
 	}
 
 	/// <summary>
@@ -63,7 +63,7 @@ public readonly record struct AbilityTriggerData
 	/// <returns>Configured trigger data for tag-added triggers.</returns>
 	public static AbilityTriggerData ForTagAdded(Tag triggerTag)
 	{
-		return new AbilityTriggerData(AbitityTriggerSource.TagAdded, triggerTag, 0);
+		return new AbilityTriggerData(AbilityTriggerSource.TagAdded, triggerTag, 0);
 	}
 
 	/// <summary>
@@ -73,6 +73,6 @@ public readonly record struct AbilityTriggerData
 	/// <returns>Configured trigger data for tag-present triggers.</returns>
 	public static AbilityTriggerData ForTagPresent(Tag triggerTag)
 	{
-		return new AbilityTriggerData(AbitityTriggerSource.TagPresent, triggerTag, 0);
+		return new AbilityTriggerData(AbilityTriggerSource.TagPresent, triggerTag, 0);
 	}
 }
