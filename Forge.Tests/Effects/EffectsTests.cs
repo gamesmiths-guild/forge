@@ -88,7 +88,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source),
+							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Owner),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
@@ -134,7 +134,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source),
+							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Owner),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
@@ -1348,7 +1348,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source, false),
+							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Owner, false),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
@@ -1515,7 +1515,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Source, false),
+							new AttributeCaptureDefinition(backingAttribute, AttributeCaptureSource.Owner, false),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(coefficient),
 							new ScalableFloat(preMultiplyAdditiveValue),
@@ -2131,7 +2131,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		"TestAttributeSet.Attribute1",
 		"TestAttributeSet.Attribute2",
 		3,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		AttributeCalculationType.CurrentValue,
 		new float[] { 1, 0, 0 },
 		5,
@@ -2160,7 +2160,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		"Invalid.Attribute",
 		"Invalid.Attribute",
 		3,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		AttributeCalculationType.CurrentValue,
 		new float[] { 1, 0, 0 },
 		5,
@@ -2189,7 +2189,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		"TestAttributeSet.Attribute1",
 		"Invalid.Attribute",
 		3,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		AttributeCalculationType.CurrentValue,
 		new float[] { 1, 0, 0 },
 		5,
@@ -2218,7 +2218,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		"Invalid.Attribute",
 		"TestAttributeSet.Attribute2",
 		3,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		AttributeCalculationType.CurrentValue,
 		new float[] { 1, 0, 0 },
 		5,
@@ -3302,7 +3302,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 						attributeBasedFloat: new AttributeBasedFloat(
 							new AttributeCaptureDefinition(
 								"TestAttributeSet.Attribute5",
-								AttributeCaptureSource.Source),
+								AttributeCaptureSource.Owner),
 							AttributeCalculationType.CurrentValue,
 							new ScalableFloat(1),
 							new ScalableFloat(0),
@@ -3329,7 +3329,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		var durationMagnitude = new ModifierMagnitude(
 			MagnitudeCalculationType.AttributeBased,
 			attributeBasedFloat: new AttributeBasedFloat(
-				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Source),
+				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Owner),
 				AttributeCalculationType.BaseValue,
 				new ScalableFloat(2f), // coefficient
 				new ScalableFloat(0f), // pre-add
@@ -3450,7 +3450,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		var durationMagnitude = new ModifierMagnitude(
 			MagnitudeCalculationType.AttributeBased,
 			attributeBasedFloat: new AttributeBasedFloat(
-				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Source, false),
+				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Owner, false),
 				AttributeCalculationType.BaseValue,
 				new ScalableFloat(2f), // coefficient
 				new ScalableFloat(0f), // pre-add
@@ -3510,7 +3510,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		var durationMagnitude = new ModifierMagnitude(
 			MagnitudeCalculationType.AttributeBased,
 			attributeBasedFloat: new AttributeBasedFloat(
-				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Source, false),
+				new AttributeCaptureDefinition("TestAttributeSet.Attribute5", AttributeCaptureSource.Owner, false),
 				AttributeCalculationType.BaseValue,
 				new ScalableFloat(2f), // coefficient
 				new ScalableFloat(0f), // pre-add
@@ -3611,7 +3611,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Source, true),
+							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Owner, true),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(1),
 							new ScalableFloat(0),
@@ -3675,7 +3675,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Source, true),
+							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Owner, true),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(1),
 							new ScalableFloat(0),
@@ -3686,7 +3686,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 					new ModifierMagnitude(
 						MagnitudeCalculationType.AttributeBased,
 						attributeBasedFloat: new AttributeBasedFloat(
-							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Source, false),
+							new AttributeCaptureDefinition("TestAttributeSet.Attribute2", AttributeCaptureSource.Owner, false),
 							AttributeCalculationType.BaseValue,
 							new ScalableFloat(1),
 							new ScalableFloat(0),
@@ -3874,7 +3874,7 @@ public class EffectsTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			// Use owner's Attribute2 (base 2), duration = captured * 0.5 => 1.0 second
 			_sourceAttr = new AttributeCaptureDefinition(
 				"TestAttributeSet.Attribute2",
-				AttributeCaptureSource.Source,
+				AttributeCaptureSource.Owner,
 				Snapshot: false);
 			AttributesToCapture.Add(_sourceAttr);
 		}

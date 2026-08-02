@@ -46,7 +46,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
-			AttributeCaptureSource.Source,
+			AttributeCaptureSource.Owner,
 			false,
 			customMagnitudeCalculatorExponent);
 
@@ -101,7 +101,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
-			AttributeCaptureSource.Source,
+			AttributeCaptureSource.Owner,
 			false,
 			customMagnitudeCalculatorExponent);
 
@@ -144,37 +144,37 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 	[InlineData(
 		"TestAttributeSet.Attribute1",
 		"TestAttributeSet.Attribute1",
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		1,
 		1,
 		0,
 		0,
 		1,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		new int[] { 2, 1, 1, 0 },
 		new int[] { 3, 1, 2, 0 })]
 	[InlineData(
 		"TestAttributeSet.Attribute1",
 		"TestAttributeSet.Attribute90",
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		1,
 		1,
 		0,
 		0,
 		-10,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		new int[] { 91, 1, 90, 0 },
 		new int[] { 81, 1, 80, 0 })]
 	[InlineData(
 		"TestAttributeSet.Attribute5",
 		"TestAttributeSet.Attribute1",
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		2,
 		0.5f,
 		0,
 		0,
 		3,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		new int[] { 5, 5, 0, 0 },
 		new int[] { 13, 5, 8, 0 })]
 	[InlineData(
@@ -198,13 +198,13 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 		0,
 		0,
 		1,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		new int[] { 2, 1, 1, 0 },
 		new int[] { 2, 1, 1, 0 })]
 	[InlineData(
 		"TestAttributeSet.Attribute1",
 		"TestAttributeSet.Attribute1",
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		1,
 		1,
 		0,
@@ -216,37 +216,37 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 	[InlineData(
 		"Invalid.Attribute",
 		"Invalid.Attribute",
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		1,
 		1,
 		0,
 		0,
 		1,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		new int[] { },
 		new int[] { })]
 	[InlineData(
 		"TestAttributeSet.Attribute1",
 		"Invalid.Attribute",
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		1,
 		1,
 		0,
 		0,
 		1,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		new int[] { 1, 1, 0, 0 },
 		new int[] { 1, 1, 0, 0 })]
 	[InlineData(
 		"Invalid.Attribute",
 		"TestAttributeSet.Attribute1",
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		1,
 		1,
 		0,
 		0,
 		1,
-		AttributeCaptureSource.Source,
+		AttributeCaptureSource.Owner,
 		new int[] { },
 		new int[] { })]
 	public void Custom_calculator_class_non_snapshot_modifies_attribute_accordingly(
@@ -662,7 +662,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			"TestAttributeSet.Attribute1",
-			AttributeCaptureSource.Source,
+			AttributeCaptureSource.Owner,
 			false,
 			1);
 
@@ -769,7 +769,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			customMagnitudeCalculatorAttribute,
-			AttributeCaptureSource.Source,
+			AttributeCaptureSource.Owner,
 			false,
 			1,
 			attributeCalculationType);
@@ -822,7 +822,7 @@ public class CustomCalculatorsEffectsTests(TagsAndCuesFixture tagsAndCuesFixture
 
 		var customCalculatorClass = new CustomMagnitudeCalculator(
 			"TestAttributeSet.Attribute1",
-			AttributeCaptureSource.Source,
+			AttributeCaptureSource.Owner,
 			true,
 			1);
 

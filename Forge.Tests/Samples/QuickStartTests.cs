@@ -1207,12 +1207,12 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		{
 			StrengthAttribute = new AttributeCaptureDefinition(
 				"PlayerAttributeSet.Strength",
-				AttributeCaptureSource.Source,
+				AttributeCaptureSource.Owner,
 				Snapshot: true);
 
 			SpeedAttribute = new AttributeCaptureDefinition(
 				"PlayerAttributeSet.Speed",
-				AttributeCaptureSource.Source,
+				AttributeCaptureSource.Owner,
 				Snapshot: true);
 
 			AttributesToCapture.Add(StrengthAttribute);
@@ -1251,12 +1251,12 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 
 			SourceHealth = new AttributeCaptureDefinition(
 				"PlayerAttributeSet.Health",
-				AttributeCaptureSource.Source,
+				AttributeCaptureSource.Owner,
 				Snapshot: false);
 
 			SourceStrength = new AttributeCaptureDefinition(
 				"PlayerAttributeSet.Strength",
-				AttributeCaptureSource.Source,
+				AttributeCaptureSource.Owner,
 				Snapshot: false);
 
 			// Register attributes for capture
