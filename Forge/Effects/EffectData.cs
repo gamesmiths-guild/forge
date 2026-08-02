@@ -366,6 +366,78 @@ public readonly record struct EffectData
 
 		Validation.Assert(
 			EffectComponents is null ||
+			!Array.Exists(EffectComponents, x => x is RaiseEventEffectComponent { RaisesOnExecution: true }) ||
+			DurationData.DurationType == DurationType.Instant ||
+			PeriodicData.HasValue,
+			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.Executed)} never fires on a duration effect " +
+			"that isn't periodic, since only instant and periodic effects execute.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			DurationData.DurationType != DurationType.Instant ||
+			!Array.Exists(EffectComponents, x => x is RaiseEventEffectComponent { RaisesOnRemoval: true }),
+			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.Removed)} never fires on an " +
+			$"{DurationType.Instant} effect, since it never becomes active and so is never removed. Use " +
+			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.Applied)} instead.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			!Array.Exists(EffectComponents, x => x is RaiseEventEffectComponent { RaisesOnStackRemoval: true }) ||
+			StackingData.HasValue,
+			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.StackRemoved)} never fires on an effect that " +
+			$"isn't stackable, since it has no stack to lose and survive. Define {nameof(StackingData)} or use " +
+			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.Removed)} instead.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			!Array.Exists(
+				EffectComponents,
+				x => x is RaiseEventEffectComponent { HasNoEventTags: true } or RaiseEventEffectComponent
+				{
+					HasNoTrigger: true
+				}),
+			$"{nameof(RaiseEventEffectComponent)} must carry at least one event tag and at least one trigger. " +
+			"Subscribers match on the tags, so an untagged event reaches nobody, and a component with no trigger " +
+			"never raises at all.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			!Array.Exists(EffectComponents, x => x is StackThresholdEffectComponent) ||
+			StackingData.HasValue,
+			$"{nameof(StackThresholdEffectComponent)} watches the effect's stack count, which only ever changes on a " +
+			$"stackable effect. Define {nameof(StackingData)} or use {nameof(AdditionalEffectsEffectComponent)} to " +
+			"apply the effect on every application instead.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			!Array.Exists(
+				EffectComponents,
+				x => x is StackThresholdEffectComponent { HasUnreachableLowThreshold: true }),
+			$"A {nameof(StackThresholdEffectComponent)} threshold of one or less is met by the initial stack of " +
+			$"every application, which is what the application effects of {nameof(AdditionalEffectsEffectComponent)} " +
+			"already express. Use a threshold of two or more.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			!Array.Exists(
+				EffectComponents,
+				x => x is StackThresholdEffectComponent { HasInstantSustainedEffect: true }),
+			$"{nameof(ConditionalEffectRemovalPolicy)}.{nameof(ConditionalEffectRemovalPolicy.RemoveOnEnd)} takes " +
+			"the threshold effect back when the stack count drops below the threshold, and an " +
+			$"{DurationType.Instant} effect executes and is gone immediately, so there is nothing left to take back. " +
+			$"Use {ConditionalEffectRemovalPolicy.Ignore} instead.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			!Array.Exists(EffectComponents, x => x is AttributeAccumulatorEffectComponent) ||
+			DurationData.DurationType == DurationType.Instant ||
+			PeriodicData.HasValue,
+			$"{nameof(AttributeAccumulatorEffectComponent)} measures its attribute as the effect executes, and only " +
+			$"{DurationType.Instant} and periodic effects execute, so a duration effect that isn't periodic would " +
+			"always publish zero. Make the effect periodic, or measure it from the effect that does the executing.");
+
+		Validation.Assert(
+			EffectComponents is null ||
 			DurationData.DurationType != DurationType.Instant ||
 			!Array.Exists(
 				EffectComponents,
