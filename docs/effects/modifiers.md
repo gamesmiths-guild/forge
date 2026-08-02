@@ -268,7 +268,7 @@ public readonly record struct AttributeCaptureDefinition(
 ```
 
 - **Attribute**: Which attribute to capture.
-- **Source**: Which entity to capture from — the effect's owner or its target.
+- **Source**: Which entity to capture from — the effect's `Owner`, its `Source`, or its `Target`.
 - **Snapshot**: If true, captures the value at the time of effect application; if false, continuously updates as the captured attribute changes.
 
 ### CustomCalculationBasedFloat

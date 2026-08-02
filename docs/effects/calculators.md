@@ -678,19 +678,19 @@ And a custom calculator like this:
 ```csharp
 public class HeadshotDamageCalculator : CustomModifierMagnitudeCalculator
 {
-    public AttributeCaptureDefinition SourceWeaponDamage { get; }
+    public AttributeCaptureDefinition OwnerWeaponDamage { get; }
 
     public HeadshotDamageCalculator()
     {
-        SourceWeaponDamage = new AttributeCaptureDefinition(
+        OwnerWeaponDamage = new AttributeCaptureDefinition(
             "WeaponAttributeSet.Damage", AttributeCaptureSource.Owner, Snapshot: true);
-        AttributesToCapture.Add(SourceWeaponDamage);
+        AttributesToCapture.Add(OwnerWeaponDamage);
     }
 
     public override float CalculateBaseMagnitude(
         Effect effect, IForgeEntity target, EffectEvaluatedData? effectEvaluatedData)
     {
-        int damage = CaptureAttributeMagnitude(SourceWeaponDamage, effect, target, effectEvaluatedData);
+        int damage = CaptureAttributeMagnitude(OwnerWeaponDamage, effect, target, effectEvaluatedData);
 
         // Default is single damage
         float finalDamage = damage;
@@ -753,7 +753,7 @@ When debugging issues with custom calculators:
    - `Snapshot: true`: Captures the attribute value once when the effect is applied.
    - `Snapshot: false`: Continuously updates when the source attribute changes.
 
-2. **Target vs Source vs Owneer**:
+2. **Target vs Source vs Owner**:
    - Choose `AttributeCaptureSource.Target` for values from the effect target.
    - Choose `AttributeCaptureSource.Source` for values from the effect source.
    - Choose `AttributeCaptureSource.Owner` for values from the effect owner.
