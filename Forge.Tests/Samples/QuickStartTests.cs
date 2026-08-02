@@ -566,6 +566,69 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 
 	[Fact]
 	[Trait("Quick Start", null)]
+	public void Advanced_composing_components()
+	{
+		// Initialize managers
+		var tagsManager = _tagsManager;
+		var cuesManager = _cuesManager;
+
+		var caster = new Player(tagsManager, cuesManager);
+		var victim = new Player(tagsManager, cuesManager);
+
+		// The tag the running total is published under, and the tag the payout reads it back from
+		var damageDealtTag = Tag.RequestTag(tagsManager, "data.damage.dealt");
+
+		// 1. The heal reads its magnitude from the tag rather than from a fixed number
+		var siphonData = new EffectData(
+			"Curse Siphon",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"PlayerAttributeSet.Health",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.SetByCaller,
+						setByCallerFloat: new SetByCallerFloat(damageDealtTag)))
+			]);
+
+		// 2. The curse ticks damage, tallies what actually landed, and pays out to the source on the way out
+		var curseData = new EffectData(
+			"Curse",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(5.0f))),
+			[
+				new Modifier(
+					"PlayerAttributeSet.Health",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
+			],
+			periodicData: new PeriodicData(
+				Period: new ScalableFloat(1.0f),
+				ExecuteOnApplication: true,
+				PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.NeverReset),
+			effectComponents: [
+				// Tallies how much this application actually took off the victim's health
+				new AttributeAccumulatorEffectComponent("PlayerAttributeSet.Health", damageDealtTag),
+				new AdditionalEffectsEffectComponent(
+					onCompleteAlways: [
+						new ConditionalEffect(siphonData, Target: EffectApplicationTarget.Source)
+					],
+					copyDataFromOriginalEffect: true) // carries the tally to the heal
+			]);
+
+		// 3. Build a fresh Effect per cast, so the tally belongs to this curse and no other
+		victim.EffectsManager.ApplyEffect(new Effect(curseData, new EffectOwnership(caster, caster)));
+
+		victim.EffectsManager.UpdateEffects(5f); // Simulate 5 seconds of game time
+
+		// 5 damage on application and once per second for five seconds: 30 dealt, and 30 paid back
+		victim.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(70);
+		caster.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(130);
+	}
+
+	[Fact]
+	[Trait("Quick Start", null)]
 	public void Advanced_creating_a_custom_calculator()
 	{
 		// Initialize managers

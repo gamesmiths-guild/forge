@@ -571,6 +571,83 @@ bool isStunned = player.Tags.AllTags.HasTag(Tag.RequestTag(tagsManager, "status.
 
 ---
 
+## Advanced: Composing Components
+
+The section above wrote a custom component. Often you don't have to: several built-in components on one effect can express mechanics that look like they need custom code.
+
+A curse that damages its victim over time and, when it wears off, heals its caster for everything it dealt. Three pieces line up:
+
+```csharp
+// Two entities this time: the one the curse lands on, and the one it pays back
+var caster = new Player(tagsManager, cuesManager);
+var victim = new Player(tagsManager, cuesManager);
+
+// The tag the running total is published under, and the tag the payout reads it back from
+var damageDealtTag = Tag.RequestTag(tagsManager, "data.damage.dealt");
+
+// 1. The heal reads its magnitude from the tag rather than from a fixed number
+var siphonData = new EffectData(
+    "Curse Siphon",
+    new DurationData(DurationType.Instant),
+    [
+        new Modifier(
+            "PlayerAttributeSet.Health",
+            ModifierOperation.FlatBonus,
+            new ModifierMagnitude(
+                MagnitudeCalculationType.SetByCaller,
+                setByCallerFloat: new SetByCallerFloat(damageDealtTag)))
+    ]);
+
+// 2. The curse ticks damage, tallies what actually landed, and pays out to the source on the way out
+var curseData = new EffectData(
+    "Curse",
+    new DurationData(
+        DurationType.HasDuration,
+        new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(5.0f))),
+    [
+        new Modifier(
+            "PlayerAttributeSet.Health",
+            ModifierOperation.FlatBonus,
+            new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
+    ],
+    periodicData: new PeriodicData(
+        Period: new ScalableFloat(1.0f),
+        ExecuteOnApplication: true,
+        PeriodInhibitionRemovedPolicy: PeriodInhibitionRemovedPolicy.NeverReset),
+    effectComponents: [
+        // Tallies how much this application actually took off the victim's health
+        new AttributeAccumulatorEffectComponent("PlayerAttributeSet.Health", damageDealtTag),
+        new AdditionalEffectsEffectComponent(
+            onCompleteAlways: [
+                new ConditionalEffect(siphonData, Target: EffectApplicationTarget.Source)
+            ],
+            copyDataFromOriginalEffect: true) // carries the tally to the heal
+    ]);
+
+// 3. Build a fresh Effect per cast, so the tally belongs to this curse and no other
+victim.EffectsManager.ApplyEffect(new Effect(curseData, new EffectOwnership(caster, caster)));
+
+// Simulate 5 seconds of game time
+victim.EffectsManager.UpdateEffects(5f);
+
+// 6 ticks of -5 (including the initial execute), so 30 dealt and 30 paid back, both starting at 100
+int victimHealth = victim.Attributes["PlayerAttributeSet.Health"].CurrentValue; // 70
+int casterHealth = caster.Attributes["PlayerAttributeSet.Health"].CurrentValue; // 130
+```
+
+No `CustomExecution`, no custom component, and no meta-attribute concept. Each of the three pieces does one job:
+
+- [`AttributeAccumulatorEffectComponent`](effects/components/attribute-accumulator-effect-component.md) measures how much the attribute actually moved and publishes the running total as a `SetByCaller` magnitude. It measures the attribute rather than the effect's declared modifiers, so the payout is worth what the curse *managed* to deal rather than what it aimed at — the difference shows up the moment a victim dies with damage to spare.
+- [`AdditionalEffectsEffectComponent`](effects/components/additional-effects-effect-component.md) applies the heal when the curse ends, aimed at `EffectApplicationTarget.Source` rather than the victim.
+- `copyDataFromOriginalEffect` is what carries the tally from the curse to the heal. Without it the payout is built with an empty magnitude dictionary and cannot resolve the tag at all.
+
+Two things to know before building on this:
+
+- **The tally lives on the `Effect`, which is shared if you reuse one.** `DataTag` belongs to the `Effect` instance rather than to the application, so one `Effect` applied to three enemies has one dictionary and the three tallies collide. Build a fresh `Effect` per cast — which is what a targeted curse does anyway.
+- **The payout reads the total once, as it is applied.** That is right here, since the heal is built at the moment the curse ends and sees the final figure. A magnitude that has to follow a total *while* it climbs — an event reporting damage per tick, say — needs its `SetByCallerFloat` declared non-snapshot, or it caches the first value it ever read.
+
+---
+
 ## Advanced: Creating a Custom Calculator
 
 Custom Calculators let you create modifiers that depend on multiple attributes.
