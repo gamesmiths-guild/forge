@@ -189,7 +189,7 @@ var strengthBasedDamage = new Modifier(
         attributeBasedFloat: new AttributeBasedFloat(
             new AttributeCaptureDefinition(
                 "StatAttributeSet.Strength",
-                AttributeCaptureSource.Source
+                AttributeCaptureSource.Owner
             ),
             AttributeCalculationType.CurrentValue,
             new ScalableFloat(0.5f),        // Coefficient: 50% of strength
@@ -223,12 +223,37 @@ The attribute can be captured from different sources:
 ```csharp
 public enum AttributeCaptureSource : byte
 {
-    Source = 0,  // The entity that applied the effect
-    Target = 1   // The entity receiving the effect
+    Target = 0,  // The entity receiving the effect
+    Source = 1,   // EffectOwnership.Source — what actually caused the effect
+    Owner = 2   // EffectOwnership.Owner — who triggered the action that caused the effect
 }
 ```
 
-> **Mind the naming.** `AttributeCaptureSource.Source` resolves to `EffectOwnership.Owner` — the entity that triggered the effect — **not** to `EffectOwnership.Source`. That distinction matters when the two differ, as they do for an effect owned by a character but sourced from a weapon or a scroll: the capture reads the character's attributes. If you need to read attributes off the sourcing object, capture from `Target` on an effect applied to it, or reach it explicitly from a [custom calculator](calculators.md).
+The member names line up with [`EffectApplicationTarget`](components/additional-effects-effect-component.md) and `OwnershipEntity`: each member that names an ownership entity resolves to the matching `EffectOwnership` property.
+
+`Owner` is the usual choice — "damage scales with the caster's Strength". Reach for `Source` when the object that caused the effect is itself an entity with meaningful stats:
+
+```csharp
+// Damage scaling off the weapon's own attribute rather than the wielder's
+new Modifier(
+    "CombatAttributeSet.CurrentHealth",
+    ModifierOperation.FlatBonus,
+    new ModifierMagnitude(
+        MagnitudeCalculationType.AttributeBased,
+        attributeBasedFloat: new AttributeBasedFloat(
+            new AttributeCaptureDefinition(
+                "WeaponAttributeSet.Damage",
+                AttributeCaptureSource.Source,
+                Snapshot: false),          // an enchantment mid-fight changes the magnitude
+            AttributeCalculationType.CurrentValue,
+            new ScalableFloat(-1),
+            new ScalableFloat(0),
+            new ScalableFloat(0))))
+```
+
+This is what makes weapons, turrets, traps and summons work as stat carriers in their own right: apply the effect with `new EffectOwnership(wielder, weapon)` and the wielder still gets kill credit and tag attribution while the magnitude comes off the weapon. It pairs with [`SourceAttributeRequirementsEffectComponent`](components/source-attribute-requirements-effect-component.md), which gates application on the same entity.
+
+An effect whose `Source` is `null`, or whose source lacks the captured attribute, captures **zero** — the capture never silently falls back to another entity, since that would produce a plausible but wrong magnitude.
 
 The `AttributeCaptureDefinition` struct controls how attributes are captured:
 
@@ -243,8 +268,8 @@ public readonly record struct AttributeCaptureDefinition(
 ```
 
 - **Attribute**: Which attribute to capture.
-- **Source**: Whether to capture from the source or target entity.
-- **Snapshot**: If true, captures the value at the time of effect application; if false, continuously updates as the source attribute changes.
+- **Source**: Which entity to capture from — the effect's owner or its target.
+- **Snapshot**: If true, captures the value at the time of effect application; if false, continuously updates as the captured attribute changes.
 
 ### CustomCalculationBasedFloat
 
@@ -474,7 +499,7 @@ new Modifier(
     new ModifierMagnitude(
         MagnitudeCalculationType.AttributeBased,
         attributeBasedFloat: new AttributeBasedFloat(
-            new AttributeCaptureDefinition("StatAttributeSet.Intelligence", AttributeCaptureSource.Source),
+            new AttributeCaptureDefinition("StatAttributeSet.Intelligence", AttributeCaptureSource.Owner),
             AttributeCalculationType.CurrentValue,
             new ScalableFloat(0.3f),  // 30% of intelligence
             new ScalableFloat(0),

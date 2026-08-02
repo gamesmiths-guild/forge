@@ -54,24 +54,20 @@ Pass `effectEvaluatedData` to all helper and custom methods that need contextual
 The `AttributeCaptureDefinition` struct is central to retrieving attribute values from the [Attributes system](../attributes.md):
 
 ```csharp
-public readonly struct AttributeCaptureDefinition(
-    StringKey attribute,
-    AttributeCaptureSource source,
-    bool snapshot = true)
+public readonly record struct AttributeCaptureDefinition(
+    StringKey Attribute,
+    AttributeCaptureSource Source,
+    bool Snapshot = true)
 {
-    public StringKey Attribute { get; }
-    public AttributeCaptureSource Source { get; }
-    public bool Snapshot { get; }
-
     public readonly bool TryGetAttribute(IForgeEntity? source, [NotNullWhen(true)] out EntityAttribute? attribute);
 }
 ```
 
 Parameters:
 
-- `attribute`: The key of the attribute to capture (e.g., "CombatAttributeSet.CurrentHealth").
-- `source`: Where to capture from—either `AttributeCaptureSource.Source` (the effect owner) or `AttributeCaptureSource.Target` (the effect target).
-- `snapshot`: If true, captures the value once when the effect is applied; if false, continuously updates when the source attribute changes.
+- `Attribute`: The key of the attribute to capture (e.g., "CombatAttributeSet.CurrentHealth").
+- `Source`: Which entity to capture from — `AttributeCaptureSource.Owner` (who triggered the effect), `AttributeCaptureSource.Target` (who receives it), or `AttributeCaptureSource.Source` (what caused it: the weapon, turret or summon, when that object carries attributes of its own). A capture whose entity is missing, or which lacks the attribute, yields `0`.
+- `Snapshot`: If true, captures the value once when the effect is applied; if false, continuously updates when the captured attribute changes.
 
 To use attribute capture properly:
 
@@ -92,7 +88,7 @@ public class MyCalculator : CustomModifierMagnitudeCalculator
         // 2. Initialize attribute definitions
         SourceHealth = new AttributeCaptureDefinition(
             "CombatAttributeSet.CurrentHealth",
-            AttributeCaptureSource.Source,
+            AttributeCaptureSource.Owner,
             Snapshot: false);
 
         TargetArmor = new AttributeCaptureDefinition(
@@ -230,7 +226,7 @@ public class DamageCalculator : CustomModifierMagnitudeCalculator
     {
         AttackerStrength = new AttributeCaptureDefinition(
             "StatAttributeSet.Strength",
-            AttributeCaptureSource.Source,
+            AttributeCaptureSource.Owner,
             Snapshot: true);
 
         AttributesToCapture.Add(AttackerStrength);
@@ -286,12 +282,12 @@ public class MyDamageCalculator : CustomModifierMagnitudeCalculator
         // Capture source's Strength and Agility attributes (non-snapshot, will update)
         StrengthAttribute = new AttributeCaptureDefinition(
             "StatAttributeSet.Strength",
-            AttributeCaptureSource.Source,
+            AttributeCaptureSource.Owner,
             Snapshot: false);
 
         AgilityAttribute = new AttributeCaptureDefinition(
             "StatAttributeSet.Agility",
-            AttributeCaptureSource.Source,
+            AttributeCaptureSource.Owner,
             Snapshot: false);
 
         // Register attributes for capture
@@ -401,12 +397,12 @@ public class ManaDrainExecution : CustomExecution
         // Capture source's intelligence and mana
         SourceIntelligence = new AttributeCaptureDefinition(
             "StatAttributeSet.Intelligence",
-            AttributeCaptureSource.Source,
+            AttributeCaptureSource.Owner,
             Snapshot: false);
 
         SourceCurrentMana = new AttributeCaptureDefinition(
             "ResourceAttributeSet.CurrentMana",
-            AttributeCaptureSource.Source,
+            AttributeCaptureSource.Owner,
             Snapshot: false);
 
         // Register attributes for capture
@@ -510,7 +506,7 @@ public class QuestDamageCalculator : CustomModifierMagnitudeCalculator
         _questManager = questManager;
         BaseDamage = new AttributeCaptureDefinition(
             "CombatAttributeSet.BaseDamage",
-            AttributeCaptureSource.Source,
+            AttributeCaptureSource.Owner,
             Snapshot: true);
 
         AttributesToCapture.Add(BaseDamage);
@@ -557,7 +553,7 @@ public class ComboAttackExecution : CustomExecution
 
         AttackerStrength = new AttributeCaptureDefinition(
             "StatAttributeSet.Strength",
-            AttributeCaptureSource.Source,
+            AttributeCaptureSource.Owner,
             Snapshot: true);
 
         AttributesToCapture.Add(TargetHealth);
@@ -687,7 +683,7 @@ public class HeadshotDamageCalculator : CustomModifierMagnitudeCalculator
     public HeadshotDamageCalculator()
     {
         SourceWeaponDamage = new AttributeCaptureDefinition(
-            "WeaponAttributeSet.Damage", AttributeCaptureSource.Source, Snapshot: true);
+            "WeaponAttributeSet.Damage", AttributeCaptureSource.Owner, Snapshot: true);
         AttributesToCapture.Add(SourceWeaponDamage);
     }
 
@@ -757,9 +753,10 @@ When debugging issues with custom calculators:
    - `Snapshot: true`: Captures the attribute value once when the effect is applied.
    - `Snapshot: false`: Continuously updates when the source attribute changes.
 
-2. **Source vs Target**:
-   - Choose `AttributeCaptureSource.Source` for values from the effect owner.
+2. **Target vs Source vs Owneer**:
    - Choose `AttributeCaptureSource.Target` for values from the effect target.
+   - Choose `AttributeCaptureSource.Source` for values from the effect source.
+   - Choose `AttributeCaptureSource.Owner` for values from the effect owner.
 
 3. **Error Handling**:
    - Always handle cases where attributes might not exist.

@@ -665,12 +665,12 @@ public class StrengthDamageCalculator : CustomModifierMagnitudeCalculator
     {
         StrengthAttribute = new AttributeCaptureDefinition(
             "PlayerAttributeSet.Strength",
-            AttributeCaptureSource.Source,
+            AttributeCaptureSource.Owner,
             Snapshot: true);
 
         SpeedAttribute = new AttributeCaptureDefinition(
             "PlayerAttributeSet.Speed",
-            AttributeCaptureSource.Source,
+            AttributeCaptureSource.Owner,
             Snapshot: true);
 
         AttributesToCapture.Add(StrengthAttribute);
@@ -741,12 +741,12 @@ public class HealthDrainExecution : CustomExecution
 
         SourceHealth = new AttributeCaptureDefinition(
             "PlayerAttributeSet.Health",
-            AttributeCaptureSource.Source,
+            AttributeCaptureSource.Owner,
             Snapshot: false);
 
         SourceStrength = new AttributeCaptureDefinition(
             "PlayerAttributeSet.Strength",
-            AttributeCaptureSource.Source,
+            AttributeCaptureSource.Owner,
             Snapshot: false);
 
         // Register attributes for capture

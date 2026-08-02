@@ -121,7 +121,7 @@ var attributeDurationEffectData = new EffectData(
         new ModifierMagnitude(
             MagnitudeCalculationType.AttributeBased,
             attributeBasedFloat: new AttributeBasedFloat(
-                new AttributeCaptureDefinition("StatAttributeSet.Strength", AttributeCaptureSource.Source, Snapshot: false),
+                new AttributeCaptureDefinition("StatAttributeSet.Strength", AttributeCaptureSource.Owner, Snapshot: false),
                 AttributeCalculationType.CurrentValue,
                 Coefficient: new ScalableFloat(0.2f),
                 PreMultiplyAdditiveValue: new ScalableFloat(0),
