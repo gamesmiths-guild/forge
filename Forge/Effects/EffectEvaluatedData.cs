@@ -274,8 +274,8 @@ public sealed class EffectEvaluatedData
 			{
 				if (!attributeCaptureDefinition.Snapshot)
 				{
-					IForgeEntity? attributeSource = attributeCaptureDefinition.Source
-						== AttributeCaptureSource.Source ? Effect.Ownership.Source : Target;
+					IForgeEntity? attributeSource =
+						attributeCaptureDefinition.Source.Resolve(Target, Effect.Ownership);
 
 					if (!attributeCaptureDefinition.TryGetAttribute(
 							attributeSource,
@@ -391,14 +391,9 @@ public sealed class EffectEvaluatedData
 			return false;
 		}
 
-		IForgeEntity? attributeSourceOwner = Target;
-
-		if (attributeSource.Source == AttributeCaptureSource.Source)
-		{
-			attributeSourceOwner = Effect.Ownership.Owner;
-		}
-
-		return attributeSource.TryGetAttribute(attributeSourceOwner, out backingAttribute);
+		return attributeSource.TryGetAttribute(
+			attributeSource.Source.Resolve(Target, Effect.Ownership),
+			out backingAttribute);
 	}
 
 	private Dictionary<StringKey, object>? EvaluateCustomCueParameters()

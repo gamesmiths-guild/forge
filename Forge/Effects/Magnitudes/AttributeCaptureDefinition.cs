@@ -10,7 +10,7 @@ namespace Gamesmiths.Forge.Effects.Magnitudes;
 /// Set of data that defines how an attribute is going to be captured.
 /// </summary>
 /// <param name="Attribute">Which attribute to capture.</param>
-/// <param name="Source">From what target to capture the attribute from.</param>
+/// <param name="Source">Which entity involved in the effect to capture the attribute from.</param>
 /// <param name="Snapshot">Whether the captured value should be a snapshot or not.</param>
 public readonly record struct AttributeCaptureDefinition(
 	StringKey Attribute,

@@ -42,18 +42,9 @@ public readonly record struct AttributeBasedFloat(
 		int level,
 		Dictionary<AttributeSnapshotKey, float>? snapshotAttributes)
 	{
-		float magnitude = 0;
-
-		switch (BackingAttribute.Source)
-		{
-			case AttributeCaptureSource.Source:
-				magnitude = CaptureAttributeSnapshotAware(effect.Ownership.Owner, snapshotAttributes);
-				break;
-
-			case AttributeCaptureSource.Target:
-				magnitude = CaptureAttributeSnapshotAware(target, snapshotAttributes);
-				break;
-		}
+		float magnitude = CaptureAttributeSnapshotAware(
+			BackingAttribute.Source.Resolve(target, effect.Ownership),
+			snapshotAttributes);
 
 		float finalMagnitude = (Coefficient.GetValue(level) * (PreMultiplyAdditiveValue.GetValue(level) + magnitude))
 			+ PostMultiplyAdditiveValue.GetValue(level);

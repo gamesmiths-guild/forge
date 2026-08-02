@@ -27,27 +27,13 @@ public abstract class CustomExecution : CustomCalculator
 	{
 		foreach (AttributeCaptureDefinition capturedAttribute in execution.AttributesToCapture)
 		{
-			switch (capturedAttribute.Source)
+			// Resolved through the shared helper so this gate always names the same entity CaptureAttributeMagnitude
+			// will read from.
+			IForgeEntity? captureTarget = capturedAttribute.Source.Resolve(target, effect.Ownership);
+
+			if (captureTarget?.Attributes.ContainsAttribute(capturedAttribute.Attribute) != true)
 			{
-				case AttributeCaptureSource.Target:
-
-					if (!target.Attributes.ContainsAttribute(capturedAttribute.Attribute))
-					{
-						return true;
-					}
-
-					break;
-
-				case AttributeCaptureSource.Source:
-
-					IForgeEntity? sourceEntity = effect.Ownership.Source;
-
-					if (sourceEntity?.Attributes.ContainsAttribute(capturedAttribute.Attribute) != true)
-					{
-						return true;
-					}
-
-					break;
+				return true;
 			}
 		}
 
