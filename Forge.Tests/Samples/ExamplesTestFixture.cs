@@ -30,7 +30,8 @@ public class ExamplesTestFixture
 			"cues.damage.fire",
 			"events.combat.damage",
 			"events.combat.hit",
-			"cooldown.fireball"
+			"cooldown.fireball",
+			"data.damage.dealt"
 		});
 
 		CuesManager.RegisterCue(

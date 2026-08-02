@@ -43,6 +43,8 @@ new ConditionalEffect(EffectData, SourceTagRequirements, RemovalPolicy, StacksTo
 
 `RemovalPolicy` is the one field that means nothing on a completion entry: the end it would take the effect back at is the very one applying it. Validation rejects a completion entry asking for `RemoveOnEnd` rather than letting it read as configured.
 
+`ConditionalEffect` is shared with [StackThresholdEffectComponent](stack-threshold-effect-component.md), which applies one when its stack count reaches a threshold. Each component decides what "the end" is for `RemoveOnEnd` — here it is this effect being removed, there it is the count falling back below the threshold — but everything else reads the same in both.
+
 ## Lifecycle Hooks
 
 | Hook | What this component does |
@@ -82,6 +84,8 @@ target.EffectsManager.ApplyEffect(fireball);
 ```
 
 The magnitudes are copied, not shared: setting one on the applier afterwards does not reach effects it has already applied. Unlike Unreal's equivalent, the flag governs the `onComplete` sets too rather than only the application ones.
+
+Leaving it off is the usual way to reach the [unset-magnitude check](../README.md#a-magnitude-nobody-set): an applied effect keyed on a `SetByCaller` tag is built with an empty magnitude dictionary, so the tag its author expected the parent to supply is simply not there.
 
 ### Taking effects back
 
@@ -133,6 +137,8 @@ new AdditionalEffectsEffectComponent(
     onCompletePrematurely: [new ConditionalEffect(exhaustionData)]);
 ```
 
+Paired with [AttributeAccumulatorEffectComponent](attribute-accumulator-effect-component.md), a completion effect aimed at `Source` becomes a damage-over-time that pays its caster back for what it dealt — the accumulator supplies the number and `copyDataFromOriginalEffect` carries it across. The [quick start](../../quick-start.md#advanced-composing-components) walks that scenario through end to end.
+
 ## Key Points
 
 - **Applied effects go through the full application pipeline.** Their own `CanApplyEffect` components, the target's [application blockers](../README.md#blocking-effect-application), and chance-to-apply all get their say, so an applied effect can be refused.
@@ -144,8 +150,10 @@ new AdditionalEffectsEffectComponent(
 ## See Also
 
 - [Effect Components Overview](README.md)
+- [AttributeAccumulatorEffectComponent](attribute-accumulator-effect-component.md)
 - [SourceTagRequirementsEffectComponent](source-tag-requirements-effect-component.md)
 - [GrantAbilityEffectComponent](grant-ability-effect-component.md)
 - [RemoveOtherEffectComponent](remove-other-effect-component.md)
+- [StackThresholdEffectComponent](stack-threshold-effect-component.md)
 - [EffectOwnership](../README.md#effectownership)
 - [ActiveEffectHandle](../README.md#activeeffecthandle)

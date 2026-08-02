@@ -11,6 +11,7 @@ For a practical guide on using components, see the [Quick Start Guide](../../qui
 | Component | State | Applies to | Description |
 |-----------|-------|------------|-------------|
 | [AdditionalEffectsEffectComponent](additional-effects-effect-component.md) | Stateful | Any | Applies further effects when the effect lands and when it ends, each gated on the source, aimed at its own entity, and cleaned up on its own terms. |
+| [AttributeAccumulatorEffectComponent](attribute-accumulator-effect-component.md) | Stateful | Instant / periodic | Tallies how much this application actually moved an attribute, and publishes the running total as a `SetByCaller` magnitude. |
 | [AttributeRequirementsEffectComponent](attribute-requirements-effect-component.md) | Stateful | Any | Gates application, forces removal, and toggles inhibition from the target's attribute values. |
 | [BlockAbilityTagsEffectComponent](block-ability-tags-effect-component.md) | Stateful | Duration | Blocks abilities carrying the given tags from activating while the effect is active. |
 | [CancelAbilityTagsEffectComponent](cancel-ability-tags-effect-component.md) | Stateless | Any | Cancels active abilities selected by tag, on application or on each execution. |
@@ -18,9 +19,11 @@ For a practical guide on using components, see the [Quick Start Guide](../../qui
 | [GrantAbilityEffectComponent](grant-ability-effect-component.md) | Stateful | Any | Grants abilities for the effect's lifetime, or permanently from an instant effect. |
 | [ImmunityEffectComponent](immunity-effect-component.md) | Stateful | Duration | Blocks incoming effects matching its queries while the effect is active. |
 | [ModifierTagsEffectComponent](modifier-tags-effect-component.md) | Stateless | Duration | Adds tags to the target while the effect is active. |
+| [RaiseEventEffectComponent](raise-event-effect-component.md) | Stateless | Any | Raises a Forge event on the target and/or source at chosen points in the effect's lifetime. |
 | [RemoveOtherEffectComponent](remove-other-effect-component.md) | Stateful | Non-periodic | Removes active effects matching its queries when applied, never itself. |
 | [SourceAttributeRequirementsEffectComponent](source-attribute-requirements-effect-component.md) | Stateful | Any | The same three gates as `AttributeRequirements`, evaluated against the effect's source or owner. |
 | [SourceTagRequirementsEffectComponent](source-tag-requirements-effect-component.md) | Stateful | Any | The same three gates as `TargetTagRequirements`, evaluated against the effect's source or owner. |
+| [StackThresholdEffectComponent](stack-threshold-effect-component.md) | Stateful | Stackable | Applies further effects once the stack count reaches a threshold, each optionally taken back when it drops. |
 | [TargetTagRequirementsEffectComponent](target-tag-requirements-effect-component.md) | Stateful | Any | Gates application, forces removal, and toggles inhibition from the target's tags. |
 
 To add a new component page, copy [effect-component-template.md](../../templates/effect-component-template.md) and add a row above.
