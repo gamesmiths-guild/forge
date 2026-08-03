@@ -72,7 +72,18 @@ Because all modifiers operate on the same raw integers, a `FlatBonus` of `+50` o
 | `ToDisplayString(int raw, IFormatProvider)` | `string` | The same, formatted with exactly `DecimalPlaces` decimals, so `400` reads as `"4.00"` rather than `"4"`. The culture is required rather than defaulted: pass `CultureInfo.CurrentCulture` for text a player reads and `CultureInfo.InvariantCulture` for anything that must look the same everywhere. |
 | `ToRawValue(float display)` | `int` | The inverse, for **authoring** surfaces — an editor field or tool where someone types `4.75` and the attribute has to store `475`. Rounds halves away from zero and converts units only; it does not clamp to `Min`/`Max`. |
 
-[Cue](cues.md) magnitudes arrive raw as well — an `AttributeCurrentValue` or `AttributeValueChange` cue hands the handler the stored integer — so a handler that wants the scaled reading converts through the attribute it came from, which it can reach from the `target` it is given:
+The same four conversions exist as statics on `Quantization` — in `Gamesmiths.Forge.Core`, since packing decimals into an integer is not attribute-specific — taking the decimal places as an argument, for the cases where there is no attribute instance to ask — a cue handler whose `target` came through null, editor tooling, a number read back out of save data:
+
+```csharp
+Quantization.GetScale(2);                                           // 100
+Quantization.ToDisplayValue(475, 2);                                // 4.75f
+Quantization.ToDisplayString(475, 2, CultureInfo.InvariantCulture); // "4.75"
+Quantization.ToRawValue(4.75f, 2);                                  // 475
+```
+
+**Prefer the `EntityAttribute` members whenever you hold the attribute.** The number passed to the statics is a copy of something the attribute already knows, and a copy goes stale: change `decimalPlaces` on the attribute and every hard-coded call site keeps converting by the old scale, quietly and wrongly. The statics are the escape hatch, not the default.
+
+[Cue](cues.md) magnitudes arrive raw as well — an `AttributeCurrentValue` or `AttributeValueChange` cue hands the handler the stored integer — so a handler that wants the scaled reading converts through the attribute it came from, which it can reach from the `target` it is given. Going through the attribute rather than `Quantization` is what keeps this handler correct if the attribute's scale is ever changed:
 
 ```csharp
 public void OnExecute(IForgeEntity? target, CueParameters? parameters)

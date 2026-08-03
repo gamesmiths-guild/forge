@@ -3,6 +3,7 @@
 using System.Globalization;
 using FluentAssertions;
 using Gamesmiths.Forge.Attributes;
+using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
@@ -101,6 +102,33 @@ public class AttributeDisplayValueTests(TagsAndCuesFixture tagsAndCuesFixture)
 		set.Speed.ToDisplayString(475, CultureInfo.InvariantCulture).Should().Be("4.75");
 		set.Speed.ToDisplayString(400, CultureInfo.InvariantCulture).Should().Be("4.00");
 		set.Ammo.ToDisplayString(7, CultureInfo.InvariantCulture).Should().Be("7");
+	}
+
+	[Theory]
+	[Trait("Static helpers", null)]
+	[InlineData(0, 1)]
+	[InlineData(1, 10)]
+	[InlineData(2, 100)]
+	[InlineData(9, 1_000_000_000)]
+	public void GetScale_is_ten_raised_to_the_decimal_places(int decimalPlaces, int expectedScale)
+	{
+		Quantization.GetScale(decimalPlaces).Should().Be(expectedScale);
+	}
+
+	[Fact]
+	[Trait("Static helpers", null)]
+	public void The_static_helpers_agree_with_the_attribute_they_stand_in_for()
+	{
+		var set = new ScaledAttributeSet();
+		EntityAttribute speed = set.Speed;
+
+		Quantization.GetScale(speed.DecimalPlaces).Should().Be(speed.DisplayScale);
+		Quantization.ToDisplayValue(475, speed.DecimalPlaces).Should().Be(speed.ToDisplayValue(475));
+		Quantization.ToRawValue(4.75f, speed.DecimalPlaces).Should().Be(speed.ToRawValue(4.75f));
+
+		Quantization.ToDisplayString(475, speed.DecimalPlaces, CultureInfo.InvariantCulture)
+			.Should()
+			.Be(speed.ToDisplayString(475, CultureInfo.InvariantCulture));
 	}
 
 	[Fact]

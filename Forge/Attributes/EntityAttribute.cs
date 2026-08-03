@@ -13,26 +13,6 @@ namespace Gamesmiths.Forge.Attributes;
 /// </summary>
 public sealed class EntityAttribute
 {
-	/// <summary>
-	/// The highest <see cref="DecimalPlaces"/> an attribute can declare, since 10^10 no longer fits in an
-	/// <see langword="int"/>.
-	/// </summary>
-	private const int MaxDecimalPlaces = 9;
-
-	private static readonly int[] _displayScales =
-	[
-		1,
-		10,
-		100,
-		1_000,
-		10_000,
-		100_000,
-		1_000_000,
-		10_000_000,
-		100_000_000,
-		1_000_000_000
-	];
-
 	private readonly ChannelData[] _channels;
 
 	private readonly LinkedList<AttributeOverride> _attributeOverrides = [];
@@ -151,10 +131,7 @@ public sealed class EntityAttribute
 		CurrentValue = BaseValue;
 
 		DecimalPlaces = decimalPlaces;
-
-		// Clamped rather than indexed directly so that an out-of-range value is a validation failure instead of an
-		// exception thrown from the constructor of a disabled-validation build.
-		DisplayScale = _displayScales[Math.Clamp(decimalPlaces, 0, MaxDecimalPlaces)];
+		DisplayScale = Quantization.GetScale(decimalPlaces);
 
 		_channels = new ChannelData[channels];
 
@@ -174,7 +151,7 @@ public sealed class EntityAttribute
 	/// <returns>The value in display units.</returns>
 	public float ToDisplayValue(int rawValue)
 	{
-		return (float)((double)rawValue / DisplayScale);
+		return Quantization.ToDisplayValue(rawValue, DecimalPlaces);
 	}
 
 	/// <summary>
@@ -191,7 +168,7 @@ public sealed class EntityAttribute
 	/// <returns>The value as text, in display units.</returns>
 	public string ToDisplayString(int rawValue, IFormatProvider formatProvider)
 	{
-		return ToDisplayValue(rawValue).ToString($"F{DecimalPlaces}", formatProvider);
+		return Quantization.ToDisplayString(rawValue, DecimalPlaces, formatProvider);
 	}
 
 	/// <summary>
@@ -207,9 +184,7 @@ public sealed class EntityAttribute
 	/// <returns>The equivalent raw value.</returns>
 	public int ToRawValue(float displayValue)
 	{
-		double rawValue = Math.Round((double)displayValue * DisplayScale, MidpointRounding.AwayFromZero);
-
-		return (int)Math.Clamp(rawValue, int.MinValue, int.MaxValue);
+		return Quantization.ToRawValue(displayValue, DecimalPlaces);
 	}
 
 	internal void SetMinValue(int newMinValue)
@@ -511,9 +486,7 @@ public sealed class EntityAttribute
 			_channels.Length > 0,
 			"There should be at least one channel.");
 
-		// The scale it stands for is a power of ten, which stops fitting in an int past nine places.
-		Validation.Assert(
-			DecimalPlaces >= 0 && DecimalPlaces <= MaxDecimalPlaces,
-			$"DecimalPlaces must be between 0 and {MaxDecimalPlaces}.");
+		// DecimalPlaces is validated by Quantization.GetScale, which the constructor calls to derive
+		// DisplayScale before it gets here.
 	}
 }

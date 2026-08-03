@@ -43,6 +43,19 @@ public sealed class AttributeDecimalPlacesValidationTests : IDisposable
 		act.Should().Throw<ValidationException>();
 	}
 
+	[Theory]
+	[Trait("Decimal places", null)]
+	[InlineData(-1)]
+	[InlineData(10)]
+	public void The_static_helpers_reject_the_same_out_of_range_scale(int decimalPlaces)
+	{
+		// The helpers take the places as an argument rather than reading them off an attribute, so they have to make
+		// the same check themselves.
+		Action act = () => _ = Quantization.ToDisplayValue(1, decimalPlaces);
+
+		act.Should().Throw<ValidationException>();
+	}
+
 	private sealed class ConfigurableAttributeSet : AttributeSet
 	{
 		public EntityAttribute Scaled { get; }
