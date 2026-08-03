@@ -27,15 +27,28 @@ public enum EffectEventTrigger : byte
 	Executed = 1 << 1,
 
 	/// <summary>
-	/// Raises when the effect is fully removed, from <see cref="IEffectComponent.OnActiveEffectUnapplied"/>. Losing a
-	/// single stack does not count, and an instant effect never becomes active, so it never reaches this.
+	/// Raises when the effect is fully removed after running out of duration, from
+	/// <see cref="IEffectComponent.OnActiveEffectUnapplied"/> with
+	/// <see cref="EffectRemovalReason.Expired"/>. Only <see cref="Duration.DurationType.HasDuration"/> effects have a
+	/// natural end to reach, so nothing else fires it.
 	/// </summary>
-	Removed = 1 << 2,
+	ExpiredNormally = 1 << 2,
+
+	/// <summary>
+	/// Raises when the effect is fully removed before it could expire, from
+	/// <see cref="IEffectComponent.OnActiveEffectUnapplied"/> with <see cref="EffectRemovalReason.Removed"/>. Every
+	/// removal through the <see cref="EffectsManager"/> API lands here — a dispel, a tag- or attribute-driven removal,
+	/// or an outright <see cref="EffectsManager.RemoveEffect(ActiveEffectHandle, bool)"/> — as does every removal of an
+	/// <see cref="Duration.DurationType.Infinite"/> effect, which has no natural end.
+	/// </summary>
+	RemovedPrematurely = 1 << 3,
 
 	/// <summary>
 	/// Raises when the effect loses a stack it survives, from <see cref="IEffectComponent.OnActiveEffectUnapplied"/>.
 	/// This is the counterpart of <see cref="Applied"/> firing again for each stack gained; the stack that takes the
-	/// count to zero is a full removal and reports <see cref="Removed"/> instead. Only stackable effects reach it.
+	/// count to zero is a full removal and reports <see cref="ExpiredNormally"/> or <see cref="RemovedPrematurely"/>
+	/// instead. Only stackable effects reach it, and it does not separate the two reasons the way the full-removal
+	/// triggers do.
 	/// </summary>
-	StackRemoved = 1 << 3,
+	StackRemoved = 1 << 4,
 }

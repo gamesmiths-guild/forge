@@ -57,19 +57,18 @@ public class RaiseEventEffectComponent(
 		? _targetOnly
 		: raiseOn;
 
-	// An event carrying no tags matches no subscription, so it is raised into nothing. EffectData rejects it.
 	internal bool HasNoEventTags => EventTags.IsEmpty;
 
-	// A component that never raises is always a mistake rather than a deliberate no-op. EffectData rejects it.
 	internal bool HasNoTrigger => Triggers == EffectEventTrigger.None;
 
-	// Executions only happen on instant and periodic effects. EffectData rejects the combination.
 	internal bool RaisesOnExecution => Triggers.HasFlag(EffectEventTrigger.Executed);
 
-	// Removal only happens to effects that became active, which an instant one never does. EffectData rejects it.
-	internal bool RaisesOnRemoval => Triggers.HasFlag(EffectEventTrigger.Removed);
+	internal bool RaisesOnRemoval =>
+		(Triggers & (EffectEventTrigger.ExpiredNormally | EffectEventTrigger.RemovedPrematurely)) !=
+		EffectEventTrigger.None;
 
-	// Only a stackable effect can lose a stack and survive it. EffectData rejects the combination.
+	internal bool RaisesOnExpiration => Triggers.HasFlag(EffectEventTrigger.ExpiredNormally);
+
 	internal bool RaisesOnStackRemoval => Triggers.HasFlag(EffectEventTrigger.StackRemoved);
 
 	/// <inheritdoc/>
@@ -98,8 +97,13 @@ public class RaiseEventEffectComponent(
 		EffectRemovalReason reason)
 	{
 		// Both halves of this hook are worth reporting, and they mean different things: one stack fewer on an effect
-		// that is still there, versus the effect being gone.
-		EffectEventTrigger trigger = removed ? EffectEventTrigger.Removed : EffectEventTrigger.StackRemoved;
+		// that is still there, versus the effect being gone. A full removal splits further by reason, since "the buff
+		// ran its course" and "the buff was stripped" are the two cases gameplay actually wants to tell apart.
+		EffectEventTrigger removalTrigger = reason == EffectRemovalReason.Expired
+			? EffectEventTrigger.ExpiredNormally
+			: EffectEventTrigger.RemovedPrematurely;
+
+		EffectEventTrigger trigger = removed ? removalTrigger : EffectEventTrigger.StackRemoved;
 
 		if (Triggers.HasFlag(trigger))
 		{
