@@ -403,8 +403,9 @@ public readonly record struct EffectData
 			!Array.Exists(EffectComponents, x => x is RaiseEventEffectComponent { RaisesOnStackRemoval: true }) ||
 			StackingData.HasValue,
 			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.StackRemoved)} never fires on an effect that " +
-			$"isn't stackable, since it has no stack to lose and survive. Define {nameof(StackingData)} or use the " +
-			"full-removal triggers instead.");
+			$"isn't stackable, since it has no stack to lose and survive. Define {nameof(StackingData)} or use " +
+			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.ExpiredNormally)} / " +
+			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.RemovedPrematurely)} instead.");
 
 		Validation.Assert(
 			EffectComponents is null ||

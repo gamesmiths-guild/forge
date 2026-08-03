@@ -103,7 +103,7 @@ Two things have to line up for that pairing: the accumulator must come **first**
 
 - **`Executed` on a duration effect that is not periodic is rejected.** Only instant and periodic effects execute, so it would never fire.
 - **Either removal trigger on an instant effect is rejected.** An instant effect never becomes active and so is never removed. Use `Applied`.
-- **`ExpiredNormally` on an `Infinite` effect is rejected.** It has no duration to run out of, and every removal of one is reported as `Removed`. Use `RemovedPrematurely`.
+- **`ExpiredNormally` on an `Infinite` effect is rejected.** It has no duration to run out of, and every removal of one is reported as `EffectRemovalReason.Removed`. Use `RemovedPrematurely` instead.
 - **`StackRemoved` on a non-stackable effect is rejected.** It has no stack to lose and survive, so it would never fire. Use the removal triggers.
 - **No event tags is rejected.** Subscribers match on the tags, so an untagged event is raised into nothing.
 - **No trigger is rejected.** `EffectEventTrigger.None` never raises, which is always a mistake rather than a deliberate no-op.
