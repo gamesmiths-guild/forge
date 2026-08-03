@@ -13,7 +13,8 @@ public readonly record struct Modifier(
     StringKey Attribute,
     ModifierOperation Operation,
     ModifierMagnitude Magnitude,
-    int Channel = 0)
+    int Channel = 0,
+    AggregationMode AggregationMode = AggregationMode.Sum)
 {
     // Implementation...
 }
@@ -25,6 +26,7 @@ public readonly record struct Modifier(
 - **Operation**: How the modifier affects the attribute (flat, percentage, or override).
 - **Magnitude**: How to calculate the value that will be applied.
 - **Channel**: Which attribute [channel](../attributes.md#attribute-channels) to affect (defaults to 0).
+- **AggregationMode**: How this modifier combines with the other modifiers of its group — all of them summed (the default), or only the strongest one (see [Modifier Aggregation](#modifier-aggregation)).
 
 ## Modifier Operations
 
@@ -44,7 +46,7 @@ public enum ModifierOperation : byte
 - **FlatBonus**: Adds (or subtracts) a fixed value to the attribute.
   - Example: `+5 Attack Power`, `-10 Movement Speed`.
   - Calculation: `CurrentValue + FlatValue`.
-  - Multiple flat bonuses are summed together before being applied.
+  - Multiple flat bonuses are summed together before being applied, unless they opt into another [aggregation mode](#modifier-aggregation).
 
 - **PercentBonus**: Adds (or subtracts) a percentage modifier that is applied after flat bonuses.
   - Example: `+25% Critical Chance`, `-15% Damage Taken`.
@@ -53,11 +55,12 @@ public enum ModifierOperation : byte
   - Example: A +10% and a +20% bonus results in a total of +30% (1 + 0.1 + 0.2 = 1.3).
   - Example: A +10% and a -5% modifier results in a +5% total bonus (1 + 0.1 - 0.05 = 1.05).
   - This additive approach ensures consistent results regardless of application order.
+  - Percentages that should compete instead of adding up use another [aggregation mode](#modifier-aggregation).
 
 - **Override**: Replaces the attribute's value entirely.
   - Example: `Set Max Health to 100`.
   - Calculation: `NewValue` (ignores current value entirely).
-  - There is no priority system for overrides: the **most recently applied** override on a channel wins.
+  - There is no priority system for overrides: the **most recently applied** override on a channel wins (unless it opts into [aggregation](#aggregating-overrides)).
   - Overrides are tracked as a stack per channel. When the active override is removed, the previously applied override on that channel (if one is still active) takes over again; the attribute only stops being overridden once every override on that channel is gone.
 
 ## Evaluation Order
@@ -65,12 +68,82 @@ public enum ModifierOperation : byte
 Evaluation happens per [channel](../attributes.md#attribute-channels), and the result of each channel feeds the next. Within a single Channel:
 
 1. First, the channel's override is checked. If an override is active, it **replaces** the value entering the channel and the channel's flat and percentage modifiers are skipped entirely.
-2. If no override is active on the channel, flat bonuses are summed and added.
-3. Finally, percentage modifiers are applied to the result.
+2. If no override is active on the channel, flat bonuses are [aggregated](#modifier-aggregation) and added.
+3. Finally, percentage modifiers are aggregated and applied to the result.
 
 The final value is then clamped between the attribute's `Min` and `Max`.
 
 An override only short-circuits the channel it belongs to. Modifiers in later channels still apply on top of the overridden value, which is how you compose "set to X, then apply a penalty" without a dedicated primitive.
+
+## Modifier Aggregation
+
+By default every modifier affecting an attribute contributes: flat bonuses are summed, percentage bonuses are summed into a single multiplier. `AggregationMode` changes that, so a set of competing modifiers contributes only its **strongest** value:
+
+```csharp
+public enum AggregationMode : byte
+{
+    Sum = 0, // Every modifier in the group contributes, summed together
+    Max = 1, // Only the highest valued modifier in the group contributes
+    Min = 2  // Only the lowest valued modifier in the group contributes
+}
+```
+
+Modifiers are grouped by **attribute, channel, operation and aggregation mode**. Each group contributes exactly one value, and those contributions are then combined the usual way:
+
+```
+ChannelFlat    = sum(Sum group) + max(Max group) + min(Min group)
+ChannelPercent = 1 + sum(Sum group) + max(Max group) + min(Min group)
+```
+
+An empty group contributes nothing, so `Sum` behaves exactly as it always did and mixing modes is well defined: a `Sum` bonus, a strongest-only buff and a strongest-only slow can all be active on the same attribute at the same time.
+
+### Strongest Wins
+
+This is the "only the biggest movement speed buff applies" family of mechanics — ubiquitous in ARPGs and MOBAs, and awkward to build any other way:
+
+```csharp
+// Every movement speed buff in the game is authored like this. Only the strongest is ever active,
+// and when it expires the next strongest takes over on the same frame.
+new Modifier(
+    "MovementAttributeSet.Speed",
+    ModifierOperation.PercentBonus,
+    new ModifierMagnitude(
+        MagnitudeCalculationType.ScalableFloat,
+        scalableFloatMagnitude: new ScalableFloat(0.3f)),
+    Channel: 0,
+    AggregationMode: AggregationMode.Max)
+```
+
+`Min` is the same mechanic in the other direction — "only the strongest slow applies":
+
+```csharp
+// A -30% slow and a -15% slow are both active; only the -30% one is felt.
+new Modifier(
+    "MovementAttributeSet.Speed",
+    ModifierOperation.PercentBonus,
+    new ModifierMagnitude(
+        MagnitudeCalculationType.ScalableFloat,
+        scalableFloatMagnitude: new ScalableFloat(-0.3f)),
+    Channel: 0,
+    AggregationMode: AggregationMode.Min)
+```
+
+Note that `Max` and `Min` compare **signed values**, not magnitudes: `Max` picks the highest number, so in a group of negative modifiers it selects the *weakest* penalty. Use `Max` for bonuses and `Min` for penalties.
+
+Nothing else changes about the effects themselves. They stack, expire, get dispelled, and re-evaluate exactly as before — the group is simply recomputed whenever a modifier is added, removed or re-evaluated, so removal of the current winner immediately promotes the runner-up.
+
+### Aggregating Overrides
+
+Overrides can only ever produce a single value per channel, so aggregation arbitrates between them instead of combining them. The **most recently applied** override on the channel decides the policy:
+
+- If it uses `Sum` (the default), it wins outright — the usual last-applied-wins behavior.
+- If it uses `Max` or `Min`, the channel goes to the extreme override **of that same mode**.
+
+So a group of `Min` overrides behaves like "the most restrictive one wins" (a root setting speed to `0` beats a snare setting it to `10`), while a plain override applied afterwards still takes precedence over the whole group for as long as it's active.
+
+### When Aggregation Doesn't Apply
+
+Aggregation only applies to modifiers applied by **active effects** — that is, non-instant, non-periodic effects. Instant and periodic effects execute their modifiers against the attribute's `BaseValue` as a permanent change, so there's no group of active modifiers to arbitrate between. Configuring an aggregation mode other than `Sum` on such an effect is rejected by validation rather than being silently ignored.
 
 ## Magnitude Calculation
 
@@ -541,7 +614,7 @@ new Modifier(
 
 6. **Snapshot Considerations**: When using attribute-based magnitudes, consider whether you want a snapshot or a live value that updates when the source attribute changes.
 
-7. **Balance Stack Interactions**: Consider how multiple modifiers will interact when they [stack](stacking.md) on the same attribute.
+7. **Balance Stack Interactions**: Consider how multiple modifiers will interact when they [stack](stacking.md) on the same attribute. Reach for `AggregationMode.Max`/`Min` when they should compete instead of adding up, and apply the mode consistently across every effect in that family — a single buff left on `Sum` silently bypasses the rule.
 
 8. **Document Your Attribute Keys**: Maintain a central registry of attribute keys to avoid typos and inconsistencies.
 

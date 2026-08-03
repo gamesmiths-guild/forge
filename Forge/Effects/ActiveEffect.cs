@@ -453,13 +453,35 @@ internal sealed class ActiveEffect
 			switch (modifier.ModifierOperation)
 			{
 				case ModifierOperation.FlatBonus:
-					int flatMagnitude = unapply ? -(int)modifier.Magnitude : (int)modifier.Magnitude;
-					modifier.Attribute.AddFlatModifier(flatMagnitude, modifier.Channel);
+					if (unapply)
+					{
+						modifier.Attribute.RemoveFlatModifier(
+							(int)modifier.Magnitude,
+							modifier.Channel,
+							modifier.AggregationMode);
+						break;
+					}
+
+					modifier.Attribute.AddFlatModifier(
+						(int)modifier.Magnitude,
+						modifier.Channel,
+						modifier.AggregationMode);
 					break;
 
 				case ModifierOperation.PercentBonus:
-					float percentMagnitude = unapply ? -modifier.Magnitude : modifier.Magnitude;
-					modifier.Attribute.AddPercentModifier(percentMagnitude, modifier.Channel);
+					if (unapply)
+					{
+						modifier.Attribute.RemovePercentModifier(
+							modifier.Magnitude,
+							modifier.Channel,
+							modifier.AggregationMode);
+						break;
+					}
+
+					modifier.Attribute.AddPercentModifier(
+						modifier.Magnitude,
+						modifier.Channel,
+						modifier.AggregationMode);
 					break;
 
 				case ModifierOperation.Override:

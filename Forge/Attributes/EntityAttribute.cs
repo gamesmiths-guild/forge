@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Effects.Modifiers;
 
 namespace Gamesmiths.Forge.Attributes;
 
@@ -97,16 +98,6 @@ public sealed class EntityAttribute
 
 		_channels = new ChannelData[channels];
 
-		for (int i = 0; i < channels; i++)
-		{
-			_channels[i] = new ChannelData
-			{
-				Override = null,
-				FlatModifier = 0,
-				PercentModifier = 1,
-			};
-		}
-
 		if (Validation.Enabled)
 		{
 			ValidateData();
@@ -122,12 +113,7 @@ public sealed class EntityAttribute
 		Min = newMinValue;
 		BaseValue = Math.Max(BaseValue, Min);
 
-		UpdateCachedValues();
-
-		if (CurrentValue != oldValue)
-		{
-			PendingValueChange += CurrentValue - oldValue;
-		}
+		RefreshValues(oldValue);
 	}
 
 	internal void SetMaxValue(int newMaxValue)
@@ -139,12 +125,7 @@ public sealed class EntityAttribute
 		Max = newMaxValue;
 		BaseValue = Math.Min(BaseValue, Max);
 
-		UpdateCachedValues();
-
-		if (CurrentValue != oldValue)
-		{
-			PendingValueChange += CurrentValue - oldValue;
-		}
+		RefreshValues(oldValue);
 	}
 
 	internal void ExecuteOverride(int newValue)
@@ -153,12 +134,7 @@ public sealed class EntityAttribute
 
 		BaseValue = Math.Clamp(newValue, Min, Max);
 
-		UpdateCachedValues();
-
-		if (CurrentValue != oldValue)
-		{
-			PendingValueChange += CurrentValue - oldValue;
-		}
+		RefreshValues(oldValue);
 	}
 
 	internal void ExecuteFlatModifier(int value)
@@ -167,12 +143,7 @@ public sealed class EntityAttribute
 
 		BaseValue = Math.Clamp(BaseValue + value, Min, Max);
 
-		UpdateCachedValues();
-
-		if (CurrentValue != oldValue)
-		{
-			PendingValueChange += CurrentValue - oldValue;
-		}
+		RefreshValues(oldValue);
 	}
 
 	internal void ExecutePercentModifier(float value)
@@ -181,29 +152,19 @@ public sealed class EntityAttribute
 
 		BaseValue = Math.Clamp((int)(BaseValue * Math.Round(1 + value, 6)), Min, Max);
 
-		UpdateCachedValues();
-
-		if (CurrentValue != oldValue)
-		{
-			PendingValueChange += CurrentValue - oldValue;
-		}
+		RefreshValues(oldValue);
 	}
 
 	internal void AddOverride(AttributeOverride attributeOverrideData)
 	{
-		_attributeOverrides.AddFirst(attributeOverrideData);
-
 		int oldValue = CurrentValue;
 
+		_attributeOverrides.AddFirst(attributeOverrideData);
+
 		ref ChannelData channelData = ref _channels[attributeOverrideData.Channel];
-		channelData.Override = attributeOverrideData.Magnitude;
+		channelData.Override = ResolveOverride(attributeOverrideData.Channel);
 
-		UpdateCachedValues();
-
-		if (CurrentValue != oldValue)
-		{
-			PendingValueChange += CurrentValue - oldValue;
-		}
+		RefreshValues(oldValue);
 	}
 
 	internal void ClearOverride(in AttributeOverride attributeOverride)
@@ -214,51 +175,49 @@ public sealed class EntityAttribute
 		_attributeOverrides.Remove(attributeOverride);
 
 		ref ChannelData channelData = ref _channels[channel];
-		if (_attributeOverrides.Any(x => x.Channel == channel))
-		{
-			channelData.Override = _attributeOverrides.First(x => x.Channel == channel).Magnitude;
-		}
-		else
-		{
-			channelData.Override = null;
-		}
+		channelData.Override = ResolveOverride(channel);
 
-		UpdateCachedValues();
-
-		if (CurrentValue != oldValue)
-		{
-			PendingValueChange += CurrentValue - oldValue;
-		}
+		RefreshValues(oldValue);
 	}
 
-	internal void AddFlatModifier(int value, int channel)
+	internal void AddFlatModifier(int value, int channel, AggregationMode aggregationMode)
 	{
 		int oldValue = CurrentValue;
 
 		ref ChannelData channelData = ref _channels[channel];
-		channelData.FlatModifier += value;
+		channelData.AddFlatModifier(value, aggregationMode);
 
-		UpdateCachedValues();
-
-		if (CurrentValue != oldValue)
-		{
-			PendingValueChange += CurrentValue - oldValue;
-		}
+		RefreshValues(oldValue);
 	}
 
-	internal void AddPercentModifier(float value, int channel)
+	internal void RemoveFlatModifier(int value, int channel, AggregationMode aggregationMode)
 	{
 		int oldValue = CurrentValue;
 
 		ref ChannelData channelData = ref _channels[channel];
-		channelData.PercentModifier += Math.Round(value, 6);
+		channelData.RemoveFlatModifier(value, aggregationMode);
 
-		UpdateCachedValues();
+		RefreshValues(oldValue);
+	}
 
-		if (CurrentValue != oldValue)
-		{
-			PendingValueChange += CurrentValue - oldValue;
-		}
+	internal void AddPercentModifier(float value, int channel, AggregationMode aggregationMode)
+	{
+		int oldValue = CurrentValue;
+
+		ref ChannelData channelData = ref _channels[channel];
+		channelData.AddPercentModifier(Math.Round(value, 6), aggregationMode);
+
+		RefreshValues(oldValue);
+	}
+
+	internal void RemovePercentModifier(float value, int channel, AggregationMode aggregationMode)
+	{
+		int oldValue = CurrentValue;
+
+		ref ChannelData channelData = ref _channels[channel];
+		channelData.RemovePercentModifier(Math.Round(value, 6), aggregationMode);
+
+		RefreshValues(oldValue);
 	}
 
 	internal float CalculateMagnitudeUpToChannel(int finalChanel)
@@ -282,43 +241,39 @@ public sealed class EntityAttribute
 	}
 
 	internal float CalculateValueWithPendingModifiers(
-		Dictionary<int, float>? pendingFlatBonusByChannel,
-		Dictionary<int, float>? pendingPercentBonusByChannel,
-		Dictionary<int, float>? pendingOverrideByChannel)
+		Dictionary<int, PendingChannelModifiers>? pendingFlatBonusByChannel,
+		Dictionary<int, PendingChannelModifiers>? pendingPercentBonusByChannel,
+		Dictionary<int, AttributeOverride>? pendingOverrideByChannel)
 	{
 		float evaluatedValue = BaseValue;
 
 		for (int i = 0; i < _channels.Length; i++)
 		{
+			AttributeOverride? pendingOverride = null;
 			if (pendingOverrideByChannel is not null &&
-				pendingOverrideByChannel.TryGetValue(i, out float pendingOverride))
+				pendingOverrideByChannel.TryGetValue(i, out AttributeOverride channelPendingOverride))
 			{
-				evaluatedValue = pendingOverride;
-				continue;
+				pendingOverride = channelPendingOverride;
 			}
 
-			int? channelOverride = _channels[i].Override;
+			int? channelOverride = pendingOverride.HasValue
+				? ResolveOverride(i, pendingOverride)
+				: _channels[i].Override;
+
 			if (channelOverride.HasValue)
 			{
 				evaluatedValue = channelOverride.Value;
 				continue;
 			}
 
-			int flatBonus = _channels[i].FlatModifier;
-			if (pendingFlatBonusByChannel is not null &&
-				pendingFlatBonusByChannel.TryGetValue(i, out float pendingFlat))
-			{
-				flatBonus += (int)pendingFlat;
-			}
+			PendingChannelModifiers pendingFlat = default;
+			pendingFlatBonusByChannel?.TryGetValue(i, out pendingFlat);
 
-			double percentMultiplier = _channels[i].PercentModifier;
-			if (pendingPercentBonusByChannel is not null &&
-				pendingPercentBonusByChannel.TryGetValue(i, out float pendingPercent))
-			{
-				percentMultiplier += pendingPercent;
-			}
+			PendingChannelModifiers pendingPercent = default;
+			pendingPercentBonusByChannel?.TryGetValue(i, out pendingPercent);
 
-			evaluatedValue = (float)((evaluatedValue + flatBonus) * percentMultiplier);
+			evaluatedValue = (float)((evaluatedValue + _channels[i].EvaluateFlatModifier(pendingFlat))
+				* _channels[i].EvaluatePercentModifier(pendingPercent));
 		}
 
 		return Math.Clamp((int)evaluatedValue, Min, Max);
@@ -331,6 +286,74 @@ public sealed class EntityAttribute
 			int cache = PendingValueChange;
 			PendingValueChange = 0;
 			OnValueChanged?.Invoke(this, cache);
+		}
+	}
+
+	/// <summary>
+	/// Resolves which of the active overrides of a channel is the one in effect.
+	/// </summary>
+	/// <remarks>
+	/// The most recently applied override decides the policy: with <see cref="AggregationMode.Sum"/> it simply wins,
+	/// while <see cref="AggregationMode.Max"/> and <see cref="AggregationMode.Min"/> hand the channel over to the
+	/// extreme override of that same mode.
+	/// </remarks>
+	/// <param name="channel">The channel being resolved.</param>
+	/// <param name="pendingOverride">An override about to be applied, which counts as the most recent one.</param>
+	/// <returns>The value overriding the channel, or <see langword="null"/> if it isn't being overridden.</returns>
+	private int? ResolveOverride(int channel, AttributeOverride? pendingOverride = null)
+	{
+		AttributeOverride? mostRecentOverride = pendingOverride;
+
+		if (!mostRecentOverride.HasValue)
+		{
+			foreach (AttributeOverride activeOverride in _attributeOverrides)
+			{
+				if (activeOverride.Channel == channel)
+				{
+					mostRecentOverride = activeOverride;
+					break;
+				}
+			}
+		}
+
+		if (!mostRecentOverride.HasValue)
+		{
+			return null;
+		}
+
+		AggregationMode aggregationMode = mostRecentOverride.Value.AggregationMode;
+		int overrideValue = mostRecentOverride.Value.Magnitude;
+
+		if (aggregationMode == AggregationMode.Sum)
+		{
+			return overrideValue;
+		}
+
+		foreach (AttributeOverride activeOverride in _attributeOverrides)
+		{
+			if (activeOverride.Channel != channel || activeOverride.AggregationMode != aggregationMode)
+			{
+				continue;
+			}
+
+			if (aggregationMode == AggregationMode.Max
+				? activeOverride.Magnitude > overrideValue
+				: activeOverride.Magnitude < overrideValue)
+			{
+				overrideValue = activeOverride.Magnitude;
+			}
+		}
+
+		return overrideValue;
+	}
+
+	private void RefreshValues(int oldValue)
+	{
+		UpdateCachedValues();
+
+		if (CurrentValue != oldValue)
+		{
+			PendingValueChange += CurrentValue - oldValue;
 		}
 	}
 
