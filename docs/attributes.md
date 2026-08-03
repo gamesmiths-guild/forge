@@ -17,6 +17,7 @@ An `EntityAttribute` represents a single numeric property with constraints and m
 - **Modifier**: The cumulative modification applied to the BaseValue.
 - **Overflow**: Value that exceeds Min/Max constraints (useful for effects like shield overflow).
 - **ValidModifier**: The effective modifier value that isn't causing overflow (Modifier - Overflow).
+- **DecimalPlaces / DisplayScale / DisplayValue**: An optional presentation-only scale and the helpers that read it — see [Representing Fractional Values](#representing-fractional-values).
 
 ### Attribute Values Are Integers
 
@@ -34,7 +35,7 @@ var healthAttribute = entity.Attributes["CombatAttributeSet.CurrentHealth"];
 
 #### Representing Fractional Values
 
-When a stat conceptually needs decimals (movement speed of `4.75`, a critical chance of `27.5%`), store it **scaled** and divide only for display:
+When a stat conceptually needs decimals (movement speed of `4.75`, a critical chance of `27.5%`), store it **scaled** and tell the attribute how far the scale goes with `decimalPlaces`:
 
 ```csharp
 public class MovementAttributeSet : AttributeSet
@@ -44,15 +45,55 @@ public class MovementAttributeSet : AttributeSet
 
     public MovementAttributeSet()
     {
-        Speed = InitializeAttribute(nameof(Speed), 475, 0, 10_000);
+        Speed = InitializeAttribute(nameof(Speed), 475, 0, 10_000, decimalPlaces: 2);
     }
 }
 
-// Presentation code converts on the way out
-var displaySpeed = entity.Attributes["MovementAttributeSet.Speed"].CurrentValue / 100f; // 4.75
+// Presentation code reads the scale off the attribute instead of hard-coding the divisor
+EntityAttribute speed = entity.Attributes["MovementAttributeSet.Speed"];
+
+int raw = speed.CurrentValue;       // 475 — what the simulation works with
+float display = speed.DisplayValue; // 4.75f
+string label = speed.ToDisplayString(speed.CurrentValue, CultureInfo.CurrentCulture); // "4.75"
 ```
 
-Pick one scale per attribute, keep it consistent across every effect that touches it, and document it next to the attribute. Because all modifiers operate on the same raw integers, a `FlatBonus` of `+50` on the example above is a `+0.5` speed bonus — no conversion is needed anywhere inside the simulation, only at the presentation boundary.
+> **`decimalPlaces` is presentation only.** It does not make the attribute fractional. `BaseValue`, `CurrentValue`, `Min`, `Max`, `Modifier` and `Overflow` are still the same `int`s they were, modifiers are still authored and evaluated in raw units, comparisons and clamping still happen on raw integers, and nothing in the effect pipeline reads the setting. All it records is what the stored number is *meant to read as*, so UI, tooltips, cue handlers and logs stop each having to know the convention. Leave it at its default of `0` and everything behaves exactly as before.
+
+Because all modifiers operate on the same raw integers, a `FlatBonus` of `+50` on the example above is a `+0.5` speed bonus — no conversion is needed anywhere inside the simulation, only at the presentation boundary.
+
+##### Display Helpers
+
+| Member | Type | What it is |
+|--------|------|------------|
+| `DecimalPlaces` | `int` | How many decimals the stored integer stands for. `0` by default; at most `9`, since the scale has to fit in an `int`. |
+| `DisplayScale` | `int` | The divisor those places imply — `10^DecimalPlaces`, so `1` when unscaled. |
+| `DisplayValue` | `float` | `CurrentValue` in display units. |
+| `ToDisplayValue(int raw)` | `float` | Any raw value in display units — `Max`, `Modifier`, `Overflow`, or the `change` an `OnValueChanged` handler is handed. |
+| `ToDisplayString(int raw, IFormatProvider)` | `string` | The same, formatted with exactly `DecimalPlaces` decimals, so `400` reads as `"4.00"` rather than `"4"`. The culture is required rather than defaulted: pass `CultureInfo.CurrentCulture` for text a player reads and `CultureInfo.InvariantCulture` for anything that must look the same everywhere. |
+| `ToRawValue(float display)` | `int` | The inverse, for **authoring** surfaces — an editor field or tool where someone types `4.75` and the attribute has to store `475`. Rounds halves away from zero and converts units only; it does not clamp to `Min`/`Max`. |
+
+The same four conversions exist as statics on `Quantization` — in `Gamesmiths.Forge.Core`, since packing decimals into an integer is not attribute-specific — taking the decimal places as an argument, for the cases where there is no attribute instance to ask — a cue handler whose `target` came through null, editor tooling, a number read back out of save data:
+
+```csharp
+Quantization.GetScale(2);                                           // 100
+Quantization.ToDisplayValue(475, 2);                                // 4.75f
+Quantization.ToDisplayString(475, 2, CultureInfo.InvariantCulture); // "4.75"
+Quantization.ToRawValue(4.75f, 2);                                  // 475
+```
+
+**Prefer the `EntityAttribute` members whenever you hold the attribute.** The number passed to the statics is a copy of something the attribute already knows, and a copy goes stale: change `decimalPlaces` on the attribute and every hard-coded call site keeps converting by the old scale, quietly and wrongly. The statics are the escape hatch, not the default.
+
+[Cue](cues.md) magnitudes arrive raw as well — an `AttributeCurrentValue` or `AttributeValueChange` cue hands the handler the stored integer — so a handler that wants the scaled reading converts through the attribute it came from, which it can reach from the `target` it is given. Going through the attribute rather than `Quantization` is what keeps this handler correct if the attribute's scale is ever changed:
+
+```csharp
+public void OnExecute(IForgeEntity? target, CueParameters? parameters)
+{
+    EntityAttribute health = target!.Attributes["CombatAttributeSet.CurrentHealth"];
+    ShowFloatingNumber(health.ToDisplayString(parameters!.Value.Magnitude, CultureInfo.CurrentCulture));
+}
+```
+
+Ratios need no conversion at all, since the scale cancels out: a health bar can keep using `CurrentValue / (float)Max`.
 
 Percent-based modifiers are unaffected by the scale: `PercentBonus` multiplies whatever integer is stored, so `+20%` means the same thing whether `Speed` holds `475` or `4`. Prefer a larger scale for attributes that receive percentage modifiers, since truncation on a small integer loses proportionally more precision.
 
@@ -442,5 +483,5 @@ While detailed relationships with other systems are covered in their respective 
 6. **Consistent Naming**: Use clear, consistent naming conventions for attributes.
 7. **Respect Encapsulation**: Never attempt to directly modify attributes outside of AttributeSets or the Effects system.
 8. **Use ValidModifier for UI**: When showing modifier values in UI, consider whether to show the total modifier or the ValidModifier.
-9. **Pick a Scale and Document It**: Attributes are integers. For stats that need decimals, choose a fixed scale (x10, x100, ...), apply it consistently to every effect touching that attribute, and convert only when displaying.
+9. **Pick a Scale and Declare It**: Attributes are integers. For stats that need decimals, choose a fixed scale (x10, x100, ...), pass it as `decimalPlaces` so presentation code can read it off the attribute, apply it consistently to every effect touching that attribute, and convert only when displaying.
 10. **Unsubscribe from `OnValueChanged`**: Attributes live as long as the entity, so an observer that subscribes must detach when it goes away.

@@ -82,18 +82,23 @@ public abstract class AttributeSet
 	/// <param name="minValue">The minimum value for the initialized attribute.</param>
 	/// <param name="maxValue">The maximum value for the initialized attribute.</param>
 	/// <param name="channels">The number of channels for the initialized attribute.</param>
+	/// <param name="decimalPlaces">How many decimal places the attribute's stored integers stand for when they are
+	/// shown to a player. Presentation only: every value passed here and to every modifier stays a raw integer, so an
+	/// attribute holding <c>475</c> with two decimal places is still <c>475</c> to the simulation and <c>4.75</c> to
+	/// the player. See <see cref="EntityAttribute.DecimalPlaces"/>.</param>
 	/// <returns>A correctly initialized <see cref="EntityAttribute"/>.</returns>
 	protected EntityAttribute InitializeAttribute(
 		string attributeName,
 		int defaultValue,
 		int minValue = int.MinValue,
 		int maxValue = int.MaxValue,
-		int channels = 1)
+		int channels = 1,
+		int decimalPlaces = 0)
 	{
 		Validation.Assert(!string.IsNullOrEmpty(attributeName), "attributeName should never be null or empty.");
 
 		StringKey attributeKey = $"{GetType().Name}.{attributeName}";
-		var attribute = new EntityAttribute(attributeKey, defaultValue, minValue, maxValue, channels);
+		var attribute = new EntityAttribute(attributeKey, defaultValue, minValue, maxValue, channels, decimalPlaces);
 		AttributesMap.Add(attributeKey, attribute);
 		attribute.OnValueChanged += AttributeOnValueChanged;
 		return attribute;
