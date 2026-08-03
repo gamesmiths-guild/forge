@@ -258,6 +258,14 @@ public readonly record struct EffectData
 			$"Effects set as {DurationType.Instant} cannot be set as non Snapshot for Level.");
 
 		Validation.Assert(
+			!((DurationData.DurationType == DurationType.Instant || PeriodicData.HasValue)
+				&& Modifiers is not null
+				&& Array.Exists(Modifiers, x => x.AggregationMode != AggregationMode.Sum)),
+			$"Effects set as {DurationType.Instant} and periodic effects execute their modifiers against the " +
+			$"attribute's base value, so they can't use an {nameof(AggregationMode)} other than " +
+			$"{AggregationMode.Sum}.");
+
+		Validation.Assert(
 			EffectComponents is null ||
 			!Array.Exists(EffectComponents, x => x is ModifierTagsEffectComponent) ||
 			(Array.Exists(EffectComponents, x => x is ModifierTagsEffectComponent) &&
