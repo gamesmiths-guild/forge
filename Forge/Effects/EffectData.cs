@@ -384,17 +384,27 @@ public readonly record struct EffectData
 			EffectComponents is null ||
 			DurationData.DurationType != DurationType.Instant ||
 			!Array.Exists(EffectComponents, x => x is RaiseEventEffectComponent { RaisesOnRemoval: true }),
-			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.Removed)} never fires on an " +
+			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.ExpiredNormally)} and " +
+			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.RemovedPrematurely)} never fire on an " +
 			$"{DurationType.Instant} effect, since it never becomes active and so is never removed. Use " +
 			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.Applied)} instead.");
+
+		Validation.Assert(
+			EffectComponents is null ||
+			DurationData.DurationType != DurationType.Infinite ||
+			!Array.Exists(EffectComponents, x => x is RaiseEventEffectComponent { RaisesOnExpiration: true }),
+			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.ExpiredNormally)} never fires on an " +
+			$"{DurationType.Infinite} effect, since it has no duration to run out of and every removal of one is " +
+			$"reported as {nameof(EffectRemovalReason)}.{nameof(EffectRemovalReason.Removed)}. Use " +
+			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.RemovedPrematurely)} instead.");
 
 		Validation.Assert(
 			EffectComponents is null ||
 			!Array.Exists(EffectComponents, x => x is RaiseEventEffectComponent { RaisesOnStackRemoval: true }) ||
 			StackingData.HasValue,
 			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.StackRemoved)} never fires on an effect that " +
-			$"isn't stackable, since it has no stack to lose and survive. Define {nameof(StackingData)} or use " +
-			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.Removed)} instead.");
+			$"isn't stackable, since it has no stack to lose and survive. Define {nameof(StackingData)} or use the " +
+			"full-removal triggers instead.");
 
 		Validation.Assert(
 			EffectComponents is null ||
