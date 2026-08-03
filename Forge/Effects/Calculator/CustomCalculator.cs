@@ -76,9 +76,9 @@ public abstract class CustomCalculator
 			return 0;
 		}
 
-		Dictionary<int, float>? pendingFlatBonusByChannel = null;
-		Dictionary<int, float>? pendingPercentBonusByChannel = null;
-		Dictionary<int, float>? pendingOverrideByChannel = null;
+		Dictionary<int, PendingChannelModifiers>? pendingFlatBonusByChannel = null;
+		Dictionary<int, PendingChannelModifiers>? pendingPercentBonusByChannel = null;
+		Dictionary<int, AttributeOverride>? pendingOverrideByChannel = null;
 
 		foreach (ModifierEvaluatedData modifier in effectEvaluatedData.ModifiersEvaluatedData)
 		{
@@ -91,27 +91,23 @@ public abstract class CustomCalculator
 			{
 				case ModifierOperation.FlatBonus:
 					pendingFlatBonusByChannel ??= [];
-					if (!pendingFlatBonusByChannel.TryGetValue(modifier.Channel, out float flatValue))
-					{
-						flatValue = 0f;
-					}
-
-					pendingFlatBonusByChannel[modifier.Channel] = flatValue + modifier.Magnitude;
+					pendingFlatBonusByChannel.TryGetValue(modifier.Channel, out PendingChannelModifiers flatValue);
+					pendingFlatBonusByChannel[modifier.Channel] =
+						flatValue.Add(modifier.Magnitude, modifier.AggregationMode);
 					break;
 
 				case ModifierOperation.PercentBonus:
 					pendingPercentBonusByChannel ??= [];
-					if (!pendingPercentBonusByChannel.TryGetValue(modifier.Channel, out float percentValue))
-					{
-						percentValue = 0f;
-					}
-
-					pendingPercentBonusByChannel[modifier.Channel] = percentValue + modifier.Magnitude;
+					pendingPercentBonusByChannel.TryGetValue(
+						modifier.Channel,
+						out PendingChannelModifiers percentValue);
+					pendingPercentBonusByChannel[modifier.Channel] =
+						percentValue.Add(modifier.Magnitude, modifier.AggregationMode);
 					break;
 
 				case ModifierOperation.Override:
 					pendingOverrideByChannel ??= [];
-					pendingOverrideByChannel[modifier.Channel] = modifier.Magnitude;
+					pendingOverrideByChannel[modifier.Channel] = modifier.AttributeOverride!.Value;
 					break;
 			}
 		}
