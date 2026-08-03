@@ -79,6 +79,34 @@ public class LoopTimerNodeTests
 		processor.GraphContext.IsActive.Should().BeTrue();
 	}
 
+	[Fact]
+	[Trait("Graph", "LoopTimer")]
+	public void Loop_timer_stops_iterating_when_an_interval_handler_stops_the_graph()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("interval", 1.0);
+		graph.VariableDefinitions.DefineVariable("loops", 3);
+
+		LoopTimerNode loopTimer = CreateLoopTimer(graph, bindLoopCount: true);
+		(TrackingActionNode onInterval, TrackingActionNode onFinished) = ConnectTrackers(graph, loopTimer);
+
+		var exit = new ExitNode();
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			onInterval.OutputPorts[ActionNode.OutputPort],
+			exit.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		// Three intervals elapse at once, but the first one stops the graph: the remaining ones must not run.
+		processor.UpdateGraph(3.5);
+
+		onInterval.ExecutionCount.Should().Be(1);
+		onFinished.ExecutionCount.Should().Be(0);
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
 	private static LoopTimerNode CreateLoopTimer(Graph graph, bool bindLoopCount)
 	{
 		var loopTimer = new LoopTimerNode();
