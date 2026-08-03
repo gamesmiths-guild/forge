@@ -13,11 +13,14 @@ namespace Gamesmiths.Forge.Effects.Modifiers;
 /// <param name="Operation">The type of operation to be used.</param>
 /// <param name="Magnitude">The magnitude calculation and configurations to be used.</param>
 /// <param name="Channel">The channel to be affected by this modifier.</param>
+/// <param name="AggregationMode">How this modifier combines with the other modifiers affecting the same attribute,
+/// channel and operation.</param>
 public readonly record struct Modifier(
 	StringKey Attribute,
 	ModifierOperation Operation,
 	ModifierMagnitude Magnitude,
-	int Channel = 0)
+	int Channel = 0,
+	AggregationMode AggregationMode = AggregationMode.Sum)
 {
 	internal bool CanApply(Effect effect, IForgeEntity target, int level)
 	{
