@@ -20,7 +20,7 @@ Standard state ports, plus:
 | 5 | OnFinished | Event | Emits when the array runs out, just before self-deactivation. |
 | 6 | OnConditionFailed | Event | Emits instead of `OnFinished` when the condition cuts the loop short. |
 
-**Every way the loop can end has its own port, and exactly one of them fires:** `OnFinished` (the array ran out), `OnConditionFailed` (the guard stopped holding, possibly before the first element), or the standard `OnAbort` (the node was aborted from outside). `OnDeactivate` still fires for all three, so a graph that only cares that the loop is over routes that instead of wiring each ending.
+**Every way the loop can end has its own port, and exactly one of them fires:** `OnFinished` (the array ran out), `OnConditionFailed` (the guard stopped holding, possibly before the first element), or the standard `OnAbort` (the node was aborted from outside). `OnDeactivate` still fires for all three, so a graph that only cares that the loop is over can route that instead of wiring each ending.
 
 ## Parameters
 

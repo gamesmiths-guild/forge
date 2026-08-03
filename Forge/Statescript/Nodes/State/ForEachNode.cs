@@ -48,7 +48,7 @@ public class ForEachNode : IterationNode<ForEachNodeContext>
 		List<InputProperty> inputProperties,
 		List<OutputVariable> outputVariables)
 	{
-		inputProperties.Add(new InputProperty("Array", typeof(object[])));
+		inputProperties.Add(new InputProperty("Array", typeof(Array)));
 
 		outputVariables.Add(new OutputVariable("Element", typeof(object)));
 		outputVariables.Add(new OutputVariable("Index", typeof(int)));
@@ -115,6 +115,7 @@ public class ForEachNode : IterationNode<ForEachNodeContext>
 		nodeContext.Values = null;
 		nodeContext.ObjectValues = null;
 		nodeContext.ElementVariables = null;
+		nodeContext.ElementVariableName = StringKey.Empty;
 
 		StringKey sourceName = InputProperties[ArrayInput].BoundName;
 

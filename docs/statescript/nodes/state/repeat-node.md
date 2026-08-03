@@ -18,7 +18,7 @@ Standard state ports, plus:
 | 5 | OnFinished | Event | Emits when the count is reached, just before self-deactivation. |
 | 6 | OnConditionFailed | Event | Emits instead of `OnFinished` when the condition cuts the loop short. |
 
-**Every way the loop can end has its own port, and exactly one of them fires:** `OnFinished` (the count was reached), `OnConditionFailed` (the guard stopped holding, possibly before the first iteration), or the standard `OnAbort` (the node was aborted from outside). `OnDeactivate` still fires for all three, so a graph that only cares that the loop is over routes that instead of wiring each ending.
+**Every way the loop can end has its own port, and exactly one of them fires:** `OnFinished` (the count was reached), `OnConditionFailed` (the guard stopped holding, possibly before the first iteration), or the standard `OnAbort` (the node was aborted from outside). `OnDeactivate` still fires for all three, so a graph that only cares that the loop is over can route that instead of wiring each ending.
 
 ## Parameters
 
