@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Globalization;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Modifiers;
 
@@ -12,6 +13,26 @@ namespace Gamesmiths.Forge.Attributes;
 /// </summary>
 public sealed class EntityAttribute
 {
+	/// <summary>
+	/// The highest <see cref="DecimalPlaces"/> an attribute can declare, since 10^10 no longer fits in an
+	/// <see langword="int"/>.
+	/// </summary>
+	private const int MaxDecimalPlaces = 9;
+
+	private static readonly int[] _displayScales =
+	[
+		1,
+		10,
+		100,
+		1_000,
+		10_000,
+		100_000,
+		1_000_000,
+		10_000_000,
+		100_000_000,
+		1_000_000_000
+	];
+
 	private readonly ChannelData[] _channels;
 
 	private readonly LinkedList<AttributeOverride> _attributeOverrides = [];
@@ -76,6 +97,38 @@ public sealed class EntityAttribute
 	/// </summary>
 	public int ValidModifier => Modifier - Overflow;
 
+	/// <summary>
+	/// Gets how many decimal places this attribute's stored integers stand for when they are shown to a player. Zero,
+	/// the default, means the stored value is already the presented one.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// This is a <b>presentation-only</b> annotation: the simulation stores, modifies and compares raw integers no
+	/// matter what it is set to. Declaring two decimal places on a speed attribute holding <c>475</c> does not make the
+	/// attribute fractional — it records that <c>475</c> is meant to read as <c>4.75</c>, so UI, tooltips and logs stop
+	/// having to know the convention.
+	/// </para>
+	/// <para>
+	/// A modifier is written in the same raw units as the attribute, so a <c>FlatBonus</c> of <c>+50</c> on that speed
+	/// attribute is a bonus of <c>0.5</c>. Percentage modifiers are unaffected by the scale.
+	/// </para>
+	/// </remarks>
+	public int DecimalPlaces { get; }
+
+	/// <summary>
+	/// Gets the factor between a stored value and the value it presents as, which is 10 raised to
+	/// <see cref="DecimalPlaces"/>. It is 1 when the attribute declares no decimal places.
+	/// </summary>
+	public int DisplayScale { get; }
+
+	/// <summary>
+	/// Gets <see cref="CurrentValue"/> converted to display units.
+	/// </summary>
+	/// <remarks>
+	/// For presentation only. Never feed this back into the simulation: use <see cref="CurrentValue"/> there.
+	/// </remarks>
+	public float DisplayValue => ToDisplayValue(CurrentValue);
+
 	internal int PendingValueChange { get; private set; }
 
 	internal EntityAttribute(
@@ -83,7 +136,8 @@ public sealed class EntityAttribute
 		int defaultValue,
 		int minValue,
 		int maxValue,
-		int channels)
+		int channels,
+		int decimalPlaces)
 	{
 		Key = key;
 
@@ -96,12 +150,66 @@ public sealed class EntityAttribute
 		Overflow = 0;
 		CurrentValue = BaseValue;
 
+		DecimalPlaces = decimalPlaces;
+
+		// Clamped rather than indexed directly so that an out-of-range value is a validation failure instead of an
+		// exception thrown from the constructor of a disabled-validation build.
+		DisplayScale = _displayScales[Math.Clamp(decimalPlaces, 0, MaxDecimalPlaces)];
+
 		_channels = new ChannelData[channels];
 
 		if (Validation.Enabled)
 		{
 			ValidateData();
 		}
+	}
+
+	/// <summary>
+	/// Converts a raw attribute value into the value it presents as, according to <see cref="DecimalPlaces"/>.
+	/// </summary>
+	/// <remarks>
+	/// For presentation only — UI, tooltips, cue handlers and logs. Simulation values stay raw.
+	/// </remarks>
+	/// <param name="rawValue">The stored value to convert, such as <see cref="Max"/> or <see cref="Modifier"/>.</param>
+	/// <returns>The value in display units.</returns>
+	public float ToDisplayValue(int rawValue)
+	{
+		return (float)((double)rawValue / DisplayScale);
+	}
+
+	/// <summary>
+	/// Formats a raw attribute value the way it should be presented, with exactly <see cref="DecimalPlaces"/> decimals.
+	/// </summary>
+	/// <remarks>
+	/// The culture is a required argument rather than a defaulted one on purpose: a game that formats some numbers
+	/// with the player's locale and others invariantly should be made to say which it means at every call.
+	/// </remarks>
+	/// <param name="rawValue">The stored value to format.</param>
+	/// <param name="formatProvider">The culture to format with — <see cref="CultureInfo.CurrentCulture"/> for text the
+	/// player reads, <see cref="CultureInfo.InvariantCulture"/> for anything that has to look the same everywhere.
+	/// </param>
+	/// <returns>The value as text, in display units.</returns>
+	public string ToDisplayString(int rawValue, IFormatProvider formatProvider)
+	{
+		return ToDisplayValue(rawValue).ToString($"F{DecimalPlaces}", formatProvider);
+	}
+
+	/// <summary>
+	/// Converts a value expressed in display units back into the raw integer the simulation stores, rounding halves
+	/// away from zero.
+	/// </summary>
+	/// <remarks>
+	/// This is the inverse of <see cref="ToDisplayValue"/>, meant for authoring surfaces — an editor field or a
+	/// designer-facing tool that lets someone type <c>4.75</c> for an attribute that stores <c>475</c>. It converts
+	/// units and nothing else: the result is not clamped to <see cref="Min"/> and <see cref="Max"/>.
+	/// </remarks>
+	/// <param name="displayValue">The value in display units.</param>
+	/// <returns>The equivalent raw value.</returns>
+	public int ToRawValue(float displayValue)
+	{
+		double rawValue = Math.Round((double)displayValue * DisplayScale, MidpointRounding.AwayFromZero);
+
+		return (int)Math.Clamp(rawValue, int.MinValue, int.MaxValue);
 	}
 
 	internal void SetMinValue(int newMinValue)
@@ -402,5 +510,10 @@ public sealed class EntityAttribute
 		Validation.Assert(
 			_channels.Length > 0,
 			"There should be at least one channel.");
+
+		// The scale it stands for is a power of ten, which stops fitting in an int past nine places.
+		Validation.Assert(
+			DecimalPlaces >= 0 && DecimalPlaces <= MaxDecimalPlaces,
+			$"DecimalPlaces must be between 0 and {MaxDecimalPlaces}.");
 	}
 }
