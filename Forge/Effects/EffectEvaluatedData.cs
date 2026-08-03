@@ -215,7 +215,8 @@ public sealed class EffectEvaluatedData
 					Target.Attributes[modifier.Attribute],
 					modifier.Operation,
 					finalMagnitude,
-					modifier.Channel));
+					modifier.Channel,
+					modifier.AggregationMode));
 		}
 
 		ModifierCount = modifiersEvaluatedData.Count;

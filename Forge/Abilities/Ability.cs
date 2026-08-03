@@ -626,7 +626,8 @@ internal sealed class Ability
 					Owner.Attributes[modifier.Attribute],
 					modifier.Operation,
 					modifier.Magnitude.GetMagnitude(effect, Owner, Level, null),
-					modifier.Channel));
+					modifier.Channel,
+					modifier.AggregationMode));
 		}
 
 		foreach (CustomExecution execution in effect.EffectData.CustomExecutions)

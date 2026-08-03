@@ -34,6 +34,11 @@ public readonly record struct ModifierEvaluatedData
 	public int Channel { get; }
 
 	/// <summary>
+	/// Gets how this modifier combines with the other modifiers affecting the same attribute, channel and operation.
+	/// </summary>
+	public AggregationMode AggregationMode { get; }
+
+	/// <summary>
 	/// Gets the attribute override data if this modifier is an override.
 	/// </summary>
 	public AttributeOverride? AttributeOverride { get; }
@@ -45,20 +50,23 @@ public readonly record struct ModifierEvaluatedData
 	/// <param name="modifierOperation">The type of modifier operation.</param>
 	/// <param name="magnitude">The final evaluated magnitude.</param>
 	/// <param name="channel">The final channel for this modifier.</param>
+	/// <param name="aggregationMode">How this modifier combines with the other modifiers of its group.</param>
 	public ModifierEvaluatedData(
 		EntityAttribute attribute,
 		ModifierOperation modifierOperation,
 		float magnitude,
-		int channel = 0)
+		int channel = 0,
+		AggregationMode aggregationMode = AggregationMode.Sum)
 	{
 		Attribute = attribute;
 		ModifierOperation = modifierOperation;
 		Magnitude = magnitude;
 		Channel = channel;
+		AggregationMode = aggregationMode;
 
 		if (modifierOperation == ModifierOperation.Override)
 		{
-			AttributeOverride = new AttributeOverride((int)magnitude, channel);
+			AttributeOverride = new AttributeOverride((int)magnitude, channel, aggregationMode);
 		}
 	}
 }
