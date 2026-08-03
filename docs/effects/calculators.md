@@ -162,13 +162,15 @@ public readonly struct ModifierEvaluatedData
     public ModifierOperation ModifierOperation { get; }
     public float Magnitude { get; }
     public int Channel { get; }
+    public AggregationMode AggregationMode { get; }
     public AttributeOverride? AttributeOverride { get; }
 
     public ModifierEvaluatedData(
         EntityAttribute attribute,
         ModifierOperation modifierOperation,
         float magnitude,
-        int channel)
+        int channel = 0,
+        AggregationMode aggregationMode = AggregationMode.Sum)
     {
         // Implementation...
     }
@@ -181,6 +183,7 @@ This struct contains:
 - **ModifierOperation**: The operation type (`FlatBonus`, `PercentBonus`, or `Override`).
 - **Magnitude**: The calculated value to be applied.
 - **Channel**: The attribute channel to apply the modifier to.
+- **AggregationMode**: How the modifier combines with the other modifiers of its group.
 - **AttributeOverride**: Special override data (only used with `ModifierOperation.Override`).
 
 `ModifierEvaluatedData` is particularly important for `CustomExecution` implementers, as you'll be creating these objects directly to specify what attributes to modify and how.
