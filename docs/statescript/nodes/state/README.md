@@ -78,6 +78,8 @@ public class WaitForTagNode : StateNode<WaitForTagNodeContext>
 
 Use `DeactivateNode(graphContext)` for simple deactivation, or `DeactivateNodeAndEmitMessage(graphContext, portIds)` to emit custom event port messages before deactivation.
 
+**Emitting on the activation frame.** Messages emitted from `OnActivate` are *deferred* and flushed as a batch once activation completes, so `OnActivate` and Subgraph always fire first. That is fine for a fixed set of events, but it means any per-emission state you write alongside them already holds its final value by the time they fire. When you need emissions **interleaved** with state changes on the activation frame — a loop writing an iteration variable before each event — override `OnActivated` instead. It runs once activation is fully complete, and only if the node is still active. Anything you reach from there can deactivate the node or stop the graph, so a method that emits more than once must re-check `IsNodeActive(graphContext)` between emissions rather than trust a node context it captured earlier. The same caution applies to an `OnUpdate` that emits in a loop. `IterationNode<T>` (the base of [RepeatNode](repeat-node.md) and [ForEachNode](for-each-node.md)) is the worked example.
+
 If your state node defines additional event or subgraph ports, override `DefinePorts`, call `base.DefinePorts(...)`, and create each custom port with an explicit label:
 
 ```csharp
@@ -101,8 +103,10 @@ That label becomes the canonical port name surfaced by editor integrations such 
 | [EffectLevelListenerNode](effect-level-listener-node.md) | Listens for effect level changes and emits OnLevelChanged with the new level. |
 | [EffectNode](effect-node.md) | Applies effects on activation, emits OnEffectEnd on natural completion, and removes still-active instances on deactivation. |
 | [EventListenerNode](event-listener-node.md) | Listens for events while active and emits OnEvent each time a matching event fires. |
+| [ForEachNode](for-each-node.md) | Walks an array, publishing each element to a variable, on the activation frame or spaced by an interval. |
 | [GrantAbilityNode](grant-ability-node.md) | Grants an ability while active, removing the grant on deactivation. |
 | [LoopTimerNode](loop-timer-node.md) | Emits an interval event every period while active, optionally finishing after a number of loops. |
+| [RepeatNode](repeat-node.md) | Emits an iteration event a fixed number of times, on the activation frame or spaced by an interval. |
 | [StateMachineNode](state-machine-node.md) | Keeps exactly one state subgraph active, selected by an integer input. |
 | [TagListenerNode](tag-listener-node.md) | Listens for watched tags being added to or removed from an entity. |
 | [TimerNode](timer-node.md) | Remains active for a configured duration and emits OnTimerEnd when it finishes naturally. |
