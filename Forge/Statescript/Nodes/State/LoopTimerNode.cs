@@ -15,7 +15,8 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// <para>The loop-count input must resolve to an <see langword="int"/>. When unbound or non-positive, the timer loops
 /// until the node is deactivated externally.</para>
 /// <para>When more than one interval elapses in a single update, <see cref="OnIntervalPort"/> is emitted once per
-/// completed interval.</para>
+/// completed interval. If a handler aborts this node or stops the graph, the remaining intervals of that update are
+/// dropped.</para>
 /// <para>When the configured number of loops completes, the node emits a final <see cref="OnIntervalPort"/> followed
 /// by <see cref="OnFinishedPort"/> and deactivates itself.</para>
 /// </remarks>
@@ -103,6 +104,13 @@ public class LoopTimerNode : StateNode<LoopTimerNodeContext>
 			}
 
 			EmitMessage(graphContext, OnIntervalPort);
+
+			// An interval handler can abort this node or stop the graph entirely, which invalidates the node context
+			// this loop is accumulating into.
+			if (!IsNodeActive(graphContext))
+			{
+				return;
+			}
 		}
 	}
 }

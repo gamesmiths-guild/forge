@@ -45,3 +45,5 @@ loop.BindInput(LoopTimerNode.LoopCountInput, "ticks");
 
 - [State Nodes Overview](README.md)
 - [TimerNode](timer-node.md)
+- [RepeatNode](repeat-node.md) — a bounded loop that can also run entirely on the activation frame
+- [ForEachNode](for-each-node.md) — the same bounded loop, driven by an array

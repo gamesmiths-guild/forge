@@ -131,6 +131,40 @@ public abstract class StateNode<T> : Node
 	{
 	}
 
+	/// <summary>
+	/// Called once the node has finished activating, after <see cref="OnActivate"/>, after
+	/// <see cref="OnActivatePort"/> and <see cref="SubgraphPort"/> have been emitted, and after any messages deferred
+	/// during activation have been flushed. Not called when the node deactivated itself while activating.
+	/// </summary>
+	/// <remarks>
+	/// <para>Use this instead of <see cref="OnActivate"/> for work that must emit messages <b>interleaved</b> with
+	/// other state changes on the activation frame — a loop that writes an iteration variable before each emission,
+	/// for example. Messages emitted from <see cref="OnActivate"/> are deferred and flushed as a batch afterwards, so
+	/// any per-emission state written alongside them would already hold its final value by the time they fire.</para>
+	/// <para>The node is guaranteed to be active when this is called, but anything reached from here can deactivate it
+	/// or stop the graph. Implementations that emit more than once must re-check <see cref="IsNodeActive"/> between
+	/// emissions.</para>
+	/// </remarks>
+	/// <param name="graphContext">The graph's context.</param>
+	protected virtual void OnActivated(GraphContext graphContext)
+	{
+	}
+
+	/// <summary>
+	/// Checks whether this node is still active in the given context. Emitting a message can synchronously deactivate
+	/// this node (an <see cref="AbortPort"/> message) or tear the whole graph down (an <see cref="ExitNode"/>, which
+	/// discards every node context), so any node that emits repeatedly within a single call must re-check this between
+	/// emissions instead of trusting a node context it captured earlier.
+	/// </summary>
+	/// <param name="graphContext">The graph's context.</param>
+	/// <returns><see langword="true"/> if the node context still exists and the node is still active; otherwise,
+	/// <see langword="false"/>.</returns>
+	protected bool IsNodeActive(GraphContext graphContext)
+	{
+		return graphContext.HasNodeContext(NodeID)
+			&& graphContext.GetNodeContext<StateNodeContext>(NodeID).Active;
+	}
+
 	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 	{
@@ -158,6 +192,11 @@ public abstract class StateNode<T> : Node
 
 			HandleDeferredEmitMessages(graphContext, nodeContext);
 			HandleDeferredDeactivationMessages(graphContext, nodeContext);
+
+			if (IsNodeActive(graphContext))
+			{
+				OnActivated(graphContext);
+			}
 		}
 		else if (receiverPort.Index == AbortPort)
 		{
