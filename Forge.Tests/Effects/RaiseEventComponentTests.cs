@@ -72,20 +72,112 @@ public class RaiseEventComponentTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 
 	[Fact]
 	[Trait("Trigger", null)]
-	public void Removal_raises_when_the_effect_is_fully_removed()
+	public void Premature_removal_raises_when_the_effect_is_taken_away_early()
 	{
 		var target = new TestEntity(_tagsManager, _cuesManager);
 		Tag eventTag = EventTag();
 		List<EventData> received = Listen(target, eventTag);
 
 		ActiveEffectHandle handle = target.EffectsManager.ApplyEffect(
-			CreateEffect(target, target, eventTag, EffectEventTrigger.Removed))!;
+			CreateEffect(target, target, eventTag, EffectEventTrigger.RemovedPrematurely))!;
 
 		received.Should().BeEmpty();
 
 		target.EffectsManager.RemoveEffect(handle, true);
 
 		received.Should().ContainSingle();
+	}
+
+	[Fact]
+	[Trait("Trigger", null)]
+	public void Premature_removal_stays_quiet_when_the_effect_runs_its_course()
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		Tag eventTag = EventTag();
+		List<EventData> received = Listen(target, eventTag);
+
+		target.EffectsManager.ApplyEffect(
+			CreateEffect(target, target, eventTag, EffectEventTrigger.RemovedPrematurely));
+
+		target.EffectsManager.UpdateEffects(11);
+
+		received.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Trigger", null)]
+	public void Expiry_raises_when_the_effect_runs_out_of_duration()
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		Tag eventTag = EventTag();
+		List<EventData> received = Listen(target, eventTag);
+
+		target.EffectsManager.ApplyEffect(CreateEffect(target, target, eventTag, EffectEventTrigger.ExpiredNormally));
+
+		received.Should().BeEmpty();
+
+		target.EffectsManager.UpdateEffects(11);
+
+		received.Should().ContainSingle();
+	}
+
+	[Fact]
+	[Trait("Trigger", null)]
+	public void Expiry_stays_quiet_when_the_effect_is_taken_away_early()
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		Tag eventTag = EventTag();
+		List<EventData> received = Listen(target, eventTag);
+
+		// This is the whole point of the split: a dispel must not set off what only a natural ending should.
+		ActiveEffectHandle handle = target.EffectsManager.ApplyEffect(
+			CreateEffect(target, target, eventTag, EffectEventTrigger.ExpiredNormally))!;
+
+		target.EffectsManager.RemoveEffect(handle, true);
+
+		received.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Trigger", null)]
+	public void Removing_an_infinite_effect_reads_as_a_premature_removal()
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		Tag eventTag = EventTag();
+		List<EventData> received = Listen(target, eventTag);
+
+		// An infinite effect has no natural end to reach, so every ending it has is something taking it away.
+		ActiveEffectHandle handle = target.EffectsManager.ApplyEffect(CreateEffect(
+			target,
+			target,
+			eventTag,
+			EffectEventTrigger.RemovedPrematurely,
+			DurationType.Infinite))!;
+
+		target.EffectsManager.RemoveEffect(handle, true);
+
+		received.Should().ContainSingle();
+	}
+
+	[Fact]
+	[Trait("Trigger", null)]
+	public void The_two_removal_triggers_together_cover_every_ending()
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		Tag eventTag = EventTag();
+		List<EventData> received = Listen(target, eventTag);
+
+		const EffectEventTrigger bothEndings =
+			EffectEventTrigger.ExpiredNormally | EffectEventTrigger.RemovedPrematurely;
+
+		ActiveEffectHandle removedHandle = target.EffectsManager.ApplyEffect(
+			CreateEffect(target, target, eventTag, bothEndings))!;
+		target.EffectsManager.RemoveEffect(removedHandle, true);
+
+		target.EffectsManager.ApplyEffect(CreateEffect(target, target, eventTag, bothEndings));
+		target.EffectsManager.UpdateEffects(11);
+
+		received.Should().HaveCount(2);
 	}
 
 	[Fact]
@@ -115,7 +207,8 @@ public class RaiseEventComponentTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 		target.EffectsManager.RemoveEffect(handle, 1);
 		received.Should().HaveCount(2);
 
-		// The stack that takes the count to zero is a full removal, so it reports Removed rather than StackRemoved.
+		// The stack that takes the count to zero is a full removal, so it reports RemovedPrematurely rather than
+		// StackRemoved.
 		target.EffectsManager.RemoveEffect(handle, 1);
 		handle.IsValid.Should().BeFalse();
 		received.Should().HaveCount(2);
@@ -131,7 +224,7 @@ public class RaiseEventComponentTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 
 		EffectData effectData = CreateEffectData(
 			eventTag,
-			EffectEventTrigger.Removed | EffectEventTrigger.StackRemoved,
+			EffectEventTrigger.RemovedPrematurely | EffectEventTrigger.StackRemoved,
 			stackable: true);
 
 		ActiveEffectHandle handle = target.EffectsManager.ApplyEffect(
@@ -142,6 +235,37 @@ public class RaiseEventComponentTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 		target.EffectsManager.RemoveEffect(handle, 1);
 		target.EffectsManager.RemoveEffect(handle, true);
 
+		received.Should().HaveCount(2);
+	}
+
+	[Fact]
+	[Trait("Trigger", null)]
+	public void Stack_removal_covers_a_stack_that_lapsed_as_well_as_one_that_was_taken()
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		Tag eventTag = EventTag();
+		List<EventData> received = Listen(target, eventTag);
+
+		// Unlike a full removal, StackRemoved does not split by reason: it fires for the stack that was stripped and
+		// for the stack that simply ran out of time.
+		EffectData effectData = CreateEffectData(
+			eventTag,
+			EffectEventTrigger.StackRemoved,
+			stackable: true,
+			expirationPolicy: StackExpirationPolicy.RemoveSingleStackAndRefreshDuration);
+
+		ActiveEffectHandle handle = target.EffectsManager.ApplyEffect(
+			new Effect(effectData, new EffectOwnership(target, target)))!;
+		target.EffectsManager.ApplyEffect(new Effect(effectData, new EffectOwnership(target, target)));
+		target.EffectsManager.ApplyEffect(new Effect(effectData, new EffectOwnership(target, target)));
+
+		target.EffectsManager.RemoveEffect(handle, 1);
+
+		received.Should().ContainSingle();
+
+		target.EffectsManager.UpdateEffects(11);
+
+		handle.StackCount.Should().Be(1);
 		received.Should().HaveCount(2);
 	}
 
@@ -191,7 +315,7 @@ public class RaiseEventComponentTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 			target,
 			target,
 			eventTag,
-			EffectEventTrigger.Applied | EffectEventTrigger.Removed))!;
+			EffectEventTrigger.Applied | EffectEventTrigger.RemovedPrematurely))!;
 
 		target.EffectsManager.RemoveEffect(handle, true);
 
@@ -372,7 +496,8 @@ public class RaiseEventComponentTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 		bool periodic = false,
 		EffectApplicationTarget[]? raiseOn = null,
 		ModifierMagnitude? magnitude = null,
-		bool stackable = false)
+		bool stackable = false,
+		StackExpirationPolicy expirationPolicy = StackExpirationPolicy.ClearEntireStack)
 	{
 		ModifierMagnitude? duration = durationType == DurationType.HasDuration
 			? new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10))
@@ -391,12 +516,12 @@ public class RaiseEventComponentTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 		return new EffectData(
 			"Reporting Effect",
 			new DurationData(durationType, duration),
-			stackingData: stackable ? CreateStackingData() : null,
+			stackingData: stackable ? CreateStackingData(expirationPolicy) : null,
 			periodicData: periodicData,
 			effectComponents: [component]);
 	}
 
-	private static StackingData CreateStackingData()
+	private static StackingData CreateStackingData(StackExpirationPolicy expirationPolicy)
 	{
 		return new StackingData(
 			new ScalableInt(5),
@@ -405,7 +530,7 @@ public class RaiseEventComponentTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 			StackLevelPolicy.SegregateLevels,
 			StackMagnitudePolicy.DontStack,
 			StackOverflowPolicy.DenyApplication,
-			StackExpirationPolicy.ClearEntireStack,
+			expirationPolicy,
 			ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication);
 	}
 

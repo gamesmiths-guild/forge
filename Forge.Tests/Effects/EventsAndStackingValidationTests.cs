@@ -55,13 +55,46 @@ public sealed class EventsAndStackingValidationTests : IDisposable
 		act.Should().NotThrow();
 	}
 
-	[Fact]
+	[Theory]
 	[Trait("RaiseEvent", null)]
-	public void Raising_on_removal_from_an_instant_effect_is_rejected()
+	[InlineData(EffectEventTrigger.ExpiredNormally)]
+	[InlineData(EffectEventTrigger.RemovedPrematurely)]
+	[InlineData(EffectEventTrigger.ExpiredNormally | EffectEventTrigger.RemovedPrematurely)]
+	public void Raising_on_removal_from_an_instant_effect_is_rejected(EffectEventTrigger triggers)
 	{
-		Action act = () => _ = CreateData(DurationType.Instant, RaiseEvent(EffectEventTrigger.Removed));
+		Action act = () => _ = CreateData(DurationType.Instant, RaiseEvent(triggers));
 
 		act.Should().Throw<ValidationException>();
+	}
+
+	[Fact]
+	[Trait("RaiseEvent", null)]
+	public void Raising_on_expiry_from_an_infinite_effect_is_rejected()
+	{
+		// An infinite effect has no duration to run out of, so it never reaches a natural end to report.
+		Action act = () => _ = CreateData(DurationType.Infinite, RaiseEvent(EffectEventTrigger.ExpiredNormally));
+
+		act.Should().Throw<ValidationException>();
+	}
+
+	[Fact]
+	[Trait("RaiseEvent", null)]
+	public void Raising_on_premature_removal_from_an_infinite_effect_is_accepted()
+	{
+		Action act = () => _ = CreateData(DurationType.Infinite, RaiseEvent(EffectEventTrigger.RemovedPrematurely));
+
+		act.Should().NotThrow();
+	}
+
+	[Fact]
+	[Trait("RaiseEvent", null)]
+	public void Raising_on_both_endings_from_a_duration_effect_is_accepted()
+	{
+		Action act = () => _ = CreateData(
+			DurationType.HasDuration,
+			RaiseEvent(EffectEventTrigger.ExpiredNormally | EffectEventTrigger.RemovedPrematurely));
+
+		act.Should().NotThrow();
 	}
 
 	[Fact]
