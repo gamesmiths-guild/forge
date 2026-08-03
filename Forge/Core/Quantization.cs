@@ -56,13 +56,7 @@ public static class Quantization
 	/// <returns>The scale those places imply, which is 1 for no decimal places at all.</returns>
 	public static int GetScale(int decimalPlaces)
 	{
-		Validation.Assert(
-			decimalPlaces >= 0 && decimalPlaces <= MaxDecimalPlaces,
-			$"DecimalPlaces must be between 0 and {MaxDecimalPlaces}.");
-
-		// Clamped rather than indexed directly so an out-of-range value reads as a validation failure instead of an
-		// exception thrown out of a build with validation disabled.
-		return _scales[Math.Clamp(decimalPlaces, 0, MaxDecimalPlaces)];
+		return _scales[ClampDecimalPlaces(decimalPlaces)];
 	}
 
 	/// <summary>
@@ -85,7 +79,11 @@ public static class Quantization
 	/// <returns>The value as text, in display units.</returns>
 	public static string ToDisplayString(int rawValue, int decimalPlaces, IFormatProvider formatProvider)
 	{
-		return ToDisplayValue(rawValue, decimalPlaces).ToString($"F{decimalPlaces}", formatProvider);
+		// The clamped count has to reach the format string as well as the scale: "F-1" is not a format, so an
+		// out-of-range argument would throw here in a build where validation is off rather than degrade quietly.
+		int places = ClampDecimalPlaces(decimalPlaces);
+
+		return ToDisplayValue(rawValue, places).ToString($"F{places}", formatProvider);
 	}
 
 	/// <summary>
@@ -102,5 +100,25 @@ public static class Quantization
 			MidpointRounding.AwayFromZero);
 
 		return (int)Math.Clamp(rawValue, int.MinValue, int.MaxValue);
+	}
+
+	/// <summary>
+	/// Brings a decimal-place count into the supported range, reporting anything outside it as a validation failure
+	/// first.
+	/// </summary>
+	/// <remarks>
+	/// Out of range is a programming error, so validation is what should catch it. The clamp is what keeps a build
+	/// with validation disabled coherent rather than crashing or reading a scale off the end of the table, and it is
+	/// applied everywhere the count is used so that no two of its uses can disagree.
+	/// </remarks>
+	/// <param name="decimalPlaces">The count to bring into range.</param>
+	/// <returns>The count, clamped between 0 and <see cref="MaxDecimalPlaces"/>.</returns>
+	internal static int ClampDecimalPlaces(int decimalPlaces)
+	{
+		Validation.Assert(
+			decimalPlaces >= 0 && decimalPlaces <= MaxDecimalPlaces,
+			$"DecimalPlaces must be between 0 and {MaxDecimalPlaces}.");
+
+		return Math.Clamp(decimalPlaces, 0, MaxDecimalPlaces);
 	}
 }

@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Globalization;
 using FluentAssertions;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
@@ -54,6 +55,38 @@ public sealed class AttributeDecimalPlacesValidationTests : IDisposable
 		Action act = () => _ = Quantization.ToDisplayValue(1, decimalPlaces);
 
 		act.Should().Throw<ValidationException>();
+	}
+
+	[Theory]
+	[Trait("Decimal places", null)]
+	[InlineData(-1)]
+	[InlineData(10)]
+	public void An_out_of_range_scale_still_leaves_a_usable_attribute_when_validation_is_off(int decimalPlaces)
+	{
+		// Validation is what should catch this, but it is off by default in a shipped build, so the value has to be
+		// brought into range rather than left to contradict itself: DecimalPlaces feeds a "F{n}" format string, and
+		// "F-1" throws.
+		Validation.Enabled = false;
+
+		var set = new ConfigurableAttributeSet(decimalPlaces);
+
+		set.Scaled.DecimalPlaces.Should().BeInRange(0, Quantization.MaxDecimalPlaces);
+		set.Scaled.DisplayScale.Should().Be(Quantization.GetScale(set.Scaled.DecimalPlaces));
+
+		set.Scaled.Invoking(x => x.ToDisplayString(1, CultureInfo.InvariantCulture)).Should().NotThrow();
+	}
+
+	[Theory]
+	[Trait("Decimal places", null)]
+	[InlineData(-1)]
+	[InlineData(10)]
+	public void The_static_formatter_survives_an_out_of_range_scale_when_validation_is_off(int decimalPlaces)
+	{
+		Validation.Enabled = false;
+
+		Action act = () => _ = Quantization.ToDisplayString(1, decimalPlaces, CultureInfo.InvariantCulture);
+
+		act.Should().NotThrow();
 	}
 
 	private sealed class ConfigurableAttributeSet : AttributeSet

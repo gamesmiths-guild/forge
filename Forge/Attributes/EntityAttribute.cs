@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Globalization;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Modifiers;
 
@@ -130,8 +129,11 @@ public sealed class EntityAttribute
 		Overflow = 0;
 		CurrentValue = BaseValue;
 
-		DecimalPlaces = decimalPlaces;
-		DisplayScale = Quantization.GetScale(decimalPlaces);
+		// Stored clamped rather than as given, so the property can never contradict the range it documents — including
+		// in a build with validation disabled, where an out-of-range argument would otherwise leave DecimalPlaces and
+		// DisplayScale describing different scales.
+		DecimalPlaces = Quantization.ClampDecimalPlaces(decimalPlaces);
+		DisplayScale = Quantization.GetScale(DecimalPlaces);
 
 		_channels = new ChannelData[channels];
 
@@ -162,8 +164,10 @@ public sealed class EntityAttribute
 	/// with the player's locale and others invariantly should be made to say which it means at every call.
 	/// </remarks>
 	/// <param name="rawValue">The stored value to format.</param>
-	/// <param name="formatProvider">The culture to format with — <see cref="CultureInfo.CurrentCulture"/> for text the
-	/// player reads, <see cref="CultureInfo.InvariantCulture"/> for anything that has to look the same everywhere.
+	/// <param name="formatProvider">The culture to format with —
+	/// <see cref="System.Globalization.CultureInfo.CurrentCulture"/> for text the player reads,
+	/// <see cref="System.Globalization.CultureInfo.InvariantCulture"/> for anything that has to look the same
+	/// everywhere.
 	/// </param>
 	/// <returns>The value as text, in display units.</returns>
 	public string ToDisplayString(int rawValue, IFormatProvider formatProvider)
