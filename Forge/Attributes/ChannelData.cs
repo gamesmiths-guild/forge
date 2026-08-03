@@ -8,8 +8,8 @@ namespace Gamesmiths.Forge.Attributes;
 /// Channel configuration for Attributes.
 /// </summary>
 /// <remarks>
-/// <para>Attributes have channels for calculating its modifiers. Multiple channels can be used to calculate in
-/// sequence, granting it's possible to have various kinds of formulas combining flat and percentage modifiers.</para>
+/// <para>Attributes have channels for calculating their modifiers. Multiple channels can be used to calculate in
+/// sequence, making it possible to have various kinds of formulas combining flat and percentage modifiers.</para>
 /// <para>Within a channel, modifiers are grouped by operation and <see cref="AggregationMode"/>. Each group
 /// contributes a single value, and those contributions are added together.</para>
 /// </remarks>

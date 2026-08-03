@@ -128,9 +128,9 @@ Channels provide powerful, layered attribute calculation with clearly defined or
 ### How Channels Work
 
 1. Each channel processes modifiers in this order:
-   - If an override is active on the channel, it **replaces** the incoming value and the channel's flat and percentage modifiers are skipped. There is no priority between overrides — the most recently applied one wins. See [Modifier Operations](effects/modifiers.md#operation-types).
+   - If an override is active on the channel, it **replaces** the incoming value and the channel's flat and percentage modifiers are skipped. Overrides default to last-applied-wins, but can opt into `AggregationMode.Max`/`Min` arbitration (see [Aggregating Overrides](effects/modifiers.md#aggregating-overrides)). 
    - Otherwise, apply flat modifiers (addition/subtraction), then percentage modifiers (multiplication).
-   - Modifiers of the same operation are combined according to their [aggregation mode](effects/modifiers.md#modifier-aggregation): summed by default, or reduced to the strongest one of the group.
+   - Modifiers of the same operation are combined according to their [aggregation mode](effects/modifiers.md#modifier-aggregation): summed by default, or reduced to the max/min value of their group.
 
 2. Channels are processed in sequence, where the output of one channel becomes the input of the next:
 

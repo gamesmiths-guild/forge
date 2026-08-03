@@ -93,7 +93,7 @@ public abstract class CustomCalculator
 					pendingFlatBonusByChannel ??= [];
 					pendingFlatBonusByChannel.TryGetValue(modifier.Channel, out PendingChannelModifiers flatValue);
 					pendingFlatBonusByChannel[modifier.Channel] =
-						flatValue.Add(modifier.Magnitude, modifier.AggregationMode);
+						flatValue.Add((int)modifier.Magnitude, modifier.AggregationMode);
 					break;
 
 				case ModifierOperation.PercentBonus:
@@ -102,7 +102,7 @@ public abstract class CustomCalculator
 						modifier.Channel,
 						out PendingChannelModifiers percentValue);
 					pendingPercentBonusByChannel[modifier.Channel] =
-						percentValue.Add(modifier.Magnitude, modifier.AggregationMode);
+						percentValue.Add(Math.Round(modifier.Magnitude, 6), modifier.AggregationMode);
 					break;
 
 				case ModifierOperation.Override:
