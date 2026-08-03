@@ -370,6 +370,70 @@ internal sealed class ReadVariableNode<T>(string variableName) : ActionNode
 	}
 }
 
+internal sealed class RecordVariableNode<T>(string variableName) : ActionNode
+	where T : unmanaged
+{
+	private readonly string _variableName = variableName;
+
+	public List<T> ReadValues { get; } = [];
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		graphContext.GraphVariables.TryGetVar(_variableName, out T value);
+		ReadValues.Add(value);
+	}
+}
+
+internal sealed class RecordObjectVariableNode<T>(string variableName) : ActionNode
+{
+	private readonly string _variableName = variableName;
+
+	public List<T?> ReadValues { get; } = [];
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		graphContext.GraphVariables.TryGetObject(_variableName, out T? value);
+		ReadValues.Add(value);
+	}
+}
+
+internal sealed class SetBoolVariableNode(string variableName, bool value) : ActionNode
+{
+	private readonly string _variableName = variableName;
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		graphContext.GraphVariables.SetVar(_variableName, value);
+	}
+}
+
+internal sealed class SetIntVariableNode(string variableName, int value) : ActionNode
+{
+	private readonly string _variableName = variableName;
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		graphContext.GraphVariables.SetVar(_variableName, value);
+	}
+}
+
+internal sealed class ReplaceIntArrayVariableNode(string variableName, params int[] values) : ActionNode
+{
+	private readonly string _variableName = variableName;
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		var variants = new Variant128[values.Length];
+
+		for (int i = 0; i < values.Length; i++)
+		{
+			variants[i] = new Variant128(values[i]);
+		}
+
+		graphContext.GraphVariables.DefineArrayVariable(_variableName, variants);
+	}
+}
+
 internal sealed class ReadPropertyNode<T> : ActionNode
 	where T : unmanaged
 {
