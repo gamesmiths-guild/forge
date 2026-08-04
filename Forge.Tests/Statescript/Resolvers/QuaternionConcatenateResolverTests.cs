@@ -7,7 +7,7 @@ using Gamesmiths.Forge.Statescript.Properties;
 
 namespace Gamesmiths.Forge.Tests.Statescript.Resolvers;
 
-public class ConcatenateResolverTests
+public class QuaternionConcatenateResolverTests
 {
 	[Fact]
 	[Trait("Resolver", "Concatenate")]
