@@ -10,7 +10,7 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// </summary>
 /// <param name="left">The resolver for the left quaternion operand.</param>
 /// <param name="right">The resolver for the right quaternion operand.</param>
-public class ConcatenateResolver(IPropertyResolver left, IPropertyResolver right) : IPropertyResolver
+public class QuaternionConcatenateResolver(IPropertyResolver left, IPropertyResolver right) : IPropertyResolver
 {
 	private readonly IPropertyResolver _left = left;
 
@@ -32,7 +32,7 @@ public class ConcatenateResolver(IPropertyResolver left, IPropertyResolver right
 		if (leftType != typeof(Quaternion) || rightType != typeof(Quaternion))
 		{
 			throw new ArgumentException(
-				$"ConcatenateResolver only supports Quaternion operands. Got '{leftType}' and '{rightType}'.");
+				$"QuaternionConcatenateResolver only supports Quaternion operands. Got '{leftType}' and '{rightType}'.");
 		}
 
 		return typeof(Quaternion);

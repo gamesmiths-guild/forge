@@ -1,14 +1,16 @@
-# ConcatenateResolver
+# QuaternionConcatenateResolver
 
-> **Type:** `Gamesmiths.Forge.Statescript.Properties.ConcatenateResolver`
+> **Type:** `Gamesmiths.Forge.Statescript.Properties.QuaternionConcatenateResolver`
 > **Output Type:** `Quaternion`
 
-Concatenates two quaternions using `Quaternion.Concatenate`.
+Concatenates two quaternions using `Quaternion.Concatenate`: the result is the left rotation followed by the right one.
+
+> Not to be confused with [`ConcatResolver`](concat-resolver.md), which joins two **arrays**. The `Quaternion` prefix is what tells the two apart.
 
 ## Constructor
 
 ```csharp
-new ConcatenateResolver(left, right)
+new QuaternionConcatenateResolver(left, right)
 ```
 
 | Parameter | Type | Description |
@@ -32,7 +34,7 @@ new ConcatenateResolver(left, right)
 
 ```csharp
 graph.VariableDefinitions.DefineProperty("combinedRotation",
-    new ConcatenateResolver(
+    new QuaternionConcatenateResolver(
         new VariableResolver("baseRotation", typeof(Quaternion)),
         new VariableResolver("offsetRotation", typeof(Quaternion))));
 ```
@@ -44,7 +46,7 @@ graph.VariableDefinitions.DefineProperty("combinedRotation",
 graph.VariableDefinitions.DefineProperty("rotatedDirection",
     new TransformResolver(
         new VariableResolver("direction", typeof(Vector3)),
-        new ConcatenateResolver(
+        new QuaternionConcatenateResolver(
             new VariableResolver("baseRotation", typeof(Quaternion)),
             new VariableResolver("offsetRotation", typeof(Quaternion)))));
 ```
@@ -54,3 +56,4 @@ graph.VariableDefinitions.DefineProperty("rotatedDirection",
 - [Resolvers Overview](README.md)
 - [InverseResolver](inverse-resolver.md)
 - [TransformResolver](transform-resolver.md)
+- [ConcatResolver](concat-resolver.md) — the array operation with the similar name
