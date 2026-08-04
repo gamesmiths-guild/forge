@@ -12,7 +12,21 @@ public class EntityTags
 {
 	private readonly Dictionary<Tag, int> _modifierTagCounts = [];
 
-	internal event Action<TagContainer>? OnTagsChanged;
+	/// <summary>
+	/// Event raised whenever <see cref="AllTags"/> changes, carrying that same container.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// Raised after the change has landed, so the container already reflects it. A change that adds a tag the entity
+	/// already had — a second effect granting the same modifier tag — raises nothing, since <see cref="AllTags"/> did
+	/// not change.
+	/// </para>
+	/// <para>
+	/// The argument is the live <see cref="AllTags"/> container, not a copy: it keeps changing after the handler
+	/// returns, so read what you need inside the handler rather than storing the container.
+	/// </para>
+	/// </remarks>
+	public event Action<TagContainer>? OnTagsChanged;
 
 	/// <summary>
 	/// Gets a container with the base tags for this entity.
