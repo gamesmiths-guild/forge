@@ -44,10 +44,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// raises it again on each successful application.
 	/// </para>
 	/// <para>
-	/// Application is the registration phase, so the effect's attribute changes have not necessarily landed yet: an
-	/// instant effect has yet to execute, and a duration effect has yet to apply its modifiers. Read values from
-	/// <see cref="OnEffectExecuted"/>, <see cref="OnActiveEffectAdded"/> or
-	/// <see cref="Attributes.EntityAttribute.OnValueChanged"/> instead.
+	/// For newly applied effects, this is the registration phase, so the effect's attribute changes have not
+	/// necessarily landed yet: an instant effect has yet to execute, and a duration effect has yet to apply its
+	/// modifiers. For stack applications, the existing active effect may already have re-evaluated and applied its
+	/// modifiers by the time this event fires. Use <see cref="OnEffectExecuted"/>, <see cref="OnActiveEffectAdded"/>,
+	/// <see cref="OnActiveEffectChanged"/> or <see cref="Attributes.EntityAttribute.OnValueChanged"/> when you need a
+	/// settled post-change view.
 	/// </para>
 	/// <para>
 	/// For the buff-bar lifecycle — one event per active effect appearing and disappearing — use
