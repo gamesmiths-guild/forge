@@ -69,6 +69,8 @@ An "overflow" occurs when an effect has reached its maximum stack count (defined
 - With `AllowApplication`, the new application is processed (refreshing duration, triggering events, etc.) but the stack count remains at the limit.
 - With `DenyApplication`, the new application is completely rejected as if it never happened.
 
+A denied application is invisible to its caller: `ApplyEffect` still returns the handle of the effect already in place. Subscribe to [`EffectsManager.OnEffectStackDenied`](README.md#observing-effects) to see them — it reports every stacking-driven refusal, including `LevelDenialPolicy` and `StackOwnerDenialPolicy` denials.
+
 ## Key Stacking Policies
 
 ### Stack Aggregation

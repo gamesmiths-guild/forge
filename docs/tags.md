@@ -271,6 +271,21 @@ bool isStunned = entity.Tags.AllTags.HasTag(Tag.RequestTag(tagsManager, "status.
 
 **Note:** While the `EntityTags` class provides methods for adding and removing tags, these are internal. Tags should be modified through proper channels: base tags during entity initialization and modifier tags through the [Effects system](effects/README.md).
 
+#### Reacting to Tag Changes
+
+`OnTagsChanged` fires whenever `AllTags` changes, carrying that same container:
+
+```csharp
+entity.Tags.OnTagsChanged += allTags =>
+    _stunOverlay.Visible = allTags.HasTag(Tag.RequestTag(tagsManager, "status.stunned"));
+```
+
+- Raised **after** the change has landed, so the container already reflects it.
+- Modifier tags are reference-counted, so a second effect granting a tag the entity already has raises nothing — `AllTags` did not change. The notification is about the tag set, not about the effects behind it.
+- The argument is the live `AllTags` container, not a copy. It keeps changing after the handler returns, so read what you need inside the handler rather than storing it.
+
+Inside a Statescript graph, use [`TagListenerNode`](statescript/nodes/state/tag-listener-node.md) instead; inside an effect, use [`TargetTagRequirementsEffectComponent`](effects/components/target-tag-requirements-effect-component.md). `OnTagsChanged` is for the code that owns neither — UI, audio, analytics.
+
 ## Tag Queries
 
 TagQueries provide powerful logical operations for matching tag containers against complex conditions. They allow you to create sophisticated, reusable rules using nested logical expressions.

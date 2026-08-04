@@ -250,6 +250,76 @@ graph.VariableDefinitions.DefineObjectArrayProperty("participants",
         new AbilitySourceResolver()));
 ```
 
+## Implementing Object-Lane Resolvers
+
+`IPropertyResolver` and `IArrayPropertyResolver` cover the **value lane**: numbers, booleans, vectors and quaternions, all packed into `Variant128`. References — entities, effects, handles — travel the **object lane** instead, through a parallel pair of interfaces. Anything that returns a reference type belongs here; a spatial query returning `IForgeEntity[]` is the canonical case.
+
+```csharp
+// Each generic interface adds a strongly-typed Resolve to a non-generic base that carries the Type.
+public interface IObjectResolver
+{
+    Type ValueType { get; }
+    object? Resolve(GraphContext graphContext);
+}
+
+public interface IObjectResolver<out T> : IObjectResolver
+{
+    new T Resolve(GraphContext graphContext);
+}
+
+public interface IObjectArrayResolver
+{
+    Type ElementType { get; }
+    object?[] ResolveArray(GraphContext graphContext);
+}
+
+public interface IObjectArrayResolver<out T> : IObjectArrayResolver
+{
+    new T[] ResolveArray(GraphContext graphContext);
+}
+```
+
+Derive from the abstract bases rather than implementing the interfaces directly — `ObjectResolver<T>` and `ObjectArrayResolver<T>` supply `ValueType` / `ElementType` and the non-generic bridging for you:
+
+```csharp
+// A spatial query is engine-side, so this is exactly the kind of resolver a game supplies.
+public class EnemiesInRangeResolver : ObjectArrayResolver<IForgeEntity>
+{
+    private readonly float _range;
+
+    public EnemiesInRangeResolver(float range)
+    {
+        _range = range;
+    }
+
+    public override IForgeEntity[] ResolveArray(GraphContext graphContext)
+    {
+        if (!graphContext.TryGetActivationContext<AbilityBehaviorContext>(out var context))
+        {
+            return [];
+        }
+
+        return YourSpatialSystem.QueryEnemies(context.Owner, _range);
+    }
+}
+```
+
+Bind them with the object-lane counterparts of the `Define*` methods:
+
+```csharp
+graph.VariableDefinitions.DefineObjectProperty("nearestEnemy",
+    new ObjectFirstResolver<IForgeEntity>(new EnemiesInRangeResolver(10f)));
+
+graph.VariableDefinitions.DefineObjectArrayProperty("enemiesInRange",
+    new EnemiesInRangeResolver(10f));
+```
+
+Three things follow from being on the object lane:
+
+- **It composes with the built-in object-lane [array operations](resolvers/README.md#array-operations)** — `ObjectWhereResolver<T>`, `ObjectOrderByResolver<T>`, `ObjectExceptResolver<T>` and the rest — so filtering and sorting a custom entity query needs no further code.
+- **Returning `IForgeEntity` is worth one more step.** Implement [`IEntityResolver`](resolvers/README.md#entity-resolvers) as well (or derive from a built-in that already does) so the result plugs straight into `AttributeResolver`, `TagQueryResolver` and the other entity-aware resolvers.
+- **Arrays never return `null`.** Return an empty array when there is nothing to produce; single-value object resolvers may return `null`, which the graph reads as an absent value.
+
 ## Composing Resolvers
 
 Custom resolvers compose with built-in resolvers. The most common pattern is using a custom resolver as an operand in a `ComparisonResolver` to create data-driven conditions:

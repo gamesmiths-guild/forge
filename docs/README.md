@@ -151,4 +151,4 @@ For more detailed information about specific systems, refer to these documentati
 
 To start using Forge in your project, see the [Quick Start Guide](quick-start.md) for basic setup and examples of common gameplay mechanics.
 
-For integrating Forge into your workflow, check the installation instructions and API reference in the main [README](../README.md) file.
+For installation options and an architecture overview, see the main [README](../README.md).
