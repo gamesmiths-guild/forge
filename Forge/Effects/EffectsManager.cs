@@ -35,6 +35,79 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	private int _applicationDepth;
 
 	/// <summary>
+	/// Event triggered whenever an effect lands on the owner, carrying its evaluated data.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// The manager-wide counterpart of <see cref="IEffectComponent.OnEffectApplied"/>, with the same meaning of
+	/// "applied": every effect raises it, including instant ones that never become active, and a stackable effect
+	/// raises it again on each successful application.
+	/// </para>
+	/// <para>
+	/// For newly applied effects, this is the registration phase, so the effect's attribute changes have not
+	/// necessarily landed yet: an instant effect has yet to execute, and a duration effect has yet to apply its
+	/// modifiers. For stack applications, the existing active effect may already have re-evaluated and applied its
+	/// modifiers by the time this event fires. Use <see cref="OnEffectExecuted"/>, <see cref="OnActiveEffectAdded"/>,
+	/// <see cref="OnActiveEffectChanged"/> or <see cref="Attributes.EntityAttribute.OnValueChanged"/> when you need a
+	/// settled post-change view.
+	/// </para>
+	/// <para>
+	/// For the buff-bar lifecycle — one event per active effect appearing and disappearing — use
+	/// <see cref="OnActiveEffectAdded"/> and <see cref="OnActiveEffectRemoved"/> instead.
+	/// </para>
+	/// </remarks>
+	public event Action<EffectEvaluatedData>? OnEffectApplied;
+
+	/// <summary>
+	/// Event triggered whenever an effect executes on the owner, carrying its evaluated data.
+	/// </summary>
+	/// <remarks>
+	/// The manager-wide counterpart of <see cref="IEffectComponent.OnEffectExecuted"/>: only instant and periodic
+	/// effects execute, and a periodic effect raises it on every tick. The execution has already changed the base
+	/// values by this point, so handlers read post-execution attributes.
+	/// </remarks>
+	public event Action<EffectEvaluatedData>? OnEffectExecuted;
+
+	/// <summary>
+	/// Event triggered when an effect becomes active on the owner, carrying its handle.
+	/// </summary>
+	/// <remarks>
+	/// Raised once per <see cref="ActiveEffect"/>, after every component has finished processing the application, so
+	/// the handle already reports its settled stack count, level and inhibition state. Instant effects never become
+	/// active and never raise it; a new stack on an already-active effect raises
+	/// <see cref="OnActiveEffectChanged"/> rather than this.
+	/// </remarks>
+	public event Action<ActiveEffectHandle>? OnActiveEffectAdded;
+
+	/// <summary>
+	/// Event triggered when an active effect on the owner changes, carrying its handle.
+	/// </summary>
+	/// <remarks>
+	/// The manager-wide counterpart of <see cref="IEffectComponent.OnActiveEffectChanged"/>: stack count, level,
+	/// re-evaluated magnitudes and inhibition all report through it. An application that changes nothing — a stack
+	/// arriving at an effect already at its limit under
+	/// <see cref="StackOverflowPolicy.DenyApplication"/> — does not raise it.
+	/// </remarks>
+	public event Action<ActiveEffectHandle>? OnActiveEffectChanged;
+
+	/// <summary>
+	/// Event triggered when an active effect is removed from the owner, carrying its handle and why it ended.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// Raised once per <see cref="ActiveEffect"/>, after every component has processed the removal but before the
+	/// handle is invalidated, so the handle can still be read inside the handler and reports
+	/// <see cref="ActiveEffectHandle.IsValid"/> as <see langword="false"/> afterwards. Losing a single stack of an
+	/// effect that survives raises <see cref="OnActiveEffectChanged"/> instead.
+	/// </para>
+	/// <para>
+	/// The owner's attributes still carry the effect's modifiers at this point; they are released immediately after,
+	/// and <see cref="Attributes.EntityAttribute.OnValueChanged"/> is the seam for observing that.
+	/// </para>
+	/// </remarks>
+	public event Action<ActiveEffectHandle, EffectRemovalReason>? OnActiveEffectRemoved;
+
+	/// <summary>
 	/// Event triggered when a registered <see cref="IEffectApplicationBlocker"/> denies an effect application. Carries
 	/// the effect that was blocked and the blocker that denied it.
 	/// </summary>
@@ -43,6 +116,20 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// raise this event.
 	/// </remarks>
 	public event Action<Effect, IEffectApplicationBlocker>? OnEffectApplicationBlocked;
+
+	/// <summary>
+	/// Event triggered when an effect reaches an active effect it would stack onto and its <see cref="StackingData"/>
+	/// refuses the application. Carries the effect that was refused and the handle of the active effect that refused
+	/// it.
+	/// </summary>
+	/// <remarks>
+	/// The stacking counterpart of <see cref="OnEffectApplicationBlocked"/>, covering every stacking-driven denial:
+	/// <see cref="StackOverflowPolicy.DenyApplication"/> at the stack limit,
+	/// <see cref="StackingData.LevelDenialPolicy"/>, and <see cref="StackOwnerDenialPolicy.DenyIfDifferent"/>. These
+	/// applications are otherwise invisible, since <see cref="ApplyEffect(Effect)"/> still returns the handle of the
+	/// effect already in place.
+	/// </remarks>
+	public event Action<Effect, ActiveEffectHandle>? OnEffectStackDenied;
 
 	/// <summary>
 	/// Gets the owner of this effects manager.
@@ -294,6 +381,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			component.OnEffectExecuted(Owner, in executedEffectEvaluatedData);
 		}
 
+		OnEffectExecuted?.Invoke(executedEffectEvaluatedData);
+
 		_cuesManager.ExecuteCues(in executedEffectEvaluatedData);
 	}
 
@@ -327,6 +416,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 					removedEffect.NextPeriodicTick,
 					removedEffect.ExecutionCount));
 		}
+
+		OnActiveEffectChanged?.Invoke(removedEffect.Handle);
 	}
 
 	internal void TriggerCuesUpdate_InternalCall(in EffectEvaluatedData effectEvaluatedData)
@@ -443,6 +534,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 				component.OnEffectApplied(Owner, in evaluatedData);
 			}
 
+			OnEffectApplied?.Invoke(evaluatedData);
+
 			Effect.Execute(in evaluatedData, componentInstances);
 			return null;
 		}
@@ -464,6 +557,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 				{
 					component.OnEffectApplied(Owner, stackableEffect.EffectEvaluatedData);
 				}
+
+				OnEffectApplied?.Invoke(stackableEffect.EffectEvaluatedData);
+			}
+			else
+			{
+				OnEffectStackDenied?.Invoke(effect, stackableEffect.Handle);
 			}
 
 			return stackableEffect.Handle;
@@ -543,6 +642,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			component.OnEffectApplied(Owner, activeEffect.EffectEvaluatedData);
 		}
 
+		OnEffectApplied?.Invoke(activeEffect.EffectEvaluatedData);
+
 		EffectEvaluatedData effectEvaluatedData = activeEffect.EffectEvaluatedData;
 
 		bool triggerApplyCuesEarly = effect.EffectData.PeriodicData.HasValue
@@ -573,6 +674,14 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 					activeEffect.RemainingDuration,
 					activeEffect.NextPeriodicTick,
 					activeEffect.ExecutionCount));
+		}
+
+		// A component reacting to the application can take the effect straight back off — an effect it applies from
+		// OnActiveEffectAdded removing this one. Announcing an addition that already ended would leave every listener
+		// holding an entry nothing ever removes, so the already-raised removal is left as the last word.
+		if (activeEffect.Handle.IsValid)
+		{
+			OnActiveEffectAdded?.Invoke(activeEffect.Handle);
 		}
 
 		return activeEffect;
@@ -653,6 +762,10 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 				true,
 				reason);
 		}
+
+		// Raised before the handle is freed so that handlers can still read what ended, and not before the component
+		// callbacks so that the effect's own components — the ones that can still change the outcome — go first.
+		OnActiveEffectRemoved?.Invoke(effectToRemove.Handle, reason);
 
 		effectToRemove.Handle.Free();
 

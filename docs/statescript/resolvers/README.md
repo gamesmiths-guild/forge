@@ -276,7 +276,7 @@ Operations that take a nested predicate, key selector, or projection evaluate it
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
-| [ConcatenateResolver](concatenate-resolver.md) | `Quaternion` | Concatenates two quaternion rotations. |
+| [QuaternionConcatenateResolver](quaternion-concatenate-resolver.md) | `Quaternion` | Concatenates two quaternion rotations. |
 | [ConjugateResolver](conjugate-resolver.md) | `Quaternion` | Computes the conjugate of a quaternion. |
 | [InverseResolver](inverse-resolver.md) | `Quaternion` | Computes the inverse of a quaternion. |
 | [LookAtResolver](lookat-resolver.md) | `Quaternion` | Creates a look rotation from one position to another using an up vector. |

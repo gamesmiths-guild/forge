@@ -6,10 +6,9 @@
 
 An Unreal GAS-like gameplay framework for developing games in C#.
 
-Forge is an engine-agnostic gameplay framework designed for building robust game systems in C#. Inspired by Unreal Engine's Gameplay Ability System (GAS), Forge provides a centralized and controlled approach to managing attributes, effects, tags, abilities, events, and cues in your games.
-Forge is an engine-agnostic, data-driven system inspired by Unreal Engine’s Gameplay Ability System (GAS), designed to manage attributes, effects, abilities, tags, events, and cues in a structured way.
+Forge is an engine-agnostic, data-driven gameplay framework for building robust game systems in C#. Inspired by Unreal Engine's Gameplay Ability System (GAS), it provides a centralized and controlled approach to managing attributes, effects, tags, abilities, events, and cues in your games.
 
-The framework eliminates the need to rebuild status systems for every game project by offering a flexible, data-driven architecture that works seamlessly with Unity, Godot, and other C#-compatible engines. With Forge, all attribute changes are handled through effects, ensuring organized and maintainable code even in complex gameplay scenarios.
+The framework eliminates the need to rebuild status systems for every game project by offering a flexible architecture that works seamlessly with Unity, Godot, and other C#-compatible engines. With Forge, all attribute changes are handled through effects, ensuring organized and maintainable code even in complex gameplay scenarios.
 
 **Keywords:** gameplay framework, C#, engine-agnostic, data-driven, attributes, gameplay effects, abilities, gameplay tags
 

@@ -40,7 +40,7 @@ graph.VariableDefinitions.DefineProperty("conjugateRotation",
 ```csharp
 // Compare a quaternion with its conjugate
 graph.VariableDefinitions.DefineProperty("rotationDifference",
-    new ConcatenateResolver(
+    new QuaternionConcatenateResolver(
         new VariableResolver("rotation", typeof(Quaternion)),
         new ConjugateResolver(
             new VariableResolver("rotation", typeof(Quaternion)))));
@@ -50,4 +50,4 @@ graph.VariableDefinitions.DefineProperty("rotationDifference",
 
 - [Resolvers Overview](README.md)
 - [InverseResolver](inverse-resolver.md)
-- [ConcatenateResolver](concatenate-resolver.md)
+- [QuaternionConcatenateResolver](quaternion-concatenate-resolver.md)

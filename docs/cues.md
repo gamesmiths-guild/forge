@@ -310,14 +310,29 @@ cuesManager.UpdateCue(burningTag, targetEntity, updatedParameters);
 cuesManager.RemoveCue(burningTag, targetEntity, interrupted: false);
 ```
 
-## Cues vs Events
+## Cues, the Events System, and Change Notifications
 
-Cues are designed for the presentation layer:  visual effects, audio, and player feedback. For gameplay logic that affects simulation state, use the [Events system](events.md) instead.
+Three mechanisms carry "something happened" out of the simulation, and they are not interchangeable. Note that two different things are called "events" in a C# codebase, and only one of them is the Forge [Events system](events.md):
 
-- **Cues** handle presentation: particle effects, sounds, UI animations. In a networked context, they can use unreliable replication. 
-- **Events** handle simulation: damage calculations, ability triggers, state changes. In a networked context, they require reliable replication. 
+- **Cues** handle *reactions to a transition*: particle effects, sounds, UI animations, floating numbers. Authored per effect, routed by tag, one-to-many. In a networked context they can use unreliable replication.
+- **The [Events system](events.md)** handles *simulation*: damage calculations, ability triggers, state changes. It is a tag-routed event bus with `EventData` payloads, raised through `entity.Events.Raise(...)`. In a networked context it requires reliable replication.
+- **Change notifications** — plain C# `event` members such as `EffectsManager.OnActiveEffectAdded`, `EntityAbilities.OnAbilityGranted`, `EntityTags.OnTagsChanged` and `EntityAttribute.OnValueChanged` — handle *views of state*: buff bars, ability bars, character sheets, anything that renders "what is currently true" rather than reacting to a change. They are subscribed with `+=`, never raised by game code, and carry no tags or payloads. See [Observing Effects](effects/README.md#observing-effects).
 
-A common pattern is to raise an Event for gameplay logic, then trigger the corresponding Cue for feedback:
+The cue / Events-system split is about **presentation vs. simulation**. The cue / change-notification split is a different axis — both are presentation — and it is about **reaction vs. roster**.
+
+### Why a Buff Bar Is Not a Cue
+
+Reaching for cues to build a buff bar is a natural first instinct, and it does not work. Three structural reasons:
+
+- **Cues cannot initialize a view.** `CuesManager` has no enumeration API, so a UI created while effects are already active — after a respawn, a scene load, or opening a character panel — never receives the `OnApply` calls that already happened. `EffectsManager.GetActiveEffects()` plus the change notifications give you the standard pattern instead: enumerate what is there on start, then subscribe for the deltas.
+- **Cues are opt-in per effect.** An effect with no `CueData` triggers nothing, so a cue-driven bar silently omits every effect nobody tagged. A view of state has to be complete.
+- **`CueParameters` carries one number.** `CueMagnitudeType.StackCount` can make that number the stack count, but then the remaining duration has nowhere to come from. An `ActiveEffectHandle` exposes stacks, remaining and total duration, level and inhibition at once, and `OnRemove` receives no parameters at all.
+
+Use both, split by role: the change notifications tell the bar **which icons exist and what they say**; cues tell each effect **what it does when it lands or leaves** — the stack-gain pop, the shield-shatter, the signature treatment a particular debuff gets. `OnRemove(target, interrupted)` even distinguishes a dispel from a natural expiry for free.
+
+### Pairing the Events System with Cues
+
+A common pattern is to raise a gameplay event for the logic, then trigger the corresponding cue for feedback:
 
 ```csharp
 // Event for gameplay (reliable, affects game state)

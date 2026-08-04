@@ -146,6 +146,7 @@ internal sealed class Ability
 			return true;
 		}
 
+		Owner.Abilities.NotifyAbilityActivationFailed(Handle, failureFlags);
 		return false;
 	}
 
@@ -161,6 +162,7 @@ internal sealed class Ability
 			return true;
 		}
 
+		Owner.Abilities.NotifyAbilityActivationFailed(Handle, failureFlags);
 		return false;
 	}
 
@@ -571,6 +573,7 @@ internal sealed class Ability
 	{
 		AbilityInstance instance = CreateInstance(abilityTarget);
 		_activeInstances.Add(instance);
+		NotifyActivated();
 		instance.Start(magnitude);
 	}
 
@@ -578,7 +581,18 @@ internal sealed class Ability
 	{
 		AbilityInstance instance = CreateInstance(abilityTarget);
 		_activeInstances.Add(instance);
+		NotifyActivated();
 		instance.Start(data, magnitude);
+	}
+
+	private void NotifyActivated()
+	{
+		if (_activeInstances.Count != 1)
+		{
+			return;
+		}
+
+		Owner.Abilities.NotifyAbilityActivated(Handle);
 	}
 
 	private AbilityInstance CreateInstance(IForgeEntity? abilityTarget)

@@ -109,7 +109,7 @@ ActiveEffectHandle? handle = entity.EffectsManager.ApplyEffect(effect);
 // Remove an effect by its handle
 if (handle is not null)
 {
-    bool removed = entity.EffectsManager.RemoveEffect(handle);
+    entity.EffectsManager.RemoveEffect(handle);
 }
 
 // Update all active effects on the entity
@@ -327,6 +327,61 @@ entity.EffectsManager.OnEffectApplicationBlocked += (blockedEffect, blocker) =>
 Effects that deny themselves through their own components never reach the blockers and raise nothing.
 
 [`ImmunityEffectComponent`](components/immunity-effect-component.md) is the data-driven implementation of this interface: it registers while its effect is active and matches incoming effects against a set of `EffectQuery` filters.
+
+#### Observing Effects
+
+[Effect components](components/README.md) are the right seam for anything that *reacts* to an effect as gameplay, and [cues](../cues.md) are the right seam for anything that reacts to it as *presentation*: both are authored on the effect that cares. But a buff bar, a combat log or an analytics hook cares about *every* effect on an entity, and cannot be authored on effects it has never heard of. The `EffectsManager` reports the same lifecycle to whoever asks, through plain C# `event` members — these are **change notifications**, unrelated to the tag-routed [Events system](../events.md) that carries `EventData` through the simulation:
+
+| Notification | Raised when | Payload |
+|---|---|---|
+| `OnEffectApplied` | any effect lands, instant ones included, and again on each successful stack | `EffectEvaluatedData` |
+| `OnEffectExecuted` | an instant or periodic effect executes, once per periodic tick | `EffectEvaluatedData` |
+| `OnActiveEffectAdded` | an effect becomes active, once per `ActiveEffect` | `ActiveEffectHandle` |
+| `OnActiveEffectChanged` | an active effect's stacks, level, magnitudes or inhibition change | `ActiveEffectHandle` |
+| `OnActiveEffectRemoved` | an active effect ends | `ActiveEffectHandle`, `EffectRemovalReason` |
+| `OnEffectApplicationBlocked` | a registered blocker denied an application | `Effect`, `IEffectApplicationBlocker` |
+| `OnEffectStackDenied` | an active effect's `StackingData` refused an application | `Effect`, `ActiveEffectHandle` |
+
+A buff bar needs three of them:
+
+```csharp
+entity.EffectsManager.OnActiveEffectAdded += handle => _icons.Add(handle, CreateIcon(handle));
+entity.EffectsManager.OnActiveEffectChanged += handle => _icons[handle].Refresh(handle);
+entity.EffectsManager.OnActiveEffectRemoved += (handle, reason) =>
+{
+    _icons[handle].PlayEndAnimation(reason == EffectRemovalReason.Expired);
+    _icons.Remove(handle);
+};
+```
+
+The handle is safe to use as a key: it is created once per active effect and stays the same object for that effect's whole life. Inside the removed handler it can still be read, and becomes invalid immediately after — so read what you need there rather than storing the handle and reading it later.
+
+##### Cues or change notifications?
+
+Both are presentation-facing, so the split is not "gameplay vs. visuals" — it is **reaction vs. roster**:
+
+- A **cue** reacts to a transition. It is authored on the effect, so the designer who writes the poison decides what poison looks like, and it fires and is done. Hit flashes, sounds, floating numbers, the pop when a stack lands.
+- These **notifications** describe the roster. They pair with `GetActiveEffects()` to answer "what is on this entity right now", which is what a bar, a character sheet or a tooltip renders.
+
+The distinction has teeth. A cue-driven buff bar cannot initialize — `CuesManager` has no enumeration, so a UI created after effects are already active never hears about them — it silently omits every effect with no `CueData`, and `CueParameters` carries a single number where an icon needs stacks *and* remaining duration at once. See [Cues, the Events System, and Change Notifications](../cues.md#cues-the-events-system-and-change-notifications).
+
+Most real buff bars use both: these notifications for which icons exist and what they say, cues for what each individual effect does when it lands or leaves.
+
+Two distinctions decide which notification you want:
+
+- **Applied vs. added.** *Applied* is the [application phase](#application-vs-execution) and fires for every landing, including instant effects that never become active and each new stack of an existing one. *Added* fires once, when an `ActiveEffect` starts existing. A buff bar wants *added*; a combat log wants *applied*.
+- **When the numbers are ready.** `OnEffectApplied` runs before the effect has changed anything — an instant effect has not executed yet, a duration effect has not applied its modifiers yet. `OnEffectExecuted` and the three `OnActiveEffect*` notifications run once the state has settled. To follow a value rather than an effect, subscribe to [`EntityAttribute.OnValueChanged`](../attributes.md#from-outside-the-attributeset) instead.
+
+Denials are reported by the last two. `OnEffectApplicationBlocked` covers the [blocker registry](#blocking-effect-application); `OnEffectStackDenied` covers every [stacking](stacking.md) refusal — the stack limit under `StackOverflowPolicy.DenyApplication`, `LevelDenialPolicy`, and `StackOwnerDenialPolicy.DenyIfDifferent`. That last one is the only way to see those applications at all, since `ApplyEffect` still hands back the handle of the effect already in place:
+
+```csharp
+entity.EffectsManager.OnEffectStackDenied += (deniedEffect, existing) =>
+    ShowFloater($"{deniedEffect.EffectData.Name} at max stacks ({existing.StackCount})");
+```
+
+An effect that denies itself through its own `CanApplyEffect` components raises nothing, on either path.
+
+Handlers run inside the effect pipeline, synchronously, so keep them cheap. Applying or removing effects from a handler works, and the same 16-level cascade guard that protects [components](components/additional-effects-effect-component.md#lifecycle-hooks) bounds it — but the ordering it produces is easier to reason about when the handler only records what happened and acts on it later.
 
 ## Effect Lifecycle
 

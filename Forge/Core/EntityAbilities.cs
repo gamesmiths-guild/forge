@@ -16,13 +16,64 @@ namespace Gamesmiths.Forge.Core;
 public class EntityAbilities(IForgeEntity owner)
 {
 	private readonly Dictionary<Ability, List<IAbilityGrantSource>> _grantSources = [];
+	private readonly HashSet<AbilityHandle> _grantedAbilities = [];
 	private Action<Ability>? _removeAbility;
 	private Action<Ability>? _inhibitAbility;
+
+	/// <summary>
+	/// Event invoked when an ability is granted to the entity, carrying its handle.
+	/// </summary>
+	/// <remarks>
+	/// Raised once per <see cref="Ability"/>, after the grant has settled, so the handle already reports its level and
+	/// inhibition state. Granting an ability the entity already has adds a grant source instead of a second ability,
+	/// and raises <see cref="OnAbilityChanged"/> if that changed anything.
+	/// </remarks>
+	public event Action<AbilityHandle>? OnAbilityGranted;
+
+	/// <summary>
+	/// Event invoked when a granted ability's level or inhibition changes, carrying its handle.
+	/// </summary>
+	/// <remarks>
+	/// A change that resolves to the same values — a repeat grant that neither overrides the level nor flips
+	/// inhibition — raises nothing.
+	/// </remarks>
+	public event Action<AbilityHandle>? OnAbilityChanged;
+
+	/// <summary>
+	/// Event invoked when an ability is removed from the entity, carrying its handle.
+	/// </summary>
+	/// <remarks>
+	/// Raised once the last grant source is gone, before the handle is invalidated, so the handle can still be read
+	/// inside the handler and reports <see cref="AbilityHandle.IsValid"/> as <see langword="false"/> afterwards.
+	/// Losing one of several grant sources keeps the ability and raises <see cref="OnAbilityChanged"/> instead.
+	/// </remarks>
+	public event Action<AbilityHandle>? OnAbilityRemoved;
+
+	/// <summary>
+	/// Event invoked when an ability becomes active, carrying its handle.
+	/// </summary>
+	/// <remarks>
+	/// The exact counterpart of <see cref="OnAbilityEnded"/>: both track the ability, not its instances, so a second
+	/// concurrent instance of a per-execution ability raises neither. Raised as the ability becomes active and before
+	/// its behavior starts, so it always precedes the matching <see cref="OnAbilityEnded"/> — including for a behavior
+	/// that finishes synchronously.
+	/// </remarks>
+	public event Action<AbilityHandle>? OnAbilityActivated;
 
 	/// <summary>
 	/// Event invoked when an ability ends.
 	/// </summary>
 	public event Action<AbilityEndedData>? OnAbilityEnded;
+
+	/// <summary>
+	/// Event invoked when an activation attempt is refused, carrying the ability's handle and every reason it failed.
+	/// </summary>
+	/// <remarks>
+	/// The direct callers of the activation API already receive these flags as an out parameter. This event covers the
+	/// activations nobody is holding the result of — those driven by <see cref="AbilityTriggerData"/> tags and events,
+	/// and by the Statescript activation nodes — which are otherwise silent.
+	/// </remarks>
+	public event Action<AbilityHandle, AbilityActivationFailures>? OnAbilityActivationFailed;
 
 	/// <summary>
 	/// Gets the owner of this effects manager.
@@ -32,7 +83,13 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <summary>
 	/// Gets the set of abilities currently granted to the entity.
 	/// </summary>
-	public HashSet<AbilityHandle> GrantedAbilities { get; } = [];
+	/// <remarks>
+	/// Read-only: the manager keeps this set in step with the grant sources behind each ability, so grant and removal
+	/// go through <see cref="GrantAbilityPermanently"/>, <c>GrantAbilityAndActivateOnce</c> and the effect components
+	/// rather than through this set. The collection is live, so a handle removed while it is being enumerated
+	/// invalidates the enumeration; copy it first when the loop body can remove abilities.
+	/// </remarks>
+	public IReadOnlyCollection<AbilityHandle> GrantedAbilities => _grantedAbilities;
 
 	/// <summary>
 	/// Gets the tags that block abilities from being used.
@@ -298,6 +355,9 @@ public class EntityAbilities(IForgeEntity owner)
 
 		if (existingAbility is not null && existingAbility.SourceEntity == sourceEntity)
 		{
+			bool wasInhibited = existingAbility.IsInhibited;
+			int previousLevel = existingAbility.Level;
+
 			_grantSources[existingAbility].Add(new PermanentGrantSource());
 
 			// If the ability was fully inhibited, this permanent grant should re-enable it.
@@ -313,12 +373,16 @@ public class EntityAbilities(IForgeEntity owner)
 				existingAbility.Level = abilityLevel;
 			}
 
+			NotifyAbilityChanged(existingAbility, wasInhibited, previousLevel);
+
 			return existingAbility.Handle;
 		}
 
 		var newAbility = new Ability(Owner, abilityData, abilityLevel, sourceEntity);
-		GrantedAbilities.Add(newAbility.Handle);
+		_grantedAbilities.Add(newAbility.Handle);
 		_grantSources[newAbility] = [new PermanentGrantSource()];
+
+		OnAbilityGranted?.Invoke(newAbility.Handle);
 
 		return newAbility.Handle;
 	}
@@ -348,6 +412,9 @@ public class EntityAbilities(IForgeEntity owner)
 
 		if (existingAbility is not null && existingAbility.SourceEntity == sourceEntity)
 		{
+			bool wasInhibited = existingAbility.IsInhibited;
+			int previousLevel = existingAbility.Level;
+
 			// Ability already granted, just add the new source to the mapping.
 			_grantSources[existingAbility].Add(grantSource);
 
@@ -364,14 +431,20 @@ public class EntityAbilities(IForgeEntity owner)
 				existingAbility.Level = abilityLevel;
 			}
 
+			NotifyAbilityChanged(existingAbility, wasInhibited, previousLevel);
+
 			return existingAbility.Handle;
 		}
 
 		var newAbility = new Ability(Owner, abilityData, abilityLevel, sourceEntity);
-		GrantedAbilities.Add(newAbility.Handle);
+		_grantedAbilities.Add(newAbility.Handle);
 		_grantSources[newAbility] = [grantSource];
 
+		// Set before announcing the grant, so the handle already reports its settled inhibition state and an inhibited
+		// grant never reads as a change to an ability nobody has been told about yet.
 		newAbility.IsInhibited = grantSource.IsInhibited;
+
+		OnAbilityGranted?.Invoke(newAbility.Handle);
 
 		return newAbility.Handle;
 	}
@@ -447,6 +520,16 @@ public class EntityAbilities(IForgeEntity owner)
 	internal void NotifyAbilityEnded(AbilityEndedData abilityEndedData)
 	{
 		OnAbilityEnded?.Invoke(abilityEndedData);
+	}
+
+	internal void NotifyAbilityActivated(AbilityHandle abilityHandle)
+	{
+		OnAbilityActivated?.Invoke(abilityHandle);
+	}
+
+	internal void NotifyAbilityActivationFailed(AbilityHandle abilityHandle, AbilityActivationFailures failureFlags)
+	{
+		OnAbilityActivationFailed?.Invoke(abilityHandle, failureFlags);
 	}
 
 	private static bool MatchesTags(Ability ability, TagContainer tagsToActivate)
@@ -533,8 +616,12 @@ public class EntityAbilities(IForgeEntity owner)
 		}
 
 		abilityToRemove.Cleanup();
+
+		// Raised before the handle is freed, so handlers can still read what went away.
+		OnAbilityRemoved?.Invoke(abilityToRemove.Handle);
+
 		abilityToRemove.Handle.Free();
-		GrantedAbilities.Remove(abilityToRemove.Handle);
+		_grantedAbilities.Remove(abilityToRemove.Handle);
 	}
 
 	private void InhibitAbility(Ability abilityToInhibit)
@@ -545,7 +632,23 @@ public class EntityAbilities(IForgeEntity owner)
 			_inhibitAbility = null;
 		}
 
+		bool wasInhibited = abilityToInhibit.IsInhibited;
+
 		abilityToInhibit.IsInhibited = CheckIsInhibited(abilityToInhibit);
+
+		NotifyAbilityChanged(abilityToInhibit, wasInhibited, abilityToInhibit.Level);
+	}
+
+	private void NotifyAbilityChanged(Ability ability, bool wasInhibited, int previousLevel)
+	{
+		// Announces a change only when one of the two observable pieces of ability state actually moved: the grant
+		// paths run unconditionally, and a repeat grant that overrides nothing must stay silent.
+		if (ability.IsInhibited == wasInhibited && ability.Level == previousLevel)
+		{
+			return;
+		}
+
+		OnAbilityChanged?.Invoke(ability.Handle);
 	}
 
 	private bool CheckIsInhibited(Ability ability)

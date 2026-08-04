@@ -266,11 +266,13 @@ entity.EffectsManager.RemoveEffect(effectHandle2);
 EntityAbilities abilities = entity.Abilities;
 
 // Get all granted abilities
-HashSet<AbilityHandle> granted = abilities.GrantedAbilities;
+IReadOnlyCollection<AbilityHandle> granted = abilities.GrantedAbilities;
 
 // Get blocked ability tags (used internally for ability blocking)
 EntityTags blockedTags = abilities.BlockedAbilityTags;
 ```
+
+`GrantedAbilities` is read-only and live: the manager keeps it in step with the grant sources behind each ability, so abilities are added and removed through the granting API and the [effect components](effects/components/grant-ability-effect-component.md), never through the set itself. Copy it before iterating when the loop body can remove abilities.
 
 Abilities whose `AbilityTags` overlap `BlockedAbilityTags` fail activation with `AbilityActivationFailures.BlockedByTags`. The container is populated by `BlockAbilitiesWithTag` while an ability is running, and by [`BlockAbilityTagsEffectComponent`](effects/components/block-ability-tags-effect-component.md) while an effect is active.
 
@@ -358,17 +360,41 @@ Each container is an independent filter, and a `null` or empty one means "don't 
 
 To drive this from an effect instead of calling it directly, use [`CancelAbilityTagsEffectComponent`](effects/components/cancel-ability-tags-effect-component.md), which wraps `CancelAbilities` and can fire on application or on each periodic execution.
 
-### Ability Events
+### Observing Abilities
 
-Subscribe to `OnAbilityEnded` to react when abilities end:
+`EntityAbilities` reports the whole ability lifecycle to whoever asks, which is what an ability bar needs to stay in sync without polling `GrantedAbilities` every frame. These are plain C# `event` members — **change notifications**, not to be confused with the tag-routed [Events system](events.md) that drives [event triggers](#event-trigger):
+
+| Notification | Raised when | Payload |
+|---|---|---|
+| `OnAbilityGranted` | an ability is granted, once per ability | `AbilityHandle` |
+| `OnAbilityChanged` | a granted ability's level or inhibition changes | `AbilityHandle` |
+| `OnAbilityRemoved` | an ability loses its last grant source | `AbilityHandle` |
+| `OnAbilityActivated` | an ability becomes active | `AbilityHandle` |
+| `OnAbilityEnded` | an ability's last active instance ends | `AbilityEndedData` |
+| `OnAbilityActivationFailed` | an activation attempt is refused | `AbilityHandle`, `AbilityActivationFailures` |
+
+```csharp
+entity.Abilities.OnAbilityGranted += handle => _slots.Add(handle, CreateSlot(handle));
+entity.Abilities.OnAbilityChanged += handle => _slots[handle].SetEnabled(!handle.IsInhibited);
+entity.Abilities.OnAbilityRemoved += handle =>
+{
+    _slots[handle].Dispose();
+    _slots.Remove(handle);
+};
+```
+
+The handle is safe to use as a key: it is created once per ability and stays the same object for that ability's whole life. Inside the removed handler it can still be read, and becomes invalid immediately after.
+
+**Granted vs. changed.** Granting an ability the entity already has adds a [grant source](#grant-sources-and-policies) rather than a second ability, so it raises `OnAbilityChanged` — and only if the [level override policy](#level-override-policy) actually moved the level, or the new source flipped inhibition. A repeat grant that resolves to the same values is silent.
+
+**Activated and ended are a matched pair.** Both track the *ability*, not its instances, so a second concurrent instance of a [`PerExecution`](#perexecution) ability raises neither: activation reports the inactive-to-active transition, ending reports the last instance going away. `OnAbilityActivated` is raised before the behavior starts, so it always arrives before the matching `OnAbilityEnded` — including for a behavior that finishes inside `OnStarted`.
 
 ```csharp
 entity.Abilities.OnAbilityEnded += data =>
 {
     AbilityHandle ability = data.Ability;
-    bool wasCanceled = data.WasCanceled;
 
-    if (wasCanceled)
+    if (data.WasCanceled)
     {
         // Ability was interrupted
         ShowInterruptedFeedback();
@@ -381,7 +407,21 @@ entity.Abilities.OnAbilityEnded += data =>
 };
 ```
 
-`OnAbilityEnded` fires **exactly once** each time an ability deactivates, when its last active instance ends. `WasCanceled` is `true` when the ability was canceled (via `AbilityHandle.Cancel()` or `CancelAbilities`) and `false` when it ended gracefully (reaching its natural end, or a Statescript Exit node).
+`WasCanceled` is `true` when the ability was canceled (via `AbilityHandle.Cancel()` or `CancelAbilities`) and `false` when it ended gracefully (reaching its natural end, or a Statescript Exit node). `AbilityEndedData` also carries `AbilityData`, captured before the handle can be freed, because an ability granted with `RemoveOnEnd` is removed by the very same call.
+
+**Failed activations.** Whoever calls the activation API already receives [`AbilityActivationFailures`](#activation-failures) as an out parameter. `OnAbilityActivationFailed` exists for the activations nobody holds the result of — those driven by [ability triggers](#ability-triggers) and by the Statescript activation nodes — which are otherwise completely silent:
+
+```csharp
+entity.Abilities.OnAbilityActivationFailed += (handle, failures) =>
+{
+    if (failures.HasFlag(AbilityActivationFailures.Cooldown))
+    {
+        FlashCooldown(handle);
+    }
+};
+```
+
+Handlers run inside the ability pipeline, synchronously, so keep them cheap. The [attribute](attributes.md#from-outside-the-attributeset), [tag](tags.md#reacting-to-tag-changes) and [effect](effects/README.md#observing-effects) change notifications cover the rest of an entity's observable state.
 
 ## Ability Handle
 
