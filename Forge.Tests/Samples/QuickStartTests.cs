@@ -933,7 +933,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		// Retrieve handle directly from component as shown in docs
 		var fireballAbilityHandle = grantEffectHandle.GetComponent<GrantAbilityEffectComponent>().GrantedAbilities[0];
 
-		bool successfulActivation = fireballAbilityHandle.Activate(out AbilityActivationFailures failures);
+		bool successfulActivation = fireballAbilityHandle.TryActivate(out AbilityActivationFailures failures);
 
 		successfulActivation.Should().BeTrue();
 		failures.Should().Be(AbilityActivationFailures.None);
@@ -1005,7 +1005,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 		costs.Should().Contain(c => c.Attribute == "PlayerAttributeSet.Mana" && c.Cost == -20);
 
 		// Activate
-		bool success = handle.Activate(out AbilityActivationFailures failures);
+		bool success = handle.TryActivate(out AbilityActivationFailures failures);
 		success.Should().BeTrue();
 
 		// Verify resources consumed and cooldown started
@@ -1030,18 +1030,21 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 			behaviorFactory: () => new CustomAbilityBehavior("Fireball"));
 
 		// Simulate using a scroll
-		AbilityHandle? handle = player.Abilities.GrantAbilityAndActivateOnce(
+		bool cast = player.Abilities.TryGrantAbilityAndActivateOnce(
 			abilityData: fireballData,
 			abilityLevel: 1,
 			levelOverridePolicy: LevelComparison.None,
 			out AbilityActivationFailures failureFlags,
+			out AbilityHandle? handle,
 			targetEntity: player, // Target of the fireball
 			sourceEntity: player  // Source (e.g., the scroll item)
 		);
 
-		// Fireball ends instantly so handle is null
-		handle.Should().BeNull();
+		cast.Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		// Fireball ends instantly so the handle is null even though the cast succeeded
+		handle.Should().BeNull();
 	}
 
 	[Fact]
@@ -1356,7 +1359,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	{
 		public void OnStarted(AbilityBehaviorContext context)
 		{
-			context.AbilityHandle.CommitAbility();
+			context.AbilityHandle.TryCommitAbility();
 
 			// Instantiate a projectile here (omitted for brevity)
 			Console.WriteLine($"{context.Owner} used ability ({parameter}) on target {context.Target}");
@@ -1374,7 +1377,7 @@ public class QuickStartTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixt
 	{
 		public void OnStarted(AbilityBehaviorContext context)
 		{
-			context.AbilityHandle.CommitAbility();
+			context.AbilityHandle.TryCommitAbility();
 			// Does NOT call End() to simulate a persistent effect/aura
 		}
 
