@@ -166,35 +166,43 @@ internal sealed class Ability
 		return false;
 	}
 
-	internal void CommitAbility()
+	internal bool TryCommitAbility()
 	{
-		CommitCooldown();
-		CommitCost();
+		// Both checks run before either application so the commit is all-or-nothing: an affordable cost must never be
+		// paid for a cooldown that is still running, and vice versa.
+		if (!CanCommitCooldown() || !CanCommitCost())
+		{
+			return false;
+		}
+
+		ApplyCooldown();
+		ApplyCost();
+
+		return true;
 	}
 
-	internal void CommitCooldown()
+	internal bool TryCommitCooldown()
 	{
-		if (_cooldownEffects is not null)
+		if (!CanCommitCooldown())
 		{
-			Validation.Assert(
-				_activeCooldownHandles is not null
-				&& _activeCooldownHandles.Length == _cooldownEffects.Length,
-				"Active cooldown handles array should have been properly initialized.");
-
-			for (int i = 0; i < _cooldownEffects.Length; i++)
-			{
-				Effect effect = _cooldownEffects[i];
-				_activeCooldownHandles[i] = Owner.EffectsManager.ApplyEffect(effect);
-			}
+			return false;
 		}
+
+		ApplyCooldown();
+
+		return true;
 	}
 
-	internal void CommitCost()
+	internal bool TryCommitCost()
 	{
-		if (_costEffect is not null)
+		if (!CanCommitCost())
 		{
-			Owner.EffectsManager.ApplyEffect(_costEffect);
+			return false;
 		}
+
+		ApplyCost();
+
+		return true;
 	}
 
 	internal void End()
@@ -355,21 +363,14 @@ internal sealed class Ability
 		}
 
 		// Check cooldown.
-		if (_cooldownEffects is not null)
+		if (!CanCommitCooldown())
 		{
-			foreach (Effect effect in _cooldownEffects)
-			{
-				if (effect?.CachedGrantedTags is not null && Owner.Tags.AllTags.HasAny(effect.CachedGrantedTags))
-				{
-					failureFlags |= AbilityActivationFailures.Cooldown;
-					canActivate = false;
-				}
-			}
+			failureFlags |= AbilityActivationFailures.Cooldown;
+			canActivate = false;
 		}
 
 		// Check resources.
-		if (_costEffect is not null
-			&& !Owner.EffectsManager.CanApplyEffect(_costEffect, Level))
+		if (!CanCommitCost())
 		{
 			failureFlags |= AbilityActivationFailures.InsufficientResources;
 			canActivate = false;
@@ -567,6 +568,56 @@ internal sealed class Ability
 			tag,
 			x => TryActivateAbility(x.Target, out _, x.Payload, x.EventMagnitude),
 			priority: priority);
+	}
+
+	private bool CanCommitCooldown()
+	{
+		if (_cooldownEffects is null)
+		{
+			return true;
+		}
+
+		foreach (Effect effect in _cooldownEffects)
+		{
+			if (effect?.CachedGrantedTags is not null && Owner.Tags.AllTags.HasAny(effect.CachedGrantedTags))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private bool CanCommitCost()
+	{
+		return _costEffect is null || Owner.EffectsManager.CanApplyEffect(_costEffect, Level);
+	}
+
+	private void ApplyCooldown()
+	{
+		if (_cooldownEffects is null)
+		{
+			return;
+		}
+
+		Validation.Assert(
+			_activeCooldownHandles is not null
+			&& _activeCooldownHandles.Length == _cooldownEffects.Length,
+			"Active cooldown handles array should have been properly initialized.");
+
+		for (int i = 0; i < _cooldownEffects.Length; i++)
+		{
+			Effect effect = _cooldownEffects[i];
+			_activeCooldownHandles[i] = Owner.EffectsManager.ApplyEffect(effect);
+		}
+	}
+
+	private void ApplyCost()
+	{
+		if (_costEffect is not null)
+		{
+			Owner.EffectsManager.ApplyEffect(_costEffect);
+		}
 	}
 
 	private void Activate(IForgeEntity? abilityTarget, float magnitude)

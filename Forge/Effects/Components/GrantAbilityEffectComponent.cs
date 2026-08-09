@@ -69,7 +69,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 		{
 			if (_grantAbilityConfigs[i].TryActivateOnGrant)
 			{
-				_grantedAbilities[i].Activate(out _);
+				_grantedAbilities[i].TryActivate(out _);
 			}
 		}
 	}
@@ -101,7 +101,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 				{
 					if (_grantAbilityConfigs[i].TryActivateOnEnable)
 					{
-						_grantedAbilities[i].Activate(out _);
+						_grantedAbilities[i].TryActivate(out _);
 					}
 				}
 			}
@@ -128,7 +128,7 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 		{
 			if (_grantAbilityConfigs[i].TryActivateOnGrant)
 			{
-				_grantedAbilities[i].Activate(out _);
+				_grantedAbilities[i].TryActivate(out _);
 			}
 		}
 	}

@@ -38,14 +38,14 @@ public class AbilityHandle
 	}
 
 	/// <summary>
-	/// Activates the ability associated with this handle.
+	/// Tries to activate the ability associated with this handle.
 	/// </summary>
 	/// <param name="failureFlags">Flags indicating the failure reasons for the ability activation.</param>
 	/// <param name="target">Optional target entity for the ability activation.</param>
 	/// <param name="magnitude">Optional magnitude value for the ability activation.</param>
 	/// <returns>Return <see langword="true"/> if the ability was successfully activated;
 	/// otherwise, <see langword="false"/>.</returns>
-	public bool Activate(
+	public bool TryActivate(
 		out AbilityActivationFailures failureFlags,
 		IForgeEntity? target = null,
 		float magnitude = 0)
@@ -55,7 +55,7 @@ public class AbilityHandle
 	}
 
 	/// <summary>
-	/// Activates the ability associated with this handle with strongly-typed additional data.
+	/// Tries to activate the ability associated with this handle with strongly-typed additional data.
 	/// </summary>
 	/// <typeparam name="TData">The type of the data to pass to the ability behavior.</typeparam>
 	/// <param name="data">Additional data to pass to the behavior.</param>
@@ -64,7 +64,7 @@ public class AbilityHandle
 	/// <param name="magnitude">Optional magnitude value for the ability activation.</param>
 	/// <returns>Return <see langword="true"/> if the ability was successfully activated; otherwise,
 	/// <see langword="false"/>.</returns>
-	public bool Activate<TData>(
+	public bool TryActivate<TData>(
 		TData data,
 		out AbilityActivationFailures failureFlags,
 		IForgeEntity? target = null,
@@ -88,27 +88,38 @@ public class AbilityHandle
 	}
 
 	/// <summary>
-	/// Commits the ability cooldown and cost.
+	/// Tries to commit the ability cooldown and cost.
 	/// </summary>
-	public void CommitAbility()
+	/// <remarks>
+	/// A commit can happen long after activation, by which point the cooldown may have started or the resources may
+	/// have been spent elsewhere, so the cooldown and the cost are both re-checked here. The commit is
+	/// all-or-nothing: when either check fails, neither the cooldown nor the cost is applied.
+	/// </remarks>
+	/// <returns>Return <see langword="true"/> if both the cooldown and the cost were committed; otherwise,
+	/// <see langword="false"/>.</returns>
+	public bool TryCommitAbility()
 	{
-		Ability?.CommitAbility();
+		return Ability?.TryCommitAbility() ?? false;
 	}
 
 	/// <summary>
-	/// Commits the ability cooldown.
+	/// Tries to commit the ability cooldown.
 	/// </summary>
-	public void CommitCooldown()
+	/// <returns>Return <see langword="true"/> if the cooldown was committed; <see langword="false"/> when the ability
+	/// is already on cooldown or the handle is invalid.</returns>
+	public bool TryCommitCooldown()
 	{
-		Ability?.CommitCooldown();
+		return Ability?.TryCommitCooldown() ?? false;
 	}
 
 	/// <summary>
-	/// Commits the ability cost.
+	/// Tries to commit the ability cost.
 	/// </summary>
-	public void CommitCost()
+	/// <returns>Return <see langword="true"/> if the cost was committed; <see langword="false"/> when the owner can no
+	/// longer afford it or the handle is invalid.</returns>
+	public bool TryCommitCost()
 	{
-		Ability?.CommitCost();
+		return Ability?.TryCommitCost() ?? false;
 	}
 
 	/// <summary>
