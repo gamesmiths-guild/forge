@@ -1,9 +1,9 @@
 // Copyright © Gamesmiths Guild.
 
-namespace Gamesmiths.Forge.Statescript.Nodes.Action;
+namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 
 /// <summary>
-/// Selects what a <see cref="CommitAbilityNode"/> commits when it executes.
+/// Selects what a <see cref="TryCommitAbilityNode"/> commits when it executes.
 /// </summary>
 public enum CommitAbilityOperation : byte
 {
