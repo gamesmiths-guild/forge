@@ -147,11 +147,13 @@ public class AbilityActivatorResolverTests(TagsAndCuesFixture tagsAndCuesFixture
 			LevelComparison.None,
 			null,
 			null,
-			graphContext).Should().BeTrue();
+			graphContext,
+			out AbilityHandle? grantedAbility).Should().BeTrue();
 
 		captured.Should().ContainSingle().Which.Volume.Should().Be(42);
 
-		// Transient grant: the ability is removed after it ends.
+		// Transient grant: the ability is removed after it ends, so the activation reports no lingering handle.
+		grantedAbility.Should().BeNull();
 		owner.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle).Should().BeFalse();
 		handle.Should().BeNull();
 	}

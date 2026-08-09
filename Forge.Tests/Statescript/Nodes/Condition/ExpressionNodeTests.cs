@@ -418,7 +418,7 @@ public class ExpressionNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClass
 		var grantEffect = new Effect(grantEffectData, new EffectOwnership(null, null));
 		_ = entity.EffectsManager.ApplyEffect(grantEffect);
 		entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle);
-		handle!.Activate(out _);
+		handle!.TryActivate(out _);
 
 		trueAction.ExecutionCount.Should().Be(1);
 		falseAction.ExecutionCount.Should().Be(0);

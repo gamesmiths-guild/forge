@@ -43,7 +43,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		AbilityHandle? handle = Grant(entity, abilityData);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		actionNode.ExecutionCount.Should().Be(1);
@@ -70,7 +70,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		AbilityHandle? handle = Grant(entity, abilityData);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
@@ -101,7 +101,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		AbilityHandle? handle = Grant(entity, abilityData);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
 		handle.IsActive.Should().BeTrue();
 		behavior.Processor.GraphContext.IsActive.Should().BeTrue();
 
@@ -130,7 +130,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		AbilityHandle? handle = Grant(entity, abilityData);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
 
 		behavior.Processor.GraphContext.GraphVariables.TryGetVar("counter", out int value).Should().BeTrue();
 		value.Should().Be(1);
@@ -155,7 +155,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		AbilityHandle? handle = Grant(entity, abilityData);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
 
 		behavior.Processor.GraphContext.SharedVariables.Should().BeSameAs(entity.SharedVariables);
 	}
@@ -195,7 +195,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		handle.Should().NotBeNull();
 
 		var activationData = new DamageData(50, 2.5);
-		handle!.Activate(activationData, out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle!.TryActivate(activationData, out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		readDamage.LastReadValue.Should().Be(50);
@@ -229,7 +229,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		AbilityHandle? handle = Grant(entity, abilityData);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
 		handle.IsActive.Should().BeFalse();
 	}
 
@@ -252,7 +252,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		AbilityHandle? handle = Grant(entity, abilityData);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
 
 		captureNode.CapturedActivationContext.Should().NotBeNull();
 		captureNode.CapturedActivationContext.Should().BeOfType<AbilityBehaviorContext>();
@@ -281,7 +281,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		AbilityHandle? handle = Grant(entity, abilityData);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
 
 		typedCaptureNode.Found.Should().BeTrue();
 		typedCaptureNode.CapturedContext.Should().NotBeNull();
