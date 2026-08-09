@@ -79,6 +79,6 @@ public class TryActivateAbilityNode : ConditionNode
 
 		return activator is not null
 			? activator.Activate(handle, target, (float)magnitude, graphContext)
-			: handle.Activate(out _, target, (float)magnitude);
+			: handle.TryActivate(out _, target, (float)magnitude);
 	}
 }
