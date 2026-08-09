@@ -7,7 +7,8 @@ using Gamesmiths.Forge.Statescript.Properties;
 namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 
 /// <summary>
-/// Grants an ability transiently, activates it once, and routes to the True port when the activation succeeds.
+/// Grants an ability transiently, tries to activate it once, and routes to the True port when the activation
+/// succeeds.
 /// </summary>
 /// <remarks>
 /// <para>The granted ability is automatically removed when it ends, the one-shot "proc" pattern.</para>
@@ -19,10 +20,14 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 /// <see cref="Providers.IAbilityActivationDataProvider"/>) carrying strongly-typed data for the activation. Since the
 /// ability being activated is known up front, the provider's data type can be matched to it. When the input is unbound,
 /// the ability is activated without custom data.</para>
+/// <para>The granted <see cref="AbilityHandle"/> is written to the node's output variable, but only while the procced
+/// ability is <b>still running</b>. A proc that ends as it activates takes its transient grant with it and leaves the
+/// output <see langword="null"/> despite routing to True, so use the output to reach a lingering proc — to cancel it,
+/// say — not to test whether the activation succeeded.</para>
 /// </remarks>
 /// <param name="levelOverridePolicy">When the ability is already granted, which level relationships override the
 /// existing level.</param>
-public class GrantAbilityAndActivateOnceNode(LevelComparison levelOverridePolicy = LevelComparison.None)
+public class TryGrantAbilityAndActivateOnceNode(LevelComparison levelOverridePolicy = LevelComparison.None)
 	: ConditionNode
 {
 	/// <summary>
@@ -50,11 +55,16 @@ public class GrantAbilityAndActivateOnceNode(LevelComparison levelOverridePolicy
 	/// </summary>
 	public const byte ActivationDataInput = 4;
 
+	/// <summary>
+	/// Output variable index for the granted ability handle.
+	/// </summary>
+	public const byte AbilityOutput = 0;
+
 	private readonly LevelComparison _levelOverridePolicy = levelOverridePolicy;
 
 	/// <inheritdoc/>
 	public override string Description =>
-		"Grants an ability transiently and activates it once; True when the activation succeeds.";
+		"Grants an ability transiently and tries to activate it once; True when the activation succeeds.";
 
 	/// <inheritdoc/>
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
@@ -64,6 +74,7 @@ public class GrantAbilityAndActivateOnceNode(LevelComparison levelOverridePolicy
 		inputProperties.Add(new InputProperty("Level", typeof(int)));
 		inputProperties.Add(new InputProperty("Target", typeof(IForgeEntity), IsOptional: true));
 		inputProperties.Add(new InputProperty("Activation Data", typeof(AbilityActivator), IsOptional: true));
+		outputVariables.Add(new OutputVariable("Ability", typeof(AbilityHandle)));
 	}
 
 	/// <inheritdoc/>
@@ -95,27 +106,36 @@ public class GrantAbilityAndActivateOnceNode(LevelComparison levelOverridePolicy
 			graphContext,
 			InputProperties[ActivationDataInput].BoundName);
 
+		bool activated;
+		AbilityHandle? grantedAbility;
+
 		if (activator is not null)
 		{
-			return activator.GrantAndActivateOnce(
+			activated = activator.GrantAndActivateOnce(
 				entity.Abilities,
 				abilityData,
 				level,
 				_levelOverridePolicy,
 				target,
 				source: null,
-				graphContext);
+				graphContext,
+				out grantedAbility);
+		}
+		else
+		{
+			activated = entity.Abilities.TryGrantAbilityAndActivateOnce(
+				abilityData,
+				level,
+				_levelOverridePolicy,
+				out _,
+				out grantedAbility,
+				target);
 		}
 
-		entity.Abilities.GrantAbilityAndActivateOnce(
-			abilityData,
-			level,
-			_levelOverridePolicy,
-			out AbilityActivationFailures failures,
-			target);
+		// Written on both outcomes so a failed proc clears a handle left by an earlier one instead of leaving it to be
+		// read as if it were still live.
+		AbilityNodeUtilities.WriteHandleOutput(graphContext, OutputVariables[AbilityOutput], grantedAbility);
 
-		// The returned handle is already freed when the ability completed (and was auto-removed) synchronously, so
-		// activation success is judged by the failure flags instead.
-		return failures == AbilityActivationFailures.None;
+		return activated;
 	}
 }

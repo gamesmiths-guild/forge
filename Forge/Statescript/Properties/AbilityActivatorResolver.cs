@@ -6,9 +6,10 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 
 /// <summary>
 /// Object resolver that produces an <see cref="AbilityActivator"/> for the optional activation-data input of
-/// <c>TryActivateAbilityNode</c>, <c>TryActivateAbilitiesByTagNode</c>, and <c>GrantAbilityAndActivateOnceNode</c>. The
-/// node uses the activator to build the bound <see cref="IAbilityActivationDataProvider"/>'s typed data and pass it
-/// through the generic (non-boxing) activation APIs.
+/// <c>TryActivateAbilityNode</c>, <c>TryActivateAbilitiesByTagNode</c>, and
+/// <c>TryGrantAbilityAndActivateOnceNode</c>. The node uses the activator to build the bound
+/// <see cref="IAbilityActivationDataProvider"/>'s typed data and pass it through the generic (non-boxing) activation
+/// APIs.
 /// </summary>
 /// <remarks>
 /// When the provider declares members, the matching <paramref name="inputResolvers"/> resolve them on demand as the
