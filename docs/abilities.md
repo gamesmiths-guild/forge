@@ -112,18 +112,17 @@ AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
 
 ### Granting and Activating Once
 
-Use `GrantAbilityAndActivateOnce` to grant an ability temporarily and immediately attempt to activate it: 
+Use `TryGrantAbilityAndActivateOnce` to grant an ability temporarily and immediately attempt to activate it: 
 
 ```csharp
-AbilityHandle? handle = entity.Abilities.GrantAbilityAndActivateOnce(
+if (entity.Abilities.TryGrantAbilityAndActivateOnce(
     abilityData: consumableAbility,
     abilityLevel: 1,
     levelOverridePolicy: LevelComparison.None,
     out AbilityActivationFailures failureFlags,
+    out AbilityHandle? handle,
     targetEntity: enemy,
-    sourceEntity: item);
-
-if (handle is not null)
+    sourceEntity: item))
 {
     // Ability activated successfully (failureFlags == AbilityActivationFailures.None)
     // The grant will be removed automatically when the ability ends
@@ -135,17 +134,20 @@ else
 }
 ```
 
-The ability grant is automatically removed when the ability ends. If activation fails, the grant is removed immediately and the method returns `null`.
+The ability grant is automatically removed when the ability ends. If activation fails, the grant is removed immediately.
+
+`handle` is **not** a success flag: it is only non-`null` while the procced ability is still active, so you can cancel a lingering one. An ability that activates and ends within the call — the common one-shot case — leaves it `null` even though the return value is `true`. Pass `out _` when you do not need it.
 
 A generic overload passes strongly-typed activation data to the procced ability, the same data a behavior reads through `IAbilityBehavior<TData>.OnStarted`:
 
 ```csharp
-AbilityHandle? handle = entity.Abilities.GrantAbilityAndActivateOnce(
+entity.Abilities.TryGrantAbilityAndActivateOnce(
     abilityData: consumableAbility,
     abilityLevel: 1,
     levelOverridePolicy: LevelComparison.None,
     data: new ConsumeData(itemId, stackCount),
     out AbilityActivationFailures failureFlags,
+    out _,
     targetEntity: enemy,
     sourceEntity: item);
 ```
@@ -240,7 +242,7 @@ ActiveEffectHandle? effectHandle2 = entity.EffectsManager.ApplyEffect(grantEffec
 
 // Get the ability handle (both grants reference the same ability)
 entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle);
-handle.Activate(out _);
+handle.TryActivate(out _);
 
 // Removing effect 1 (RemoveOnEnd): ability stays active, waits for end
 entity.EffectsManager.RemoveEffect(effectHandle1);
@@ -288,7 +290,7 @@ Without a source, the lookup matches the ability regardless of who granted it (i
 if (entity.Abilities.TryGetAbility(fireballData, out AbilityHandle? handle))
 {
     // Ability is granted (by any source), use the handle
-    handle.Activate(out AbilityActivationFailures failures);
+    handle.TryActivate(out AbilityActivationFailures failures);
 }
 
 // With a specific source entity
@@ -430,7 +432,7 @@ Handlers run inside the ability pipeline, synchronously, so keep them cheap. The
 ```csharp
 if (entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle))
 {
-    if (handle.Activate(out AbilityActivationFailures failureFlags))
+    if (handle.TryActivate(out AbilityActivationFailures failureFlags))
     {
         // Ability activated successfully
     }
@@ -456,12 +458,12 @@ if (entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle))
 - **IsInhibited**: Whether the ability is inhibited by its granting effect.
 - **IsValid**: Whether the handle still references a valid granted ability.
 - **Level**: The current level of the ability.
-- **Activate(out failureFlags, target?, magnitude?)**: Attempt to activate the ability with optional target and magnitude.
-- **Activate\<TData\>(data, out failureFlags, target?, magnitude?)**: Attempt to activate the ability passing additional typed activation data.
+- **TryActivate(out failureFlags, target?, magnitude?)**: Attempt to activate the ability with optional target and magnitude. Returns whether it activated.
+- **TryActivate\<TData\>(data, out failureFlags, target?, magnitude?)**: Attempt to activate the ability passing additional typed activation data.
 - **Cancel()**: Cancel all active instances.
-- **CommitAbility()**: Helper that calls both `CommitCooldown()` and `CommitCost()`.
-- **CommitCooldown()**: Apply the cooldown effects.
-- **CommitCost()**: Apply the cost effect.
+- **TryCommitAbility()**: Attempt to commit both the cooldown and the cost. All-or-nothing: if either cannot be committed, neither is applied. Returns whether it committed.
+- **TryCommitCooldown()**: Attempt to apply the cooldown effects. Fails when the ability is already on cooldown.
+- **TryCommitCost()**: Attempt to apply the cost effect. Fails when the owner can no longer afford it.
 - **GetCooldownData()**: Get information about all cooldowns.
 - **GetRemainingCooldownTime(tag)**: Get remaining time for a specific cooldown.
 - **GetCostData()**: Get information about all costs.
@@ -522,9 +524,9 @@ var abilityData = new AbilityData(
     instancingPolicy: AbilityInstancingPolicy.PerExecution);
 
 // Each activation creates a new instance
-handle.Activate(out _); // Instance 1
-handle.Activate(out _); // Instance 2
-handle.Activate(out _); // Instance 3
+handle.TryActivate(out _); // Instance 1
+handle.TryActivate(out _); // Instance 2
+handle.TryActivate(out _); // Instance 3
 
 // Cancel ends all instances
 handle.Cancel();
@@ -612,7 +614,7 @@ foreach (CooldownData cd in cooldowns)
 float remainingTime = handle.GetRemainingCooldownTime(cooldownTag);
 ```
 
-Cooldowns are checked during activation but only applied when `CommitCooldown()` or `CommitAbility()` is called.
+Cooldowns are checked during activation but only applied when `TryCommitCooldown()` or `TryCommitAbility()` is called. The check is repeated at commit time, so committing a cooldown that is already running returns `false` and applies nothing.
 
 ## Costs
 
@@ -644,7 +646,7 @@ var abilityData = new AbilityData(
     costEffect: costEffect);
 ```
 
-Cost is checked during activation but only applied when `CommitCost()` or `CommitAbility()` is called.
+Cost is checked during activation but only applied when `TryCommitCost()` or `TryCommitAbility()` is called. The check is repeated at commit time, so a cost the owner can no longer afford returns `false` and consumes nothing.
 
 ## Ability Behavior
 
@@ -653,10 +655,11 @@ Cost is checked during activation but only applied when `CommitCost()` or `Commi
 ### Developer Responsibilities
 
 1. **Ending Instances**: It is up to the developer to call `context.InstanceHandle.End()` when the ability logic is complete. If you fail to do this, the system will consider the ability "Active" indefinitely.
-2. **Committing**: Resources and Cooldowns are not applied automatically. You must call `context.AbilityHandle.CommitAbility()` (or `CommitCost` / `CommitCooldown` separately).
-   - `CommitAbility()` calls both `CommitCost()` and `CommitCooldown()`.
+2. **Committing**: Resources and Cooldowns are not applied automatically. You must call `context.AbilityHandle.TryCommitAbility()` (or `TryCommitCost` / `TryCommitCooldown` separately).
+   - `TryCommitAbility()` commits both the cost and the cooldown, and only if both can be committed.
    - Do **not** call all three; it is redundant.
    - Deferring commits allows for mechanics like "free cast if cancelled early."
+   - Because a commit can run at any point after activation — the resources checked on activation may already be spent — every commit re-checks and returns `false` instead of paying. Handle that result: a behavior that cannot pay usually ends or cancels its instance.
 
 **Note**: It is entirely possible to **not end** an ability. This is useful for passive abilities or toggles that should run continuously until cancelled externally or by tag triggers.
 
@@ -673,9 +676,12 @@ public class FireballBehavior : IAbilityBehavior
         AbilityHandle abilityHandle = context.AbilityHandle;
         AbilityInstanceHandle instanceHandle = context.InstanceHandle;
 
-        // Commit cooldown and cost
-        // This calls both CommitCooldown() and CommitCost()
-        abilityHandle.CommitAbility();
+        // Commit cooldown and cost together; nothing is paid unless both can be
+        if (!abilityHandle.TryCommitAbility())
+        {
+            instanceHandle.End();
+            return;
+        }
 
         // Spawn projectile, start animation, etc.
         SpawnFireball(owner, target, level);
@@ -718,7 +724,7 @@ public class InstantAbilityBehavior : IAbilityBehavior
 {
     public void OnStarted(AbilityBehaviorContext context)
     {
-        context.AbilityHandle.CommitAbility();
+        context.AbilityHandle.TryCommitAbility();
 
         // Do the instant effect
         ApplyDamage(context.Target);
@@ -898,7 +904,7 @@ Forge exposes this data through the ability behavior context during activation.
 
 `Magnitude` is a numeric value associated with an activation attempt.
 
-- It can be passed explicitly when calling `AbilityHandle.Activate(...)`.
+- It can be passed explicitly when calling `AbilityHandle.TryActivate(...)`.
 - It is automatically populated when abilities are triggered by **Event Triggers**.
 - It is accessible via `context.Magnitude` inside the behavior.
 
@@ -911,7 +917,7 @@ For cases where a numeric magnitude is not sufficient, abilities can receive str
 This is done using the generic activation method:
 
 ```csharp
-handle.Activate<HitLocationData>(
+handle.TryActivate<HitLocationData>(
     new HitLocationData(HitZone.Head),
     out AbilityActivationFailures failures,
     target: enemy);
@@ -931,7 +937,7 @@ public sealed class HitReactionBehavior : IAbilityBehavior<HitLocationData>
 {
     public void OnStarted(AbilityBehaviorContext context, HitLocationData data)
     {
-        context.AbilityHandle.CommitAbility();
+        context.AbilityHandle.TryCommitAbility();
 
         switch (data.Zone)
         {
@@ -1040,7 +1046,7 @@ For detailed documentation on Statescript concepts, see the [Statescript documen
 
 1. **Separate Data from Behavior**: Define ability configuration in `AbilityData` and implement logic in `IAbilityBehavior`.
 2. **Use Appropriate Instancing**: Choose `PerEntity` for abilities that should have one active instance, `PerExecution` for stackable abilities.
-3. **Commit Explicitly**: Call `CommitAbility()` (or individual commits) inside your behavior.
+3. **Commit Explicitly**: Call `TryCommitAbility()` (or individual commits) inside your behavior, and act on the `false` result — a late commit can find the cooldown running or the resources already spent.
 4. **End Instances**: Always call `context.InstanceHandle.End()` when logic completes to prevent "stuck" abilities.
 5. **Handle Failure Flags**: Use the `AbilityActivationFailures` flags to provide specific feedback to the player (e.g. check for `Cooldown` and `InsufficientResources`).
 6. **Clean Up in OnEnded**: Always clean up spawned objects, effects, and state in `OnEnded`.

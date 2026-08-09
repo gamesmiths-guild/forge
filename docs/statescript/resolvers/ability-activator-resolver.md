@@ -3,7 +3,7 @@
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.AbilityActivatorResolver`
 > **Output Type:** `AbilityActivator`
 
-Produces the custom activation data a graph passes when it activates an ability. It delegates to an `IAbilityActivationDataProvider`, which builds a strongly-typed value from the current graph state and hands it to the generic activation APIs. Bind it to the optional **Activation Data** input of [TryActivateAbilityNode](../nodes/condition/try-activate-ability-node.md), [TryActivateAbilitiesByTagNode](../nodes/condition/try-activate-abilities-by-tag-node.md), and [GrantAbilityAndActivateOnceNode](../nodes/condition/grant-ability-and-activate-once-node.md).
+Produces the custom activation data a graph passes when it activates an ability. It delegates to an `IAbilityActivationDataProvider`, which builds a strongly-typed value from the current graph state and hands it to the generic activation APIs. Bind it to the optional **Activation Data** input of [TryActivateAbilityNode](../nodes/condition/try-activate-ability-node.md), [TryActivateAbilitiesByTagNode](../nodes/condition/try-activate-abilities-by-tag-node.md), and [TryGrantAbilityAndActivateOnceNode](../nodes/condition/try-grant-ability-and-activate-once-node.md).
 
 This is the send end of the channel [AbilityActivationDataResolver](ability-activation-data-resolver.md) reads from: a provider builds typed data *from* the graph and feeds it *into* the activation, where the activated ability reads members back *out*. **Both ends are driven by the same `IAbilityActivationDataProvider`**, so one implementation per activation-data type covers the whole round trip. It is the ability counterpart of [EffectContextDataResolver](effect-context-data-resolver.md) and [EventPayloadResolver](event-payload-resolver.md).
 
@@ -81,7 +81,7 @@ On the **reading** side the same member is offered as a bindable field of [Abili
 ## Behavior
 
 - The resolver returns the same `AbilityActivator` on every resolve; the *data* is rebuilt from the current graph state on each activation. Declared inputs are resolved lazily from the bag as the provider reads them.
-- Each node calls the activator entry point matching its own operation, which forwards to the generic ability API (`AbilityHandle.Activate<TData>`, `EntityAbilities.TryActivateAbilitiesByTag<TData>`, `EntityAbilities.GrantAbilityAndActivateOnce<TData>`).
+- Each node calls the activator entry point matching its own operation, which forwards to the generic ability API (`AbilityHandle.TryActivate<TData>`, `EntityAbilities.TryActivateAbilitiesByTag<TData>`, `EntityAbilities.TryGrantAbilityAndActivateOnce<TData>`).
 - **Mismatched data is never an error.** An ability whose behavior does not implement `IAbilityBehavior<TData>` still activates; it just starts through the untyped path and ignores the data. This matters most for [TryActivateAbilitiesByTagNode](../nodes/condition/try-activate-abilities-by-tag-node.md), where one tag can select several abilities that do not share an activation-data type.
 - When the **Activation Data** input is unbound, the node activates without custom data.
 
@@ -105,4 +105,4 @@ tryActivate.BindInput(TryActivateAbilityNode.ActivationDataInput, "throwData");
 - [EventPayloadResolver](event-payload-resolver.md)
 - [TryActivateAbilityNode](../nodes/condition/try-activate-ability-node.md)
 - [TryActivateAbilitiesByTagNode](../nodes/condition/try-activate-abilities-by-tag-node.md)
-- [GrantAbilityAndActivateOnceNode](../nodes/condition/grant-ability-and-activate-once-node.md)
+- [TryGrantAbilityAndActivateOnceNode](../nodes/condition/try-grant-ability-and-activate-once-node.md)

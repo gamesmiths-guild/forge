@@ -56,7 +56,6 @@ public class ApplyEffectActionNode : ActionNode
 | [ApplyEffectNode](apply-effect-node.md) | Applies one or more effects to one or more targets. |
 | [CancelAbilitiesNode](cancel-abilities-node.md) | Cancels active abilities on an entity, selected by the ability tags they carry. |
 | [CancelAbilityNode](cancel-ability-node.md) | Cancels the ability driving the current graph. |
-| [CommitAbilityNode](commit-ability-node.md) | Commits the cost and/or cooldown of the ability driving the graph. |
 | [ExecuteCueNode](execute-cue-node.md) | Executes one or more one-shot cues on one or more targets. |
 | [GrantAbilityPermanentlyNode](grant-ability-permanently-node.md) | Permanently grants an ability to an entity (cannot be revoked). |
 | [RaiseEventNode](raise-event-node.md) | Raises an event on one or more target entities' event buses. |

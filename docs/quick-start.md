@@ -1050,8 +1050,13 @@ public class FireballBehavior : IAbilityBehavior
 {
     public void OnStarted(AbilityBehaviorContext context)
     {
-        // Apply costs and cooldowns
-        context.AbilityHandle.CommitAbility();
+        // Apply costs and cooldowns; a commit can fail if the resources went away
+        if (!context.AbilityHandle.TryCommitAbility())
+        {
+            context.InstanceHandle.End();
+            return;
+        }
+
         Console.WriteLine("Fireball cast!");
         context.InstanceHandle.End();
     }
@@ -1138,7 +1143,7 @@ if (player.Abilities.TryGetAbility(fireballData, out AbilityHandle? handle))
     }
 
     // Try to activate
-    if (handle.Activate(out AbilityActivationFailures failures))
+    if (handle.TryActivate(out AbilityActivationFailures failures))
     {
         Console.WriteLine("Activation successful");
     }
@@ -1178,16 +1183,17 @@ In some cases you just want a quick way to activate an ability on a target witho
 The example below shows the use of a "Scroll of Fireball" that grants the fireball ability transiently, attempts to activate it immediately, and then removes the grant once the ability concludes or fails.
 
 ```csharp
-AbilityHandle? handle = player.Abilities.GrantAbilityAndActivateOnce(
+bool cast = player.Abilities.TryGrantAbilityAndActivateOnce(
     abilityData: fireballData,
     abilityLevel: 1,
     levelOverridePolicy: LevelComparison.None,
     out AbilityActivationFailures failureFlags,
+    out AbilityHandle? handle,
     targetEntity: enemy,  // The target of the fireball
     sourceEntity: scrollItem // The source (e.g., the scroll item)
 );
 
-if (handle is not null)
+if (cast)
 {
     Console.WriteLine("Scroll used successfully! Fireball cast.");
 }
@@ -1196,6 +1202,8 @@ else
     Console.WriteLine($"Failed to use scroll: {failureFlags}");
 }
 ```
+
+The `handle` is only set while the procced ability is **still running**. A fireball that finishes inside the call leaves it `null` even though the cast succeeded, so read the return value — not the handle — to know whether the ability activated.
 
 ---
 
@@ -1315,7 +1323,7 @@ var abilityData = new AbilityData(
 AbilityHandle handle = player.Abilities.GrantAbilityPermanently(
     abilityData, 1, LevelComparison.None, player);
 
-handle.Activate(out AbilityActivationFailures failureFlags);
+handle.TryActivate(out AbilityActivationFailures failureFlags);
 ```
 
 Activating the ability starts the graph at its Entry node; `UpdateAbilities` ticks it each frame, and the ability instance ends automatically when the graph finishes. Everything you already know about costs, cooldowns, tag requirements and triggers applies unchanged — the graph replaces the behavior, not the ability.

@@ -69,4 +69,4 @@ graph.AddConnection(new Connection(
 
 - [State Nodes Overview](README.md)
 - [GrantAbilityPermanentlyNode](../action/grant-ability-permanently-node.md)
-- [GrantAbilityAndActivateOnceNode](../condition/grant-ability-and-activate-once-node.md)
+- [TryGrantAbilityAndActivateOnceNode](../condition/try-grant-ability-and-activate-once-node.md)
