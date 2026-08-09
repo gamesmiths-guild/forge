@@ -2704,6 +2704,175 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		entity.Attributes["TestAttributeSet.Attribute90"].CurrentValue.Should().Be(finalValue);
 	}
 
+	[Theory]
+
+	// Attribute90 starts at 90 within bounds [0, 99]. Only a flat modifier's magnitude is the change it makes to the
+	// attribute; for the other operations the magnitude describes the result, so the affordability check has to derive
+	// the change before comparing it against the remaining headroom.
+	[InlineData(ModifierOperation.Override, 98f, true, 98)]
+	[InlineData(ModifierOperation.Override, -5f, false, 90)]
+	[InlineData(ModifierOperation.PercentBonus, 0.2f, false, 90)]
+	[InlineData(ModifierOperation.PercentBonus, -0.1f, true, 81)]
+	[Trait("Ability cost", null)]
+	public void Cost_affordability_accounts_for_the_modifier_operation(
+		ModifierOperation operation, float magnitude, bool affordable, int finalValue)
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var costEffectData = new EffectData(
+			"Fireball Cost",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute90",
+					operation,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(magnitude)))
+			]);
+
+		AbilityData abilityData = new("Fireball", costEffectData);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		// Activation and commit share the affordability check, so both have to agree with the operation's real change.
+		abilityHandle!.TryActivate(out AbilityActivationFailures failureFlags).Should().Be(affordable);
+		failureFlags.Should().Be(
+			affordable ? AbilityActivationFailures.None : AbilityActivationFailures.InsufficientResources);
+
+		abilityHandle.TryCommitCost().Should().Be(affordable);
+		entity.Attributes["TestAttributeSet.Attribute90"].CurrentValue.Should().Be(finalValue);
+	}
+
+	[Fact]
+	[Trait("Ability cost", null)]
+	public void Cost_affordability_is_measured_against_the_value_a_commit_would_spend_from()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		// Attribute100 starts at 100 within bounds [0, 1000]. A buff raises the current value without moving the base
+		// value, and an instant cost spends from the base value.
+		var buffEffectData = new EffectData(
+			"Mana Buff",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute100",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(200)))
+			]);
+
+		entity.EffectsManager.ApplyEffect(new Effect(buffEffectData, new EffectOwnership(entity, entity)));
+
+		entity.Attributes["TestAttributeSet.Attribute100"].BaseValue.Should().Be(100);
+		entity.Attributes["TestAttributeSet.Attribute100"].CurrentValue.Should().Be(300);
+
+		var costEffectData = new EffectData(
+			"Fireball Cost",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute100",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-150)))
+			]);
+
+		AbilityData abilityData = new("Fireball", costEffectData);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		// The quoted cost stays the nominal ask even though the owner cannot cover it.
+		abilityHandle!.GetCostForAttribute("TestAttributeSet.Attribute100").Should().Be(-150);
+
+		// 150 fits under the current value of 300 but not under the 100 a commit would actually spend from, and a
+		// commit that went ahead would clamp at 0 and quietly charge 100 instead of 150.
+		abilityHandle.TryActivate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.InsufficientResources);
+
+		abilityHandle.TryCommitCost().Should().BeFalse();
+		entity.Attributes["TestAttributeSet.Attribute100"].BaseValue.Should().Be(100);
+		entity.Attributes["TestAttributeSet.Attribute100"].CurrentValue.Should().Be(300);
+	}
+
+	[Fact]
+	[Trait("Ability cost", null)]
+	public void Cost_is_unaffordable_when_the_owner_has_no_attribute_to_charge_it_against()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var costEffectData = new EffectData(
+			"Fireball Cost",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"MissingAttributeSet.Mana",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-10)))
+			]);
+
+		AbilityData abilityData = new("Fireball", costEffectData);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		// Applying the effect would skip the modifier, so without this gate the ability would be cast for free.
+		abilityHandle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.InsufficientResources);
+
+		abilityHandle.TryCommitCost().Should().BeFalse();
+
+		// There is no attribute to quote a cost against, so the cost data stays empty while the ability stays blocked.
+		abilityHandle.GetCostData().Should().BeEmpty();
+		abilityHandle.GetCostForAttribute("MissingAttributeSet.Mana").Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Ability cost", null)]
+	public void Cost_affordability_compounds_modifiers_charged_against_the_same_attribute()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		// Attribute90 starts at 90. Either half is affordable on its own; together they overdraw it.
+		var costEffectData = new EffectData(
+			"Fireball Cost",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute90",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-50))),
+				new Modifier(
+					"TestAttributeSet.Attribute90",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-50)))
+			]);
+
+		AbilityData abilityData = new("Fireball", costEffectData);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		abilityHandle!.GetCostForAttribute("TestAttributeSet.Attribute90").Should().Be(-100);
+
+		abilityHandle.TryActivate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.InsufficientResources);
+
+		abilityHandle.TryCommitCost().Should().BeFalse();
+		entity.Attributes["TestAttributeSet.Attribute90"].CurrentValue.Should().Be(90);
+	}
+
 	[Fact]
 	[Trait("Ability cost", null)]
 	public void Cost_effect_with_multiple_modifiers_reports_configured_cost_and_applies_on_commit()

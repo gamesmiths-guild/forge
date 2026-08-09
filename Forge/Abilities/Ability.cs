@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using System.Reflection;
+using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Calculator;
@@ -17,6 +18,16 @@ namespace Gamesmiths.Forge.Abilities;
 internal sealed class Ability
 {
 	private record struct BehaviorBinding(IAbilityBehavior Behavior, AbilityBehaviorContext Context);
+
+	/// <summary>
+	/// What applying the cost effect would do to one attribute: the net change it produces, and whether every step of
+	/// it lands inside the attribute's bounds.
+	/// </summary>
+	/// <param name="Attribute">The attribute the cost is charged against.</param>
+	/// <param name="Cost">The nominal net change the cost effect asks of the attribute, whether or not it fits.</param>
+	/// <param name="AppliesInFull">Whether the cost lands without being clamped, which is what makes it affordable.
+	/// </param>
+	private readonly record struct CostProjection(StringKey Attribute, int Cost, bool AppliesInFull);
 
 	private readonly Effect[]? _cooldownEffects;
 
@@ -482,40 +493,15 @@ internal sealed class Ability
 			return null;
 		}
 
-		ModifierEvaluatedData[] allModifiersEvaluatedData = EvaluateInstantModifiers(_costEffect, specificAttribute);
+		CostProjection[] projections = ProjectCost(specificAttribute);
+		var costData = new CostData[projections.Length];
 
-		Dictionary<StringKey, float> costByAttribute = [];
-
-		foreach (ModifierEvaluatedData modifierEvaluatedData in allModifiersEvaluatedData)
+		for (int i = 0; i < projections.Length; i++)
 		{
-			if (!costByAttribute.TryGetValue(modifierEvaluatedData.Attribute.Key, out float value))
-			{
-				value = 0f;
-				costByAttribute[modifierEvaluatedData.Attribute.Key] = value;
-			}
-
-			float baseValue = modifierEvaluatedData.Attribute.BaseValue
-				+ value;
-
-			switch (modifierEvaluatedData.ModifierOperation)
-			{
-				case ModifierOperation.FlatBonus:
-					costByAttribute[modifierEvaluatedData.Attribute.Key] += modifierEvaluatedData.Magnitude;
-					break;
-
-				case ModifierOperation.PercentBonus:
-					costByAttribute[modifierEvaluatedData.Attribute.Key] +=
-						(int)(baseValue * (1 + modifierEvaluatedData.Magnitude)) - baseValue;
-					break;
-
-				case ModifierOperation.Override:
-					costByAttribute[modifierEvaluatedData.Attribute.Key] +=
-						modifierEvaluatedData.Magnitude - baseValue;
-					break;
-			}
+			costData[i] = new CostData(projections[i].Attribute, projections[i].Cost);
 		}
 
-		return [.. costByAttribute.Select(x => new CostData(x.Key, (int)x.Value))];
+		return costData;
 	}
 
 	internal int GetCostForAttribute(StringKey attributeKey)
@@ -536,6 +522,54 @@ internal sealed class Ability
 		}
 
 		return 0;
+	}
+
+	/// <summary>
+	/// Replays every modifier charged against one attribute the way an instant application would: in order, each one
+	/// building on the value the previous one produced, clamped to the attribute's bounds at every step.
+	/// </summary>
+	/// <remarks>
+	/// <para>A step landing outside the bounds is one the attribute could not absorb in full, which is exactly what
+	/// makes a cost unaffordable. The projection deliberately carries the <b>unclamped</b> value forward, so the cost
+	/// stays the nominal ask — a UI showing "150 mana" against a pool of 100 wants the 150, not the 100 the target
+	/// could scrape together.</para>
+	/// <para>When nothing falls out of bounds no clamping would happen either, so the projected cost is then exactly
+	/// the change an application would make.</para>
+	/// </remarks>
+	/// <param name="attribute">The attribute being charged.</param>
+	/// <param name="evaluatedModifiers">Every evaluated modifier of the cost effect, in application order.</param>
+	/// <returns>The projected outcome for this attribute.</returns>
+	private static CostProjection ProjectAttributeCost(
+		EntityAttribute attribute,
+		ModifierEvaluatedData[] evaluatedModifiers)
+	{
+		// An instant application mutates the base value, so that is the value the projection has to start from.
+		int value = attribute.BaseValue;
+		bool appliesInFull = true;
+
+		foreach (ModifierEvaluatedData evaluatedModifier in evaluatedModifiers)
+		{
+			if (evaluatedModifier.Attribute.Key != attribute.Key)
+			{
+				continue;
+			}
+
+			// Mirrors EntityAttribute.Execute*: the same truncation and the same rounding.
+			value = evaluatedModifier.ModifierOperation switch
+			{
+				ModifierOperation.FlatBonus => value + (int)evaluatedModifier.Magnitude,
+				ModifierOperation.PercentBonus => (int)(value * Math.Round(1 + evaluatedModifier.Magnitude, 6)),
+				ModifierOperation.Override => (int)evaluatedModifier.Magnitude,
+				_ => value,
+			};
+
+			if (value < attribute.Min || value > attribute.Max)
+			{
+				appliesInFull = false;
+			}
+		}
+
+		return new CostProjection(attribute.Key, value - attribute.BaseValue, appliesInFull);
 	}
 
 	private static bool FailsRequiredTags(TagContainer? required, TagContainer? present)
@@ -590,7 +624,66 @@ internal sealed class Ability
 
 	private bool CanCommitCost()
 	{
-		return _costEffect is null || Owner.EffectsManager.CanApplyEffect(_costEffect, Level);
+		if (_costEffect is null)
+		{
+			return true;
+		}
+
+		// A cost charged against an attribute the owner does not have can never be paid. Applying the effect would
+		// quietly skip that modifier, so refusing here is what stops the ability from being cast for free — the check
+		// is deliberately stricter than the application on this one point.
+		foreach (Modifier modifier in _costEffect.EffectData.Modifiers)
+		{
+			if (!Owner.Attributes.ContainsAttribute(modifier.Attribute))
+			{
+				return false;
+			}
+		}
+
+		foreach (CostProjection projection in ProjectCost(specificAttribute: null))
+		{
+			if (!projection.AppliesInFull)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// Projects what applying the cost effect would do, without touching a single attribute.
+	/// </summary>
+	/// <remarks>
+	/// <para>This is the one place the cost is computed. Both the number a player is shown through
+	/// <see cref="GetCostData"/> and the affordability behind <see cref="CanCommitCost"/> read it, so the cost quoted
+	/// and the cost charged cannot drift apart, and neither can drift from what an instant
+	/// <see cref="Effect"/> application would really do.</para>
+	/// <para>Modifiers are grouped per attribute because that is the granularity the bounds apply at; several
+	/// modifiers charged against the same attribute compound, exactly as they would when executed.</para>
+	/// </remarks>
+	/// <param name="specificAttribute">Restricts the projection to a single attribute, or <see langword="null"/> for
+	/// every attribute the cost touches.</param>
+	/// <returns>One projection per attribute the cost effect charges.</returns>
+	private CostProjection[] ProjectCost(StringKey? specificAttribute)
+	{
+		Validation.Assert(_costEffect is not null, "There is no cost to project without a cost effect.");
+
+		ModifierEvaluatedData[] evaluatedModifiers = EvaluateInstantModifiers(_costEffect, specificAttribute);
+
+		List<CostProjection> projections = [];
+
+		foreach (EntityAttribute attribute in evaluatedModifiers.Select(x => x.Attribute))
+		{
+			if (projections.Exists(x => x.Attribute == attribute.Key))
+			{
+				continue;
+			}
+
+			projections.Add(ProjectAttributeCost(attribute, evaluatedModifiers));
+		}
+
+		return [.. projections];
 	}
 
 	private void ApplyCooldown()

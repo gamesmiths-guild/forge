@@ -626,11 +626,17 @@ Costs are instant effects that modify attributes when committed.
 
 **Validation Logic**:
 
-Cost modifiers are validated against the attribute's configured min/max bounds:
-- If the modifier is **negative** (consumption), it tests against the attribute's **Minimum Value**. (e.g., Do I have enough Mana to pay -30 without going below 0?)
-- If the modifier is **positive** (restoration), it tests against the attribute's **Maximum Value**. (e.g., Is my Health low enough to receive +50 healing without exceeding Max Health?)
+A cost is affordable when applying it would land inside the attribute's configured min/max bounds — that is, when it applies **in full**, with nothing clamped away:
+- A **negative** modifier (consumption) tests against the attribute's **Minimum Value**. (e.g., Do I have enough Mana to pay -30 without going below 0?)
+- A **positive** modifier (restoration) tests against the attribute's **Maximum Value**. (e.g., Is my Health low enough to receive +50 healing without exceeding Max Health?)
 
-You can add multiple modifiers to the single `CostEffect`, allowing an ability to consume multiple different attributes (e.g., Mana and Health).
+Two details follow from the cost being an *instant* effect, and they are what `GetCostData()` reports and what the affordability check measures — the two are computed by the same projection, so the cost you show a player is always the cost that gets charged:
+
+- **Costs are spent from `BaseValue`, not `CurrentValue`.** Instant effects modify the base value, so a duration-based buff raising an attribute's current value does not make more of it spendable. An entity with 100 base Mana and a +200 Mana buff shows 300 but can still only pay 100.
+- **Modifiers on the same attribute compound.** They are validated in application order, each building on the value the previous one produced, so two -50 modifiers against 90 Mana cost 100 and are rejected together rather than passing individually.
+- **A cost the owner has no attribute for is never affordable.** Applying the effect would silently skip that modifier, so the check refuses instead — otherwise an ability whose cost names an attribute the entity does not have would be cast for free. This is the one point where the check is deliberately stricter than the application.
+
+You can add multiple modifiers to the single `CostEffect`, allowing an ability to consume multiple different attributes (e.g., Mana and Health). Each attribute is validated independently.
 
 ```csharp
 var costEffect = new EffectData(

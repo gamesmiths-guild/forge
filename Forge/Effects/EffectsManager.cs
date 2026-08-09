@@ -4,7 +4,6 @@ using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
-using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Stacking;
 
 namespace Gamesmiths.Forge.Effects;
@@ -428,19 +427,6 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	internal void RemoveActiveEffect_InternalCall(ActiveEffect effect)
 	{
 		RemoveActiveEffect(effect, EffectRemovalReason.Expired);
-	}
-
-	internal bool CanApplyEffect(Effect costEffect, int level)
-	{
-		foreach (Modifier modifier in costEffect.EffectData.Modifiers)
-		{
-			if (!modifier.CanApply(costEffect, Owner, level))
-			{
-				return false;
-			}
-		}
-
-		return true;
 	}
 
 	internal ActiveEffectHandle? ApplyEffectInternal(Effect effect, EffectApplicationContext? applicationContext)
