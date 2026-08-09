@@ -33,14 +33,25 @@ public readonly record struct Modifier(
 
 		EntityAttribute attribute = target.Attributes[Attribute];
 
-		if (magnitude < 0)
+		// Only a flat modifier's magnitude is a delta. The other operations describe the resulting value, so their
+		// delta has to be derived before it can be checked against the attribute's bounds — otherwise an override to
+		// a value well within range reads as an unaffordable change.
+		float delta = Operation switch
 		{
-			return magnitude >= attribute.Min - attribute.CurrentValue;
+			ModifierOperation.PercentBonus =>
+				(int)(attribute.CurrentValue * Math.Round(1 + magnitude, 6)) - attribute.CurrentValue,
+			ModifierOperation.Override => magnitude - attribute.CurrentValue,
+			_ => magnitude,
+		};
+
+		if (delta < 0)
+		{
+			return delta >= attribute.Min - attribute.CurrentValue;
 		}
 
-		if (magnitude > 0)
+		if (delta > 0)
 		{
-			return magnitude <= attribute.Max - attribute.CurrentValue;
+			return delta <= attribute.Max - attribute.CurrentValue;
 		}
 
 		return true;
