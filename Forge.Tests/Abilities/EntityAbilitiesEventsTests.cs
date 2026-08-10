@@ -128,6 +128,69 @@ public class EntityAbilitiesEventsTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 	[Fact]
 	[Trait("Lifecycle", null)]
+	public void Revoking_the_last_grant_reports_removal_before_the_handle_is_freed()
+	{
+		TestEntity entity = CreateEntity();
+
+		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
+			CreateAbilityData("Fireball"), 1, LevelComparison.Higher, null);
+
+		var log = new EventLog(entity.Abilities);
+
+		bool validInsideHandler = false;
+		entity.Abilities.OnAbilityRemoved += removed => validInsideHandler = removed.IsValid;
+
+		entity.Abilities.RevokeAbility(handle).Should().BeTrue();
+
+		log.Entries.Should().Equal("Removed");
+		log.Removed.Should().ContainSingle().Which.Should().BeSameAs(handle);
+		validInsideHandler.Should().BeTrue();
+		handle.IsValid.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Lifecycle", null)]
+	public void Revoking_while_an_effect_still_grants_the_ability_reports_no_removal()
+	{
+		TestEntity entity = CreateEntity();
+		AbilityData abilityData = CreateAbilityData("Fireball");
+
+		GrantThroughEffect(entity, abilityData);
+
+		// The granting effect is owned and sourced by the entity, and an ability's identity is its data plus its
+		// granting source, so the permanent grant has to name the same source to land on that same ability.
+		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(abilityData, 1, LevelComparison.Higher, entity);
+
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		var log = new EventLog(entity.Abilities);
+		entity.Abilities.RevokeAbility(handle).Should().BeTrue();
+
+		log.Removed.Should().BeEmpty();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+		handle.IsValid.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Lifecycle", null)]
+	public void Clearing_an_effect_granted_ability_reports_removal()
+	{
+		TestEntity entity = CreateEntity();
+		AbilityData abilityData = CreateAbilityData("Fireball");
+
+		GrantThroughEffect(entity, abilityData);
+		entity.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle).Should().BeTrue();
+
+		var log = new EventLog(entity.Abilities);
+		entity.Abilities.ClearAbility(handle!).Should().BeTrue();
+
+		log.Entries.Should().Equal("Removed");
+		log.Removed.Should().ContainSingle().Which.Should().BeSameAs(handle);
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Lifecycle", null)]
 	public void Inhibiting_and_uninhibiting_an_ability_reports_changed()
 	{
 		TestEntity entity = CreateEntity();
