@@ -126,6 +126,85 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 	[Fact]
 	[Trait("Remove ability", null)]
+	public void Removing_the_grant_cancels_every_instance_of_a_per_execution_ability()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var ownedTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"]));
+
+		AbilityData abilityData = CreateAbilityData(
+			"PerExecutionRemoval",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution,
+			activationOwnedTags: ownedTags);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? effectHandle);
+
+		abilityHandle.Should().NotBeNull();
+		effectHandle.Should().NotBeNull();
+
+		for (int i = 0; i < 3; i++)
+		{
+			abilityHandle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+			failureFlags.Should().Be(AbilityActivationFailures.None);
+		}
+
+		abilityHandle!.IsActive.Should().BeTrue();
+		entity.Tags.AllTags.HasAll(ownedTags).Should().BeTrue();
+
+		entity.EffectsManager.RemoveEffect(effectHandle!);
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+
+		// Every instance must be cancelled, not just the most recent one. The ability is gone from the manager, so
+		// nothing is left to end the survivors and their activation owned tags would sit on the entity forever.
+		entity.Tags.AllTags.HasAny(ownedTags).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Remove ability", null)]
+	public void Removing_the_grant_reports_the_ability_as_canceled()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? effectHandle);
+
+		abilityHandle.Should().NotBeNull();
+
+		AbilityEndedData? capturedData = null;
+		entity.Abilities.OnAbilityEnded += x => capturedData = x;
+
+		abilityHandle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		entity.EffectsManager.RemoveEffect(effectHandle!);
+
+		// A grant removed under CancelImmediately tears the ability away rather than letting it finish, so listeners
+		// have to be able to tell it apart from a natural ending.
+		capturedData.Should().NotBeNull();
+		capturedData!.Value.WasCanceled.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Remove ability", null)]
 	public void Grants_with_different_remove_policies_work_independently()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
@@ -307,6 +386,577 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 		abilityHandle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Revoke ability", null)]
+	public void Revoking_a_permanent_grant_removes_the_ability()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		entity.Abilities.RevokeAbility(handle).Should().BeTrue();
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+		handle.IsValid.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Revoke ability", null)]
+	public void Revoking_removes_every_permanent_grant_in_a_single_call()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		// Repeat permanent grants stack a source each, but revoking is an unlock-style operation: one call takes the
+		// ability away rather than decrementing a counter the caller never sees.
+		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+		entity.Abilities.GrantAbilityPermanently(abilityData, 1, LevelComparison.None, sourceEntity: null);
+		entity.Abilities.GrantAbilityPermanently(abilityData, 1, LevelComparison.None, sourceEntity: null);
+
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		entity.Abilities.RevokeAbility(handle).Should().BeTrue();
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Revoke ability", null)]
+	public void Revoking_leaves_an_ability_an_effect_is_still_granting()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? effectHandle);
+
+		abilityHandle.Should().NotBeNull();
+
+		entity.Abilities.GrantAbilityPermanently(abilityData, 1, LevelComparison.None, sourceEntity: null);
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		// The permanent share goes, the effect's grant stays.
+		entity.Abilities.RevokeAbility(abilityHandle!).Should().BeTrue();
+
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+		abilityHandle!.IsValid.Should().BeTrue();
+
+		entity.EffectsManager.RemoveEffect(effectHandle!);
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+		abilityHandle.IsValid.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Revoke ability", null)]
+	public void Revoking_an_ability_without_a_permanent_grant_reports_failure_and_changes_nothing()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
+		abilityHandle.Should().NotBeNull();
+
+		entity.Abilities.RevokeAbility(abilityHandle!).Should().BeFalse();
+
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+		abilityHandle!.IsValid.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Revoke ability", null)]
+	public void Revoking_an_invalid_handle_reports_failure()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		entity.Abilities.RevokeAbility(handle).Should().BeTrue();
+
+		// The handle is now freed; revoking it again must not throw or resurrect anything.
+		entity.Abilities.RevokeAbility(handle).Should().BeFalse();
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Revoke ability", null)]
+	public void Revoking_a_handle_granted_on_another_entity_reports_failure()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+		TestEntity otherEntity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle otherHandle = otherEntity.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		entity.Abilities.RevokeAbility(otherHandle).Should().BeFalse();
+
+		otherEntity.Abilities.GrantedAbilities.Should().ContainSingle();
+		otherHandle.IsValid.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Revoke ability", null)]
+	public void Revoked_ability_with_RemoveOnEnd_is_removed_only_after_deactivation()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		handle.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		entity.Abilities.RevokeAbility(handle, AbilityDeactivationPolicy.RemoveOnEnd).Should().BeTrue();
+
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+		handle.IsActive.Should().BeTrue();
+
+		handle.Cancel();
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Revoke ability", null)]
+	public void Revoking_cancels_every_instance_of_a_per_execution_ability()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var ownedTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"]));
+
+		AbilityData abilityData = CreateAbilityData(
+			"PerExecutionRevoke",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution,
+			activationOwnedTags: ownedTags);
+
+		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		for (int i = 0; i < 3; i++)
+		{
+			handle.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+			failureFlags.Should().Be(AbilityActivationFailures.None);
+		}
+
+		entity.Tags.AllTags.HasAll(ownedTags).Should().BeTrue();
+
+		entity.Abilities.RevokeAbility(handle).Should().BeTrue();
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+		entity.Tags.AllTags.HasAny(ownedTags).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Clear ability", null)]
+	public void Clearing_removes_an_ability_that_only_an_effect_was_granting()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? effectHandle);
+
+		abilityHandle.Should().NotBeNull();
+
+		// RevokeAbility would not touch this grant; ClearAbility drops it regardless of who owns it.
+		entity.Abilities.RevokeAbility(abilityHandle!).Should().BeFalse();
+		entity.Abilities.ClearAbility(abilityHandle!).Should().BeTrue();
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+		abilityHandle!.IsValid.Should().BeFalse();
+
+		// The granting effect still believes it owns the ability. Its removal must be a quiet no-op rather than a
+		// throw or a resurrected entry, and it must not grant the ability back.
+		entity.EffectsManager.RemoveEffect(effectHandle!);
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Clear ability", null)]
+	public void Clearing_drops_permanent_and_effect_grants_together()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
+		abilityHandle.Should().NotBeNull();
+
+		entity.Abilities.GrantAbilityPermanently(abilityData, 1, LevelComparison.None, sourceEntity: null);
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		entity.Abilities.ClearAbility(abilityHandle!).Should().BeTrue();
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Clear ability", null)]
+	public void Reapplying_the_granting_effect_grants_a_cleared_ability_again()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? effectHandle);
+
+		abilityHandle.Should().NotBeNull();
+
+		entity.Abilities.ClearAbility(abilityHandle!).Should().BeTrue();
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+
+		// The orphaned application is inert: unapplying it neither throws nor resurrects anything.
+		entity.EffectsManager.RemoveEffect(effectHandle!);
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+
+		// Clearing orphans the grant, it does not disable the effect. A fresh application builds a fresh component
+		// instance, so re-equipping the item that provides the ability brings it back.
+		AbilityHandle? regrantedHandle = SetupAbility(entity, abilityData, new ScalableInt(1), out _);
+
+		regrantedHandle.Should().NotBeNull();
+		regrantedHandle!.IsValid.Should().BeTrue();
+		regrantedHandle.Should().NotBeSameAs(abilityHandle);
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+	}
+
+	[Fact]
+	[Trait("Clear ability", null)]
+	public void Clearing_overrides_a_removal_that_is_already_pending_on_end()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? effectHandle,
+			AbilityDeactivationPolicy.RemoveOnEnd,
+			AbilityDeactivationPolicy.RemoveOnEnd);
+
+		abilityHandle.Should().NotBeNull();
+
+		abilityHandle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		// Removing the only grant under RemoveOnEnd leaves the ability registered with an empty source list, waiting
+		// for its instances to finish.
+		entity.EffectsManager.RemoveEffect(effectHandle!);
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		// A teardown asked for during that window has to win, not report "nothing to do" and leave it running.
+		entity.Abilities.ClearAbility(abilityHandle).Should().BeTrue();
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+		abilityHandle.IsValid.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Clear ability", null)]
+	public void ClearAllAbilities_also_removes_an_ability_pending_removal_on_end()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out ActiveEffectHandle? effectHandle,
+			AbilityDeactivationPolicy.RemoveOnEnd,
+			AbilityDeactivationPolicy.RemoveOnEnd);
+
+		abilityHandle!.TryActivate(out _).Should().BeTrue();
+		entity.EffectsManager.RemoveEffect(effectHandle!);
+
+		entity.Abilities.ClearAllAbilities();
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Revoke ability", null)]
+	public void Revoking_a_permanent_grant_inhibits_an_ability_whose_remaining_effect_is_inhibited()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		// Granted by an effect that is inhibited while the entity carries color.red...
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(IgnoreTags: TagsOf("color.red"))));
+
+		abilityHandle.Should().NotBeNull();
+
+		// ...and also granted permanently, which keeps it enabled because a permanent grant ignores inhibition.
+		entity.Abilities.GrantAbilityPermanently(abilityData, 1, LevelComparison.None, sourceEntity: null);
+
+		CreateAndApplyTagEffect(entity, TagsOf("color.red"));
+
+		abilityHandle!.IsInhibited.Should().BeFalse();
+
+		int changedCount = 0;
+		entity.Abilities.OnAbilityChanged += _ => changedCount++;
+
+		// Revoking the permanent share leaves only the inhibited effect grant, so the ability must become inhibited.
+		entity.Abilities.RevokeAbility(abilityHandle).Should().BeTrue();
+
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+		abilityHandle.IsInhibited.Should().BeTrue();
+		changedCount.Should().Be(1);
+
+		abilityHandle.TryActivate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.Inhibited);
+	}
+
+	[Fact]
+	[Trait("Clear ability", null)]
+	public void Clearing_an_ability_that_is_not_granted_reports_failure()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+		TestEntity otherEntity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle otherHandle = otherEntity.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		entity.Abilities.ClearAbility(otherHandle).Should().BeFalse();
+
+		otherEntity.Abilities.GrantedAbilities.Should().ContainSingle();
+	}
+
+	[Fact]
+	[Trait("Clear ability", null)]
+	public void ClearAllAbilities_removes_every_ability_including_active_ones()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var ownedTags = new TagContainer(_tagsManager, TestUtils.StringToTag(_tagsManager, ["tag"]));
+
+		AbilityData permanentData = CreateAbilityData(
+			"Permanent",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1),
+			activationOwnedTags: ownedTags);
+
+		AbilityData effectGrantedData = CreateAbilityData(
+			"EffectGranted",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1));
+
+		AbilityHandle permanentHandle = entity.Abilities.GrantAbilityPermanently(
+			permanentData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		SetupAbility(entity, effectGrantedData, new ScalableInt(1), out _).Should().NotBeNull();
+
+		entity.Abilities.GrantedAbilities.Should().HaveCount(2);
+
+		permanentHandle.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+		entity.Tags.AllTags.HasAll(ownedTags).Should().BeTrue();
+
+		entity.Abilities.ClearAllAbilities();
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty();
+		entity.Tags.AllTags.HasAny(ownedTags).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Cooldown", null)]
+	public void Cooldown_survives_a_revoke_and_regrant_and_is_reported_consistently()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		handle.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		handle.TryCommitCooldown();
+		handle.Cancel();
+
+		entity.EffectsManager.UpdateEffects(1f);
+
+		var simpleTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		handle.GetRemainingCooldownTime(simpleTag).Should().Be(2f);
+
+		entity.Abilities.RevokeAbility(handle).Should().BeTrue();
+
+		// The cooldown lives in an effect on the owner, so it outlives the grant. Re-granting must not hand back a
+		// ready ability, and the reported time must agree with the refusal rather than reading as zero.
+		AbilityHandle regrantedHandle = entity.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		regrantedHandle.TryActivate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.Cooldown);
+
+		regrantedHandle.GetRemainingCooldownTime(simpleTag).Should().Be(2f);
+
+		CooldownData[] cooldownData = regrantedHandle.GetCooldownData()!;
+		cooldownData.Should().ContainSingle();
+		cooldownData[0].TotalTime.Should().Be(3f);
+		cooldownData[0].RemainingTime.Should().Be(2f);
+
+		// Once it expires the ability is castable again through the new handle.
+		entity.EffectsManager.UpdateEffects(2f);
+
+		regrantedHandle.GetRemainingCooldownTime(simpleTag).Should().Be(0f);
+		regrantedHandle.TryActivate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
 	}
 
 	[Fact]

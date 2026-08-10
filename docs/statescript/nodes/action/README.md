@@ -57,7 +57,7 @@ public class ApplyEffectActionNode : ActionNode
 | [CancelAbilitiesNode](cancel-abilities-node.md) | Cancels active abilities on an entity, selected by the ability tags they carry. |
 | [CancelAbilityNode](cancel-ability-node.md) | Cancels the ability driving the current graph. |
 | [ExecuteCueNode](execute-cue-node.md) | Executes one or more one-shot cues on one or more targets. |
-| [GrantAbilityPermanentlyNode](grant-ability-permanently-node.md) | Permanently grants an ability to an entity (cannot be revoked). |
+| [GrantAbilityPermanentlyNode](grant-ability-permanently-node.md) | Permanently grants an ability to an entity (removed only by an explicit revocation). |
 | [RaiseEventNode](raise-event-node.md) | Raises an event on one or more target entities' event buses. |
 | [RemoveEffectNode](remove-effect-node.md) | Removes active effects through their handles. |
 | [SetByCallerMagnitudeNode](set-by-caller-magnitude-node.md) | Sets a SetByCaller magnitude on effects, keyed by tag. |

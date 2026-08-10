@@ -416,35 +416,29 @@ internal sealed class Ability
 	{
 		var cooldownData = new CooldownData[_activeCooldownHandles?.Length ?? 0];
 
-		if (_activeCooldownHandles is not null)
+		for (int i = 0; i < cooldownData.Length; i++)
 		{
-			for (int i = 0; i < _activeCooldownHandles.Length; i++)
+			ActiveEffect? activeEffect = FindRunningCooldown(i);
+
+			if (activeEffect is not null)
 			{
-				ActiveEffectHandle? effectHandle = _activeCooldownHandles[i];
-				if (effectHandle?.ActiveEffect is not null)
-				{
-					ActiveEffect activeEffect = effectHandle.ActiveEffect;
+				cooldownData[i] = new CooldownData(
+					activeEffect.Effect.CachedGrantedTags!,
+					activeEffect.EffectEvaluatedData.Duration,
+					(float)activeEffect.RemainingDuration);
 
-					TagContainer cooldownTags = activeEffect.Effect.CachedGrantedTags!;
-					float totalTime = activeEffect.EffectEvaluatedData.Duration;
-					float remainingTime = (float)activeEffect.RemainingDuration;
-
-					cooldownData[i] = new CooldownData(cooldownTags, totalTime, remainingTime);
-				}
-				else
-				{
-					EffectData effectData = _cooldownEffects![i].EffectData;
-
-					ModifierTagsEffectComponent modifierTagsComponent =
-						effectData.EffectComponents.OfType<ModifierTagsEffectComponent>().First();
-					TagContainer cooldownTags = modifierTagsComponent.TagsToAdd;
-
-					float totalTime = effectData.DurationData.DurationMagnitude!.Value.GetMagnitude(
-						_cooldownEffects[i], Owner, Level);
-
-					cooldownData[i] = new CooldownData(cooldownTags, totalTime, 0f);
-				}
+				continue;
 			}
+
+			EffectData effectData = _cooldownEffects![i].EffectData;
+
+			ModifierTagsEffectComponent modifierTagsComponent =
+				effectData.EffectComponents.OfType<ModifierTagsEffectComponent>().First();
+
+			float totalTime = effectData.DurationData.DurationMagnitude!.Value.GetMagnitude(
+				_cooldownEffects[i], Owner, Level);
+
+			cooldownData[i] = new CooldownData(modifierTagsComponent.TagsToAdd, totalTime, 0f);
 		}
 
 		return cooldownData;
@@ -452,20 +446,13 @@ internal sealed class Ability
 
 	internal float GetRemainingCooldownTime(Tag tag)
 	{
-		if (_activeCooldownHandles is not null)
+		for (int i = 0; i < (_activeCooldownHandles?.Length ?? 0); i++)
 		{
-			for (int i = 0; i < _activeCooldownHandles.Length; i++)
+			ActiveEffect? activeEffect = FindRunningCooldown(i);
+
+			if (activeEffect?.Effect.CachedGrantedTags?.HasTag(tag) == true)
 			{
-				ActiveEffectHandle? effectHandle = _activeCooldownHandles[i];
-				if (effectHandle?.ActiveEffect is not null)
-				{
-					ActiveEffect activeEffect = effectHandle.ActiveEffect;
-					TagContainer cooldownTags = activeEffect.Effect.CachedGrantedTags!;
-					if (cooldownTags.HasTag(tag))
-					{
-						return (float)activeEffect.RemainingDuration;
-					}
-				}
+				return (float)activeEffect.RemainingDuration;
 			}
 		}
 
@@ -588,6 +575,13 @@ internal sealed class Ability
 			tag,
 			x => TryActivateAbility(x.Target, out _, x.Payload, x.EventMagnitude),
 			priority: priority);
+	}
+
+	private ActiveEffect? FindRunningCooldown(int index)
+	{
+		ActiveEffect? activeEffect = _activeCooldownHandles?[index]?.ActiveEffect;
+
+		return activeEffect ?? Owner.EffectsManager.FindActiveEffectByData(_cooldownEffects![index].EffectData);
 	}
 
 	private bool CanCommitCooldown()

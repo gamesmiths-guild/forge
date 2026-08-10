@@ -50,3 +50,4 @@ public class HasTargetConditionNode : ConditionNode
 | [TryActivateAbilityNode](try-activate-ability-node.md) | Tries to activate an ability through its handle; True when activated. |
 | [TryCommitAbilityNode](try-commit-ability-node.md) | Tries to commit the cost and/or cooldown of the ability driving the graph; True when committed. |
 | [TryGrantAbilityAndActivateOnceNode](try-grant-ability-and-activate-once-node.md) | Grants an ability transiently and tries to activate it once; True when the activation succeeds. Writes the still-running proc's `AbilityHandle` to an output variable. |
+| [TryRevokeAbilityNode](try-revoke-ability-node.md) | Tries to revoke granted abilities through their handles; True when any was revoked. |

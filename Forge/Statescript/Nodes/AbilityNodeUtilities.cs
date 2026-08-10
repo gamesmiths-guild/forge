@@ -130,6 +130,49 @@ internal static class AbilityNodeUtilities
 	}
 
 	/// <summary>
+	/// Resolves an ability handle input that accepts either a single <see cref="AbilityHandle"/> or an array of
+	/// handles.
+	/// </summary>
+	/// <param name="graphContext">The graph execution context.</param>
+	/// <param name="handleInputName">The bound name of the handle input property.</param>
+	/// <param name="handles">The resolved handles.</param>
+	/// <returns><see langword="true"/> when at least one handle resolved.</returns>
+	public static bool TryResolveHandles(
+		GraphContext graphContext,
+		StringKey handleInputName,
+		out IReadOnlyList<AbilityHandle> handles)
+	{
+		if (graphContext.TryResolveObjectArray(
+			handleInputName,
+			typeof(AbilityHandle),
+			out object?[]? resolvedHandleArray))
+		{
+			var resolvedHandles = new List<AbilityHandle>(resolvedHandleArray.Length);
+
+			for (int i = 0; i < resolvedHandleArray.Length; i++)
+			{
+				if (resolvedHandleArray[i] is AbilityHandle handle)
+				{
+					resolvedHandles.Add(handle);
+				}
+			}
+
+			handles = resolvedHandles;
+			return resolvedHandles.Count > 0;
+		}
+
+		if (graphContext.TryResolveObject(handleInputName, typeof(AbilityHandle), out object? resolvedHandle)
+			&& resolvedHandle is AbilityHandle singleHandle)
+		{
+			handles = [singleHandle];
+			return true;
+		}
+
+		handles = [];
+		return false;
+	}
+
+	/// <summary>
 	/// Writes an <see cref="AbilityHandle"/> to a node's bound object output variable.
 	/// </summary>
 	/// <param name="graphContext">The graph execution context.</param>
