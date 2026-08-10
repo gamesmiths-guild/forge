@@ -7,6 +7,8 @@ Cancels the ability driving the current graph.
 
 Unlike reaching an [Exit node](../../README.md), which ends the ability instance gracefully, canceling marks the ability as canceled (`AbilityEndedData.WasCanceled == true`) and stops the whole graph immediately.
 
+**Cancel stops what is running; it does not ungrant.** The ability stays granted and can be activated again. To remove the grant itself, use [TryRevokeAbilityNode](../condition/try-revoke-ability-node.md).
+
 ## Ports
 
 **Input Ports:**

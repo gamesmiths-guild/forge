@@ -5,7 +5,7 @@
 
 Permanently grants an ability to an entity.
 
-Permanent grants **cannot be revoked or inhibited**, use them for unlock-style progression. For grants tied to a graph state's lifetime, use the [GrantAbilityNode](../state/grant-ability-node.md) state node instead; for data-driven grants, use effects with a grant-ability component.
+Permanent grants **cannot be inhibited, and the effects system never removes them** — use them for unlock-style progression. They are undone only by an explicit [TryRevokeAbilityNode](../condition/try-revoke-ability-node.md) (or `EntityAbilities.RevokeAbility`). For grants tied to a graph state's lifetime, use the [GrantAbilityNode](../state/grant-ability-node.md) state node instead; for data-driven grants, use effects with a grant-ability component.
 
 ## Ports
 
@@ -70,6 +70,7 @@ graph.AddConnection(new Connection(
 ## See Also
 
 - [Action Nodes Overview](README.md)
+- [TryRevokeAbilityNode](../condition/try-revoke-ability-node.md)
 - [GrantAbilityNode](../state/grant-ability-node.md)
 - [TryGrantAbilityAndActivateOnceNode](../condition/try-grant-ability-and-activate-once-node.md)
 - [GetAbilityHandleResolver](../../resolvers/get-ability-handle-resolver.md)

@@ -96,7 +96,7 @@ Abilities granted by **instant effects** become permanent, while abilities grant
 
 There are three ways to grant an ability that persists permanently:
 
-1.  **Direct API**: Use `entity.Abilities.GrantAbilityPermanently(...)`. These abilities cannot be removed or inhibited by the effects system.
+1.  **Direct API**: Use `entity.Abilities.GrantAbilityPermanently(...)`. These abilities cannot be removed or inhibited by the effects system; only an explicit `RevokeAbility`/`ClearAbility` call removes them.
 2.  **Instant Effects**: Apply an effect with `DurationType.Instant` that contains a `GrantAbilityEffectComponent`. These behave exactly like manually granted permanent abilities.
 3.  **Ignore Policy**: Apply a Duration/Infinite effect with a `GrantAbilityEffectComponent` configured with `RemovalPolicy = AbilityDeactivationPolicy.Ignore`.
     *   Unlike the other two methods, abilities granted this way *can* still be inhibited if the source effect is inhibited (depending on `InhibitionPolicy`).
@@ -109,6 +109,41 @@ AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
     levelOverridePolicy: LevelComparison.Higher,
     sourceEntity: null);
 ```
+
+"Permanent" means **the effects system never takes it away**, not that it can never be removed. See [Revoking and Clearing Abilities](#revoking-and-clearing-abilities).
+
+### Revoking and Clearing Abilities
+
+Permanent grants are undone by an explicit, owner-driven call. There is no path from the effects system to either of these — an effect can never revoke a permanent grant.
+
+**`RevokeAbility`** is the exact counterpart of `GrantAbilityPermanently`. It removes every permanent grant source behind the ability, so an ability granted permanently three times is revoked by one call rather than three. Grants owned by effects or by Statescript graphs are left alone:
+
+```csharp
+// Respec: the skill tree no longer provides this ability.
+bool revoked = entity.Abilities.RevokeAbility(handle);
+
+// Wait for running instances to finish instead of cancelling them.
+entity.Abilities.RevokeAbility(handle, AbilityDeactivationPolicy.RemoveOnEnd);
+```
+
+It returns `false` when the handle is invalid, when the ability is not granted on this entity, or when it has no permanent grant to remove. `AbilityDeactivationPolicy.Ignore` is not a valid policy here — a revocation that ignores its own request would do nothing — and fails validation.
+
+If any grant source remains, the ability stays granted and only loses its permanent share, raising `OnAbilityChanged` if that changed its inhibition. Once nothing is granting it, the ability is removed exactly as an effect-driven ungrant removes it, raising `OnAbilityRemoved`.
+
+**`ClearAbility`** drops *every* grant source, whatever granted it, and `ClearAllAbilities` does that for the whole entity — both are teardown operations for respawn, pooling, or disposal:
+
+```csharp
+entity.Abilities.ClearAbility(handle);
+entity.Abilities.ClearAllAbilities();
+```
+
+> **Clearing is not the same as a temporary removal.** An effect that was granting a cleared ability keeps its now-invalid `AbilityHandle`; its later removal and inhibition requests become no-ops, and **it will not grant the ability back when it ends**. An ability cleared while an item's effect was providing it does not return when the item is unequipped and re-equipped. To take an ability away temporarily, use inhibition through [`BlockAbilityTagsEffectComponent`](effects/components/block-ability-tags-effect-component.md), which is reversible.
+
+**Cooldowns survive both.** A cooldown lives in an effect on the owner and is checked by tag, so revoking and re-granting an ability cannot be used to skip one. The re-granted ability reports the still-running cooldown through `GetCooldownData()` and `GetRemainingCooldownTime()`.
+
+Neither call cancels *only* the ability's instances — that is what [Canceling Abilities by Tag](#canceling-abilities-by-tag) and `AbilityHandle.Cancel()` are for. **Cancel stops what is running; revoke removes the grant.**
+
+Both return `bool`, and the `false` case carries information nothing else can give you: whether the entity actually held a grant of that kind. A query cannot answer it, since `TryGetAbility` reports that an ability is granted without saying whether the grant is permanent or an effect's. That is what a respec-and-refund flow branches on, and in Statescript it is the False port of [TryRevokeAbilityNode](statescript/nodes/condition/try-revoke-ability-node.md).
 
 ### Granting and Activating Once
 
@@ -181,6 +216,8 @@ entity.Abilities.GrantedAbilities.Count; // 0
 
 Grant sources are only shared when both grants target the same `AbilityData` **and** carry the same source entity. Granting the same `AbilityData` from two different source entities produces two separate abilities, each with its own handle, level and grant sources.
 
+[`RevokeAbility`](#revoking-and-clearing-abilities) participates in the same accounting: it removes the permanent sources and leaves the rest, so the ability survives while an effect is still granting it. [`ClearAbility`](#revoking-and-clearing-abilities) is the one operation that steps outside the accounting and removes every source at once.
+
 ### Level Override Policy
 
 When an ability is granted multiple times, the `LevelOverridePolicy` determines whether the level should be updated:
@@ -215,6 +252,8 @@ entity.EffectsManager.ApplyEffect(grantEffect3);
 - **CancelImmediately**: Cancel all active instances and remove/inhibit immediately.
 - **RemoveOnEnd**: Wait for all active instances to end before removing/inhibiting.
 - **Ignore**: The grant source ignores removal/inhibition requests entirely.
+
+A removal under `CancelImmediately` cancels **every** active instance, which matters for [`PerExecution`](#perexecution) abilities running several at once, and reports `AbilityEndedData.WasCanceled == true` — the ability was torn away rather than allowed to finish.
 
 ### Policy Interactions Between Grant Sources
 
@@ -272,9 +311,14 @@ IReadOnlyCollection<AbilityHandle> granted = abilities.GrantedAbilities;
 
 // Get blocked ability tags (used internally for ability blocking)
 EntityTags blockedTags = abilities.BlockedAbilityTags;
+
+// Take abilities away again
+abilities.RevokeAbility(handle);   // the permanent grants only
+abilities.ClearAbility(handle);    // every grant source
+abilities.ClearAllAbilities();     // the whole entity, for teardown
 ```
 
-`GrantedAbilities` is read-only and live: the manager keeps it in step with the grant sources behind each ability, so abilities are added and removed through the granting API and the [effect components](effects/components/grant-ability-effect-component.md), never through the set itself. Copy it before iterating when the loop body can remove abilities.
+`GrantedAbilities` is read-only and live: the manager keeps it in step with the grant sources behind each ability, so abilities are added and removed through the granting and [revocation](#revoking-and-clearing-abilities) API and the [effect components](effects/components/grant-ability-effect-component.md), never through the set itself. Copy it before iterating when the loop body can remove abilities.
 
 Abilities whose `AbilityTags` overlap `BlockedAbilityTags` fail activation with `AbilityActivationFailures.BlockedByTags`. The container is populated by `BlockAbilitiesWithTag` while an ability is running, and by [`BlockAbilityTagsEffectComponent`](effects/components/block-ability-tags-effect-component.md) while an effect is active.
 
@@ -898,7 +942,7 @@ The grant's `InhibitionPolicy` — an [`AbilityDeactivationPolicy`](#deactivatio
 
 Inhibition is cumulative across grant sources — see [Policy Interactions Between Grant Sources](#policy-interactions-between-grant-sources). Adding a new grant to an inhibited ability re-enables it.
 
-Abilities granted permanently via `GrantAbilityPermanently` cannot be inhibited.
+Abilities granted permanently via `GrantAbilityPermanently` cannot be inhibited. Inhibition is an effects concept and revocation is an ownership one, so [`RevokeAbility`](#revoking-and-clearing-abilities) removing such a grant does not make it inhibitable.
 
 ## Ability Activation Context
 
@@ -1059,7 +1103,7 @@ For detailed documentation on Statescript concepts, see the [Statescript documen
 7. **Use Tag Requirements**: Leverage tag-based requirements for complex activation conditions.
 8. **Consider Policy Interactions**: When granting abilities from multiple sources, be aware that `CancelImmediately` policies take precedence.
 9. **Query Before Activation**: Use `GetCooldownData()` and `GetCostData()` to show UI state before attempting activation.
-10. **Use Permanent Grants for Innate Abilities**: Use `GrantAbilityPermanently` for abilities that should always be available.
+10. **Use Permanent Grants for Innate Abilities**: Use `GrantAbilityPermanently` for abilities that should always be available, and `RevokeAbility` to undo one. Reach for `ClearAbility` only when tearing an entity down — for a temporary removal, inhibit instead.
 11. **Use Tag-Based Activation**: Use `TryActivateAbilitiesByTag` for flexible input handling where multiple abilities share activation contexts.
 12. **Check Validation Rules**: Ensure cooldowns have durations/tags and costs are instant.
 13. **Use Activation Context for Runtime Data**: Pass external execution data via activation context, preferring typed data.

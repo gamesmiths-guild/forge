@@ -5,6 +5,8 @@
 
 Cancels active abilities on an entity, selected by the ability tags they carry. An ability is canceled when it carries any of the **With Tags** and none of the **Without Tags**.
 
+**Cancel stops what is running; it does not ungrant.** The abilities stay granted and can be activated again. To remove a grant itself, use [TryRevokeAbilityNode](../condition/try-revoke-ability-node.md).
+
 ## Ports
 
 **Input Ports:**
