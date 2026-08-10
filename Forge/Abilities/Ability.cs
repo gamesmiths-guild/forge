@@ -186,34 +186,20 @@ internal sealed class Ability
 			return false;
 		}
 
-		ApplyCooldown();
-		ApplyCost();
-
-		return true;
+		// The cost goes first because it is the half that cannot be undone. An effect component or a registered
+		// application blocker can still turn either of them away, and an instant attribute change cannot be rolled
+		// back, so a cost turned away leaves nothing spent and no cooldown running, while the reverse would not.
+		return ApplyCost() && ApplyCooldown();
 	}
 
 	internal bool TryCommitCooldown()
 	{
-		if (!CanCommitCooldown())
-		{
-			return false;
-		}
-
-		ApplyCooldown();
-
-		return true;
+		return CanCommitCooldown() && ApplyCooldown();
 	}
 
 	internal bool TryCommitCost()
 	{
-		if (!CanCommitCost())
-		{
-			return false;
-		}
-
-		ApplyCost();
-
-		return true;
+		return CanCommitCost() && ApplyCost();
 	}
 
 	internal void End()
@@ -686,11 +672,20 @@ internal sealed class Ability
 		return [.. projections];
 	}
 
-	private void ApplyCooldown()
+	/// <summary>
+	/// Applies the cooldown effects and reports whether every one of them landed.
+	/// </summary>
+	/// <remarks>
+	/// Passing <see cref="CanCommitCooldown"/> is not enough on its own: an effect component or a registered
+	/// application blocker — an immunity, typically — can still turn a cooldown effect away, and a commit must not
+	/// claim to have started a cooldown that never began.
+	/// </remarks>
+	/// <returns><see langword="true"/> when there was nothing to apply or every cooldown effect was applied.</returns>
+	private bool ApplyCooldown()
 	{
 		if (_cooldownEffects is null)
 		{
-			return;
+			return true;
 		}
 
 		Validation.Assert(
@@ -698,19 +693,28 @@ internal sealed class Ability
 			&& _activeCooldownHandles.Length == _cooldownEffects.Length,
 			"Active cooldown handles array should have been properly initialized.");
 
+		bool applied = true;
+
 		for (int i = 0; i < _cooldownEffects.Length; i++)
 		{
 			Effect effect = _cooldownEffects[i];
-			_activeCooldownHandles[i] = Owner.EffectsManager.ApplyEffect(effect);
+			applied &= Owner.EffectsManager.TryApplyEffect(effect, out ActiveEffectHandle? activeEffectHandle);
+			_activeCooldownHandles[i] = activeEffectHandle;
 		}
+
+		return applied;
 	}
 
-	private void ApplyCost()
+	/// <summary>
+	/// Applies the cost effect and reports whether it landed.
+	/// </summary>
+	/// <remarks>
+	/// Affordability is only half the question — see <see cref="ApplyCooldown"/> for the other half.
+	/// </remarks>
+	/// <returns><see langword="true"/> when there was no cost or the cost effect was applied.</returns>
+	private bool ApplyCost()
 	{
-		if (_costEffect is not null)
-		{
-			Owner.EffectsManager.ApplyEffect(_costEffect);
-		}
+		return _costEffect is null || Owner.EffectsManager.TryApplyEffect(_costEffect, out _);
 	}
 
 	private void Activate(IForgeEntity? abilityTarget, float magnitude)

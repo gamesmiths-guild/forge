@@ -42,6 +42,10 @@ public class TryCommitAbilityNode(CommitAbilityOperation operation = CommitAbili
 		{
 			CommitAbilityOperation.CooldownOnly => abilityContext.AbilityHandle.TryCommitCooldown(),
 			CommitAbilityOperation.CostOnly => abilityContext.AbilityHandle.TryCommitCost(),
+
+			// CostAndCooldown, and equally anything a corrupted configuration deserializes into. Committing both is
+			// the node's default and, unlike a no-op, can never hand out a free cast; it also keeps the True/False
+			// result honest, since the port still reports a commit that was genuinely attempted.
 			_ => abilityContext.AbilityHandle.TryCommitAbility(),
 		};
 	}

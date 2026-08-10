@@ -2802,6 +2802,46 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 	[Fact]
 	[Trait("Ability cost", null)]
+	public void Commit_fails_when_an_application_blocker_turns_the_cost_effect_away()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		var costEffectData = new EffectData(
+			"Fireball Cost",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute90",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-10)))
+			]);
+
+		AbilityData abilityData = new("Fireball", costEffectData);
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _);
+
+		// An immunity registers itself as an application blocker, so the cost effect never reaches the attributes.
+		var immunityEffectData = new EffectData(
+			"Cost Immunity",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [new ImmunityEffectComponent([new EffectQuery(costEffectData)])]);
+
+		entity.EffectsManager.ApplyEffect(new Effect(immunityEffectData, new EffectOwnership(entity, entity)));
+
+		// The cost is perfectly affordable; it just cannot land. Reporting success here would hand out a free cast.
+		abilityHandle!.TryCommitCost().Should().BeFalse();
+		entity.Attributes["TestAttributeSet.Attribute90"].CurrentValue.Should().Be(90);
+
+		abilityHandle.TryCommitAbility().Should().BeFalse();
+		entity.Attributes["TestAttributeSet.Attribute90"].CurrentValue.Should().Be(90);
+	}
+
+	[Fact]
+	[Trait("Ability cost", null)]
 	public void Cost_is_unaffordable_when_the_owner_has_no_attribute_to_charge_it_against()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
@@ -3126,6 +3166,34 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
 		failureFlags.Should().Be(AbilityActivationFailures.InsufficientResources);
 		abilityHandle.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Grant ability", null)]
+	public void Ability_granted_and_activated_once_outputs_no_handle_when_another_grant_keeps_it_alive()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-100));
+
+		// A pre-existing grant of the same ability from the same source shares one handle, so removing the transient
+		// grant afterwards leaves that handle valid even though this activation never happened.
+		entity.Abilities.GrantAbilityPermanently(abilityData, 1, LevelComparison.None, sourceEntity: null);
+
+		entity.Abilities.TryGrantAbilityAndActivateOnce(
+			abilityData,
+			1,
+			LevelComparison.None,
+			out AbilityActivationFailures failureFlags,
+			out AbilityHandle? grantedAbility).Should().BeFalse();
+
+		failureFlags.Should().Be(AbilityActivationFailures.InsufficientResources);
+		grantedAbility.Should().BeNull();
 	}
 
 	[Fact]

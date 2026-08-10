@@ -296,7 +296,9 @@ public class EntityAbilities(IForgeEntity owner)
 
 		RemoveGrantedAbility(abilityHandle, grantSource);
 
-		grantedAbility = abilityHandle.IsValid ? abilityHandle : null;
+		// A still-valid handle is not proof this proc is alive: the same ability granted from another source shares
+		// one handle, which outlives the transient grant. Only this activation still running earns the output.
+		grantedAbility = activated && abilityHandle.IsActive ? abilityHandle : null;
 
 		return activated;
 	}
@@ -347,7 +349,9 @@ public class EntityAbilities(IForgeEntity owner)
 
 		RemoveGrantedAbility(abilityHandle, grantSource);
 
-		grantedAbility = abilityHandle.IsValid ? abilityHandle : null;
+		// A still-valid handle is not proof this proc is alive: the same ability granted from another source shares
+		// one handle, which outlives the transient grant. Only this activation still running earns the output.
+		grantedAbility = activated && abilityHandle.IsActive ? abilityHandle : null;
 
 		return activated;
 	}
