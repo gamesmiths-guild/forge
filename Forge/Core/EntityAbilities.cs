@@ -442,11 +442,13 @@ public class EntityAbilities(IForgeEntity owner)
 	/// </summary>
 	/// <remarks>
 	/// <para>Unlike <see cref="RevokeAbility"/> this also drops grants owned by effects and by Statescript graphs, so
-	/// the ability always goes away. Those owners keep their now-invalid <see cref="AbilityHandle"/>s and their later
-	/// removal and inhibition requests become no-ops, but they will not re-grant the ability when they end — an
-	/// ability cleared while an item's effect was granting it does not come back when that effect is removed.</para>
-	/// <para>This is a teardown operation. To take an ability away temporarily, prefer inhibition through
-	/// <see cref="Effects.Components.BlockAbilityTagsEffectComponent"/>, which is reversible.</para>
+	/// the ability always goes away. Those owners keep their now-invalid <see cref="AbilityHandle"/>s and go inert
+	/// with respect to the ability: their later removal and inhibition requests become no-ops, and they will not
+	/// restore it if they are un-inhibited later. This orphans the grant rather than disabling its owner — applying
+	/// the effect again grants the ability afresh, so re-equipping the item that provides it does bring it
+	/// back.</para>
+	/// <para>This is a teardown operation. To suppress an ability reversibly without orphaning its grants, prefer
+	/// inhibition through <see cref="Effects.Components.BlockAbilityTagsEffectComponent"/>.</para>
 	/// </remarks>
 	/// <param name="abilityHandle">The handle of the ability to clear.</param>
 	/// <param name="removalPolicy">How active instances are treated. <see cref="AbilityDeactivationPolicy.Ignore"/> is
@@ -550,7 +552,7 @@ public class EntityAbilities(IForgeEntity owner)
 			return;
 		}
 
-		RemoveGrantSource(abilityToRemove, grantSource, grantSource.RemovalPolicy);
+		RemoveGrantSource(abilityToRemove, grantSource, grantSource.RemovalPolicy, grantSource.InhibitionPolicy);
 	}
 
 	internal void InhibitGrantedAbility(AbilityHandle abilityHandle, IAbilityGrantSource grantSource)
@@ -654,12 +656,24 @@ public class EntityAbilities(IForgeEntity owner)
 
 		if (sourcesToRemove.Length == 0)
 		{
-			return false;
+			// An empty source list does not always mean "not granted": a removal pending RemoveOnEnd keeps the
+			// ability registered with no sources left while its instances finish. A clear is an explicit teardown, so
+			// it has to override that pending removal; a revoke genuinely has nothing of its own to take.
+			if (permanentOnly)
+			{
+				return false;
+			}
+
+			ApplyRemovalPolicy(ability, removalPolicy);
+			return true;
 		}
 
 		foreach (IAbilityGrantSource grantSource in sourcesToRemove)
 		{
-			RemoveGrantSource(ability, grantSource, removalPolicy);
+			// The revocation's own policy drives inhibition too. Reading it off the departing source would be wrong
+			// here: a PermanentGrantSource carries Ignore, so an ability left with nothing but inhibited effect
+			// grants would silently stay enabled.
+			RemoveGrantSource(ability, grantSource, removalPolicy, removalPolicy);
 		}
 
 		return true;
@@ -668,7 +682,8 @@ public class EntityAbilities(IForgeEntity owner)
 	private void RemoveGrantSource(
 		Ability abilityToRemove,
 		IAbilityGrantSource grantSource,
-		AbilityDeactivationPolicy removalPolicy)
+		AbilityDeactivationPolicy removalPolicy,
+		AbilityDeactivationPolicy inhibitionPolicy)
 	{
 		if (removalPolicy == AbilityDeactivationPolicy.Ignore)
 		{
@@ -686,12 +701,18 @@ public class EntityAbilities(IForgeEntity owner)
 		{
 			if (CheckIsInhibited(abilityToRemove))
 			{
-				InhibitAbilityBasedOnPolicy(abilityToRemove, grantSource.InhibitionPolicy);
+				InhibitAbilityBasedOnPolicy(abilityToRemove, inhibitionPolicy);
 			}
 
 			return;
 		}
 
+		ApplyRemovalPolicy(abilityToRemove, removalPolicy);
+	}
+
+	// Settles an ability that has no grant sources left, per the policy that took the last one away.
+	private void ApplyRemovalPolicy(Ability abilityToRemove, AbilityDeactivationPolicy removalPolicy)
+	{
 		switch (removalPolicy)
 		{
 			case AbilityDeactivationPolicy.CancelImmediately:
@@ -752,6 +773,14 @@ public class EntityAbilities(IForgeEntity owner)
 		{
 			abilityToRemove.OnAbilityDeactivated -= _removeAbility;
 			_removeAbility = null;
+		}
+
+		// Already removed. Cancelling the instances of an ability whose RemoveOnEnd removal was pending completes
+		// that removal from inside this very call, so the teardown reaches here twice and OnAbilityRemoved must
+		// still be raised exactly once.
+		if (!_grantedAbilities.Contains(abilityToRemove.Handle))
+		{
+			return;
 		}
 
 		if (_grantSources.TryGetValue(abilityToRemove, out List<IAbilityGrantSource>? grantSources)

@@ -137,7 +137,7 @@ entity.Abilities.ClearAbility(handle);
 entity.Abilities.ClearAllAbilities();
 ```
 
-> **Clearing is not the same as a temporary removal.** An effect that was granting a cleared ability keeps its now-invalid `AbilityHandle`; its later removal and inhibition requests become no-ops, and **it will not grant the ability back when it ends**. An ability cleared while an item's effect was providing it does not return when the item is unequipped and re-equipped. To take an ability away temporarily, use inhibition through [`BlockAbilityTagsEffectComponent`](effects/components/block-ability-tags-effect-component.md), which is reversible.
+> **Clearing orphans the grant, it does not disable what was granting it.** The effect application that was providing a cleared ability keeps its now-invalid `AbilityHandle`, so **that application** goes inert with respect to the ability: its later removal and inhibition requests become no-ops, and it will not restore the ability if it is un-inhibited later. It does not stay gone forever, though — applying the effect again creates a fresh component instance and a fresh grant, so re-equipping the item that provides it does bring the ability back. To suppress an ability reversibly *without* orphaning its grants, use inhibition through [`BlockAbilityTagsEffectComponent`](effects/components/block-ability-tags-effect-component.md).
 
 **Cooldowns survive both.** A cooldown lives in an effect on the owner and is checked by tag, so revoking and re-granting an ability cannot be used to skip one. The re-granted ability reports the still-running cooldown through `GetCooldownData()` and `GetRemainingCooldownTime()`.
 

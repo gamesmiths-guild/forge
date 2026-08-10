@@ -65,7 +65,7 @@ Handles come from the **Ability** output of a [GrantAbilityPermanentlyNode](../a
 
 A graph may revoke the ability driving it. The node tears down its own execution context mid-message and the condition still resolves, exactly like [CancelAbilityNode](../action/cancel-ability-node.md).
 
-> **`AllGrants` is a teardown, not a temporary removal.** An effect that was granting a cleared ability keeps its now-invalid handle and **will not grant the ability back when it ends** — an ability cleared while an item was providing it does not return when the item is unequipped and re-equipped. For a reversible removal, inhibit instead with a [BlockAbilityTagsEffectComponent](../../../effects/components/block-ability-tags-effect-component.md).
+> **`AllGrants` orphans the grant, it does not disable what was granting it.** The effect application that was providing the ability keeps its now-invalid handle, so **that application** goes inert with respect to it: its later removal and inhibition requests become no-ops, and it will not restore the ability if it is un-inhibited later. Applying the effect again does grant it afresh, so re-equipping the item that provides it brings the ability back. To suppress an ability reversibly *without* orphaning its grants, inhibit instead with a [BlockAbilityTagsEffectComponent](../../../effects/components/block-ability-tags-effect-component.md).
 
 Cooldowns are unaffected: they live in effects on the owner and are checked by tag, so revoking and re-granting an ability cannot be used to skip one.
 
