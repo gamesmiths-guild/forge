@@ -149,7 +149,7 @@ internal static class ResolverTestContextFactory
 			?? throw new InvalidOperationException(
 				"Failed to grant the resolver test ability and create an ability graph context.");
 
-		if (!handle.Activate(out _, target, magnitude))
+		if (!handle.TryActivate(out _, target, magnitude))
 		{
 			throw new InvalidOperationException(
 				"Failed to activate the resolver test ability while creating an ability graph context." +
@@ -186,7 +186,7 @@ internal static class ResolverTestContextFactory
 			?? throw new InvalidOperationException(
 				"Failed to grant the typed resolver test ability and create an ability graph context.");
 
-		if (!handle.Activate(activationData, out _, magnitude: magnitude))
+		if (!handle.TryActivate(activationData, out _, magnitude: magnitude))
 		{
 			throw new InvalidOperationException(
 				"Failed to activate the typed resolver test ability while creating an ability graph context." +
@@ -216,7 +216,7 @@ internal static class ResolverTestContextFactory
 		AbilityHandle handle = Grant(owner, abilityData, source, level)
 			?? throw new InvalidOperationException("Failed to grant the resolver execution test ability.");
 
-		if (!handle.Activate(out _, target, magnitude))
+		if (!handle.TryActivate(out _, target, magnitude))
 		{
 			throw new InvalidOperationException("Failed to activate the resolver execution test ability.");
 		}

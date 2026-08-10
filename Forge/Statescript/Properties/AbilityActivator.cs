@@ -76,6 +76,8 @@ public sealed class AbilityActivator(
 	/// <param name="target">The optional activation target.</param>
 	/// <param name="source">The source entity of the granted ability, if any.</param>
 	/// <param name="graphContext">The graph execution context the data is built from.</param>
+	/// <param name="grantedAbility">The handle of the granted ability while it remains active, or
+	/// <see langword="null"/> once the transient grant has been removed.</param>
 	/// <returns><see langword="true"/> when the ability activated without failures.</returns>
 	public bool GrantAndActivateOnce(
 		EntityAbilities abilities,
@@ -84,7 +86,8 @@ public sealed class AbilityActivator(
 		LevelComparison levelOverridePolicy,
 		IForgeEntity? target,
 		IForgeEntity? source,
-		GraphContext graphContext)
+		GraphContext graphContext,
+		out AbilityHandle? grantedAbility)
 	{
 		return _provider.GrantAndActivateOnce(
 			abilities,
@@ -94,6 +97,7 @@ public sealed class AbilityActivator(
 			target,
 			source,
 			graphContext,
-			_inputResolvers);
+			_inputResolvers,
+			out grantedAbility);
 	}
 }

@@ -45,7 +45,8 @@ public class HasTargetConditionNode : ConditionNode
 | Node | Description |
 |------|-------------|
 | [ExpressionNode](expression-node.md) | Evaluates a boolean input property to choose the output. |
-| [GrantAbilityAndActivateOnceNode](grant-ability-and-activate-once-node.md) | Grants an ability transiently and activates it once; True when the activation succeeds. |
 | [RandomBranchNode](random-branch-node.md) | Routes to True with a resolved probability. |
 | [TryActivateAbilitiesByTagNode](try-activate-abilities-by-tag-node.md) | Tries to activate abilities matching the given tags; True when any activated. |
 | [TryActivateAbilityNode](try-activate-ability-node.md) | Tries to activate an ability through its handle; True when activated. |
+| [TryCommitAbilityNode](try-commit-ability-node.md) | Tries to commit the cost and/or cooldown of the ability driving the graph; True when committed. |
+| [TryGrantAbilityAndActivateOnceNode](try-grant-ability-and-activate-once-node.md) | Grants an ability transiently and tries to activate it once; True when the activation succeeds. Writes the still-running proc's `AbilityHandle` to an output variable. |

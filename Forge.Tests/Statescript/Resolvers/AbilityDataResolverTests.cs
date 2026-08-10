@@ -35,7 +35,7 @@ public class AbilityDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 		new AbilityCooldownResolver(AbilityCooldownDataType.TotalTime)
 			.Resolve(context).Get<float>().Should().BeApproximately(5f, 0.001f);
 
-		handle.CommitCooldown();
+		handle.TryCommitCooldown();
 
 		new AbilityCooldownResolver(AbilityCooldownDataType.RemainingTime)
 			.Resolve(context).Get<float>().Should().BeApproximately(5f, 0.001f);
@@ -56,7 +56,7 @@ public class AbilityDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 	{
 		(GraphContext context, AbilityHandle handle, _) = CreateActivatedAbility();
 
-		handle.CommitCooldown();
+		handle.TryCommitCooldown();
 
 		var cooldownTag = Tag.RequestTag(_tagsManager, "simple.tag");
 		var unrelatedTag = Tag.RequestTag(_tagsManager, "color.red");
@@ -85,7 +85,7 @@ public class AbilityDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 
 		new CanActivateAbilityResolver().Resolve(context).AsBool().Should().BeTrue();
 
-		handle.CommitCooldown();
+		handle.TryCommitCooldown();
 
 		new CanActivateAbilityResolver().Resolve(context).AsBool().Should().BeFalse();
 	}
@@ -114,7 +114,7 @@ public class AbilityDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 		resolvedHandle.Should().Be(handle);
 
 		// Cross-ability query: the resolved handle feeds other ability resolvers.
-		handle.CommitCooldown();
+		handle.TryCommitCooldown();
 		new AbilityCooldownResolver(
 				AbilityCooldownDataType.RemainingTime,
 				handleResolver: new GetAbilityHandleResolver(abilityData))
@@ -185,7 +185,7 @@ public class AbilityDataResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 			LevelComparison.None,
 			sourceEntity: null);
 
-		handle.Activate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
 		captureNode.CapturedGraphContext.Should().NotBeNull();
 
 		return (captureNode.CapturedGraphContext!, handle, owner);

@@ -89,6 +89,8 @@ public interface IAbilityActivationDataProvider
 	/// <param name="source">The source entity of the granted ability, if any.</param>
 	/// <param name="graphContext">The graph execution context the data is built from.</param>
 	/// <param name="inputResolvers">The resolvers for the provider's declared members, keyed by member name.</param>
+	/// <param name="grantedAbility">The handle of the granted ability while it remains active, or
+	/// <see langword="null"/> once the transient grant has been removed.</param>
 	/// <returns><see langword="true"/> when the ability activated without failures.</returns>
 	bool GrantAndActivateOnce(
 		EntityAbilities abilities,
@@ -98,5 +100,6 @@ public interface IAbilityActivationDataProvider
 		IForgeEntity? target,
 		IForgeEntity? source,
 		GraphContext graphContext,
-		IReadOnlyDictionary<string, IPropertyResolver> inputResolvers);
+		IReadOnlyDictionary<string, IPropertyResolver> inputResolvers,
+		out AbilityHandle? grantedAbility);
 }

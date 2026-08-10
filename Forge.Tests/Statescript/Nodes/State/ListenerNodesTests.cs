@@ -140,7 +140,7 @@ public class ListenerNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassF
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
-		handle.Activate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
 
 		onEnded.ExecutionCount.Should().Be(1);
 		processor.GraphContext.GraphVariables.TryGetVar("wasCanceled", out bool wasCanceled).Should().BeTrue();
@@ -193,10 +193,10 @@ public class ListenerNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassF
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
-		otherHandle.Activate(out _).Should().BeTrue();
+		otherHandle.TryActivate(out _).Should().BeTrue();
 		onEnded.ExecutionCount.Should().Be(0);
 
-		watchedHandle.Activate(out _).Should().BeTrue();
+		watchedHandle.TryActivate(out _).Should().BeTrue();
 		onEnded.ExecutionCount.Should().Be(1);
 	}
 
@@ -247,10 +247,10 @@ public class ListenerNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassF
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
-		otherHandle.Activate(out _).Should().BeTrue();
+		otherHandle.TryActivate(out _).Should().BeTrue();
 		onEnded.ExecutionCount.Should().Be(0);
 
-		watchedHandle.Activate(out _).Should().BeTrue();
+		watchedHandle.TryActivate(out _).Should().BeTrue();
 		onEnded.ExecutionCount.Should().Be(1);
 	}
 
@@ -302,10 +302,10 @@ public class ListenerNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassF
 			sourceEntity: null);
 		AbilityHandle otherHandle = GrantInstantAbility(owner, "Other");
 
-		otherHandle.Activate(out _).Should().BeTrue();
+		otherHandle.TryActivate(out _).Should().BeTrue();
 		onEnded.ExecutionCount.Should().Be(0);
 
-		watchedHandle.Activate(out _).Should().BeTrue();
+		watchedHandle.TryActivate(out _).Should().BeTrue();
 		onEnded.ExecutionCount.Should().Be(1);
 	}
 
@@ -359,7 +359,7 @@ public class ListenerNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassF
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
-		watchedHandle!.Activate(out _).Should().BeTrue();
+		watchedHandle!.TryActivate(out _).Should().BeTrue();
 		watchedHandle.IsActive.Should().BeTrue();
 
 		// Removing the grant while the ability is active defers removal to deactivation, which frees the handle before

@@ -166,7 +166,7 @@ public class EntityAbilitiesEventsTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		var log = new EventLog(entity.Abilities);
 
-		handle.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		log.Entries.Should().Equal("Activated");
@@ -192,7 +192,7 @@ public class EntityAbilitiesEventsTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		var log = new EventLog(entity.Abilities);
 
-		handle.Activate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
 
 		log.Entries.Should().Equal("Activated", "Ended");
 		handle.IsActive.Should().BeFalse();
@@ -211,8 +211,8 @@ public class EntityAbilitiesEventsTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		var log = new EventLog(entity.Abilities);
 
-		handle.Activate(out _).Should().BeTrue();
-		handle.Activate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
 
 		// Both events track the ability, not its instances, so the second concurrent instance is silent.
 		log.Entries.Should().Equal("Activated");
@@ -235,7 +235,7 @@ public class EntityAbilitiesEventsTests(TagsAndCuesFixture tagsAndCuesFixture) :
 
 		var log = new EventLog(entity.Abilities);
 
-		handle.Activate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		handle.TryActivate(out AbilityActivationFailures failureFlags).Should().BeFalse();
 
 		log.Entries.Should().Equal("ActivationFailed");
 		log.Failures.Should().ContainSingle();
@@ -253,7 +253,7 @@ public class EntityAbilitiesEventsTests(TagsAndCuesFixture tagsAndCuesFixture) :
 			CreateAbilityData("Fireball"), 1, LevelComparison.Higher, null);
 
 		var log = new EventLog(entity.Abilities);
-		handle.Activate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
 
 		log.Failures.Should().BeEmpty();
 	}

@@ -85,9 +85,9 @@ public class EntityAbilities(IForgeEntity owner)
 	/// </summary>
 	/// <remarks>
 	/// Read-only: the manager keeps this set in step with the grant sources behind each ability, so grant and removal
-	/// go through <see cref="GrantAbilityPermanently"/>, <c>GrantAbilityAndActivateOnce</c> and the effect components
-	/// rather than through this set. The collection is live, so a handle removed while it is being enumerated
-	/// invalidates the enumeration; copy it first when the loop body can remove abilities.
+	/// go through <see cref="GrantAbilityPermanently"/>, <c>TryGrantAbilityAndActivateOnce</c> and the effect
+	/// components rather than through this set. The collection is live, so a handle removed while it is being
+	/// enumerated invalidates the enumeration; copy it first when the loop body can remove abilities.
 	/// </remarks>
 	public IReadOnlyCollection<AbilityHandle> GrantedAbilities => _grantedAbilities;
 
@@ -261,19 +261,27 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <summary>
 	/// Grants an ability and activates it once. The ability grant will be removed if activation fails or after it ends.
 	/// </summary>
+	/// <remarks>
+	/// <paramref name="grantedAbility"/> is only a handle to an ability that is <b>still running</b>. An ability that
+	/// activates and ends within the call — the common one-shot case — leaves it <see langword="null"/> even though the
+	/// activation succeeded, so read the return value, not the handle, to know whether the ability activated.
+	/// </remarks>
 	/// <param name="abilityData">The configuration data of the ability to grant and activate.</param>
 	/// <param name="abilityLevel">The level at which to grant the ability.</param>
 	/// <param name="levelOverridePolicy">The policy for overriding the level of an existing granted ability.</param>
 	/// <param name="failureFlags">Flags indicating the failure reasons for the ability activation.</param>
+	/// <param name="grantedAbility">The handle of the granted ability while it remains active, or
+	/// <see langword="null"/> once the grant has been removed.</param>
 	/// <param name="targetEntity">The target entity for the ability activation, if any.</param>
 	/// <param name="sourceEntity">The source entity of the granted ability, if any.</param>
-	/// <returns>The handle of the granted and activated ability, or <see langword="null"/> if activation failed.
+	/// <returns>Returns <see langword="true"/> if the ability was activated; otherwise, <see langword="false"/>.
 	/// </returns>
-	public AbilityHandle? GrantAbilityAndActivateOnce(
+	public bool TryGrantAbilityAndActivateOnce(
 		AbilityData abilityData,
 		int abilityLevel,
 		LevelComparison levelOverridePolicy,
 		out AbilityActivationFailures failureFlags,
+		out AbilityHandle? grantedAbility,
 		IForgeEntity? targetEntity = null,
 		IForgeEntity? sourceEntity = null)
 	{
@@ -284,11 +292,15 @@ public class EntityAbilities(IForgeEntity owner)
 			sourceEntity,
 			out TransientGrantSource grantSource);
 
-		abilityHandle.Activate(out failureFlags, targetEntity);
+		bool activated = abilityHandle.TryActivate(out failureFlags, targetEntity);
 
 		RemoveGrantedAbility(abilityHandle, grantSource);
 
-		return abilityHandle.IsValid ? abilityHandle : null;
+		// A still-valid handle is not proof this proc is alive: the same ability granted from another source shares
+		// one handle, which outlives the transient grant. Only this activation still running earns the output.
+		grantedAbility = activated && abilityHandle.IsActive ? abilityHandle : null;
+
+		return activated;
 	}
 
 	/// <summary>
@@ -296,9 +308,13 @@ public class EntityAbilities(IForgeEntity owner)
 	/// if activation fails or after it ends.
 	/// </summary>
 	/// <remarks>
-	/// Unlike <see cref="TryActivateAbilitiesByTag{TData}"/>, the activated ability is known up front, so
+	/// <para>Unlike <see cref="TryActivateAbilitiesByTag{TData}"/>, the activated ability is known up front, so
 	/// <typeparamref name="TData"/> can be matched to it. An ability whose behavior does not accept
-	/// <typeparamref name="TData"/> still activates, ignoring the data.
+	/// <typeparamref name="TData"/> still activates, ignoring the data.</para>
+	/// <para><paramref name="grantedAbility"/> is only a handle to an ability that is <b>still running</b>. An ability
+	/// that activates and ends within the call — the common one-shot case — leaves it <see langword="null"/> even
+	/// though the activation succeeded, so read the return value, not the handle, to know whether the ability
+	/// activated.</para>
 	/// </remarks>
 	/// <typeparam name="TData">The type of the data to pass to the ability behavior.</typeparam>
 	/// <param name="abilityData">The configuration data of the ability to grant and activate.</param>
@@ -306,16 +322,19 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <param name="levelOverridePolicy">The policy for overriding the level of an existing granted ability.</param>
 	/// <param name="data">Additional data to pass to the behavior.</param>
 	/// <param name="failureFlags">Flags indicating the failure reasons for the ability activation.</param>
+	/// <param name="grantedAbility">The handle of the granted ability while it remains active, or
+	/// <see langword="null"/> once the grant has been removed.</param>
 	/// <param name="targetEntity">The target entity for the ability activation, if any.</param>
 	/// <param name="sourceEntity">The source entity of the granted ability, if any.</param>
-	/// <returns>The handle of the granted and activated ability, or <see langword="null"/> if activation failed.
+	/// <returns>Returns <see langword="true"/> if the ability was activated; otherwise, <see langword="false"/>.
 	/// </returns>
-	public AbilityHandle? GrantAbilityAndActivateOnce<TData>(
+	public bool TryGrantAbilityAndActivateOnce<TData>(
 		AbilityData abilityData,
 		int abilityLevel,
 		LevelComparison levelOverridePolicy,
 		TData data,
 		out AbilityActivationFailures failureFlags,
+		out AbilityHandle? grantedAbility,
 		IForgeEntity? targetEntity = null,
 		IForgeEntity? sourceEntity = null)
 	{
@@ -326,11 +345,15 @@ public class EntityAbilities(IForgeEntity owner)
 			sourceEntity,
 			out TransientGrantSource grantSource);
 
-		abilityHandle.Activate(data, out failureFlags, targetEntity);
+		bool activated = abilityHandle.TryActivate(data, out failureFlags, targetEntity);
 
 		RemoveGrantedAbility(abilityHandle, grantSource);
 
-		return abilityHandle.IsValid ? abilityHandle : null;
+		// A still-valid handle is not proof this proc is alive: the same ability granted from another source shares
+		// one handle, which outlives the transient grant. Only this activation still running earns the output.
+		grantedAbility = activated && abilityHandle.IsActive ? abilityHandle : null;
+
+		return activated;
 	}
 
 	/// <summary>

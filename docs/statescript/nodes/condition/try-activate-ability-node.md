@@ -34,7 +34,7 @@ Tries to activate an ability through its `AbilityHandle`, routing to the **True*
 ## Behavior
 
 1. Resolves the `AbilityHandle` (typically from a [GetAbilityHandleResolver](../../resolvers/get-ability-handle-resolver.md) or the output of a grant node), the optional target, and the magnitude.
-2. Calls `AbilityHandle.Activate(out _, target, magnitude)`, or `AbilityHandle.Activate<TData>(data, out _, target, magnitude)` when the **Activation Data** input is bound.
+2. Calls `AbilityHandle.TryActivate(out _, target, magnitude)`, or `AbilityHandle.TryActivate<TData>(data, out _, target, magnitude)` when the **Activation Data** input is bound.
 3. Routes to **True** when it activated, otherwise **False**.
 
 ## Usage

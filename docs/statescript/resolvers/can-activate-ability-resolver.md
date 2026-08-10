@@ -51,5 +51,5 @@ graph.VariableDefinitions.DefineProperty("shouldProc",
 ## See Also
 
 - [Resolvers Overview](README.md)
-- [CommitAbilityNode](../nodes/action/commit-ability-node.md)
+- [TryCommitAbilityNode](../nodes/condition/try-commit-ability-node.md)
 - [AbilityCooldownResolver](ability-cooldown-resolver.md)

@@ -30,7 +30,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		behavior.StartCount.Should().Be(1);
 		behavior.EndCount.Should().Be(0);
@@ -58,9 +58,9 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out _).Should().BeTrue();
-		handle.Activate(out _).Should().BeTrue();
-		handle.Activate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
 		behaviors.Should().HaveCount(3);
 		behaviors.Sum(x => x.StartCount).Should().Be(3);
 		behaviors.Sum(x => x.EndCount).Should().Be(0);
@@ -96,23 +96,23 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? blockerHandle = Grant(entity, blocker);
 		AbilityHandle? blockedHandle = Grant(entity, blocked);
 
-		blockerHandle!.Activate(out _).Should().BeTrue();
-		blockerHandle!.Activate(out _).Should().BeTrue();
+		blockerHandle!.TryActivate(out _).Should().BeTrue();
+		blockerHandle!.TryActivate(out _).Should().BeTrue();
 
 		// While any blocker instance active, blocked ability cannot activate.
-		blockedHandle!.Activate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		blockedHandle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeFalse();
 		failureFlags.Should().Be(AbilityActivationFailures.BlockedByTags);
 		blockedHandle.IsActive.Should().BeFalse();
 
 		// End one blocker instance; still blocked.
 		behaviors[0].End();
-		blockedHandle.Activate(out failureFlags).Should().BeFalse();
+		blockedHandle.TryActivate(out failureFlags).Should().BeFalse();
 		failureFlags.Should().Be(AbilityActivationFailures.BlockedByTags);
 		blockedHandle.IsActive.Should().BeFalse();
 
 		// End last blocker instance; now unblocked.
 		behaviors[1].End();
-		blockedHandle.Activate(out failureFlags).Should().BeTrue();
+		blockedHandle.TryActivate(out failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		blockedHandle.IsActive.Should().BeTrue();
 	}
@@ -139,9 +139,9 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 
 		AbilityHandle? handle = Grant(entity, abilityWithOwned);
 
-		handle!.Activate(out _).Should().BeTrue();
-		handle!.Activate(out _).Should().BeTrue();
-		handle!.Activate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
 
 		entity.Tags.AllTags.HasAll(ownedTags).Should().BeTrue();
 
@@ -182,10 +182,10 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
 
 		// Second activation retriggers: ability should call previous.OnEnded() before new.OnStarted().
-		handle.Activate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
 
 		endedBeforeNew.Should().BeTrue("the previous instance should have ended before the new one started");
 	}
@@ -203,7 +203,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(target, data, sourceEntity: source);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationFailures failureFlags, target).Should().BeTrue();
+		handle!.TryActivate(out AbilityActivationFailures failureFlags, target).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		captured.Should().NotBeNull();
 		captured!.Owner.Should().Be(target);
@@ -225,17 +225,17 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeFalse();
 	}
 
 	[Fact]
-	[Trait("CommitAbility", null)]
+	[Trait("TryCommitAbility", null)]
 	public void Behavior_commits_cooldown_and_cost_on_start()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var behavior = new CallbackBehavior(x => x.AbilityHandle.CommitAbility());
+		var behavior = new CallbackBehavior(x => x.AbilityHandle.TryCommitAbility());
 
 		AbilityData data = CreateAbilityData(
 			"CommitOnStart",
@@ -247,18 +247,18 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		entity.Attributes["TestAttributeSet.Attribute90"].BaseValue.Should().Be(baseBefore - 5);
 
 		// Attempt re-activate during cooldown should fail.
-		handle.Activate(out failureFlags).Should().BeFalse();
+		handle.TryActivate(out failureFlags).Should().BeFalse();
 		failureFlags.Should().Be(AbilityActivationFailures.Cooldown);
 
 		// Advance time until cooldown expires.
 		entity.EffectsManager.UpdateEffects(2f);
-		handle.Activate(out failureFlags).Should().BeTrue();
+		handle.TryActivate(out failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 	}
 
@@ -274,7 +274,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		handle.Should().NotBeNull();
 
 		// Activation returns success (instance created then canceled).
-		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		handle.IsActive.Should().BeFalse();
 		behavior.StartAttempts.Should().Be(1);
 	}
@@ -290,7 +290,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
 		handle.IsActive.Should().BeTrue();
 
 		handle.Cancel();
@@ -313,7 +313,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out _).Should().BeTrue();
+		handle!.TryActivate(out _).Should().BeTrue();
 		handle.IsActive.Should().BeTrue();
 
 		handle.Cancel();
@@ -333,7 +333,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityEndedData? capturedData = null;
 		entity.Abilities.OnAbilityEnded += x => { capturedData = x; };
 
-		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		behavior.StartCount.Should().Be(1);
 		behavior.EndCount.Should().Be(0);
@@ -356,14 +356,17 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		var behavior = new TrackingBehavior();
 
 		AbilityData data = CreateAbilityData("Tracked", behaviorFactory: () => behavior);
-		entity.Abilities.GrantAbilityAndActivateOnce(
+		entity.Abilities.TryGrantAbilityAndActivateOnce(
 			data,
 			1,
 			LevelComparison.None,
-			out AbilityActivationFailures failureFlags);
+			out AbilityActivationFailures failureFlags,
+			out AbilityHandle? grantedAbility).Should().BeTrue();
 
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
+		// The behavior keeps the instance running, so the transient grant is still in place.
+		grantedAbility.Should().NotBeNull();
 		entity.Abilities.GrantedAbilities.Should().ContainSingle();
 		behavior.StartCount.Should().Be(1);
 		behavior.EndCount.Should().Be(0);
@@ -385,19 +388,22 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 			"TypedProc",
 			behaviorFactory: () => new TypedPayloadBehavior<TestActivationData>((_, x) => capturedData = x));
 
-		entity.Abilities.GrantAbilityAndActivateOnce(
+		entity.Abilities.TryGrantAbilityAndActivateOnce(
 			data,
 			1,
 			LevelComparison.None,
 			new TestActivationData("Proc", 7),
-			out AbilityActivationFailures failureFlags);
+			out AbilityActivationFailures failureFlags,
+			out AbilityHandle? grantedAbility).Should().BeTrue();
 
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		capturedData.Should().NotBeNull();
 		capturedData!.StringValue.Should().Be("Proc");
 		capturedData.IntValue.Should().Be(7);
 
-		// Transient grant: the behavior ends the instance, so the ability is removed again.
+		// Transient grant: the behavior ends the instance, so the ability is removed again and the handle is freed
+		// even though the activation succeeded.
+		grantedAbility.Should().BeNull();
 		entity.Abilities.GrantedAbilities.Should().BeEmpty();
 	}
 
@@ -479,7 +485,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		handle.Should().NotBeNull();
 
 		var activationData = new TestActivationData("TestValue", 42);
-		handle!.Activate(activationData, out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle!.TryActivate(activationData, out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		capturedContext.Should().NotBeNull();
@@ -504,7 +510,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		capturedContext.Should().NotBeNull();
@@ -526,7 +532,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		handle.Should().NotBeNull();
 
 		var activationData = new ValueTypeActivationData(1.5f, 2.5f, 3.5f);
-		handle!.Activate(activationData, out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle!.TryActivate(activationData, out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		capturedContext.Should().NotBeNull();
@@ -556,8 +562,8 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		var activationData1 = new TestActivationData("First", 1);
 		var activationData2 = new TestActivationData("Second", 2);
 
-		handle!.Activate(activationData1, out _).Should().BeTrue();
-		handle.Activate(activationData2, out _).Should().BeTrue();
+		handle!.TryActivate(activationData1, out _).Should().BeTrue();
+		handle.TryActivate(activationData2, out _).Should().BeTrue();
 
 		capturedContexts.Should().HaveCount(2);
 
@@ -591,8 +597,8 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		var activationData1 = new TestActivationData("First", 1);
 		var activationData2 = new TestActivationData("Second", 2);
 
-		handle!.Activate(activationData1, out _).Should().BeTrue();
-		handle.Activate(activationData2, out _).Should().BeTrue();
+		handle!.TryActivate(activationData1, out _).Should().BeTrue();
+		handle.TryActivate(activationData2, out _).Should().BeTrue();
 
 		// Both activations should have succeeded with their own context data
 		capturedContexts.Should().HaveCount(2);
@@ -712,7 +718,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 	public void Event_triggered_ability_respects_cooldown()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		var behavior = new CallbackBehavior(x => x.AbilityHandle.CommitAbility());
+		var behavior = new CallbackBehavior(x => x.AbilityHandle.TryCommitAbility());
 		var eventTag = Tag.RequestTag(_tagsManager, "color.dark.red");
 
 		AbilityData data = CreateAbilityData(
@@ -778,7 +784,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationFailures failureFlags, magnitude: 75.5f).Should().BeTrue();
+		handle!.TryActivate(out AbilityActivationFailures failureFlags, magnitude: 75.5f).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		capturedContext.Should().NotBeNull();
@@ -799,7 +805,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		capturedContext.Should().NotBeNull();
@@ -884,7 +890,7 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		handle.Should().NotBeNull();
 
 		var activationData = new TestActivationData("TestValue", 42);
-		handle!.Activate(activationData, out AbilityActivationFailures failureFlags, magnitude: 100f).Should().BeTrue();
+		handle!.TryActivate(activationData, out AbilityActivationFailures failureFlags, magnitude: 100f).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		capturedContext.Should().NotBeNull();
@@ -911,9 +917,9 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out _, magnitude: 10f).Should().BeTrue();
-		handle.Activate(out _, magnitude: 20f).Should().BeTrue();
-		handle.Activate(out _, magnitude: 30f).Should().BeTrue();
+		handle!.TryActivate(out _, magnitude: 10f).Should().BeTrue();
+		handle.TryActivate(out _, magnitude: 20f).Should().BeTrue();
+		handle.TryActivate(out _, magnitude: 30f).Should().BeTrue();
 
 		capturedMagnitudes.Should().HaveCount(3);
 		capturedMagnitudes.Should().HaveElementAt(0, 10f);
@@ -936,8 +942,8 @@ public class AbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		AbilityHandle? handle = Grant(entity, data);
 		handle.Should().NotBeNull();
 
-		handle!.Activate(out _, magnitude: 50f).Should().BeTrue();
-		handle.Activate(out _, magnitude: 75f).Should().BeTrue();
+		handle!.TryActivate(out _, magnitude: 50f).Should().BeTrue();
+		handle.TryActivate(out _, magnitude: 75f).Should().BeTrue();
 
 		capturedMagnitudes.Should().HaveCount(2);
 		capturedMagnitudes.Should().HaveElementAt(0, 50f);

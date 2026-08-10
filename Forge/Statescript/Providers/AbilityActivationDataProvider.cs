@@ -48,7 +48,7 @@ public abstract class AbilityActivationDataProvider<TData> : IAbilityActivationD
 		GraphContext graphContext,
 		IReadOnlyDictionary<string, IPropertyResolver> inputResolvers)
 	{
-		return handle.Activate(BuildData(graphContext, inputResolvers), out _, target, magnitude);
+		return handle.TryActivate(BuildData(graphContext, inputResolvers), out _, target, magnitude);
 	}
 
 	/// <inheritdoc/>
@@ -71,20 +71,18 @@ public abstract class AbilityActivationDataProvider<TData> : IAbilityActivationD
 		IForgeEntity? target,
 		IForgeEntity? source,
 		GraphContext graphContext,
-		IReadOnlyDictionary<string, IPropertyResolver> inputResolvers)
+		IReadOnlyDictionary<string, IPropertyResolver> inputResolvers,
+		out AbilityHandle? grantedAbility)
 	{
-		abilities.GrantAbilityAndActivateOnce(
+		return abilities.TryGrantAbilityAndActivateOnce(
 			abilityData,
 			level,
 			levelOverridePolicy,
 			BuildData(graphContext, inputResolvers),
-			out AbilityActivationFailures failures,
+			out _,
+			out grantedAbility,
 			target,
 			source);
-
-		// The returned handle is already freed when the ability completed (and was auto-removed) synchronously, so
-		// activation success is judged by the failure flags instead.
-		return failures == AbilityActivationFailures.None;
 	}
 
 	private TData BuildData(

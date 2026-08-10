@@ -56,7 +56,7 @@ public class BlockAbilityTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixtur
 
 		entity.EffectsManager.ApplyEffect(CreateBlockingEffect(entity, ["item.equipment.weapon.axe"], 10f));
 
-		ability.Activate(out AbilityActivationFailures failureFlags).Should().BeFalse();
+		ability.TryActivate(out AbilityActivationFailures failureFlags).Should().BeFalse();
 		failureFlags.Should().HaveFlag(AbilityActivationFailures.BlockedByTags);
 		ability.IsActive.Should().BeFalse();
 	}

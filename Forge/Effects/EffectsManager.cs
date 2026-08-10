@@ -4,7 +4,6 @@ using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
-using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Stacking;
 
 namespace Gamesmiths.Forge.Effects;
@@ -430,44 +429,29 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		RemoveActiveEffect(effect, EffectRemovalReason.Expired);
 	}
 
-	internal bool CanApplyEffect(Effect costEffect, int level)
-	{
-		foreach (Modifier modifier in costEffect.EffectData.Modifiers)
-		{
-			if (!modifier.CanApply(costEffect, Owner, level))
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
 	internal ActiveEffectHandle? ApplyEffectInternal(Effect effect, EffectApplicationContext? applicationContext)
 	{
-		// Applications can cascade: a component reacting to one effect landing can apply another, which can apply
-		// another. The chain is cut here rather than left to overflow the stack, so a build with validation disabled
-		// drops the offending application instead of taking the process down with it.
-		if (_applicationDepth >= MaxApplicationDepth)
-		{
-			Validation.Fail(
-				$"Effect application exceeded {MaxApplicationDepth} levels of nesting while applying " +
-				$"'{effect.EffectData.Name}', which means two or more effects are applying each other in a cycle. " +
-				"Break the cycle, usually by gating one of the applications on a tag the other grants.");
+		return ApplyEffectInternal(effect, applicationContext, out _);
+	}
 
-			return null;
-		}
-
-		_applicationDepth++;
-
-		try
-		{
-			return ApplyEffectUnguarded(effect, applicationContext);
-		}
-		finally
-		{
-			_applicationDepth--;
-		}
+	/// <summary>
+	/// Applies an effect and reports whether it actually landed.
+	/// </summary>
+	/// <remarks>
+	/// A returned handle cannot answer this on its own: an instant effect has no <see cref="ActiveEffect"/> to hand
+	/// back, so it returns <see langword="null"/> whether it executed or was turned away by a component's
+	/// <see cref="IEffectComponent.CanApplyEffect"/> or by a registered <see cref="IEffectApplicationBlocker"/>.
+	/// Callers that must know — an ability committing its cost, say — need this instead of re-running those checks up
+	/// front, which would fire the blocked notification twice and burn through a single-use immunity.
+	/// </remarks>
+	/// <param name="effect">The instance of the effect to be applied.</param>
+	/// <param name="activeEffectHandle">A handle to the applied effect when it became an <see cref="ActiveEffect"/>.
+	/// </param>
+	/// <returns><see langword="true"/> when the effect was applied.</returns>
+	internal bool TryApplyEffect(Effect effect, out ActiveEffectHandle? activeEffectHandle)
+	{
+		activeEffectHandle = ApplyEffectInternal(effect, applicationContext: null, out bool applied);
+		return applied;
 	}
 
 	private static bool MatchesStackPolicy(ActiveEffect existingEffect, Effect newEffect)
@@ -505,8 +489,44 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			evaluatedData.Stack);
 	}
 
-	private ActiveEffectHandle? ApplyEffectUnguarded(Effect effect, EffectApplicationContext? applicationContext)
+	private ActiveEffectHandle? ApplyEffectInternal(
+		Effect effect,
+		EffectApplicationContext? applicationContext,
+		out bool applied)
 	{
+		// Applications can cascade: a component reacting to one effect landing can apply another, which can apply
+		// another. The chain is cut here rather than left to overflow the stack, so a build with validation disabled
+		// drops the offending application instead of taking the process down with it.
+		if (_applicationDepth >= MaxApplicationDepth)
+		{
+			Validation.Fail(
+				$"Effect application exceeded {MaxApplicationDepth} levels of nesting while applying " +
+				$"'{effect.EffectData.Name}', which means two or more effects are applying each other in a cycle. " +
+				"Break the cycle, usually by gating one of the applications on a tag the other grants.");
+
+			applied = false;
+			return null;
+		}
+
+		_applicationDepth++;
+
+		try
+		{
+			return ApplyEffectUnguarded(effect, applicationContext, out applied);
+		}
+		finally
+		{
+			_applicationDepth--;
+		}
+	}
+
+	private ActiveEffectHandle? ApplyEffectUnguarded(
+		Effect effect,
+		EffectApplicationContext? applicationContext,
+		out bool applied)
+	{
+		applied = false;
+
 		if (!effect.CanApply(Owner))
 		{
 			return null;
@@ -537,11 +557,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			OnEffectApplied?.Invoke(evaluatedData);
 
 			Effect.Execute(in evaluatedData, componentInstances);
+			applied = true;
 			return null;
 		}
 
 		if (!effect.EffectData.StackingData.HasValue)
 		{
+			applied = true;
 			return ApplyNewEffect(effect, applicationContext).Handle;
 		}
 
@@ -565,9 +587,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 				OnEffectStackDenied?.Invoke(effect, stackableEffect.Handle);
 			}
 
+			// A denied stack hands back the existing handle but changed nothing, so it is not an application.
+			applied = successfulApplication;
 			return stackableEffect.Handle;
 		}
 
+		applied = true;
 		return ApplyNewEffect(effect, applicationContext).Handle;
 	}
 

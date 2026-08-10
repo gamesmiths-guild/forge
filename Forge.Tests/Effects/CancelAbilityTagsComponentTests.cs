@@ -93,7 +93,7 @@ public class CancelAbilityTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixtu
 		red.IsActive.Should().BeFalse();
 
 		// Re-activating mid-effect must stick: OnApplication does not fire again on update.
-		red.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		red.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		entity.EffectsManager.UpdateEffects(5f);
@@ -120,7 +120,7 @@ public class CancelAbilityTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixtu
 		// ExecuteOnApplication is on, so the first execution happens right away.
 		red.IsActive.Should().BeFalse();
 
-		red.Activate(out _).Should().BeTrue();
+		red.TryActivate(out _).Should().BeTrue();
 		red.IsActive.Should().BeTrue();
 
 		// No execution yet, so the re-activated ability survives.
@@ -150,7 +150,7 @@ public class CancelAbilityTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixtu
 
 		red.IsActive.Should().BeFalse();
 
-		red.Activate(out _).Should().BeTrue();
+		red.TryActivate(out _).Should().BeTrue();
 
 		entity.EffectsManager.UpdateEffects(3f);
 
@@ -224,7 +224,7 @@ public class CancelAbilityTagsComponentTests(TagsAndCuesFixture tagsAndCuesFixtu
 
 		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(abilityData, 1, LevelComparison.None, null);
 
-		handle.Activate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		handle.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 

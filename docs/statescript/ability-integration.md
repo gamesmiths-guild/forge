@@ -90,7 +90,7 @@ var abilityData = new AbilityData(
 When activated with typed data:
 
 ```csharp
-handle.Activate(new DashData(10.0f, 5.0f), out AbilityActivationFailures failures);
+handle.TryActivate(new DashData(10.0f, 5.0f), out AbilityActivationFailures failures);
 ```
 
 If you need to rename fields, precompute values, or convert unsupported payload types into graph-friendly values, use the data-binder overload instead:
@@ -132,20 +132,21 @@ The activated ability then receives the value through `IAbilityBehavior<DashData
 
 The provider covers **both** directions from a single `Members` declaration: the same entries the sending node authors are the fields the receiving graph binds. So `DashDataProvider` is the whole contract for `DashData` — the reading examples earlier in this page are driven by that one list, not by a second declaration that could drift from it.
 
-The same **Activation Data** input exists on `TryActivateAbilitiesByTagNode` and `GrantAbilityAndActivateOnceNode`. Abilities whose behavior does not accept the provider's type still activate and ignore the data, which is what makes the by-tag node safe when one tag selects abilities with different activation-data types. See [AbilityActivatorResolver](resolvers/ability-activator-resolver.md) for details.
+The same **Activation Data** input exists on `TryActivateAbilitiesByTagNode` and `TryGrantAbilityAndActivateOnceNode`. Abilities whose behavior does not accept the provider's type still activate and ignore the data, which is what makes the by-tag node safe when one tag selects abilities with different activation-data types. See [AbilityActivatorResolver](resolvers/ability-activator-resolver.md) for details.
 
 ## Activation Context
 
 When a graph is driven by an ability, the `AbilityBehaviorContext` is stored in `GraphContext.ActivationContext`. Nodes can access it to interact with the ability system:
 
 ```csharp
-public class CommitAbilityActionNode : ActionNode
+public class EndOnLowHealthNode : ActionNode
 {
     protected override void Execute(GraphContext graphContext)
     {
-        if (graphContext.TryGetActivationContext<AbilityBehaviorContext>(out var context))
+        if (graphContext.TryGetActivationContext<AbilityBehaviorContext>(out var context)
+            && context.Owner.Attributes["Health.Current"].CurrentValue < 10)
         {
-            context.AbilityHandle.CommitAbility();
+            context.InstanceHandle.End();
         }
     }
 }
@@ -233,20 +234,21 @@ This is especially useful for `PerExecution` instancing policies where the same 
 
 ### Commit Cost and Cooldown from Graph
 
+The built-in [TryCommitAbilityNode](nodes/condition/try-commit-ability-node.md) does this. Wire it after the Entry to commit the ability's cost and cooldown at the start of execution:
+
 ```csharp
-public class CommitAbilityActionNode : ActionNode
-{
-    protected override void Execute(GraphContext graphContext)
-    {
-        if (graphContext.TryGetActivationContext<AbilityBehaviorContext>(out var context))
-        {
-            context.AbilityHandle.CommitAbility();
-        }
-    }
-}
+var commit = new TryCommitAbilityNode();
+graph.AddNode(commit);
+
+graph.AddConnection(new Connection(
+    graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+    commit.InputPorts[ConditionNode.InputPort]));
+graph.AddConnection(new Connection(
+    commit.OutputPorts[ConditionNode.TruePort],
+    castNode.InputPorts[ActionNode.InputPort]));
 ```
 
-Wire this node after the Entry to commit the ability's cost and cooldown at the start of execution.
+It is a condition node rather than an action node because the commit can fail: a graph may reach it long after activation, by which point the cooldown may be running or the resources may be gone. Route the **False** port to whatever should happen when the ability cannot pay.
 
 ### Apply Effects from Graph
 
@@ -305,7 +307,7 @@ A complete example of an ability that applies a buff, waits, then cleans up:
 var graph = new Graph();
 graph.VariableDefinitions.DefineVariable("buffDuration", 5.0);
 
-var commitNode = new CommitAbilityActionNode();
+var commitNode = new TryCommitAbilityNode();
 var applyBuff = new ApplyEffectToOwnerNode(buffEffectData);
 var timer = new TimerNode();
 timer.BindInput(TimerNode.DurationInput, "buffDuration");
@@ -316,12 +318,12 @@ graph.AddNode(applyBuff);
 graph.AddNode(timer);
 graph.AddNode(removeBuff);
 
-// Entry → commit → apply buff → timer
+// Entry → commit → apply buff → timer (nothing runs when the commit fails)
 graph.AddConnection(new Connection(
     graph.EntryNode.OutputPorts[EntryNode.OutputPort],
-    commitNode.InputPorts[ActionNode.InputPort]));
+    commitNode.InputPorts[ConditionNode.InputPort]));
 graph.AddConnection(new Connection(
-    commitNode.OutputPorts[ActionNode.OutputPort],
+    commitNode.OutputPorts[ConditionNode.TruePort],
     applyBuff.InputPorts[ActionNode.InputPort]));
 graph.AddConnection(new Connection(
     applyBuff.OutputPorts[ActionNode.OutputPort],
@@ -341,7 +343,7 @@ var abilityData = new AbilityData(
 
 ## Best Practices
 
-1. **Remember to Commit**: Usually you want to place a `CommitAbility` action node early in the graph to apply costs and cooldowns, but you may want to test conditions first. Make sure to commit at some point to activate cooldowns and deduct costs.
+1. **Remember to Commit**: Usually you want to place a `TryCommitAbilityNode` early in the graph to apply costs and cooldowns, but you may want to test conditions first. Make sure to commit at some point to activate cooldowns and deduct costs, and handle its **False** port — the later the commit, the likelier it is to fail.
 2. **Use Subgraphs for Cleanup**: Connect ongoing effects and state to Subgraph ports so they are automatically cleaned up when the parent deactivates or the ability is canceled.
 3. **Leverage Property Resolvers**: Use `AttributeResolver`, `TagQueryResolver`, and `ComparisonResolver` for data-driven conditions instead of writing custom condition nodes.
 4. **Use Shared Variables for Cross-Ability State**: When multiple abilities need to communicate and [Attributes](../attributes.md) or [Tags](../tags.md) are not sufficient, use entity-level shared variables rather than external state.

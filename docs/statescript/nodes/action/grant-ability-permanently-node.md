@@ -71,5 +71,5 @@ graph.AddConnection(new Connection(
 
 - [Action Nodes Overview](README.md)
 - [GrantAbilityNode](../state/grant-ability-node.md)
-- [GrantAbilityAndActivateOnceNode](../condition/grant-ability-and-activate-once-node.md)
+- [TryGrantAbilityAndActivateOnceNode](../condition/try-grant-ability-and-activate-once-node.md)
 - [GetAbilityHandleResolver](../../resolvers/get-ability-handle-resolver.md)

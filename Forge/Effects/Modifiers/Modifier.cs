@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Magnitudes;
 
@@ -20,29 +19,4 @@ public readonly record struct Modifier(
 	ModifierOperation Operation,
 	ModifierMagnitude Magnitude,
 	int Channel = 0,
-	AggregationMode AggregationMode = AggregationMode.Sum)
-{
-	internal bool CanApply(Effect effect, IForgeEntity target, int level)
-	{
-		if (!target.Attributes.ContainsAttribute(Attribute))
-		{
-			return false;
-		}
-
-		float magnitude = Magnitude.GetMagnitude(effect, target, level);
-
-		EntityAttribute attribute = target.Attributes[Attribute];
-
-		if (magnitude < 0)
-		{
-			return magnitude >= attribute.Min - attribute.CurrentValue;
-		}
-
-		if (magnitude > 0)
-		{
-			return magnitude <= attribute.Max - attribute.CurrentValue;
-		}
-
-		return true;
-	}
-}
+	AggregationMode AggregationMode = AggregationMode.Sum);

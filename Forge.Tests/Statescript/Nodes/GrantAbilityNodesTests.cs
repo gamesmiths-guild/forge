@@ -278,7 +278,7 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 			1,
 			LevelComparison.None,
 			sourceEntity: null);
-		handle.Activate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
 		handle.IsActive.Should().BeTrue();
 
 		var graph = new Graph();
@@ -379,7 +379,7 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 			1,
 			LevelComparison.None,
 			sourceEntity: null);
-		handle.Activate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
 		handle.IsActive.Should().BeTrue();
 
 		owner.Abilities.UpdateAbilities(1.0);
@@ -408,10 +408,12 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineObjectVariable("abilityData", abilityData);
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", owner);
+		graph.VariableDefinitions.DefineObjectVariable<AbilityHandle>("grantedAbility");
 
-		var procNode = new GrantAbilityAndActivateOnceNode();
-		procNode.BindInput(GrantAbilityAndActivateOnceNode.AbilityDataInput, "abilityData");
-		procNode.BindInput(GrantAbilityAndActivateOnceNode.EntityInput, "entity");
+		var procNode = new TryGrantAbilityAndActivateOnceNode();
+		procNode.BindInput(TryGrantAbilityAndActivateOnceNode.AbilityDataInput, "abilityData");
+		procNode.BindInput(TryGrantAbilityAndActivateOnceNode.EntityInput, "entity");
+		procNode.BindOutput(TryGrantAbilityAndActivateOnceNode.AbilityOutput, "grantedAbility");
 
 		var onTrue = new TrackingActionNode();
 
@@ -430,9 +432,57 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		onTrue.ExecutionCount.Should().Be(1);
 		captureNode.CapturedGraphContext.Should().NotBeNull();
 
-		// Transient grant: the ability is removed after it ends.
+		// Transient grant: the ability is removed after it ends, so there is no lingering handle to output even
+		// though the proc activated.
 		owner.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle);
 		handle.Should().BeNull();
+
+		processor.GraphContext.GraphVariables.TryGetObject("grantedAbility", out object? outputHandle)
+			.Should().BeTrue();
+		outputHandle.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Graph", "GrantAbility")]
+	public void Try_grant_ability_and_activate_once_node_outputs_a_lingering_proc_handle()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+
+		// No behavior factory means nothing ends the instance, so the transient grant outlives the node.
+		var abilityData = new AbilityData("Lingering Proc");
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable("abilityData", abilityData);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", owner);
+		graph.VariableDefinitions.DefineObjectVariable<AbilityHandle>("grantedAbility");
+
+		var procNode = new TryGrantAbilityAndActivateOnceNode();
+		procNode.BindInput(TryGrantAbilityAndActivateOnceNode.AbilityDataInput, "abilityData");
+		procNode.BindInput(TryGrantAbilityAndActivateOnceNode.EntityInput, "entity");
+		procNode.BindOutput(TryGrantAbilityAndActivateOnceNode.AbilityOutput, "grantedAbility");
+
+		var onTrue = new TrackingActionNode();
+
+		graph.AddNode(procNode);
+		graph.AddNode(onTrue);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			procNode.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			procNode.OutputPorts[ConditionNode.TruePort],
+			onTrue.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		onTrue.ExecutionCount.Should().Be(1);
+
+		owner.Abilities.TryGetAbility(abilityData, out AbilityHandle? handle).Should().BeTrue();
+		handle!.IsActive.Should().BeTrue();
+
+		processor.GraphContext.GraphVariables.TryGetObject("grantedAbility", out object? outputHandle)
+			.Should().BeTrue();
+		outputHandle.Should().Be(handle);
 	}
 
 	[Fact]
@@ -557,10 +607,10 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 			"activationData",
 			new AbilityActivatorResolver(new ShoutProvider()));
 
-		var procNode = new GrantAbilityAndActivateOnceNode();
-		procNode.BindInput(GrantAbilityAndActivateOnceNode.AbilityDataInput, "abilityData");
-		procNode.BindInput(GrantAbilityAndActivateOnceNode.EntityInput, "entity");
-		procNode.BindInput(GrantAbilityAndActivateOnceNode.ActivationDataInput, "activationData");
+		var procNode = new TryGrantAbilityAndActivateOnceNode();
+		procNode.BindInput(TryGrantAbilityAndActivateOnceNode.AbilityDataInput, "abilityData");
+		procNode.BindInput(TryGrantAbilityAndActivateOnceNode.EntityInput, "entity");
+		procNode.BindInput(TryGrantAbilityAndActivateOnceNode.ActivationDataInput, "activationData");
 
 		var onTrue = new TrackingActionNode();
 
@@ -610,7 +660,7 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 			LevelComparison.None,
 			sourceEntity: null);
 
-		handle.Activate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
 		handle.IsActive.Should().BeTrue();
 
 		return handle;
