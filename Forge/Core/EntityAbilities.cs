@@ -85,9 +85,10 @@ public class EntityAbilities(IForgeEntity owner)
 	/// </summary>
 	/// <remarks>
 	/// Read-only: the manager keeps this set in step with the grant sources behind each ability, so grant and removal
-	/// go through <see cref="GrantAbilityPermanently"/>, <c>TryGrantAbilityAndActivateOnce</c> and the effect
-	/// components rather than through this set. The collection is live, so a handle removed while it is being
-	/// enumerated invalidates the enumeration; copy it first when the loop body can remove abilities.
+	/// go through <see cref="GrantAbilityPermanently"/>, <c>TryGrantAbilityAndActivateOnce</c>,
+	/// <see cref="RevokeAbility"/>, <see cref="ClearAbility"/> and the effect components rather than through this set.
+	/// The collection is live, so a handle removed while it is being enumerated invalidates the enumeration; copy it
+	/// first when the loop body can remove abilities.
 	/// </remarks>
 	public IReadOnlyCollection<AbilityHandle> GrantedAbilities => _grantedAbilities;
 
@@ -360,7 +361,8 @@ public class EntityAbilities(IForgeEntity owner)
 	/// Grants an ability permanently.
 	/// </summary>
 	/// <remarks>
-	/// Abilities granted permanently cannot be removed nor inhibited.
+	/// Abilities granted permanently cannot be inhibited, and the effects system never removes them. They are undone
+	/// only by an explicit <see cref="RevokeAbility"/> or <see cref="ClearAbility"/>.
 	/// </remarks>
 	/// <param name="abilityData">The configuration data of the ability to grant.</param>
 	/// <param name="abilityLevel">The level at which to grant the ability.</param>
@@ -408,6 +410,70 @@ public class EntityAbilities(IForgeEntity owner)
 		OnAbilityGranted?.Invoke(newAbility.Handle);
 
 		return newAbility.Handle;
+	}
+
+	/// <summary>
+	/// Revokes the permanent grants of an ability, the counterpart of <see cref="GrantAbilityPermanently"/>.
+	/// </summary>
+	/// <remarks>
+	/// <para>Removes every permanent grant source behind the ability in one call, so an ability that was granted
+	/// permanently more than once is revoked by a single call rather than by one call per grant.</para>
+	/// <para>Grants owned by effects or by Statescript graphs are left alone. While any of them remain the ability
+	/// stays granted and merely loses its permanent share, raising <see cref="OnAbilityChanged"/> if that changed its
+	/// inhibition. Once no grant source is left the ability is removed exactly as an effect-driven ungrant removes it,
+	/// raising <see cref="OnAbilityRemoved"/>.</para>
+	/// <para>The ability's cooldown deliberately keeps running. Cooldowns live in effects on the owner and are checked
+	/// by tag, so revoking and re-granting an ability cannot be used to skip one.</para>
+	/// </remarks>
+	/// <param name="abilityHandle">The handle of the ability to revoke.</param>
+	/// <param name="removalPolicy">How active instances are treated once the last grant source is gone.
+	/// <see cref="AbilityDeactivationPolicy.Ignore"/> is not a valid value here.</param>
+	/// <returns><see langword="true"/> if a permanent grant was found and revoked; otherwise,
+	/// <see langword="false"/>.</returns>
+	public bool RevokeAbility(
+		AbilityHandle abilityHandle,
+		AbilityDeactivationPolicy removalPolicy = AbilityDeactivationPolicy.CancelImmediately)
+	{
+		return RemoveGrantSources(abilityHandle, removalPolicy, permanentOnly: true);
+	}
+
+	/// <summary>
+	/// Clears an ability from the entity, dropping every grant source behind it whatever granted it.
+	/// </summary>
+	/// <remarks>
+	/// <para>Unlike <see cref="RevokeAbility"/> this also drops grants owned by effects and by Statescript graphs, so
+	/// the ability always goes away. Those owners keep their now-invalid <see cref="AbilityHandle"/>s and their later
+	/// removal and inhibition requests become no-ops, but they will not re-grant the ability when they end — an
+	/// ability cleared while an item's effect was granting it does not come back when that effect is removed.</para>
+	/// <para>This is a teardown operation. To take an ability away temporarily, prefer inhibition through
+	/// <see cref="Effects.Components.BlockAbilityTagsEffectComponent"/>, which is reversible.</para>
+	/// </remarks>
+	/// <param name="abilityHandle">The handle of the ability to clear.</param>
+	/// <param name="removalPolicy">How active instances are treated. <see cref="AbilityDeactivationPolicy.Ignore"/> is
+	/// not a valid value here.</param>
+	/// <returns><see langword="true"/> if the ability was granted on this entity and has been cleared; otherwise,
+	/// <see langword="false"/>.</returns>
+	public bool ClearAbility(
+		AbilityHandle abilityHandle,
+		AbilityDeactivationPolicy removalPolicy = AbilityDeactivationPolicy.CancelImmediately)
+	{
+		return RemoveGrantSources(abilityHandle, removalPolicy, permanentOnly: false);
+	}
+
+	/// <summary>
+	/// Clears every ability granted to the entity, whatever granted them.
+	/// </summary>
+	/// <remarks>
+	/// Intended for entity teardown — respawn, pooling, or disposal — where the whole ability set goes away at once.
+	/// Active instances are cancelled immediately. Every caveat on <see cref="ClearAbility"/> applies to each ability.
+	/// </remarks>
+	public void ClearAllAbilities()
+	{
+		// Copied because clearing an ability removes its handle from the backing set.
+		foreach (AbilityHandle abilityHandle in _grantedAbilities.ToArray())
+		{
+			ClearAbility(abilityHandle);
+		}
 	}
 
 	/// <summary>
@@ -479,50 +545,12 @@ public class EntityAbilities(IForgeEntity owner)
 
 	internal void RemoveGrantedAbility(Ability? abilityToRemove, IAbilityGrantSource grantSource)
 	{
-		if (abilityToRemove is null || grantSource.RemovalPolicy == AbilityDeactivationPolicy.Ignore)
+		if (abilityToRemove is null)
 		{
 			return;
 		}
 
-		List<IAbilityGrantSource> grantSources = _grantSources[abilityToRemove];
-
-		grantSources.Remove(grantSource);
-
-		if (grantSources.Count > 0)
-		{
-			if (CheckIsInhibited(abilityToRemove))
-			{
-				InhibitAbilityBasedOnPolicy(abilityToRemove, grantSource.InhibitionPolicy);
-			}
-
-			return;
-		}
-
-		switch (grantSource.RemovalPolicy)
-		{
-			case AbilityDeactivationPolicy.Ignore:
-				return;
-
-			case AbilityDeactivationPolicy.CancelImmediately:
-				if (abilityToRemove.IsActive)
-				{
-					abilityToRemove.End();
-				}
-
-				RemoveAbility(abilityToRemove);
-				return;
-
-			case AbilityDeactivationPolicy.RemoveOnEnd:
-				if (abilityToRemove.IsActive)
-				{
-					_removeAbility = RemoveAbility;
-					abilityToRemove.OnAbilityDeactivated += _removeAbility;
-					return;
-				}
-
-				RemoveAbility(abilityToRemove);
-				return;
-		}
+		RemoveGrantSource(abilityToRemove, grantSource, grantSource.RemovalPolicy);
 	}
 
 	internal void InhibitGrantedAbility(AbilityHandle abilityHandle, IAbilityGrantSource grantSource)
@@ -597,6 +625,100 @@ public class EntityAbilities(IForgeEntity owner)
 			sourceEntity);
 	}
 
+	private bool RemoveGrantSources(
+		AbilityHandle abilityHandle,
+		AbilityDeactivationPolicy removalPolicy,
+		bool permanentOnly)
+	{
+		Validation.Assert(
+			removalPolicy != AbilityDeactivationPolicy.Ignore,
+			"AbilityDeactivationPolicy.Ignore is not a valid revocation policy: it would do nothing.");
+
+		if (removalPolicy == AbilityDeactivationPolicy.Ignore)
+		{
+			return false;
+		}
+
+		Ability? ability = abilityHandle.Ability;
+
+		// A handle from another entity's manager is not a key here, which is what keeps this scoped to our own grants.
+		if (ability is null || !_grantSources.TryGetValue(ability, out List<IAbilityGrantSource>? grantSources))
+		{
+			return false;
+		}
+
+		// Snapshotted because removing the last source takes the ability, and this very list, out of the manager.
+		IAbilityGrantSource[] sourcesToRemove = permanentOnly
+			? [.. grantSources.FindAll(x => x is PermanentGrantSource)]
+			: [.. grantSources];
+
+		if (sourcesToRemove.Length == 0)
+		{
+			return false;
+		}
+
+		foreach (IAbilityGrantSource grantSource in sourcesToRemove)
+		{
+			RemoveGrantSource(ability, grantSource, removalPolicy);
+		}
+
+		return true;
+	}
+
+	private void RemoveGrantSource(
+		Ability abilityToRemove,
+		IAbilityGrantSource grantSource,
+		AbilityDeactivationPolicy removalPolicy)
+	{
+		if (removalPolicy == AbilityDeactivationPolicy.Ignore)
+		{
+			return;
+		}
+
+		if (!_grantSources.TryGetValue(abilityToRemove, out List<IAbilityGrantSource>? grantSources))
+		{
+			return;
+		}
+
+		grantSources.Remove(grantSource);
+
+		if (grantSources.Count > 0)
+		{
+			if (CheckIsInhibited(abilityToRemove))
+			{
+				InhibitAbilityBasedOnPolicy(abilityToRemove, grantSource.InhibitionPolicy);
+			}
+
+			return;
+		}
+
+		switch (removalPolicy)
+		{
+			case AbilityDeactivationPolicy.CancelImmediately:
+				if (abilityToRemove.IsActive)
+				{
+					// Every instance goes, not just the most recent one. The ability is about to leave the manager, so
+					// a surviving instance would keep its activation owned and blocked tags on the entity with nothing
+					// left to end it, and would stop being updated since UpdateAbilities iterates GrantedAbilities.
+					abilityToRemove.CancelAllInstances();
+				}
+
+				RemoveAbility(abilityToRemove);
+				return;
+
+			case AbilityDeactivationPolicy.RemoveOnEnd:
+				if (abilityToRemove.IsActive)
+				{
+					_removeAbility = RemoveAbility;
+					abilityToRemove.OnAbilityDeactivated += _removeAbility;
+					return;
+				}
+
+				RemoveAbility(abilityToRemove);
+				return;
+		}
+	}
+
 	private void InhibitAbilityBasedOnPolicy(Ability abilityToInhibit, AbilityDeactivationPolicy inhibitionPolicy)
 	{
 		switch (inhibitionPolicy)
@@ -645,6 +767,10 @@ public class EntityAbilities(IForgeEntity owner)
 
 		abilityToRemove.Handle.Free();
 		_grantedAbilities.Remove(abilityToRemove.Handle);
+
+		// The ability is gone for good, so its now-empty entry goes too. Leaving it behind roots the dead Ability as a
+		// dictionary key for the lifetime of the entity, and a revoke/re-grant cycle repeats that without bound.
+		_grantSources.Remove(abilityToRemove);
 	}
 
 	private void InhibitAbility(Ability abilityToInhibit)

@@ -9,9 +9,10 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Action;
 /// Permanently grants an ability to an entity.
 /// </summary>
 /// <remarks>
-/// <para>Permanent grants cannot be revoked or inhibited, use them for unlock-style progression. For grants tied to
-/// a graph state's lifetime, use the GrantAbility state node instead; for data-driven grants, use effects with a
-/// grant-ability component.</para>
+/// <para>Permanent grants cannot be inhibited and the effects system never removes them, so use them for unlock-style
+/// progression. They are undone only by an explicit revocation — the RevokeAbility node, or
+/// <see cref="EntityAbilities.RevokeAbility"/>. For grants tied to a graph state's lifetime, use the GrantAbility
+/// state node instead; for data-driven grants, use effects with a grant-ability component.</para>
 /// <para>The ability-data input must resolve to an <see cref="AbilityData"/>. The entity input selects who receives
 /// the grant, defaulting to the ability context's owner when unbound. The level input defaults to the ability
 /// context's level, or <c>1</c> without a context.</para>
@@ -49,7 +50,8 @@ public class GrantAbilityPermanentlyNode(LevelComparison levelOverridePolicy = L
 	private readonly LevelComparison _levelOverridePolicy = levelOverridePolicy;
 
 	/// <inheritdoc/>
-	public override string Description => "Permanently grants an ability to an entity (cannot be revoked).";
+	public override string Description =>
+		"Permanently grants an ability to an entity (removed only by an explicit revocation).";
 
 	/// <inheritdoc/>
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
