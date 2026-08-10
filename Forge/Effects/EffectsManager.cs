@@ -429,6 +429,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		RemoveActiveEffect(effect, EffectRemovalReason.Expired);
 	}
 
+	internal ActiveEffect? FindActiveEffectByData(EffectData effectData)
+	{
+		return FilterEffectsByData(effectData).FirstOrDefault();
+	}
+
 	internal ActiveEffectHandle? ApplyEffectInternal(Effect effect, EffectApplicationContext? applicationContext)
 	{
 		return ApplyEffectInternal(effect, applicationContext, out _);
