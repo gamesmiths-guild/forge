@@ -1,9 +1,9 @@
 // Copyright © Gamesmiths Guild.
 
-namespace Gamesmiths.Forge.Statescript.Nodes.Action;
+namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 
 /// <summary>
-/// Selects which grant sources a <see cref="RevokeAbilityNode"/> removes when it executes.
+/// Selects which grant sources a <see cref="TryRevokeAbilityNode"/> removes when it executes.
 /// </summary>
 public enum AbilityRevokeScope : byte
 {

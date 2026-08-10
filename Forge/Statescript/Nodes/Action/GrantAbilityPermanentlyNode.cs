@@ -10,7 +10,7 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Action;
 /// </summary>
 /// <remarks>
 /// <para>Permanent grants cannot be inhibited and the effects system never removes them, so use them for unlock-style
-/// progression. They are undone only by an explicit revocation — the RevokeAbility node, or
+/// progression. They are undone only by an explicit revocation — the TryRevokeAbility node, or
 /// <see cref="EntityAbilities.RevokeAbility"/>. For grants tied to a graph state's lifetime, use the GrantAbility
 /// state node instead; for data-driven grants, use effects with a grant-ability component.</para>
 /// <para>The ability-data input must resolve to an <see cref="AbilityData"/>. The entity input selects who receives
