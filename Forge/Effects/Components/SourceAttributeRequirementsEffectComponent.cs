@@ -158,6 +158,12 @@ public class SourceAttributeRequirementsEffectComponent(
 		_subscribedAttributes.Clear();
 		SubscribeToWatchedAttributes(sourceEntity, _handler);
 
+		if (AttributeRequirement.RequirementsMet(RemovalRequirements, sourceEntity, emptyResult: false))
+		{
+			target.EffectsManager.RemoveEffect(activeEffectEvaluatedData.ActiveEffectHandle, true);
+			return;
+		}
+
 		if (OngoingRequirements.Length > 0)
 		{
 			activeEffectEvaluatedData.ActiveEffectHandle.SetInhibit(

@@ -441,13 +441,23 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// effect participates, not just those whose modifiers name a departing attribute, because an effect can depend on
 	/// one indirectly through an attribute-based magnitude, a custom calculator or its own duration.
 	/// </summary>
+	/// <remarks>
+	/// Scope is this entity's own effects. An effect on <i>another</i> entity that reads this one's attributes — a
+	/// non-snapshot capture resolving to the source, or a source-requirement component watching this entity — is not
+	/// rebuilt and keeps the values and subscriptions it had. Closing that needs a registry of cross-entity
+	/// dependents, which is a larger change than this one.
+	/// </remarks>
 	/// <param name="applyChange">The action that applies the attribute set membership change.</param>
 	internal void RebuildAroundAttributeChange(Action applyChange)
 	{
 		ActiveEffect[] activeEffects = [.. _activeEffects];
 
+		// Capture subscriptions come off before anything moves. Unwinding the modifiers and flushing the departing
+		// attributes both raise value changes, and a live capture handler would react by re-evaluating and
+		// re-applying an effect from the middle of this rebuild, putting modifiers back on out of turn.
 		foreach (ActiveEffect activeEffect in activeEffects)
 		{
+			activeEffect.DetachAttributeBindings();
 			activeEffect.Unapply(reApplication: true);
 		}
 
@@ -455,6 +465,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		foreach (ActiveEffect activeEffect in activeEffects)
 		{
+			// A requirement component's handler can still remove an effect during the change, so a snapshot entry may
+			// already be gone by the time its turn comes.
+			if (!_activeEffects.Contains(activeEffect))
+			{
+				continue;
+			}
+
 			activeEffect.RebuildAfterAttributeChange();
 		}
 
@@ -474,6 +491,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 			foreach (IEffectComponent component in activeEffect.ComponentInstances)
 			{
+				// A component can remove its own effect from here — a removal requirement the new membership already
+				// satisfies does exactly that — and the ones after it must not keep working on a freed handle.
+				if (!_activeEffects.Contains(activeEffect))
+				{
+					break;
+				}
+
 				component.OnTargetAttributesChanged(
 					Owner,
 					new ActiveEffectEvaluatedData(

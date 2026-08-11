@@ -512,6 +512,10 @@ Three consequences are worth knowing:
 
 `AttributeSets` is read-only: the manager keeps it in step with the attribute mapping behind the indexer, so sets are added and removed through these methods rather than through the list.
 
+**Adding a set whose keys collide throws.** An entity cannot hold two instances of the same `AttributeSet` subclass, since keys derive from the set's type name. The collision is detected before anything changes, so a rejected add leaves the entity exactly as it was.
+
+> **Known limit: the rebuild covers only the changed entity's own effects.** An effect living on *another* entity that reads this one's attributes — through a non-snapshot capture resolving to `Source`, or a [source attribute requirement](effects/components/source-attribute-requirements-effect-component.md) watching this entity — is not re-evaluated, and goes on using the values and subscriptions it had. If you change the sets of an entity that other entities' effects capture from, re-apply those effects.
+
 ## Integration with Other Systems
 
 While detailed relationships with other systems are covered in their respective documentation, attributes are designed to work seamlessly with them:

@@ -98,12 +98,27 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 	/// comes back exactly as it left.
 	/// </remarks>
 	/// <param name="attributeSet">The attribute set to be added.</param>
+	/// <exception cref="ArgumentException">Thrown when the entity already has an attribute for one of this set's keys.
+	/// Keys derive from the set's type name, so an entity cannot hold two instances of the same
+	/// <see cref="AttributeSet"/> subclass. Nothing is changed when this throws.</exception>
 	public void AddAttributeSet(AttributeSet attributeSet)
 	{
 		Validation.Assert(attributeSet is not null, "AttributeSet is not initialized.");
 		Validation.Assert(
 			Owner.EffectsManager is not null,
 			"The owner's EffectsManager must exist before its attribute sets can change at runtime.");
+
+		// Checked before the rebuild starts. AttachAttributeSet maps the keys with Dictionary.Add, and a collision
+		// thrown from inside the rebuild would leave every active effect unapplied and never put back.
+		StringKey[] collisions = [.. attributeSet.AttributesMap.Keys.Where(_attributes.ContainsKey)];
+
+		if (collisions.Length > 0)
+		{
+			throw new ArgumentException(
+				$"The attribute '{collisions[0]}' is already present on this entity. Attribute keys derive from the "
+				+ "set's type name, so an entity cannot hold two instances of the same AttributeSet.",
+				nameof(attributeSet));
+		}
 
 		Owner.EffectsManager.RebuildAroundAttributeChange(() => AttachAttributeSet(attributeSet));
 

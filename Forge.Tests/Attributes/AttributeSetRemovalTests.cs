@@ -228,9 +228,16 @@ public class AttributeSetRemovalTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 
 		entity.Attributes.AddAttributeSet(vitalSet);
 
+		// The effect drains the tracked attribute by 10 on every tick, and the accumulator tallies those losses.
 		var effectData = new EffectData(
 			"Tally",
 			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					DepartingAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-10)))
+			],
 			periodicData: new PeriodicData(
 				new ScalableFloat(1),
 				true,
@@ -245,8 +252,10 @@ public class AttributeSetRemovalTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 
 		handle.Should().NotBeNull();
 
-		ChangeDepartingAttribute(entity, -10);
-		entity.EffectsManager.UpdateEffects(1);
+		AttributeAccumulatorEffectComponent accumulator =
+			handle!.GetComponent<AttributeAccumulatorEffectComponent>()!;
+
+		accumulator.Total.Should().Be(10);
 
 		// The set leaves mid-flight: the running total stands, and nothing throws on the orphaned attribute.
 		FluentActions.Invoking(() => entity.Attributes.RemoveAttributeSet(vitalSet)).Should().NotThrow();
@@ -254,11 +263,16 @@ public class AttributeSetRemovalTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 		entity.EffectsManager.UpdateEffects(1);
 		entity.EffectsManager.GetActiveEffects().Should().ContainSingle();
 
-		// Coming back rebinds it to the instance the entity holds now, rather than leaving it watching an orphan.
-		entity.Attributes.AddAttributeSet(vitalSet);
-		ChangeDepartingAttribute(entity, -5);
+		// The total is a record of what already happened, so it survives the attribute going away — and nothing is
+		// added while there is no attribute to drain.
+		accumulator.Total.Should().Be(10);
 
-		FluentActions.Invoking(() => entity.EffectsManager.UpdateEffects(1)).Should().NotThrow();
+		// A *different* set instance supplying the same keys, so the attribute objects are new ones. That is what makes
+		// the rebind load-bearing: a component still holding the old instance would tally nothing from here on.
+		entity.Attributes.AddAttributeSet(new VitalAttributeSet());
+		entity.EffectsManager.UpdateEffects(1);
+
+		accumulator.Total.Should().Be(20);
 	}
 
 	[Fact]
@@ -307,27 +321,109 @@ public class AttributeSetRemovalTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 
 	[Fact]
 	[Trait("Removal", null)]
+	public void An_effect_whose_duration_is_backed_by_a_departing_attribute_expires()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		// Duration reads the departing attribute live, so losing it re-evaluates the duration to zero.
+		var effectData = new EffectData(
+			"Timed Buff",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(
+					MagnitudeCalculationType.AttributeBased,
+					attributeBasedFloat: new AttributeBasedFloat(
+						new AttributeCaptureDefinition(
+							DepartingAttribute,
+							AttributeCaptureSource.Target,
+							Snapshot: false),
+						AttributeCalculationType.CurrentValue,
+						new ScalableFloat(1),
+						new ScalableFloat(0),
+						new ScalableFloat(0)))),
+			[
+				new Modifier(
+					KeptAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+			]);
+
+		entity.EffectsManager.ApplyEffect(new Effect(effectData, new EffectOwnership(entity, entity)))
+			.Should().NotBeNull();
+
+		entity.EffectsManager.GetActiveEffects().Should().ContainSingle();
+		entity.Attributes[KeptAttribute].CurrentValue.Should().Be(10);
+
+		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		// Its duration is now zero, so it must expire rather than run on for the time it had left.
+		entity.EffectsManager.GetActiveEffects().Should().BeEmpty();
+		entity.Attributes[KeptAttribute].CurrentValue.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void Adding_a_set_whose_key_collides_leaves_the_entity_untouched()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+
+		entity.EffectsManager.ApplyEffect(CreateCrossSetEffect(entity)).Should().NotBeNull();
+		entity.Attributes[KeptAttribute].CurrentValue.Should().Be(10);
+
+		// Keys derive from the set's runtime type name, so a second TestAttributeSet collides with the one the entity
+		// already has. That has to be refused before anything is unwound, not halfway through the rebuild.
+		FluentActions.Invoking(() => entity.Attributes.AddAttributeSet(new TestAttributeSet()))
+			.Should().Throw<ArgumentException>();
+
+		entity.Attributes.AttributeSets.Should().ContainSingle();
+		entity.Attributes[KeptAttribute].CurrentValue.Should().Be(10);
+		entity.EffectsManager.GetActiveEffects().Should().ContainSingle();
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void Adding_a_set_that_already_satisfies_a_removal_requirement_removes_the_effect()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+
+		var effectData = new EffectData(
+			"Dispellable",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					KeptAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+			],
+			effectComponents:
+			[
+				new AttributeRequirementsEffectComponent(
+					removalRequirements: [new AttributeRequirement(DepartingAttribute, MinValue: 1)])
+			]);
+
+		entity.EffectsManager.ApplyEffect(new Effect(effectData, new EffectOwnership(entity, entity)))
+			.Should().NotBeNull();
+
+		entity.EffectsManager.GetActiveEffects().Should().ContainSingle();
+
+		// CurrentHealth arrives at 100, which already meets the removal requirement. Subscribing does not itself raise
+		// a value change, so the membership change is the only chance to notice.
+		entity.Attributes.AddAttributeSet(new VitalAttributeSet());
+
+		entity.EffectsManager.GetActiveEffects().Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
 	public void The_attribute_sets_collection_is_exposed_read_only()
 	{
 		// Pins the declared type rather than the runtime one: the guarantee is that a caller cannot add or remove a
 		// set without a deliberate cast, matching how EntityAbilities exposes its granted abilities.
 		typeof(EntityAttributes).GetProperty(nameof(EntityAttributes.AttributeSets))!
 			.PropertyType.Should().Be<IReadOnlyList<AttributeSet>>();
-	}
-
-	private static void ChangeDepartingAttribute(TestEntity entity, int amount)
-	{
-		var effectData = new EffectData(
-			"Instant Change",
-			new DurationData(DurationType.Instant),
-			[
-				new Modifier(
-					DepartingAttribute,
-					ModifierOperation.FlatBonus,
-					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(amount)))
-			]);
-
-		entity.EffectsManager.ApplyEffect(new Effect(effectData, new EffectOwnership(entity, entity)));
 	}
 
 	// An infinite effect straddling two sets: one modifier on an attribute the entity keeps, one on an attribute that

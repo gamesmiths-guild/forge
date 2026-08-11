@@ -372,12 +372,17 @@ internal sealed class ActiveEffect
 		EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 	}
 
-	internal void RebuildAfterAttributeChange()
+	internal void DetachAttributeBindings()
 	{
 		foreach (EntityAttribute attribute in EffectEvaluatedData.AttributesToCapture)
 		{
 			attribute.OnValueChanged -= Attribute_OnValueChanged;
 		}
+	}
+
+	internal void RebuildAfterAttributeChange()
+	{
+		float previousDuration = EffectEvaluatedData.Duration;
 
 		EffectEvaluatedData.ReEvaluate(Effect, StackCount);
 		EffectEvaluatedData.RefreshAttributesToCapture();
@@ -388,6 +393,28 @@ internal sealed class ActiveEffect
 		}
 
 		Apply(reApplication: true);
+
+		if (!EffectData.DurationData.DurationMagnitude.HasValue)
+		{
+			return;
+		}
+
+		// A duration backed by an attribute that just left re-evaluates to zero. Elapsed time is preserved the same
+		// way the captured-attribute path preserves it, by shifting the remainder by the change in total duration.
+		float updatedDuration = EffectEvaluatedData.Duration;
+
+		if (previousDuration > updatedDuration + Epsilon || previousDuration < updatedDuration - Epsilon)
+		{
+			RemainingDuration += updatedDuration - previousDuration;
+		}
+
+		if (RemainingDuration <= 0
+			&& EffectData.DurationData.DurationType == DurationType.HasDuration
+			&& StackCount == 1)
+		{
+			Unapply();
+			EffectEvaluatedData.Target.EffectsManager.RemoveActiveEffect_InternalCall(this);
+		}
 	}
 
 	internal void SetInhibit(bool value)

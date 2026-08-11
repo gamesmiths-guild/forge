@@ -409,9 +409,10 @@ public class ListenerNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassF
 		// While the set is away the node has nothing to listen to, but it must not be stuck on the orphan either.
 		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
 
-		entity.Attributes.AddAttributeSet(vitalSet);
+		// A different instance supplying the same keys, so the attribute objects are new ones. A node still holding
+		// the old instance would never hear from it again, which is what makes the rebind load-bearing here.
+		entity.Attributes.AddAttributeSet(new VitalAttributeSet());
 
-		// Rebound rather than left watching a detached instance, so changes are heard again.
 		ChangeVitalAttribute(entity, -5);
 		onChanged.ExecutionCount.Should().Be(2);
 
