@@ -145,8 +145,19 @@ public class PlayerCharacter : IForgeEntity
         var resourceStats = new ResourceAttributeSet();
 
         // Initialize EntityAttributes with the attribute sets
-        Attributes = new EntityAttributes([combatStats, resourceStats]);
+        Attributes = new EntityAttributes(this, [combatStats, resourceStats]);
     }
+}
+```
+
+The container takes the entity that owns it, like `EntityAbilities` and `EffectsManager` do. That is what lets it keep the entity's active effects in step when its [sets change at runtime](#adding-and-removing-attribute-sets); assign it in any order relative to the other managers, since the owner is only used later.
+
+Use `TryGetAttribute` to reach an attribute that may not be present — the indexer throws for an unknown key, and attributes can come and go with their sets:
+
+```csharp
+if (entity.Attributes.TryGetAttribute("CombatAttributeSet.CurrentHealth", out EntityAttribute? health))
+{
+    Console.WriteLine(health.CurrentValue);
 }
 ```
 
@@ -453,7 +464,7 @@ public class PlayerCharacter : IForgeEntity
         var movementStats = new MovementAttributeSet();
 
         // Initialize entity attributes with all sets
-        Attributes = new EntityAttributes([combatStats, resourceStats, movementStats]);
+        Attributes = new EntityAttributes(this, [combatStats, resourceStats, movementStats]);
     }
 
     // Example of accessing an attribute
@@ -464,6 +475,42 @@ public class PlayerCharacter : IForgeEntity
     }
 }
 ```
+
+### Adding and Removing Attribute Sets
+
+Sets are not fixed at construction. `AddAttributeSet` and `RemoveAttributeSet` change an entity's attributes at runtime — for transformations, mounts, possession, modular gear that carries its own stats, or recycling a pooled entity:
+
+```csharp
+// Werewolf form brings its own stats along
+entity.Attributes.AddAttributeSet(werewolfSet);
+
+// ...and takes them away again
+bool removed = entity.Attributes.RemoveAttributeSet(werewolfSet);
+```
+
+`RemoveAttributeSet` returns `false` when the set is not on the entity. `OnAttributeSetAdded` and `OnAttributeSetRemoved` announce both, after the change has fully settled.
+
+**The set is not modified.** It keeps its attributes and their current values, so removing and re-adding the same instance restores it exactly as it left. Note that keys derive from the set's runtime type name, so an entity cannot hold two instances of the same `AttributeSet` subclass at once.
+
+**Active effects survive the change.** They are not removed, cancelled, or reapplied from scratch. On removal, an effect's modifiers for the departing attributes are unwound and then dropped when it re-evaluates, while its modifiers for attributes the entity keeps go on applying:
+
+```csharp
+// One effect, modifiers on two sets
+entity.Attributes.RemoveAttributeSet(movementStats);
+// -> the MovementAttributeSet.Speed modifier is gone
+// -> the CombatAttributeSet.Attack modifier is untouched
+// -> the effect is still active
+```
+
+This matches how the rest of the system treats a modifier naming an attribute the target does not have: it is skipped, not an error. Adding a set works the same way in reverse — an active effect that carries a modifier for one of the arriving attributes starts contributing immediately, rather than waiting for something else to trigger a re-evaluation.
+
+Three consequences are worth knowing:
+
+- **Requirements re-evaluate.** An [attribute requirement](effects/components/attribute-requirements-effect-component.md) naming a departed attribute is never met, so an effect with an *ongoing* requirement on one becomes inhibited, and un-inhibits when the set comes back.
+- **Snapshots are not rolled back.** A value already captured into an effect's snapshot stays as it was read. A snapshot is a reading taken at a point in time, not a live link.
+- **Ability costs fail loudly.** An ability whose cost is charged against a departed attribute becomes uncastable, failing with `AbilityActivationFailures.InsufficientResources`. This is the one place where a missing attribute is an error rather than a skip — a cost that can never be paid is refused instead of being quietly ignored, which is what stops the ability from being cast for free.
+
+`AttributeSets` is read-only: the manager keeps it in step with the attribute mapping behind the indexer, so sets are added and removed through these methods rather than through the list.
 
 ## Integration with Other Systems
 
@@ -484,4 +531,5 @@ While detailed relationships with other systems are covered in their respective 
 7. **Respect Encapsulation**: Never attempt to directly modify attributes outside of AttributeSets or the Effects system.
 8. **Use ValidModifier for UI**: When showing modifier values in UI, consider whether to show the total modifier or the ValidModifier.
 9. **Pick a Scale and Declare It**: Attributes are integers. For stats that need decimals, choose a fixed scale (x10, x100, ...), pass it as `decimalPlaces` so presentation code can read it off the attribute, apply it consistently to every effect touching that attribute, and convert only when displaying.
-10. **Unsubscribe from `OnValueChanged`**: Attributes live as long as the entity, so an observer that subscribes must detach when it goes away.
+10. **Unsubscribe from `OnValueChanged`**: An observer that subscribes must detach when it goes away — and an attribute can outlive its place on the entity, since [removing its set](#adding-and-removing-attribute-sets) detaches it while leaving the object itself alive. Follow `OnAttributeSetAdded`/`OnAttributeSetRemoved` if the observer has to survive that.
+11. **Probe with `TryGetAttribute`**: The indexer throws for an unknown key. Anywhere an attribute might not be present — optional sets, or sets that come and go — probe rather than index.

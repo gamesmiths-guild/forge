@@ -62,7 +62,7 @@ public class Player : IForgeEntity
                 Tag.RequestTag(tagsManager, "class.warrior")
             });
 
-        Attributes = new EntityAttributes(new PlayerAttributeSet());
+        Attributes = new EntityAttributes(this, new PlayerAttributeSet());
         Tags = new EntityTags(baseTags);
         EffectsManager = new EffectsManager(this, cuesManager);
         CuesManager = cuesManager;
