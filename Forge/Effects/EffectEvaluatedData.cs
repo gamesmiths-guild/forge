@@ -64,7 +64,12 @@ public sealed class EffectEvaluatedData
 	/// <summary>
 	/// Gets an array of the attributes to be captured by an active effect.
 	/// </summary>
-	public EntityAttribute[] AttributesToCapture { get; }
+	/// <remarks>
+	/// Unlike <see cref="ModifiersEvaluatedData"/> this is deliberately not recomputed by a re-evaluation: it is the
+	/// subscription list, and the active effect's handlers are attached to exactly these instances. It only changes
+	/// when the target's attribute set membership does, through <see cref="RefreshAttributesToCapture"/>.
+	/// </remarks>
+	public EntityAttribute[] AttributesToCapture { get; private set; }
 
 	/// <summary>
 	/// Gets an array of custom cue parameters.
@@ -166,6 +171,13 @@ public sealed class EffectEvaluatedData
 	internal void RefreshCustomCueParameters()
 	{
 		CustomCueParameters = EvaluateCustomCueParameters();
+	}
+
+	internal void RefreshAttributesToCapture()
+	{
+		AttributesToCapture = Effect.EffectData.DurationData.DurationType == DurationType.Instant
+			? []
+			: EvaluateAttributesToCapture();
 	}
 
 	internal float EvaluateDuration(DurationData durationData)

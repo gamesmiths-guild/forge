@@ -372,6 +372,24 @@ internal sealed class ActiveEffect
 		EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 	}
 
+	internal void RebuildAfterAttributeChange()
+	{
+		foreach (EntityAttribute attribute in EffectEvaluatedData.AttributesToCapture)
+		{
+			attribute.OnValueChanged -= Attribute_OnValueChanged;
+		}
+
+		EffectEvaluatedData.ReEvaluate(Effect, StackCount);
+		EffectEvaluatedData.RefreshAttributesToCapture();
+
+		foreach (EntityAttribute attribute in EffectEvaluatedData.AttributesToCapture)
+		{
+			attribute.OnValueChanged += Attribute_OnValueChanged;
+		}
+
+		Apply(reApplication: true);
+	}
+
 	internal void SetInhibit(bool value)
 	{
 		if (IsInhibited == value)

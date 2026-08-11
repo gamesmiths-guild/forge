@@ -434,6 +434,58 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return FilterEffectsByData(effectData).FirstOrDefault();
 	}
 
+	/// <summary>
+	/// Unwinds every active effect's modifiers, runs a change to the entity's attribute set membership, then
+	/// re-evaluates and re-applies them. The unwind has to precede the detach, or a departing attribute keeps this
+	/// entity's modifiers baked into its channels and overrides and comes back dirty if the set is re-added. Every
+	/// effect participates, not just those whose modifiers name a departing attribute, because an effect can depend on
+	/// one indirectly through an attribute-based magnitude, a custom calculator or its own duration.
+	/// </summary>
+	/// <param name="applyChange">The action that applies the attribute set membership change.</param>
+	internal void RebuildAroundAttributeChange(Action applyChange)
+	{
+		ActiveEffect[] activeEffects = [.. _activeEffects];
+
+		foreach (ActiveEffect activeEffect in activeEffects)
+		{
+			activeEffect.Unapply(reApplication: true);
+		}
+
+		applyChange();
+
+		foreach (ActiveEffect activeEffect in activeEffects)
+		{
+			activeEffect.RebuildAfterAttributeChange();
+		}
+
+		// Only now, so an attribute the entity keeps sees the net change rather than the unwind and the re-apply as
+		// two separate ones. Attributes that are leaving were flushed by the change itself, while they still could be.
+		Owner.Attributes.ApplyPendingValueChanges();
+
+		// Second pass, so a component that reacts by inhibiting or removing sees every effect already settled against
+		// the new membership rather than a half-rebuilt entity.
+		foreach (ActiveEffect activeEffect in activeEffects)
+		{
+			// An earlier component may have removed this one.
+			if (!_activeEffects.Contains(activeEffect))
+			{
+				continue;
+			}
+
+			foreach (IEffectComponent component in activeEffect.ComponentInstances)
+			{
+				component.OnTargetAttributesChanged(
+					Owner,
+					new ActiveEffectEvaluatedData(
+						activeEffect.Handle,
+						activeEffect.EffectEvaluatedData,
+						activeEffect.RemainingDuration,
+						activeEffect.NextPeriodicTick,
+						activeEffect.ExecutionCount));
+			}
+		}
+	}
+
 	internal ActiveEffectHandle? ApplyEffectInternal(Effect effect, EffectApplicationContext? applicationContext)
 	{
 		return ApplyEffectInternal(effect, applicationContext, out _);
