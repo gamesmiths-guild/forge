@@ -135,6 +135,36 @@ public class SourceAttributeRequirementsEffectComponent(
 		_handler = null;
 	}
 
+	/// <inheritdoc/>
+	/// <remarks>
+	/// Only matters when this effect's source is the entity whose sets changed, which is the common self-sourced
+	/// case. An effect watching some *other* entity's attributes is not rebound when that entity's sets change, since
+	/// the rebuild only walks the effects living on the entity being changed.
+	/// </remarks>
+	public void OnTargetAttributesChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		IForgeEntity? sourceEntity = ResolveEntity(activeEffectEvaluatedData.EffectEvaluatedData.Effect.Ownership);
+
+		if (_handler is null || sourceEntity != target)
+		{
+			return;
+		}
+
+		foreach (EntityAttribute attribute in _subscribedAttributes)
+		{
+			attribute.OnValueChanged -= _handler;
+		}
+
+		_subscribedAttributes.Clear();
+		SubscribeToWatchedAttributes(sourceEntity, _handler);
+
+		if (OngoingRequirements.Length > 0)
+		{
+			activeEffectEvaluatedData.ActiveEffectHandle.SetInhibit(
+				!AttributeRequirement.RequirementsMet(OngoingRequirements, sourceEntity));
+		}
+	}
+
 	private IForgeEntity? ResolveEntity(EffectOwnership ownership)
 	{
 		return OwnershipEntity == OwnershipEntity.Owner ? ownership.Owner : ownership.Source;

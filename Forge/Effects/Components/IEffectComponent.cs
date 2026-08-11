@@ -112,6 +112,22 @@ public interface IEffectComponent
 	}
 
 	/// <summary>
+	/// Executes and implements extra functionality for when the target's attribute set membership changes, so a
+	/// component watching individual attributes can rebind to the ones the entity now has.
+	/// </summary>
+	/// <remarks>
+	/// A component that subscribed to <see cref="Attributes.EntityAttribute"/> instances must drop the ones that left
+	/// — they are detached and will never raise again, and holding them keeps the whole set alive — and pick up any
+	/// it had been waiting for. Components that address attributes purely by key have nothing to do here.
+	/// </remarks>
+	/// <param name="target">The target of the effect.</param>
+	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect.</param>
+	void OnTargetAttributesChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		// This method is intentionally left blank.
+	}
+
+	/// <summary>
 	/// Executes and implements extra functionality for when a effect is applied to a target.
 	/// </summary>
 	/// <remarks>

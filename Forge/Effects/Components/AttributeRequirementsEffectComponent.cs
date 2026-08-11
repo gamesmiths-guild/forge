@@ -121,6 +121,29 @@ public class AttributeRequirementsEffectComponent(
 		_handler = null;
 	}
 
+	/// <inheritdoc/>
+	public void OnTargetAttributesChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		if (_handler is null)
+		{
+			return;
+		}
+
+		foreach (EntityAttribute attribute in _subscribedAttributes)
+		{
+			attribute.OnValueChanged -= _handler;
+		}
+
+		_subscribedAttributes.Clear();
+		SubscribeToWatchedAttributes(target, _handler);
+
+		if (OngoingRequirements.Length > 0)
+		{
+			activeEffectEvaluatedData.ActiveEffectHandle.SetInhibit(
+				!AttributeRequirement.RequirementsMet(OngoingRequirements, target));
+		}
+	}
+
 	private void SubscribeToWatchedAttributes(IForgeEntity target, Action<EntityAttribute, int> handler)
 	{
 		// Only the removal and ongoing buckets are reactive. Application requirements are consulted once, in
