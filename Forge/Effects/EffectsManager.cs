@@ -452,9 +452,6 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		ActiveEffect[] activeEffects = [.. _activeEffects];
 
-		// Capture subscriptions come off before anything moves. Unwinding the modifiers and flushing the departing
-		// attributes both raise value changes, and a live capture handler would react by re-evaluating and
-		// re-applying an effect from the middle of this rebuild, putting modifiers back on out of turn.
 		foreach (ActiveEffect activeEffect in activeEffects)
 		{
 			activeEffect.DetachAttributeBindings();
@@ -465,8 +462,6 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		foreach (ActiveEffect activeEffect in activeEffects)
 		{
-			// A requirement component's handler can still remove an effect during the change, so a snapshot entry may
-			// already be gone by the time its turn comes.
 			if (!_activeEffects.Contains(activeEffect))
 			{
 				continue;
@@ -475,15 +470,10 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			activeEffect.RebuildAfterAttributeChange();
 		}
 
-		// Only now, so an attribute the entity keeps sees the net change rather than the unwind and the re-apply as
-		// two separate ones. Attributes that are leaving were flushed by the change itself, while they still could be.
 		Owner.Attributes.ApplyPendingValueChanges();
 
-		// Second pass, so a component that reacts by inhibiting or removing sees every effect already settled against
-		// the new membership rather than a half-rebuilt entity.
 		foreach (ActiveEffect activeEffect in activeEffects)
 		{
-			// An earlier component may have removed this one.
 			if (!_activeEffects.Contains(activeEffect))
 			{
 				continue;
@@ -491,8 +481,6 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 			foreach (IEffectComponent component in activeEffect.ComponentInstances)
 			{
-				// A component can remove its own effect from here — a removal requirement the new membership already
-				// satisfies does exactly that — and the ones after it must not keep working on a freed handle.
 				if (!_activeEffects.Contains(activeEffect))
 				{
 					break;

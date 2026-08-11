@@ -399,8 +399,6 @@ internal sealed class ActiveEffect
 			return;
 		}
 
-		// A duration backed by an attribute that just left re-evaluates to zero. Elapsed time is preserved the same
-		// way the captured-attribute path preserves it, by shifting the remainder by the change in total duration.
 		float updatedDuration = EffectEvaluatedData.Duration;
 
 		if (previousDuration > updatedDuration + Epsilon || previousDuration < updatedDuration - Epsilon)

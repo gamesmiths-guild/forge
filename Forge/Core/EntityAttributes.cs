@@ -108,8 +108,6 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 			Owner.EffectsManager is not null,
 			"The owner's EffectsManager must exist before its attribute sets can change at runtime.");
 
-		// Checked before the rebuild starts. AttachAttributeSet maps the keys with Dictionary.Add, and a collision
-		// thrown from inside the rebuild would leave every active effect unapplied and never put back.
 		StringKey[] collisions = [.. attributeSet.AttributesMap.Keys.Where(_attributes.ContainsKey)];
 
 		if (collisions.Length > 0)
