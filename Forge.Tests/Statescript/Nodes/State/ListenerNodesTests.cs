@@ -372,6 +372,55 @@ public class ListenerNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassF
 		onEnded.ExecutionCount.Should().Be(1);
 	}
 
+	[Fact]
+	[Trait("Graph", "AttributeListener")]
+	public void Attribute_listener_node_follows_its_attribute_across_set_removal_and_re_addition()
+	{
+		const string VitalAttribute = "VitalAttributeSet.CurrentHealth";
+
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", entity);
+
+		var listener = new AttributeListenerNode(VitalAttribute);
+		listener.BindInput(AttributeListenerNode.EntityInput, "entity");
+
+		var onChanged = new TrackingActionNode();
+
+		graph.AddNode(listener);
+		graph.AddNode(onChanged);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			listener.InputPorts[StateNode<AttributeListenerNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			listener.OutputPorts[AttributeListenerNode.OnChangedPort],
+			onChanged.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		ChangeVitalAttribute(entity, -5);
+		onChanged.ExecutionCount.Should().Be(1);
+
+		// While the set is away the node has nothing to listen to, but it must not be stuck on the orphan either.
+		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		// Rebound rather than left watching a detached instance, so changes are heard again.
+		ChangeVitalAttribute(entity, -5);
+		onChanged.ExecutionCount.Should().Be(2);
+
+		processor.StopGraph();
+
+		ChangeVitalAttribute(entity, -5);
+		onChanged.ExecutionCount.Should().Be(2);
+	}
+
 	private static EffectData CreateInfiniteEffectData()
 	{
 		return new EffectData(
@@ -399,6 +448,21 @@ public class ListenerNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassF
 			behaviorFactory: () => new GraphAbilityBehavior(behaviorGraph));
 
 		return owner.Abilities.GrantAbilityPermanently(abilityData, 1, LevelComparison.None, sourceEntity: null);
+	}
+
+	private static void ChangeVitalAttribute(TestEntity entity, int magnitude)
+	{
+		var effectData = new EffectData(
+			"Vital Change",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"VitalAttributeSet.CurrentHealth",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(magnitude)))
+			]);
+
+		entity.EffectsManager.ApplyEffect(new Effect(effectData, new EffectOwnership(entity, entity)));
 	}
 
 	private void ApplyInstantDamage(TestEntity entity, int magnitude)

@@ -1,0 +1,353 @@
+// Copyright © Gamesmiths Guild.
+
+using FluentAssertions;
+using Gamesmiths.Forge.Abilities;
+using Gamesmiths.Forge.Attributes;
+using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Components;
+using Gamesmiths.Forge.Effects.Duration;
+using Gamesmiths.Forge.Effects.Magnitudes;
+using Gamesmiths.Forge.Effects.Modifiers;
+using Gamesmiths.Forge.Effects.Periodic;
+using Gamesmiths.Forge.Tags;
+using Gamesmiths.Forge.Tests.Helpers;
+
+namespace Gamesmiths.Forge.Tests.Attributes;
+
+public class AttributeSetRemovalTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture<TagsAndCuesFixture>
+{
+	private const string KeptAttribute = "TestAttributeSet.Attribute1000";
+	private const string DepartingAttribute = "VitalAttributeSet.CurrentHealth";
+
+	private readonly TagsManager _tagsManager = tagsAndCuesFixture.TagsManager;
+	private readonly CuesManager _cuesManager = tagsAndCuesFixture.CuesManager;
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void Removing_a_set_that_is_not_present_reports_failure()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+
+		entity.Attributes.RemoveAttributeSet(new VitalAttributeSet()).Should().BeFalse();
+		entity.Attributes.AttributeSets.Should().ContainSingle();
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void Removing_a_set_detaches_its_attributes_and_keeps_the_others()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+		entity.Attributes.AttributeSets.Should().HaveCount(2);
+		entity.Attributes.TryGetAttribute(DepartingAttribute, out _).Should().BeTrue();
+
+		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		entity.Attributes.AttributeSets.Should().ContainSingle();
+		entity.Attributes.TryGetAttribute(DepartingAttribute, out _).Should().BeFalse();
+		entity.Attributes.TryGetAttribute(KeptAttribute, out _).Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void An_effect_keeps_the_modifiers_for_the_attributes_that_remain()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+		entity.EffectsManager.ApplyEffect(CreateCrossSetEffect(entity)).Should().NotBeNull();
+
+		entity.Attributes[KeptAttribute].CurrentValue.Should().Be(10);
+		entity.Attributes[DepartingAttribute].CurrentValue.Should().Be(90);
+
+		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		// The effect survives with its remaining modifier still applied.
+		entity.EffectsManager.GetActiveEffects().Should().ContainSingle();
+		entity.Attributes[KeptAttribute].CurrentValue.Should().Be(10);
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void Re_adding_a_set_reapplies_the_modifier_exactly_once()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+		entity.EffectsManager.ApplyEffect(CreateCrossSetEffect(entity)).Should().NotBeNull();
+
+		entity.Attributes[DepartingAttribute].CurrentValue.Should().Be(90);
+
+		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		// 90 and not 80: the modifier was unwound on the way out, so coming back applies it once, not twice.
+		entity.Attributes[DepartingAttribute].CurrentValue.Should().Be(90);
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void A_set_removed_while_an_effect_is_active_comes_back_clean_once_the_effect_is_gone()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		ActiveEffectHandle? handle = entity.EffectsManager.ApplyEffect(CreateCrossSetEffect(entity));
+		handle.Should().NotBeNull();
+		entity.Attributes[DepartingAttribute].CurrentValue.Should().Be(90);
+
+		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		// Removing the effect while the set is detached must not leave anything behind on the departed attribute.
+		entity.EffectsManager.RemoveEffect(handle!);
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		entity.Attributes[DepartingAttribute].CurrentValue.Should().Be(100);
+		entity.Attributes[DepartingAttribute].Modifier.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void Adding_a_set_mid_life_lets_an_active_effect_start_modifying_it()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+
+		// Applied while the entity does not have the set at all, so the modifier is skipped.
+		entity.EffectsManager.ApplyEffect(CreateCrossSetEffect(entity)).Should().NotBeNull();
+		entity.Attributes[KeptAttribute].CurrentValue.Should().Be(10);
+		entity.Attributes.TryGetAttribute(DepartingAttribute, out _).Should().BeFalse();
+
+		entity.Attributes.AddAttributeSet(new VitalAttributeSet());
+
+		// The active effect picks the new attribute up instead of waiting for something else to re-evaluate it.
+		entity.Attributes[DepartingAttribute].CurrentValue.Should().Be(90);
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void The_last_change_to_a_departing_attribute_still_reaches_its_listeners()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		int observed = 0;
+		entity.Attributes[DepartingAttribute].OnValueChanged += (_, change) => observed += change;
+
+		entity.EffectsManager.ApplyEffect(CreateCrossSetEffect(entity)).Should().NotBeNull();
+		observed.Should().Be(-10);
+
+		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		// Unwinding the modifier on the way out is itself a change, and it has to be flushed before the attribute is
+		// detached rather than left pending on an object nothing enumerates any more.
+		observed.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void Removing_a_set_raises_the_membership_events()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		var added = new List<AttributeSet>();
+		var removed = new List<AttributeSet>();
+
+		entity.Attributes.OnAttributeSetAdded += added.Add;
+		entity.Attributes.OnAttributeSetRemoved += removed.Add;
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		added.Should().ContainSingle().Which.Should().BeSameAs(vitalSet);
+		removed.Should().ContainSingle().Which.Should().BeSameAs(vitalSet);
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void An_ongoing_requirement_on_a_departing_attribute_inhibits_its_effect()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		var effectData = new EffectData(
+			"Gated Buff",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					KeptAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+			],
+			effectComponents:
+			[
+				new AttributeRequirementsEffectComponent(
+					ongoingRequirements: [new AttributeRequirement(DepartingAttribute, MinValue: 1)])
+			]);
+
+		ActiveEffectHandle? handle = entity.EffectsManager.ApplyEffect(
+			new Effect(effectData, new EffectOwnership(entity, entity)));
+
+		handle.Should().NotBeNull();
+		handle!.IsInhibited.Should().BeFalse();
+		entity.Attributes[KeptAttribute].CurrentValue.Should().Be(10);
+
+		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		// A requirement naming an attribute the entity does not have is never met, and nothing else would re-check it
+		// once the attribute that used to drive it is detached.
+		handle.IsInhibited.Should().BeTrue();
+		entity.Attributes[KeptAttribute].CurrentValue.Should().Be(0);
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		handle.IsInhibited.Should().BeFalse();
+		entity.Attributes[KeptAttribute].CurrentValue.Should().Be(10);
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void An_accumulator_stops_at_its_total_when_its_attribute_leaves_and_resumes_when_it_returns()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+		var tallyTag = Tag.RequestTag(_tagsManager, "simple.tag");
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		var effectData = new EffectData(
+			"Tally",
+			new DurationData(DurationType.Infinite),
+			periodicData: new PeriodicData(
+				new ScalableFloat(1),
+				true,
+				PeriodInhibitionRemovedPolicy.NeverReset),
+			effectComponents:
+			[
+				new AttributeAccumulatorEffectComponent(DepartingAttribute, tallyTag, AccumulationPolicy.Losses)
+			]);
+
+		ActiveEffectHandle? handle = entity.EffectsManager.ApplyEffect(
+			new Effect(effectData, new EffectOwnership(entity, entity)));
+
+		handle.Should().NotBeNull();
+
+		ChangeDepartingAttribute(entity, -10);
+		entity.EffectsManager.UpdateEffects(1);
+
+		// The set leaves mid-flight: the running total stands, and nothing throws on the orphaned attribute.
+		FluentActions.Invoking(() => entity.Attributes.RemoveAttributeSet(vitalSet)).Should().NotThrow();
+
+		entity.EffectsManager.UpdateEffects(1);
+		entity.EffectsManager.GetActiveEffects().Should().ContainSingle();
+
+		// Coming back rebinds it to the instance the entity holds now, rather than leaving it watching an orphan.
+		entity.Attributes.AddAttributeSet(vitalSet);
+		ChangeDepartingAttribute(entity, -5);
+
+		FluentActions.Invoking(() => entity.EffectsManager.UpdateEffects(1)).Should().NotThrow();
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void An_ability_cost_charged_against_a_departing_attribute_makes_it_uncastable()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		var costEffectData = new EffectData(
+			"Health Cost",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					DepartingAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-10)))
+			]);
+
+		var abilityData = new AbilityData("Bloodcast", costEffectData);
+
+		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
+			abilityData,
+			1,
+			LevelComparison.None,
+			sourceEntity: null);
+
+		handle.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+		handle.Cancel();
+
+		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		// A cost that can never be paid is refused rather than quietly skipped, so this is the one place where a
+		// missing attribute fails loudly instead of being ignored.
+		handle.TryActivate(out failureFlags).Should().BeFalse();
+		failureFlags.Should().Be(AbilityActivationFailures.InsufficientResources);
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		handle.TryActivate(out failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void The_attribute_sets_collection_is_exposed_read_only()
+	{
+		// Pins the declared type rather than the runtime one: the guarantee is that a caller cannot add or remove a
+		// set without a deliberate cast, matching how EntityAbilities exposes its granted abilities.
+		typeof(EntityAttributes).GetProperty(nameof(EntityAttributes.AttributeSets))!
+			.PropertyType.Should().Be<IReadOnlyList<AttributeSet>>();
+	}
+
+	private static void ChangeDepartingAttribute(TestEntity entity, int amount)
+	{
+		var effectData = new EffectData(
+			"Instant Change",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					DepartingAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(amount)))
+			]);
+
+		entity.EffectsManager.ApplyEffect(new Effect(effectData, new EffectOwnership(entity, entity)));
+	}
+
+	// An infinite effect straddling two sets: one modifier on an attribute the entity keeps, one on an attribute that
+	// leaves with the set under test.
+	private static Effect CreateCrossSetEffect(TestEntity entity)
+	{
+		var effectData = new EffectData(
+			"Cross Set Buff",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					KeptAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10))),
+				new Modifier(
+					DepartingAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-10)))
+			]);
+
+		return new Effect(effectData, new EffectOwnership(entity, entity));
+	}
+}
