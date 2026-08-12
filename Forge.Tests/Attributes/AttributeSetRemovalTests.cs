@@ -417,6 +417,228 @@ public class AttributeSetRemovalTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 	}
 
 	[Fact]
+	[Trait("Cross entity", null)]
+	public void An_effect_on_another_entity_reevaluates_when_its_source_loses_the_captured_attribute()
+	{
+		var source = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		source.Attributes.AddAttributeSet(vitalSet);
+
+		// The effect lives on the target but reads the *source's* health, live, to size its modifier.
+		var effectData = new EffectData(
+			"Sympathetic Buff",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					KeptAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition(
+								DepartingAttribute,
+								AttributeCaptureSource.Source,
+								Snapshot: false),
+							AttributeCalculationType.CurrentValue,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			]);
+
+		target.EffectsManager.ApplyEffect(new Effect(effectData, new EffectOwnership(source, source)))
+			.Should().NotBeNull();
+
+		target.Attributes[KeptAttribute].CurrentValue.Should().Be(100);
+
+		// Changing the *source's* sets has to reach an effect living on a different entity's manager.
+		source.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		target.Attributes[KeptAttribute].CurrentValue.Should().Be(0);
+
+		source.Attributes.AddAttributeSet(vitalSet);
+
+		target.Attributes[KeptAttribute].CurrentValue.Should().Be(100);
+	}
+
+	[Fact]
+	[Trait("Cross entity", null)]
+	public void A_source_requirement_rebinds_when_the_source_entity_changes_sets()
+	{
+		var source = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		source.Attributes.AddAttributeSet(vitalSet);
+
+		var effectData = new EffectData(
+			"Gated By Source",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					KeptAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+			],
+			effectComponents:
+			[
+				new SourceAttributeRequirementsEffectComponent(
+					ongoingRequirements: [new AttributeRequirement(DepartingAttribute, MinValue: 1)],
+					ownershipEntity: OwnershipEntity.Source)
+			]);
+
+		ActiveEffectHandle? handle = target.EffectsManager.ApplyEffect(
+			new Effect(effectData, new EffectOwnership(source, source)));
+
+		handle.Should().NotBeNull();
+		handle!.IsInhibited.Should().BeFalse();
+		target.Attributes[KeptAttribute].CurrentValue.Should().Be(10);
+
+		// The requirement watches the source, so the source losing the attribute must inhibit an effect that lives on
+		// the target. Only the dependent registry can carry that across.
+		source.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		handle.IsInhibited.Should().BeTrue();
+		target.Attributes[KeptAttribute].CurrentValue.Should().Be(0);
+
+		source.Attributes.AddAttributeSet(vitalSet);
+
+		handle.IsInhibited.Should().BeFalse();
+		target.Attributes[KeptAttribute].CurrentValue.Should().Be(10);
+	}
+
+	[Fact]
+	[Trait("Cross entity", null)]
+	public void A_source_requirement_ignores_set_changes_on_the_ownership_entity_it_does_not_watch()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var source = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var ownerVitalSet = new VitalAttributeSet();
+		var sourceVitalSet = new VitalAttributeSet();
+
+		owner.Attributes.AddAttributeSet(ownerVitalSet);
+		source.Attributes.AddAttributeSet(sourceVitalSet);
+
+		// Owner and source are different entities, and the requirement names the source.
+		var effectData = new EffectData(
+			"Gated By Source",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					KeptAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+			],
+			effectComponents:
+			[
+				new SourceAttributeRequirementsEffectComponent(
+					ongoingRequirements: [new AttributeRequirement(DepartingAttribute, MinValue: 1)],
+					ownershipEntity: OwnershipEntity.Source)
+			]);
+
+		ActiveEffectHandle? handle = target.EffectsManager.ApplyEffect(
+			new Effect(effectData, new EffectOwnership(owner, source)));
+
+		handle.Should().NotBeNull();
+		handle!.IsInhibited.Should().BeFalse();
+
+		// The owner is not what this component watches, so its sets changing must leave the effect alone.
+		owner.Attributes.RemoveAttributeSet(ownerVitalSet).Should().BeTrue();
+
+		handle.IsInhibited.Should().BeFalse();
+		target.Attributes[KeptAttribute].CurrentValue.Should().Be(10);
+
+		// The source is, so its sets changing must reach it.
+		source.Attributes.RemoveAttributeSet(sourceVitalSet).Should().BeTrue();
+
+		handle.IsInhibited.Should().BeTrue();
+		target.Attributes[KeptAttribute].CurrentValue.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Cross entity", null)]
+	public void An_effect_registers_only_with_the_entity_its_component_names()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var source = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		var ownerVitalSet = new VitalAttributeSet();
+		var sourceVitalSet = new VitalAttributeSet();
+
+		owner.Attributes.AddAttributeSet(ownerVitalSet);
+		source.Attributes.AddAttributeSet(sourceVitalSet);
+
+		var probe = new MembershipProbeComponent(AttributeCaptureSource.Source);
+
+		var effectData = new EffectData(
+			"Probed",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [probe]);
+
+		target.EffectsManager.ApplyEffect(new Effect(effectData, new EffectOwnership(owner, source)))
+			.Should().NotBeNull();
+
+		// The probe names the source, so a change on the owner must not reach it at all — not merely be ignored by a
+		// guard inside the component, but never be delivered, so the effect is not rebuilt for nothing.
+		owner.Attributes.RemoveAttributeSet(ownerVitalSet).Should().BeTrue();
+
+		probe.NotificationCount.Should().Be(0);
+
+		source.Attributes.RemoveAttributeSet(sourceVitalSet).Should().BeTrue();
+
+		probe.NotificationCount.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Cross entity", null)]
+	public void A_removed_effect_stops_being_a_dependent_of_the_entity_it_read()
+	{
+		var source = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		source.Attributes.AddAttributeSet(vitalSet);
+
+		var effectData = new EffectData(
+			"Sympathetic Buff",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					KeptAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition(
+								DepartingAttribute,
+								AttributeCaptureSource.Source,
+								Snapshot: false),
+							AttributeCalculationType.CurrentValue,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			]);
+
+		ActiveEffectHandle? handle = target.EffectsManager.ApplyEffect(
+			new Effect(effectData, new EffectOwnership(source, source)));
+
+		handle.Should().NotBeNull();
+
+		target.EffectsManager.RemoveEffect(handle!);
+		target.Attributes[KeptAttribute].CurrentValue.Should().Be(0);
+
+		// The registration has to come off with the effect, or the source keeps rebuilding a dead one forever.
+		FluentActions.Invoking(() => source.Attributes.RemoveAttributeSet(vitalSet)).Should().NotThrow();
+
+		target.Attributes[KeptAttribute].CurrentValue.Should().Be(0);
+		target.EffectsManager.GetActiveEffects().Should().BeEmpty();
+	}
+
+	[Fact]
 	[Trait("Removal", null)]
 	public void The_attribute_sets_collection_is_exposed_read_only()
 	{
@@ -445,5 +667,25 @@ public class AttributeSetRemovalTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 			]);
 
 		return new Effect(effectData, new EffectOwnership(entity, entity));
+	}
+
+	private sealed class MembershipProbeComponent(AttributeCaptureSource watchedSource) : IEffectComponent
+	{
+		public AttributeCaptureSource WatchedAttributeSource { get; } = watchedSource;
+
+		public int NotificationCount { get; private set; }
+
+		// Deliberately shares the instance so the test can read the count off the object it passed in.
+		public IEffectComponent CreateInstance()
+		{
+			return this;
+		}
+
+		public void OnAttributeMembershipChanged(
+			IForgeEntity changedEntity,
+			in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+		{
+			NotificationCount++;
+		}
 	}
 }
