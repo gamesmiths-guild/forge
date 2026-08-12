@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Effects.Magnitudes;
 
 namespace Gamesmiths.Forge.Effects.Components;
 
@@ -22,6 +23,18 @@ namespace Gamesmiths.Forge.Effects.Components;
 /// </remarks>
 public interface IEffectComponent
 {
+	/// <summary>
+	/// Gets which entity's attributes this component watches.
+	/// </summary>
+	/// <remarks>
+	/// Effects register as dependents of every entity whose attributes they read live, so that a change to that
+	/// entity's attribute sets reaches them. Capture definitions declare their own source, but a component that
+	/// subscribes to attributes of its own accord cannot be discovered that way — naming the entity here is how it
+	/// says so. The default, <see cref="AttributeCaptureSource.Target"/>, needs no registration: the target's own
+	/// manager already holds the effect and rebuilds it directly.
+	/// </remarks>
+	AttributeCaptureSource WatchedAttributeSource => AttributeCaptureSource.Target;
+
 	/// <summary>
 	/// Creates an instance of this component for a specific effect application.
 	/// </summary>
@@ -112,17 +125,21 @@ public interface IEffectComponent
 	}
 
 	/// <summary>
-	/// Executes and implements extra functionality for when the target's attribute set membership changes, so a
-	/// component watching individual attributes can rebind to the ones the entity now has.
+	/// Executes and implements extra functionality for when the attribute set membership of an entity this effect
+	/// reads changes, so a component watching individual attributes can rebind to the ones that entity now has.
 	/// </summary>
 	/// <remarks>
 	/// A component that subscribed to <see cref="Attributes.EntityAttribute"/> instances must drop the ones that left
 	/// — they are detached and will never raise again, and holding them keeps the whole set alive — and pick up any
 	/// it had been waiting for. Components that address attributes purely by key have nothing to do here.
 	/// </remarks>
-	/// <param name="target">The target of the effect.</param>
+	/// <param name="changedEntity">The entity whose attribute set membership changed. Not necessarily the effect's
+	/// target: an effect that reads a source or owner attribute is notified when that entity changes too, so a
+	/// component must check which entity it is looking at before reacting.</param>
 	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect.</param>
-	void OnTargetAttributesChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	void OnAttributeMembershipChanged(
+		IForgeEntity changedEntity,
+		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
 		// This method is intentionally left blank.
 	}

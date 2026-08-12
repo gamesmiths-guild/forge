@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Effects.Magnitudes;
 
 namespace Gamesmiths.Forge.Effects.Components;
 
@@ -42,6 +43,15 @@ public class SourceAttributeRequirementsEffectComponent(
 	private readonly List<EntityAttribute> _subscribedAttributes = [];
 
 	private Action<EntityAttribute, int>? _handler;
+
+	/// <inheritdoc/>
+	/// <remarks>
+	/// Whichever ownership entity <see cref="OwnershipEntity"/> selects, and only that one: this is how the effect
+	/// knows to register as a dependent of that entity even when it is not the target.
+	/// </remarks>
+	public AttributeCaptureSource WatchedAttributeSource => OwnershipEntity == OwnershipEntity.Owner
+		? AttributeCaptureSource.Owner
+		: AttributeCaptureSource.Source;
 
 	internal AttributeRequirement[] ApplicationRequirements { get; } = applicationRequirements ?? [];
 
@@ -105,7 +115,6 @@ public class SourceAttributeRequirementsEffectComponent(
 			}
 		};
 
-		// A null source has no attributes to watch, so the requirements stay frozen at their initial evaluation.
 		if (sourceEntity is not null)
 		{
 			SubscribeToWatchedAttributes(sourceEntity, _handler);
@@ -136,16 +145,13 @@ public class SourceAttributeRequirementsEffectComponent(
 	}
 
 	/// <inheritdoc/>
-	/// <remarks>
-	/// Only matters when this effect's source is the entity whose sets changed, which is the common self-sourced
-	/// case. An effect watching some *other* entity's attributes is not rebound when that entity's sets change, since
-	/// the rebuild only walks the effects living on the entity being changed.
-	/// </remarks>
-	public void OnTargetAttributesChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	public void OnAttributeMembershipChanged(
+		IForgeEntity changedEntity,
+		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
 		IForgeEntity? sourceEntity = ResolveEntity(activeEffectEvaluatedData.EffectEvaluatedData.Effect.Ownership);
 
-		if (_handler is null || sourceEntity != target)
+		if (_handler is null || sourceEntity != changedEntity)
 		{
 			return;
 		}
@@ -156,11 +162,14 @@ public class SourceAttributeRequirementsEffectComponent(
 		}
 
 		_subscribedAttributes.Clear();
-		SubscribeToWatchedAttributes(sourceEntity, _handler);
+		SubscribeToWatchedAttributes(changedEntity, _handler);
 
 		if (AttributeRequirement.RequirementsMet(RemovalRequirements, sourceEntity, emptyResult: false))
 		{
-			target.EffectsManager.RemoveEffect(activeEffectEvaluatedData.ActiveEffectHandle, true);
+			activeEffectEvaluatedData.EffectEvaluatedData.Target.EffectsManager.RemoveEffect(
+				activeEffectEvaluatedData.ActiveEffectHandle,
+				true);
+
 			return;
 		}
 

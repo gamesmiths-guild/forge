@@ -3,6 +3,7 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Attributes;
+using Gamesmiths.Forge.Effects;
 
 namespace Gamesmiths.Forge.Core;
 
@@ -19,6 +20,7 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 {
 	private readonly Dictionary<StringKey, EntityAttribute> _attributes = [];
 	private readonly List<AttributeSet> _attributeSets = [];
+	private readonly HashSet<ActiveEffect> _dependentEffects = [];
 
 	/// <summary>
 	/// Event invoked when an attribute set is added to this entity, carrying the set.
@@ -54,6 +56,8 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 	public IReadOnlyList<AttributeSet> AttributeSets => _attributeSets;
 
 	internal IReadOnlyDictionary<StringKey, EntityAttribute> AttributesMap => _attributes;
+
+	internal IReadOnlyCollection<ActiveEffect> DependentEffects => _dependentEffects;
 
 	/// <summary>
 	/// Gets the mapping for the attributes of this container.
@@ -206,9 +210,19 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 	}
 
 	internal bool ContainsAttribute(StringKey attributeKey)
-#pragma warning restore T0009
 	{
 		return _attributes.ContainsKey(attributeKey);
+	}
+
+	internal void RegisterDependent(ActiveEffect activeEffect)
+	{
+		_dependentEffects.Add(activeEffect);
+	}
+
+	internal void UnregisterDependent(ActiveEffect activeEffect)
+#pragma warning restore T0009 // Internal Styling Rule T0009
+	{
+		_dependentEffects.Remove(activeEffect);
 	}
 
 	private void AttachAttributeSet(AttributeSet attributeSet)

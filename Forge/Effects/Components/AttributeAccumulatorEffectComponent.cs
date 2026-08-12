@@ -169,8 +169,17 @@ public class AttributeAccumulatorEffectComponent(
 	}
 
 	/// <inheritdoc/>
-	public void OnTargetAttributesChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	public void OnAttributeMembershipChanged(
+		IForgeEntity changedEntity,
+		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
+		IForgeEntity target = activeEffectEvaluatedData.EffectEvaluatedData.Target;
+
+		if (changedEntity != target)
+		{
+			return;
+		}
+
 		if (_trackedAttribute is not null && _handler is not null)
 		{
 			_trackedAttribute.OnValueChanged -= _handler;

@@ -442,15 +442,16 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// one indirectly through an attribute-based magnitude, a custom calculator or its own duration.
 	/// </summary>
 	/// <remarks>
-	/// Scope is this entity's own effects. An effect on <i>another</i> entity that reads this one's attributes — a
-	/// non-snapshot capture resolving to the source, or a source-requirement component watching this entity — is not
-	/// rebuilt and keeps the values and subscriptions it had. Closing that needs a registry of cross-entity
-	/// dependents, which is a larger change than this one.
+	/// Covers this entity's own effects and, through the dependent registry, effects living on other entities that
+	/// read this one's attributes — a non-snapshot capture resolving to the source or owner, or a source-requirement
+	/// component watching this entity. A dependent effect's modifiers sit on its own target, not here, so it is
+	/// rebuilt in place: its magnitudes are re-evaluated and its capture subscriptions move to the attributes this
+	/// entity has now.
 	/// </remarks>
 	/// <param name="applyChange">The action that applies the attribute set membership change.</param>
 	internal void RebuildAroundAttributeChange(Action applyChange)
 	{
-		ActiveEffect[] activeEffects = [.. _activeEffects];
+		ActiveEffect[] activeEffects = [.. _activeEffects, .. Owner.Attributes.DependentEffects];
 
 		foreach (ActiveEffect activeEffect in activeEffects)
 		{
@@ -462,7 +463,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		foreach (ActiveEffect activeEffect in activeEffects)
 		{
-			if (!_activeEffects.Contains(activeEffect))
+			if (!IsStillActive(activeEffect))
 			{
 				continue;
 			}
@@ -474,19 +475,19 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		foreach (ActiveEffect activeEffect in activeEffects)
 		{
-			if (!_activeEffects.Contains(activeEffect))
-			{
-				continue;
-			}
+			activeEffect.EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
+		}
 
+		foreach (ActiveEffect activeEffect in activeEffects)
+		{
 			foreach (IEffectComponent component in activeEffect.ComponentInstances)
 			{
-				if (!_activeEffects.Contains(activeEffect))
+				if (!IsStillActive(activeEffect))
 				{
 					break;
 				}
 
-				component.OnTargetAttributesChanged(
+				component.OnAttributeMembershipChanged(
 					Owner,
 					new ActiveEffectEvaluatedData(
 						activeEffect.Handle,
@@ -521,6 +522,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		activeEffectHandle = ApplyEffectInternal(effect, applicationContext: null, out bool applied);
 		return applied;
+	}
+
+	private static bool IsStillActive(ActiveEffect activeEffect)
+	{
+		return activeEffect.EffectEvaluatedData.Target.EffectsManager._activeEffects.Contains(activeEffect);
 	}
 
 	private static bool MatchesStackPolicy(ActiveEffect existingEffect, Effect newEffect)

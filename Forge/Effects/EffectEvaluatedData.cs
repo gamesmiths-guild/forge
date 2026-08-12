@@ -173,6 +173,40 @@ public sealed class EffectEvaluatedData
 		CustomCueParameters = EvaluateCustomCueParameters();
 	}
 
+	internal HashSet<AttributeCaptureSource> CollectLiveCaptureSources()
+	{
+		var sources = new HashSet<AttributeCaptureSource>();
+
+		if (Effect.EffectData.DurationData.DurationType == DurationType.Instant)
+		{
+			return sources;
+		}
+
+		foreach (ModifierMagnitude modifierMagnitude in Effect.EffectData.Modifiers.Select(x => x.Magnitude))
+		{
+			CollectLiveCaptureSources(modifierMagnitude, sources);
+		}
+
+		if (Effect.EffectData.DurationData.DurationType == DurationType.HasDuration
+			&& Effect.EffectData.DurationData.DurationMagnitude.HasValue)
+		{
+			CollectLiveCaptureSources(Effect.EffectData.DurationData.DurationMagnitude.Value, sources);
+		}
+
+		foreach (CustomExecution execution in Effect.EffectData.CustomExecutions)
+		{
+			foreach (AttributeCaptureDefinition attributeCaptureDefinition in execution.AttributesToCapture)
+			{
+				if (!attributeCaptureDefinition.Snapshot)
+				{
+					sources.Add(attributeCaptureDefinition.Source);
+				}
+			}
+		}
+
+		return sources;
+	}
+
 	internal void RefreshAttributesToCapture()
 	{
 		AttributesToCapture = Effect.EffectData.DurationData.DurationType == DurationType.Instant
@@ -188,6 +222,34 @@ public sealed class EffectEvaluatedData
 		}
 
 		return durationData.DurationMagnitude.Value.GetMagnitude(Effect, Target, Level, this);
+	}
+
+	private static void CollectLiveCaptureSources(
+		ModifierMagnitude modifierMagnitude,
+		HashSet<AttributeCaptureSource> sources)
+	{
+		if (modifierMagnitude.MagnitudeCalculationType == MagnitudeCalculationType.AttributeBased
+			&& modifierMagnitude.AttributeBasedFloat.HasValue
+			&& !modifierMagnitude.AttributeBasedFloat.Value.BackingAttribute.Snapshot)
+		{
+			sources.Add(modifierMagnitude.AttributeBasedFloat.Value.BackingAttribute.Source);
+			return;
+		}
+
+		if (modifierMagnitude.MagnitudeCalculationType != MagnitudeCalculationType.CustomCalculatorClass
+			|| !modifierMagnitude.CustomCalculationBasedFloat.HasValue)
+		{
+			return;
+		}
+
+		foreach (AttributeCaptureDefinition attributeCaptureDefinition in
+			modifierMagnitude.CustomCalculationBasedFloat.Value.MagnitudeCalculatorClass.AttributesToCapture)
+		{
+			if (!attributeCaptureDefinition.Snapshot)
+			{
+				sources.Add(attributeCaptureDefinition.Source);
+			}
+		}
 	}
 
 	private float EvaluatePeriod(PeriodicData? periodicData)

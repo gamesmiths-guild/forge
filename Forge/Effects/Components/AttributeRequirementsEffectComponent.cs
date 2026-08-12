@@ -122,9 +122,13 @@ public class AttributeRequirementsEffectComponent(
 	}
 
 	/// <inheritdoc/>
-	public void OnTargetAttributesChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	public void OnAttributeMembershipChanged(
+		IForgeEntity changedEntity,
+		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
-		if (_handler is null)
+		IForgeEntity target = activeEffectEvaluatedData.EffectEvaluatedData.Target;
+
+		if (_handler is null || changedEntity != target)
 		{
 			return;
 		}
