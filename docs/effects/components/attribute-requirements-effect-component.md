@@ -66,7 +66,9 @@ Only the attributes named in the **removal** and **ongoing** buckets are watched
 
 A requirement naming an attribute the entity does not have is **never met**. A gate on health cannot be satisfied by an entity with no health.
 
-That includes an attribute the entity had and lost: [removing an attribute set](../../attributes.md#adding-and-removing-attribute-sets) re-evaluates the requirements, so an effect with an *ongoing* requirement on a departed attribute becomes inhibited, and un-inhibits if the set is added back. The component follows the attributes across the change rather than staying subscribed to the detached ones.
+That includes an attribute the entity had and lost: [removing an attribute set](../../attributes.md#adding-and-removing-attribute-sets) re-evaluates the requirements, so an effect with an *ongoing* requirement on a departed attribute becomes inhibited, and un-inhibits if the set is added back. The component follows the attributes across the change rather than staying subscribed to the detached ones. Both buckets are re-checked, not just the ongoing one — an attribute arriving in a state that already satisfies a *removal* requirement removes the effect, which no value-change event would have reported.
+
+The same applies to the [source variant](source-attribute-requirements-effect-component.md) when the entity it watches changes sets, even though the effect lives elsewhere.
 
 Attribute changes are flushed at the end of an effect application, so a component reacts to values that have already settled — including cascades, such as a `MaxHealth` change clamping `CurrentHealth`.
 

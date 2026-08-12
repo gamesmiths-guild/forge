@@ -514,7 +514,11 @@ Three consequences are worth knowing:
 
 **Adding a set whose keys collide throws.** An entity cannot hold two instances of the same `AttributeSet` subclass, since keys derive from the set's type name. The collision is detected before anything changes, so a rejected add leaves the entity exactly as it was.
 
-> **Known limit: the rebuild covers only the changed entity's own effects.** An effect living on *another* entity that reads this one's attributes — through a non-snapshot capture resolving to `Source`, or a [source attribute requirement](effects/components/source-attribute-requirements-effect-component.md) watching this entity — is not re-evaluated, and goes on using the values and subscriptions it had. If you change the sets of an entity that other entities' effects capture from, re-apply those effects.
+**Effects on other entities are covered too.** An effect that reads this entity's attributes without living on it — through a non-snapshot capture resolving to `Source` or `Owner`, or a [source attribute requirement](effects/components/source-attribute-requirements-effect-component.md) watching it — is rebuilt as well. Those effects register as dependents when they are applied, so a buff on a minion sized from its summoner's health re-evaluates when the summoner's sets change, and a requirement gated on the summoner re-inhibits.
+
+An effect's modifiers always land on its own target, so only the *reading* crosses entities: a dependent effect is re-evaluated and its subscriptions move, but its modifiers stay where they were.
+
+A custom component that watches attributes on the owner or source rather than the target names it with `WatchedAttributeSource`, which is how the effect learns to register with that entity — and only that one, so a component watching the source is not woken by the owner's sets changing. Capture definitions declare their own source and need no such hint. The default, `AttributeCaptureSource.Target`, registers nothing, because the target's own manager already rebuilds the effect. Components are told which entity changed through `OnAttributeMembershipChanged`, so one that reads more than a single entity should check before reacting.
 
 ## Integration with Other Systems
 

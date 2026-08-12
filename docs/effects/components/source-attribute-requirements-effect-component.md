@@ -99,6 +99,7 @@ var channelledBeamData = new EffectData(
 
 - The target's own attributes never satisfy these requirements — that is the whole point. Use [AttributeRequirementsEffectComponent](attribute-requirements-effect-component.md) for the target side, and both together when a condition spans the two.
 - Reacts to the source's attribute changes, so a link can follow its caster's state after application.
+- Also reacts to the source [gaining or losing an attribute set](../../attributes.md#adding-and-removing-attribute-sets), even though the effect lives on the target. The effect registers as a dependent of the entity this component watches, which is what carries the change across.
 - A null source satisfies no non-empty bucket, and never becomes reactive.
 - Completes the four-way symmetry: target/source × tags/attributes.
 
