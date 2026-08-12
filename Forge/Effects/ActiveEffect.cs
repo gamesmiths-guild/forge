@@ -386,9 +386,10 @@ internal sealed class ActiveEffect
 		}
 	}
 
-	internal void RebuildAfterAttributeChange()
+	internal bool RebuildAfterAttributeChange()
 	{
 		float previousDuration = EffectEvaluatedData.Duration;
+		ModifierEvaluatedData[] previousModifiers = EffectEvaluatedData.ModifiersEvaluatedData;
 
 		EffectEvaluatedData.ReEvaluate(Effect, StackCount);
 		EffectEvaluatedData.RefreshAttributesToCapture();
@@ -402,25 +403,32 @@ internal sealed class ActiveEffect
 
 		Apply(reApplication: true);
 
-		if (!EffectData.DurationData.DurationMagnitude.HasValue)
+		bool durationChanged = false;
+
+		if (EffectData.DurationData.DurationMagnitude.HasValue)
 		{
-			return;
+			float updatedDuration = EffectEvaluatedData.Duration;
+
+			durationChanged = previousDuration > updatedDuration + Epsilon
+				|| previousDuration < updatedDuration - Epsilon;
+
+			if (durationChanged)
+			{
+				RemainingDuration += updatedDuration - previousDuration;
+			}
+
+			if (RemainingDuration <= 0
+				&& EffectData.DurationData.DurationType == DurationType.HasDuration
+				&& StackCount == 1)
+			{
+				Unapply();
+				EffectEvaluatedData.Target.EffectsManager.RemoveActiveEffect_InternalCall(this);
+
+				return false;
+			}
 		}
 
-		float updatedDuration = EffectEvaluatedData.Duration;
-
-		if (previousDuration > updatedDuration + Epsilon || previousDuration < updatedDuration - Epsilon)
-		{
-			RemainingDuration += updatedDuration - previousDuration;
-		}
-
-		if (RemainingDuration <= 0
-			&& EffectData.DurationData.DurationType == DurationType.HasDuration
-			&& StackCount == 1)
-		{
-			Unapply();
-			EffectEvaluatedData.Target.EffectsManager.RemoveActiveEffect_InternalCall(this);
-		}
+		return durationChanged || ModifiersChanged(previousModifiers, EffectEvaluatedData.ModifiersEvaluatedData);
 	}
 
 	internal void SetInhibit(bool value)
@@ -457,6 +465,24 @@ internal sealed class ActiveEffect
 		ApplyModifiers(IsInhibited);
 
 		EffectEvaluatedData.Target.EffectsManager.OnActiveEffectChanged_InternalCall(this);
+	}
+
+	private static bool ModifiersChanged(ModifierEvaluatedData[] previous, ModifierEvaluatedData[] current)
+	{
+		if (previous.Length != current.Length)
+		{
+			return true;
+		}
+
+		for (int i = 0; i < previous.Length; i++)
+		{
+			if (!previous[i].Equals(current[i]))
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private void ExecutePeriodicEffects(double deltaTime)

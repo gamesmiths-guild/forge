@@ -461,6 +461,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		applyChange();
 
+		var changedEffects = new List<ActiveEffect>();
+
 		foreach (ActiveEffect activeEffect in activeEffects)
 		{
 			if (!IsStillActive(activeEffect))
@@ -468,7 +470,10 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 				continue;
 			}
 
-			activeEffect.RebuildAfterAttributeChange();
+			if (activeEffect.RebuildAfterAttributeChange())
+			{
+				changedEffects.Add(activeEffect);
+			}
 		}
 
 		Owner.Attributes.ApplyPendingValueChanges();
@@ -476,6 +481,20 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		foreach (ActiveEffect activeEffect in activeEffects)
 		{
 			activeEffect.EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
+		}
+
+		foreach (ActiveEffect activeEffect in changedEffects)
+		{
+			if (!IsStillActive(activeEffect))
+			{
+				continue;
+			}
+
+			EffectsManager effectsManager = activeEffect.EffectEvaluatedData.Target.EffectsManager;
+			effectsManager.OnActiveEffectChanged_InternalCall(activeEffect);
+
+			EffectEvaluatedData effectEvaluatedData = activeEffect.EffectEvaluatedData;
+			effectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData);
 		}
 
 		foreach (ActiveEffect activeEffect in activeEffects)

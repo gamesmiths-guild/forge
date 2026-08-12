@@ -158,18 +158,12 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 			return false;
 		}
 
-		Owner.EffectsManager.RebuildAroundAttributeChange(() =>
-		{
-			// Flushed after the modifiers have come off and while these attributes are still reachable. Taking a
-			// modifier off is itself a change, and once they are detached nothing enumerates them to raise it, so the
-			// delta would sit pending on an object no longer connected to anything.
-			foreach (EntityAttribute attribute in attributeSet.AttributesMap.Values)
-			{
-				attribute.ApplyPendingValueChanges();
-			}
+		Owner.EffectsManager.RebuildAroundAttributeChange(() => DetachAttributeSet(attributeSet));
 
-			DetachAttributeSet(attributeSet);
-		});
+		foreach (EntityAttribute attribute in attributeSet.AttributesMap.Values)
+		{
+			attribute.ApplyPendingValueChanges();
+		}
 
 		OnAttributeSetRemoved?.Invoke(attributeSet);
 

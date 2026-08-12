@@ -156,6 +156,93 @@ public class AttributeSetRemovalTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 
 	[Fact]
 	[Trait("Removal", null)]
+	public void A_listener_removing_an_effect_as_the_set_leaves_does_not_unapply_it_twice()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		ActiveEffectHandle? handle = entity.EffectsManager.ApplyEffect(CreateCrossSetEffect(entity));
+		handle.Should().NotBeNull();
+		entity.Attributes[KeptAttribute].Modifier.Should().Be(10);
+
+		// An ordinary listener that reacts to the departing attribute's last change by dropping the effect. It must
+		// not be able to observe the rebuild's temporary state, where the modifiers are already off.
+		entity.Attributes[DepartingAttribute].OnValueChanged += (_, _) =>
+		{
+			if (handle!.IsValid)
+			{
+				entity.EffectsManager.RemoveEffect(handle);
+			}
+		};
+
+		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		// Exactly once: unapplying an effect whose modifiers the rebuild had already taken off would subtract them a
+		// second time and leave the kept attribute holding a phantom penalty.
+		entity.Attributes[KeptAttribute].Modifier.Should().Be(0);
+		entity.EffectsManager.GetActiveEffects().Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
+	public void An_effect_re_evaluated_by_a_membership_change_reports_itself_as_changed()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+
+		entity.Attributes.AddAttributeSet(vitalSet);
+
+		// Its magnitude reads the departing attribute, so losing the set genuinely changes what it applies.
+		var dependentData = new EffectData(
+			"Reads Health",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					KeptAttribute,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition(
+								DepartingAttribute,
+								AttributeCaptureSource.Target,
+								Snapshot: false),
+							AttributeCalculationType.CurrentValue,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			]);
+
+		// This one is untouched by the change and must stay quiet.
+		var independentData = new EffectData(
+			"Flat Buff",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute100",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(5)))
+			]);
+
+		ActiveEffectHandle? dependentHandle = entity.EffectsManager.ApplyEffect(
+			new Effect(dependentData, new EffectOwnership(entity, entity)));
+
+		entity.EffectsManager.ApplyEffect(new Effect(independentData, new EffectOwnership(entity, entity)))
+			.Should().NotBeNull();
+
+		var changed = new List<ActiveEffectHandle>();
+		entity.EffectsManager.OnActiveEffectChanged += changed.Add;
+
+		entity.Attributes.RemoveAttributeSet(vitalSet).Should().BeTrue();
+
+		// Its magnitudes moved, so manager subscribers and persistent cues have to hear about it — and only it.
+		changed.Should().ContainSingle().Which.Should().BeSameAs(dependentHandle);
+	}
+
+	[Fact]
+	[Trait("Removal", null)]
 	public void Removing_a_set_raises_the_membership_events()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
