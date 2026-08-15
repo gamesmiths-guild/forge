@@ -750,7 +750,7 @@ public class EntityAbilities(IForgeEntity owner)
 			case AbilityDeactivationPolicy.CancelImmediately:
 				if (abilityToInhibit.IsActive)
 				{
-					abilityToInhibit.End();
+					abilityToInhibit.CancelAllInstances();
 				}
 
 				InhibitAbility(abilityToInhibit);
