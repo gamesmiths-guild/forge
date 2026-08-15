@@ -21,6 +21,8 @@ internal sealed class ActiveEffect
 
 	private readonly HashSet<Tag> _nonSnapshotSetByCallerTags;
 
+	private readonly List<EntityAttributes> _attributeDependencies = [];
+
 	private double _internalTime;
 
 	internal ActiveEffectHandle Handle { get; }
@@ -118,6 +120,8 @@ internal sealed class ActiveEffect
 				attribute.OnValueChanged += Attribute_OnValueChanged;
 			}
 
+			RegisterAttributeDependencies();
+
 			Effect.OnSetByCallerFloatChanged += Effect_OnSetByCallerFloatChanged;
 		}
 
@@ -155,6 +159,8 @@ internal sealed class ActiveEffect
 			{
 				attribute.OnValueChanged -= Attribute_OnValueChanged;
 			}
+
+			UnregisterAttributeDependencies();
 
 			if (!EffectData.SnapshotLevel)
 			{
@@ -372,6 +378,59 @@ internal sealed class ActiveEffect
 		EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 	}
 
+	internal void DetachAttributeBindings()
+	{
+		foreach (EntityAttribute attribute in EffectEvaluatedData.AttributesToCapture)
+		{
+			attribute.OnValueChanged -= Attribute_OnValueChanged;
+		}
+	}
+
+	internal bool RebuildAfterAttributeChange()
+	{
+		float previousDuration = EffectEvaluatedData.Duration;
+		ModifierEvaluatedData[] previousModifiers = EffectEvaluatedData.ModifiersEvaluatedData;
+
+		EffectEvaluatedData.ReEvaluate(Effect, StackCount);
+		EffectEvaluatedData.RefreshAttributesToCapture();
+
+		foreach (EntityAttribute attribute in EffectEvaluatedData.AttributesToCapture)
+		{
+			attribute.OnValueChanged += Attribute_OnValueChanged;
+		}
+
+		RegisterAttributeDependencies();
+
+		Apply(reApplication: true);
+
+		bool durationChanged = false;
+
+		if (EffectData.DurationData.DurationMagnitude.HasValue)
+		{
+			float updatedDuration = EffectEvaluatedData.Duration;
+
+			durationChanged = previousDuration > updatedDuration + Epsilon
+				|| previousDuration < updatedDuration - Epsilon;
+
+			if (durationChanged)
+			{
+				RemainingDuration += updatedDuration - previousDuration;
+			}
+
+			if (RemainingDuration <= 0
+				&& EffectData.DurationData.DurationType == DurationType.HasDuration
+				&& StackCount == 1)
+			{
+				Unapply();
+				EffectEvaluatedData.Target.EffectsManager.RemoveActiveEffect_InternalCall(this);
+
+				return false;
+			}
+		}
+
+		return durationChanged || ModifiersChanged(previousModifiers, EffectEvaluatedData.ModifiersEvaluatedData);
+	}
+
 	internal void SetInhibit(bool value)
 	{
 		if (IsInhibited == value)
@@ -408,6 +467,24 @@ internal sealed class ActiveEffect
 		EffectEvaluatedData.Target.EffectsManager.OnActiveEffectChanged_InternalCall(this);
 	}
 
+	private static bool ModifiersChanged(ModifierEvaluatedData[] previous, ModifierEvaluatedData[] current)
+	{
+		if (previous.Length != current.Length)
+		{
+			return true;
+		}
+
+		for (int i = 0; i < previous.Length; i++)
+		{
+			if (!previous[i].Equals(current[i]))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private void ExecutePeriodicEffects(double deltaTime)
 	{
 		_internalTime += deltaTime;
@@ -424,6 +501,43 @@ internal sealed class ActiveEffect
 				NextPeriodicTick += EffectEvaluatedData.Period;
 			}
 		}
+	}
+
+	private void RegisterAttributeDependencies()
+	{
+		UnregisterAttributeDependencies();
+
+		HashSet<AttributeCaptureSource> captureSources = EffectEvaluatedData.CollectLiveCaptureSources();
+
+		foreach (IEffectComponent component in ComponentInstances)
+		{
+			captureSources.Add(component.WatchedAttributeSource);
+		}
+
+		foreach (AttributeCaptureSource captureSource in captureSources)
+		{
+			IForgeEntity? entity = captureSource.Resolve(EffectEvaluatedData.Target, Effect.Ownership);
+
+			if (entity is null
+				|| entity == EffectEvaluatedData.Target
+				|| _attributeDependencies.Contains(entity.Attributes))
+			{
+				continue;
+			}
+
+			entity.Attributes.RegisterDependent(this);
+			_attributeDependencies.Add(entity.Attributes);
+		}
+	}
+
+	private void UnregisterAttributeDependencies()
+	{
+		foreach (EntityAttributes attributeDependency in _attributeDependencies)
+		{
+			attributeDependency.UnregisterDependent(this);
+		}
+
+		_attributeDependencies.Clear();
 	}
 
 	private void ReapplyEffect(Effect effect, int? level = null, bool isStackingCall = false)

@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Effects.Magnitudes;
 
 namespace Gamesmiths.Forge.Effects.Components;
 
@@ -42,6 +43,15 @@ public class SourceAttributeRequirementsEffectComponent(
 	private readonly List<EntityAttribute> _subscribedAttributes = [];
 
 	private Action<EntityAttribute, int>? _handler;
+
+	/// <inheritdoc/>
+	/// <remarks>
+	/// Whichever ownership entity <see cref="OwnershipEntity"/> selects, and only that one: this is how the effect
+	/// knows to register as a dependent of that entity even when it is not the target.
+	/// </remarks>
+	public AttributeCaptureSource WatchedAttributeSource => OwnershipEntity == OwnershipEntity.Owner
+		? AttributeCaptureSource.Owner
+		: AttributeCaptureSource.Source;
 
 	internal AttributeRequirement[] ApplicationRequirements { get; } = applicationRequirements ?? [];
 
@@ -105,7 +115,6 @@ public class SourceAttributeRequirementsEffectComponent(
 			}
 		};
 
-		// A null source has no attributes to watch, so the requirements stay frozen at their initial evaluation.
 		if (sourceEntity is not null)
 		{
 			SubscribeToWatchedAttributes(sourceEntity, _handler);
@@ -133,6 +142,42 @@ public class SourceAttributeRequirementsEffectComponent(
 
 		_subscribedAttributes.Clear();
 		_handler = null;
+	}
+
+	/// <inheritdoc/>
+	public void OnAttributeMembershipChanged(
+		IForgeEntity changedEntity,
+		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		IForgeEntity? sourceEntity = ResolveEntity(activeEffectEvaluatedData.EffectEvaluatedData.Effect.Ownership);
+
+		if (_handler is null || sourceEntity != changedEntity)
+		{
+			return;
+		}
+
+		foreach (EntityAttribute attribute in _subscribedAttributes)
+		{
+			attribute.OnValueChanged -= _handler;
+		}
+
+		_subscribedAttributes.Clear();
+		SubscribeToWatchedAttributes(changedEntity, _handler);
+
+		if (AttributeRequirement.RequirementsMet(RemovalRequirements, sourceEntity, emptyResult: false))
+		{
+			activeEffectEvaluatedData.EffectEvaluatedData.Target.EffectsManager.RemoveEffect(
+				activeEffectEvaluatedData.ActiveEffectHandle,
+				true);
+
+			return;
+		}
+
+		if (OngoingRequirements.Length > 0)
+		{
+			activeEffectEvaluatedData.ActiveEffectHandle.SetInhibit(
+				!AttributeRequirement.RequirementsMet(OngoingRequirements, sourceEntity));
+		}
 	}
 
 	private IForgeEntity? ResolveEntity(EffectOwnership ownership)

@@ -434,6 +434,90 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return FilterEffectsByData(effectData).FirstOrDefault();
 	}
 
+	/// <summary>
+	/// Unwinds every active effect's modifiers, runs a change to the entity's attribute set membership, then
+	/// re-evaluates and re-applies them. The unwind has to precede the detach, or a departing attribute keeps this
+	/// entity's modifiers baked into its channels and overrides and comes back dirty if the set is re-added. Every
+	/// effect participates, not just those whose modifiers name a departing attribute, because an effect can depend on
+	/// one indirectly through an attribute-based magnitude, a custom calculator or its own duration.
+	/// </summary>
+	/// <remarks>
+	/// Covers this entity's own effects and, through the dependent registry, effects living on other entities that
+	/// read this one's attributes — a non-snapshot capture resolving to the source or owner, or a source-requirement
+	/// component watching this entity. A dependent effect's modifiers sit on its own target, not here, so it is
+	/// rebuilt in place: its magnitudes are re-evaluated and its capture subscriptions move to the attributes this
+	/// entity has now.
+	/// </remarks>
+	/// <param name="applyChange">The action that applies the attribute set membership change.</param>
+	internal void RebuildAroundAttributeChange(Action applyChange)
+	{
+		ActiveEffect[] activeEffects = [.. _activeEffects, .. Owner.Attributes.DependentEffects];
+
+		foreach (ActiveEffect activeEffect in activeEffects)
+		{
+			activeEffect.DetachAttributeBindings();
+			activeEffect.Unapply(reApplication: true);
+		}
+
+		applyChange();
+
+		var changedEffects = new List<ActiveEffect>();
+
+		foreach (ActiveEffect activeEffect in activeEffects)
+		{
+			if (!IsStillActive(activeEffect))
+			{
+				continue;
+			}
+
+			if (activeEffect.RebuildAfterAttributeChange())
+			{
+				changedEffects.Add(activeEffect);
+			}
+		}
+
+		Owner.Attributes.ApplyPendingValueChanges();
+
+		foreach (ActiveEffect activeEffect in activeEffects)
+		{
+			activeEffect.EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
+		}
+
+		foreach (ActiveEffect activeEffect in changedEffects)
+		{
+			if (!IsStillActive(activeEffect))
+			{
+				continue;
+			}
+
+			EffectsManager effectsManager = activeEffect.EffectEvaluatedData.Target.EffectsManager;
+			effectsManager.OnActiveEffectChanged_InternalCall(activeEffect);
+
+			EffectEvaluatedData effectEvaluatedData = activeEffect.EffectEvaluatedData;
+			effectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData);
+		}
+
+		foreach (ActiveEffect activeEffect in activeEffects)
+		{
+			foreach (IEffectComponent component in activeEffect.ComponentInstances)
+			{
+				if (!IsStillActive(activeEffect))
+				{
+					break;
+				}
+
+				component.OnAttributeMembershipChanged(
+					Owner,
+					new ActiveEffectEvaluatedData(
+						activeEffect.Handle,
+						activeEffect.EffectEvaluatedData,
+						activeEffect.RemainingDuration,
+						activeEffect.NextPeriodicTick,
+						activeEffect.ExecutionCount));
+			}
+		}
+	}
+
 	internal ActiveEffectHandle? ApplyEffectInternal(Effect effect, EffectApplicationContext? applicationContext)
 	{
 		return ApplyEffectInternal(effect, applicationContext, out _);
@@ -457,6 +541,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		activeEffectHandle = ApplyEffectInternal(effect, applicationContext: null, out bool applied);
 		return applied;
+	}
+
+	private static bool IsStillActive(ActiveEffect activeEffect)
+	{
+		return activeEffect.EffectEvaluatedData.Target.EffectsManager._activeEffects.Contains(activeEffect);
 	}
 
 	private static bool MatchesStackPolicy(ActiveEffect existingEffect, Effect newEffect)

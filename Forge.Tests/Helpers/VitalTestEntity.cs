@@ -34,7 +34,7 @@ public class VitalTestEntity : IForgeEntity
 
 		EffectsManager = new(this, cuesManager);
 		CuesManager = cuesManager;
-		Attributes = new(VitalAttributeSet);
+		Attributes = new(this, VitalAttributeSet);
 		Tags = new(originalTags);
 		Abilities = new(this);
 		Events = new();

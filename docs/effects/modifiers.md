@@ -28,6 +28,8 @@ public readonly record struct Modifier(
 - **Channel**: Which attribute [channel](../attributes.md#attribute-channels) to affect (defaults to 0).
 - **AggregationMode**: How this modifier combines with the other modifiers of its group — all of them summed (the default), or only the strongest one (see [Modifier Aggregation](#modifier-aggregation)).
 
+A modifier naming an attribute the target does not have is **skipped**, not an error: the rest of the effect applies normally. That also covers an attribute that goes away mid-effect — [removing an attribute set](../attributes.md#adding-and-removing-attribute-sets) unwinds the affected modifiers and drops them, leaving the effect's other modifiers applied, and adding the set back brings them into play again.
+
 ## Modifier Operations
 
 The `ModifierOperation` enum defines how a modifier changes an attribute's value:

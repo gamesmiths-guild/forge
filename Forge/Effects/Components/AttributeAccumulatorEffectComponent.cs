@@ -168,6 +168,39 @@ public class AttributeAccumulatorEffectComponent(
 		_handler = null;
 	}
 
+	/// <inheritdoc/>
+	public void OnAttributeMembershipChanged(
+		IForgeEntity changedEntity,
+		in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		IForgeEntity target = activeEffectEvaluatedData.EffectEvaluatedData.Target;
+
+		if (changedEntity != target)
+		{
+			return;
+		}
+
+		if (_trackedAttribute is not null && _handler is not null)
+		{
+			_trackedAttribute.OnValueChanged -= _handler;
+		}
+
+		_trackedAttribute = null;
+
+		if (!target.Attributes.TryGetAttribute(Attribute, out EntityAttribute? trackedAttribute))
+		{
+			return;
+		}
+
+		// Deliberately bypasses the _tracking guard, which exists to stop a stack application from resetting the
+		// total. A fresh baseline is taken because the accumulator reports change since it started watching, and it
+		// was not watching while the attribute was away.
+		_handler ??= (changedAttribute, _) => _baseline = changedAttribute.CurrentValue;
+		_trackedAttribute = trackedAttribute;
+		_baseline = trackedAttribute.CurrentValue;
+		trackedAttribute.OnValueChanged += _handler;
+	}
+
 	private bool TryStartTracking(IForgeEntity target, Effect effect)
 	{
 		if (_tracking)

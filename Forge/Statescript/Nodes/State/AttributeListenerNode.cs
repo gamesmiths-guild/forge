@@ -67,27 +67,31 @@ public class AttributeListenerNode(StringKey attributeKey) : StateNode<Attribute
 		AttributeListenerNodeContext nodeContext = graphContext.GetNodeContext<AttributeListenerNodeContext>(NodeID);
 		nodeContext.SubscribedAttribute = null;
 		nodeContext.Handler = null;
+		nodeContext.MembershipHandler = null;
 
 		IForgeEntity? entity = AbilityNodeUtilities.ResolveEntityOrOwner(
 			graphContext,
 			InputProperties[EntityInput].BoundName);
 
-		if (entity?.Attributes.ContainsAttribute(_attributeKey) != true)
+		nodeContext.WatchedEntity = entity;
+
+		if (entity is null)
 		{
 			return;
 		}
 
-		EntityAttribute attribute = entity.Attributes[_attributeKey];
-
-		void Handler(EntityAttribute changedAttribute, int change)
-		{
+		nodeContext.Handler = (changedAttribute, change) =>
 			OnAttributeChanged(graphContext, changedAttribute, change);
-		}
 
-		nodeContext.SubscribedAttribute = attribute;
-		nodeContext.Handler = Handler;
+		// The attribute is looked up again whenever the entity's sets change. Without this the node would keep
+		// listening to an attribute that has been detached — going quiet for good — and would never pick up the
+		// attribute it is configured for if the set carrying it arrives later.
+		nodeContext.MembershipHandler = _ => BindAttribute(nodeContext);
 
-		attribute.OnValueChanged += Handler;
+		entity.Attributes.OnAttributeSetAdded += nodeContext.MembershipHandler;
+		entity.Attributes.OnAttributeSetRemoved += nodeContext.MembershipHandler;
+
+		BindAttribute(nodeContext);
 	}
 
 	/// <inheritdoc/>
@@ -100,8 +104,16 @@ public class AttributeListenerNode(StringKey attributeKey) : StateNode<Attribute
 			nodeContext.SubscribedAttribute.OnValueChanged -= nodeContext.Handler;
 		}
 
+		if (nodeContext.WatchedEntity is not null && nodeContext.MembershipHandler is not null)
+		{
+			nodeContext.WatchedEntity.Attributes.OnAttributeSetAdded -= nodeContext.MembershipHandler;
+			nodeContext.WatchedEntity.Attributes.OnAttributeSetRemoved -= nodeContext.MembershipHandler;
+		}
+
 		nodeContext.SubscribedAttribute = null;
 		nodeContext.Handler = null;
+		nodeContext.MembershipHandler = null;
+		nodeContext.WatchedEntity = null;
 	}
 
 	private static void WriteIntOutput(GraphContext graphContext, OutputVariable output, int value)
@@ -116,6 +128,29 @@ public class AttributeListenerNode(StringKey attributeKey) : StateNode<Attribute
 			: graphContext.GraphVariables;
 
 		variables?.SetVar(output.BoundName, value);
+	}
+
+	private void BindAttribute(AttributeListenerNodeContext nodeContext)
+	{
+		if (nodeContext.Handler is null)
+		{
+			return;
+		}
+
+		if (nodeContext.SubscribedAttribute is not null)
+		{
+			nodeContext.SubscribedAttribute.OnValueChanged -= nodeContext.Handler;
+			nodeContext.SubscribedAttribute = null;
+		}
+
+		if (nodeContext.WatchedEntity is null
+			|| !nodeContext.WatchedEntity.Attributes.TryGetAttribute(_attributeKey, out EntityAttribute? attribute))
+		{
+			return;
+		}
+
+		nodeContext.SubscribedAttribute = attribute;
+		attribute.OnValueChanged += nodeContext.Handler;
 	}
 
 	private void OnAttributeChanged(GraphContext graphContext, EntityAttribute attribute, int change)

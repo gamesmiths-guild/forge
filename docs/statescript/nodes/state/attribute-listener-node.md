@@ -45,6 +45,8 @@ new AttributeListenerNode(attributeKey)
 2. On each change, writes **New Value** and **Delta**, then emits `OnChanged` synchronously.
 3. Unsubscribes on deactivation.
 
+The node follows its attribute across changes to the entity's [attribute sets](../../../attributes.md#adding-and-removing-attribute-sets). If the set carrying the attribute is removed the node goes quiet rather than staying attached to the detached instance, and it rebinds when that set — or any set providing the key — is added back. A node whose attribute is not present on activation is not inert either: it picks the attribute up if a set later brings it in.
+
 ## Usage
 
 ```csharp
