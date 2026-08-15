@@ -1581,6 +1581,101 @@ public class AbilitiesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 	[Fact]
 	[Trait("Inhibit ability", null)]
+	public void Inhibiting_the_grant_cancels_every_instance_of_a_per_execution_ability()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		TagContainer ownedTags = TagsOf("color.red");
+
+		AbilityData abilityData = CreateAbilityData(
+			"PerExecutionInhibition",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute5",
+			new ScalableFloat(-1),
+			instancingPolicy: AbilityInstancingPolicy.PerExecution,
+			activationOwnedTags: ownedTags);
+
+		// Kept apart from the activation owned tags, so starting an instance is not what inhibits the grant.
+		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "other.tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(
+					IgnoreTags: ignoreTags)));
+
+		abilityHandle.Should().NotBeNull();
+
+		for (int i = 0; i < 3; i++)
+		{
+			abilityHandle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+			failureFlags.Should().Be(AbilityActivationFailures.None);
+		}
+
+		abilityHandle!.IsActive.Should().BeTrue();
+		entity.Tags.AllTags.HasAll(ownedTags).Should().BeTrue();
+
+		// Inhibit the granting effect.
+		CreateAndApplyTagEffect(entity, ignoreTags!);
+
+		abilityHandle.IsInhibited.Should().BeTrue();
+
+		// Every instance must be cancelled, not just the most recent one. An inhibited ability that is still running
+		// contradicts CancelImmediately, and the survivors would hold their activation owned tags on the entity while
+		// nothing is allowed to activate the ability again.
+		abilityHandle.IsActive.Should().BeFalse();
+		entity.Tags.AllTags.HasAny(ownedTags).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Inhibit ability", null)]
+	public void Inhibiting_the_grant_reports_the_ability_as_canceled()
+	{
+		TestEntity entity = new(_tagsManager, _cuesManager);
+
+		AbilityData abilityData = CreateAbilityData(
+			"Fireball",
+			[new ScalableFloat(3f)],
+			["simple.tag"],
+			"TestAttributeSet.Attribute90",
+			new ScalableFloat(-1));
+
+		TagContainer? ignoreTags = Tag.RequestTag(_tagsManager, "other.tag").GetSingleTagContainer();
+		ignoreTags.Should().NotBeNull();
+
+		AbilityHandle? abilityHandle = SetupAbility(
+			entity,
+			abilityData,
+			new ScalableInt(1),
+			out _,
+			extraComponent: new TargetTagRequirementsEffectComponent(
+				ongoingTagRequirements: new TagRequirements(
+					IgnoreTags: ignoreTags)));
+
+		abilityHandle.Should().NotBeNull();
+
+		AbilityEndedData? capturedData = null;
+		entity.Abilities.OnAbilityEnded += x => capturedData = x;
+
+		abilityHandle!.TryActivate(out AbilityActivationFailures failureFlags).Should().BeTrue();
+		failureFlags.Should().Be(AbilityActivationFailures.None);
+
+		// Inhibit the granting effect.
+		CreateAndApplyTagEffect(entity, ignoreTags!);
+
+		// A grant inhibited under CancelImmediately tears the ability away rather than letting it finish, exactly as a
+		// removal does, so listeners have to be able to tell it apart from a natural ending.
+		capturedData.Should().NotBeNull();
+		capturedData!.Value.WasCanceled.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Inhibit ability", null)]
 	public void Inhibition_policy_RemoveOnEnd_inhibits_after_deactivation()
 	{
 		TestEntity entity = new(_tagsManager, _cuesManager);
