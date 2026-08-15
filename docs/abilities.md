@@ -253,7 +253,7 @@ entity.EffectsManager.ApplyEffect(grantEffect3);
 - **RemoveOnEnd**: Wait for all active instances to end before removing/inhibiting.
 - **Ignore**: The grant source ignores removal/inhibition requests entirely.
 
-A removal under `CancelImmediately` cancels **every** active instance, which matters for [`PerExecution`](#perexecution) abilities running several at once, and reports `AbilityEndedData.WasCanceled == true` — the ability was torn away rather than allowed to finish.
+A removal or an inhibition under `CancelImmediately` cancels **every** active instance, which matters for [`PerExecution`](#perexecution) abilities running several at once, and reports `AbilityEndedData.WasCanceled == true` — the ability was torn away rather than allowed to finish.
 
 ### Policy Interactions Between Grant Sources
 
@@ -453,7 +453,7 @@ entity.Abilities.OnAbilityEnded += data =>
 };
 ```
 
-`WasCanceled` is `true` when the ability was canceled (via `AbilityHandle.Cancel()` or `CancelAbilities`) and `false` when it ended gracefully (reaching its natural end, or a Statescript Exit node). `AbilityEndedData` also carries `AbilityData`, captured before the handle can be freed, because an ability granted with `RemoveOnEnd` is removed by the very same call.
+`WasCanceled` is `true` when the ability was canceled (via `AbilityHandle.Cancel()` or `CancelAbilities`, or by a grant removed or inhibited under [`CancelImmediately`](#deactivation-policies)) and `false` when it ended gracefully (reaching its natural end, or a Statescript Exit node). `AbilityEndedData` also carries `AbilityData`, captured before the handle can be freed, because an ability granted with `RemoveOnEnd` is removed by the very same call.
 
 **Failed activations.** Whoever calls the activation API already receives [`AbilityActivationFailures`](#activation-failures) as an out parameter. `OnAbilityActivationFailed` exists for the activations nobody holds the result of — those driven by [ability triggers](#ability-triggers) and by the Statescript activation nodes — which are otherwise completely silent:
 
