@@ -8,7 +8,7 @@ namespace Gamesmiths.Forge.Abilities;
 /// <summary>
 /// Represents a handle to a granted ability.
 /// </summary>
-public class AbilityHandle
+public class AbilityHandle : IValidatable
 {
 	/// <summary>
 	/// Gets a value indicating whether the ability associated with this handle is valid and active.

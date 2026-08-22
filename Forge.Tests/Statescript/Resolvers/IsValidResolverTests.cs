@@ -96,10 +96,63 @@ public class IsValidResolverTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		resolver.Resolve(context).AsBool().Should().BeTrue();
 	}
 
+	[Fact]
+	[Trait("Resolver", "IsValid")]
+	public void Is_valid_resolver_returns_false_for_invalidated_value()
+	{
+		var context = new GraphContext();
+		context.GraphVariables.DefineObjectVariable<IValidatable>("handle", new FakeHandle(isValid: false));
+
+		var resolver = new IsValidResolver(new ObjectVariableResolver<IValidatable>("handle"));
+
+		resolver.Resolve(context).AsBool().Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Resolver", "IsValid")]
+	public void Is_valid_resolver_returns_true_for_still_valid_value()
+	{
+		var context = new GraphContext();
+		context.GraphVariables.DefineObjectVariable<IValidatable>("handle", new FakeHandle(isValid: true));
+
+		var resolver = new IsValidResolver(new ObjectVariableResolver<IValidatable>("handle"));
+
+		resolver.Resolve(context).AsBool().Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Resolver", "IsValid")]
+	public void Is_valid_resolver_returns_false_for_empty_tag()
+	{
+		var context = new GraphContext();
+		context.GraphVariables.DefineObjectVariable("tag", Tag.Empty);
+
+		var resolver = new IsValidResolver(new ObjectVariableResolver<Tag>("tag"));
+
+		resolver.Resolve(context).AsBool().Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Resolver", "IsValid")]
+	public void Is_valid_resolver_returns_true_for_registered_tag()
+	{
+		var context = new GraphContext();
+		context.GraphVariables.DefineObjectVariable("tag", Tag.RequestTag(_tagsManager, "color.red"));
+
+		var resolver = new IsValidResolver(new ObjectVariableResolver<Tag>("tag"));
+
+		resolver.Resolve(context).AsBool().Should().BeTrue();
+	}
+
 	private static Effect CreateEffect()
 	{
 		return new Effect(
 			new EffectData("Burn", new DurationData(DurationType.Instant)),
 			new EffectOwnership(null, null));
+	}
+
+	private sealed class FakeHandle(bool isValid) : IValidatable
+	{
+		public bool IsValid { get; } = isValid;
 	}
 }
