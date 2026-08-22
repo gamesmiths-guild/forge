@@ -105,7 +105,7 @@ regular node-bindable properties.
 
 | Resolver | Output Type | Description |
 |----------|-------------|-------------|
-| [IsValidResolver](is-valid-resolver.md) | `bool` | Checks whether an object-backed resolver produces a valid (non-null) value. |
+| [IsValidResolver](is-valid-resolver.md) | `bool` | Checks whether an object-backed resolver produces a usable value: non-`null`, and still valid for types that track their own validity such as handles. |
 | [ObjectEqualsResolver](object-equals-resolver.md) | `bool` | Checks whether two object-backed resolvers produce the same instance (reference identity). |
 
 ---

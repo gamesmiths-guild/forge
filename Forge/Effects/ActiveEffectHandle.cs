@@ -9,7 +9,7 @@ namespace Gamesmiths.Forge.Effects;
 /// <summary>
 /// Represents a handle to an active effect.
 /// </summary>
-public class ActiveEffectHandle
+public class ActiveEffectHandle : IValidatable
 {
 	/// <summary>
 	/// Gets a value indicating whether the effect is currently inhibited.

@@ -8,7 +8,7 @@ namespace Gamesmiths.Forge.Abilities;
 /// Slim handle for controlling a single active ability instance (end / cancel).
 /// Additional context (owner, source, level, commits) lives in <see cref="AbilityBehaviorContext"/>.
 /// </summary>
-public sealed class AbilityInstanceHandle
+public sealed class AbilityInstanceHandle : IValidatable
 {
 	/// <summary>
 	/// Gets the target entity of this ability instance.

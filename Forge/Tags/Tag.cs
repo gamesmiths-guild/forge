@@ -8,7 +8,7 @@ namespace Gamesmiths.Forge.Tags;
 /// A tag is an immutable structured label, following a hierarchy like "enemy.undead.zombie" or
 /// "item.consumable.potion.health", that gets registered and managed by the <see cref="TagsManager"/>.
 /// </summary>
-public readonly struct Tag : IEquatable<Tag>
+public readonly struct Tag : IEquatable<Tag>, IValidatable
 {
 	/// <summary>
 	/// Gets a static representation of an empty <see cref="Tag"/>.
