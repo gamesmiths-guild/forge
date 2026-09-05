@@ -285,6 +285,95 @@ internal static class ResolverTestContextFactory
 	}
 }
 
+/// <summary>
+/// A state node that stays active and counts what it was called with, so a test can tell the frame update and the
+/// fixed update apart by which counter moved.
+/// </summary>
+internal sealed class TrackingStateNode : StateNode<StateNodeContext>
+{
+	public int ActivateCount { get; private set; }
+
+	public int DeactivateCount { get; private set; }
+
+	public int UpdateCount { get; private set; }
+
+	public int FixedUpdateCount { get; private set; }
+
+	public double LastUpdateDelta { get; private set; }
+
+	public double LastFixedUpdateDelta { get; private set; }
+
+	public ulong LastSeenUpdateStamp { get; private set; }
+
+	protected override void OnActivate(GraphContext graphContext)
+	{
+		ActivateCount++;
+	}
+
+	protected override void OnDeactivate(GraphContext graphContext)
+	{
+		DeactivateCount++;
+	}
+
+	protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+	{
+		UpdateCount++;
+		LastUpdateDelta = deltaTime;
+		LastSeenUpdateStamp = graphContext.UpdateStamp;
+	}
+
+	protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
+	{
+		FixedUpdateCount++;
+		LastFixedUpdateDelta = deltaTime;
+		LastSeenUpdateStamp = graphContext.UpdateStamp;
+	}
+}
+
+/// <summary>
+/// An ability behavior that overrides only the frame hook, so the fixed hook falls through to the interface default.
+/// </summary>
+internal sealed class FrameOnlyBehavior : IAbilityBehavior
+{
+	public int UpdateCount { get; private set; }
+
+	public void OnStarted(AbilityBehaviorContext context)
+	{
+	}
+
+	public void OnEnded(AbilityBehaviorContext context)
+	{
+	}
+
+	public void OnUpdate(double deltaTime)
+	{
+		UpdateCount++;
+	}
+}
+
+/// <summary>
+/// A state node that deactivates another one from inside its own fixed update, for the case where the set of active
+/// nodes changes while it is being walked.
+/// </summary>
+/// <param name="target">The state node to deactivate from the fixed update.</param>
+internal sealed class DeactivateOnFixedUpdateNode(TrackingStateNode target) : StateNode<StateNodeContext>
+{
+	private readonly TrackingStateNode _target = target;
+
+	protected override void OnActivate(GraphContext graphContext)
+	{
+	}
+
+	protected override void OnDeactivate(GraphContext graphContext)
+	{
+	}
+
+	protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
+	{
+		_target.InputPorts[AbortPort].ReceiveMessage(graphContext);
+	}
+}
+
 internal sealed class TrackingActionNode(string? name = null, List<string>? executionLog = null) : ActionNode
 {
 	private readonly string? _name = name;

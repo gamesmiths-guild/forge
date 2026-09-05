@@ -45,6 +45,32 @@ public sealed class GraphContext
 	/// </summary>
 	public Variables GraphVariables { get; } = new Variables();
 
+	/// <summary>
+	/// Gets the number of update passes this execution has run, counting frame and fixed updates alike.
+	/// </summary>
+	/// <remarks>
+	/// <para>A monotonic stamp for "the same pass as last time I looked", which is what a value worth computing once
+	/// per pass needs and what neither delta time nor a host frame counter gives: delta time says how long the pass
+	/// was rather than which one it is, and a host counter cannot distinguish a frame update from the fixed update
+	/// beside it.</para>
+	/// <para>It counts both rails deliberately, because they are separate passes over separate world state - a value
+	/// computed on the frame and reused on the fixed step would be reused across exactly the boundary the two hooks
+	/// exist to keep apart. One counter rather than one per rail for the same reason: a resolver cannot tell which
+	/// rail it is being evaluated on, since nodes also run in cascades that begin on either or on neither, so a
+	/// per-rail counter would be read unchanged across passes that are not the same pass.</para>
+	/// <para><b>This is a cache epoch, not a clock, and in particular it is not a network tick.</b> It is local to one
+	/// graph execution, starts at zero every time a graph starts, and only ever counts up. A simulation tick shared
+	/// between peers is none of those things - it has to mean the same number on every machine and has to be settable,
+	/// because reconciliation rewinds it. A stamp that could go backwards would serve a value cached before the rewind
+	/// as though it were current.</para>
+	/// <para><b>It is also not a licence to memoize a property definition on.</b> Every resolver bound to a node input
+	/// is defined as a property, and nodes run in cascades <em>between</em> passes - an event listener firing, an
+	/// ability activating - so a value held for a whole pass would be read after a Set Variable or a Set Position that
+	/// changed it. What this is for is a resolver that knows its own answer cannot change within a pass, and that is a
+	/// judgement only that resolver can make.</para>
+	/// </remarks>
+	public ulong UpdateStamp { get; internal set; }
+
 	internal Dictionary<Guid, bool> InternalNodeActivationStatus { get; } = [];
 
 	internal HashSet<Node> ActiveStateNodes { get; } = [];

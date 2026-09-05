@@ -69,19 +69,23 @@ public abstract class StateNode<T> : Node
 	internal override void Update(double deltaTime, GraphContext graphContext)
 #pragma warning restore SA1202 // Elements should be ordered by access
 	{
-		if (!graphContext.HasNodeContext(NodeID))
+		if (IsNodeActive(graphContext))
 		{
-			return;
+			OnUpdate(deltaTime, graphContext);
 		}
+	}
 
-		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
-
-		if (!nodeContext.Active)
+	/// <summary>
+	/// Updates this state node on the host's fixed step. Only processes the update if the node is currently active.
+	/// </summary>
+	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
+	/// <param name="graphContext">The graph's context.</param>
+	internal override void FixedUpdate(double deltaTime, GraphContext graphContext)
+	{
+		if (IsNodeActive(graphContext))
 		{
-			return;
+			OnFixedUpdate(deltaTime, graphContext);
 		}
-
-		OnUpdate(deltaTime, graphContext);
 	}
 
 	/// <inheritdoc/>
@@ -128,6 +132,32 @@ public abstract class StateNode<T> : Node
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
 	/// <param name="graphContext">The graph's context.</param>
 	protected virtual void OnUpdate(double deltaTime, GraphContext graphContext)
+	{
+	}
+
+	/// <summary>
+	/// Called on every fixed step while the node is active. Override this instead of <see cref="OnUpdate"/> for logic
+	/// that has to advance at a rate agreed in advance rather than at whatever rate the machine renders: moving a
+	/// body, steering a character, asking the physics world a question, or anything a networked peer has to be able to
+	/// reproduce step for step.
+	/// </summary>
+	/// <remarks>
+	/// <para>Both hooks exist because the two rates are different and neither substitutes for the other. The frame
+	/// rate is whatever the machine manages and can drift far above or below the fixed rate, so a body driven from
+	/// <see cref="OnUpdate"/> is pushed a different amount per second on a fast machine than on a slow one, and a
+	/// physics query asked from there is asked several times about a world that has not changed, or not at all in the
+	/// step where it did.</para>
+	/// <para>The name says <em>fixed</em> rather than <em>physics</em> because the interval is the guarantee and
+	/// physics is only the most common reason to want one: a dedicated server with physics switched off still runs
+	/// this rail, and a networked simulation drives it from its own clock rather than from the engine's.</para>
+	/// <para>A host that never drives the fixed step simply never calls this, and a node that overrides it stops
+	/// running rather than running at the wrong rate - which is the honest failure, since silently falling back to
+	/// the frame would reintroduce exactly what overriding this avoids. Timers, animations and anything counting
+	/// wall-clock time belong in <see cref="OnUpdate"/>, whose delta is the one the player experiences.</para>
+	/// </remarks>
+	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
+	/// <param name="graphContext">The graph's context.</param>
+	protected virtual void OnFixedUpdate(double deltaTime, GraphContext graphContext)
 	{
 	}
 

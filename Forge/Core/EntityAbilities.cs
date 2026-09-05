@@ -491,6 +491,24 @@ public class EntityAbilities(IForgeEntity owner)
 		}
 	}
 
+	/// <summary>
+	/// Advances the parts of every active ability behavior that have to run at a rate agreed in advance. Call this from
+	/// the game's fixed callback - a physics step, or a network tick - alongside
+	/// <see cref="UpdateAbilities(double)"/> in its frame callback.
+	/// </summary>
+	/// <remarks>
+	/// A game with no fixed step of its own never calls this, and the behaviors that need one stop running rather
+	/// than running at the frame rate.
+	/// </remarks>
+	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
+	public void FixedUpdateAbilities(double deltaTime)
+	{
+		foreach (AbilityHandle handle in GrantedAbilities)
+		{
+			handle.Ability?.FixedUpdateBehaviors(deltaTime);
+		}
+	}
+
 	internal AbilityHandle GrantAbility(
 		AbilityData abilityData,
 		int abilityLevel,

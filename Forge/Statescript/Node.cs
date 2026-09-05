@@ -222,6 +222,21 @@ public abstract class Node
 	}
 
 	/// <summary>
+	/// Updates this node on the host's fixed step. The default implementation does nothing.
+	/// </summary>
+	/// <remarks>
+	/// Separate from <see cref="Update"/> because the two run at different rates and answer different questions: the
+	/// frame rate is whatever the machine manages, while the fixed rate is agreed in advance and is the only rate at
+	/// which repeating the same work twice gives the same answer twice. Physics is the usual reason a host has a fixed
+	/// step; a networked simulation, where every peer must reproduce the same steps, is the other.
+	/// </remarks>
+	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
+	/// <param name="graphContext">The graph context.</param>
+	internal virtual void FixedUpdate(double deltaTime, GraphContext graphContext)
+	{
+	}
+
+	/// <summary>
 	/// Creates a port of the specified type with the given index.
 	/// </summary>
 	/// <typeparam name="T">The type of port to create.</typeparam>
