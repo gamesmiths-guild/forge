@@ -55,6 +55,14 @@ public class GraphVariableDefinitions
 	/// </summary>
 	public List<ObjectArrayPropertyDefinition> ObjectArrayPropertyDefinitions { get; } = [];
 
+	internal Dictionary<StringKey, PropertyDefinition> PropertiesByName { get; } = [];
+
+	internal Dictionary<StringKey, ObjectPropertyDefinition> ObjectPropertiesByName { get; } = [];
+
+	internal Dictionary<StringKey, ArrayPropertyDefinition> ArrayPropertiesByName { get; } = [];
+
+	internal Dictionary<StringKey, ObjectArrayPropertyDefinition> ObjectArrayPropertiesByName { get; } = [];
+
 	/// <summary>
 	/// Adds a mutable variable definition with the specified name and initial value.
 	/// </summary>
@@ -118,7 +126,9 @@ public class GraphVariableDefinitions
 	/// <param name="resolver">The resolver used to compute the property's value at runtime.</param>
 	public void DefineProperty(StringKey name, IPropertyResolver resolver)
 	{
-		PropertyDefinitions.Add(new PropertyDefinition(name, resolver));
+		var definition = new PropertyDefinition(name, resolver);
+		PropertyDefinitions.Add(definition);
+		PropertiesByName.TryAdd(name, definition);
 	}
 
 	/// <summary>
@@ -128,7 +138,9 @@ public class GraphVariableDefinitions
 	/// <param name="resolver">The resolver used to compute the property's value at runtime.</param>
 	public void DefineObjectProperty(StringKey name, IObjectResolver resolver)
 	{
-		ObjectPropertyDefinitions.Add(new ObjectPropertyDefinition(name, resolver));
+		var definition = new ObjectPropertyDefinition(name, resolver);
+		ObjectPropertyDefinitions.Add(definition);
+		ObjectPropertiesByName.TryAdd(name, definition);
 	}
 
 	/// <summary>
@@ -138,7 +150,9 @@ public class GraphVariableDefinitions
 	/// <param name="resolver">The resolver used to compute the property's array value at runtime.</param>
 	public void DefineArrayProperty(StringKey name, IArrayPropertyResolver resolver)
 	{
-		ArrayPropertyDefinitions.Add(new ArrayPropertyDefinition(name, resolver));
+		var definition = new ArrayPropertyDefinition(name, resolver);
+		ArrayPropertyDefinitions.Add(definition);
+		ArrayPropertiesByName.TryAdd(name, definition);
 	}
 
 	/// <summary>
@@ -148,7 +162,9 @@ public class GraphVariableDefinitions
 	/// <param name="resolver">The resolver used to compute the property's array value at runtime.</param>
 	public void DefineObjectArrayProperty(StringKey name, IObjectArrayResolver resolver)
 	{
-		ObjectArrayPropertyDefinitions.Add(new ObjectArrayPropertyDefinition(name, resolver));
+		var definition = new ObjectArrayPropertyDefinition(name, resolver);
+		ObjectArrayPropertyDefinitions.Add(definition);
+		ObjectArrayPropertiesByName.TryAdd(name, definition);
 	}
 
 	/// <summary>
