@@ -1050,7 +1050,7 @@ entity.Events.Raise(new EventData<HitLocationData>
 Abilities can be driven by Statescript graphs instead of handwritten `IAbilityBehavior` classes. This is done through `GraphAbilityBehavior`, which connects the ability lifecycle to a graph's execution:
 
 - When the ability **starts**, the graph begins processing from its Entry node.
-- Each frame, `OnUpdate(deltaTime)` advances all active state nodes in the graph.
+- Each frame, `OnUpdate(deltaTime)` advances all active state nodes in the graph; each fixed step, `OnFixedUpdate(deltaTime)` advances the ones on that rail.
 - When the graph **completes** (all state nodes deactivate) or an Exit node is reached, the ability instance ends.
 - When the ability is **canceled**, the graph is stopped and all active nodes are disabled.
 

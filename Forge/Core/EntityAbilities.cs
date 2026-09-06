@@ -17,6 +17,13 @@ public class EntityAbilities(IForgeEntity owner)
 {
 	private readonly Dictionary<Ability, List<IAbilityGrantSource>> _grantSources = [];
 	private readonly HashSet<AbilityHandle> _grantedAbilities = [];
+
+	// Reused by both update rails so the per-frame walk allocates nothing. Sharing one list is what makes the walk
+	// non-re-entrant, which BufferGrantedAbilities enforces rather than leaves to trust.
+	private readonly List<AbilityHandle> _updateBuffer = [];
+
+	private bool _updating;
+
 	private Action<Ability>? _removeAbility;
 	private Action<Ability>? _inhibitAbility;
 
@@ -87,8 +94,9 @@ public class EntityAbilities(IForgeEntity owner)
 	/// Read-only: the manager keeps this set in step with the grant sources behind each ability, so grant and removal
 	/// go through <see cref="GrantAbilityPermanently"/>, <c>TryGrantAbilityAndActivateOnce</c>,
 	/// <see cref="RevokeAbility"/>, <see cref="ClearAbility"/> and the effect components rather than through this set.
-	/// The collection is live, so a handle removed while it is being enumerated invalidates the enumeration; copy it
-	/// first when the loop body can remove abilities.
+	/// The collection is live, so copy it first when the loop body can grant or clear abilities. Granting is the case
+	/// that throws: adding invalidates any open enumerator, while removing from a <see cref="HashSet{T}"/> no longer
+	/// does. Both are worth copying for, since a loop that skips whatever a removal moved is wrong just as quietly.
 	/// </remarks>
 	public IReadOnlyCollection<AbilityHandle> GrantedAbilities => _grantedAbilities;
 
@@ -485,9 +493,63 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
 	public void UpdateAbilities(double deltaTime)
 	{
-		foreach (AbilityHandle handle in GrantedAbilities)
+		if (!BufferGrantedAbilities())
 		{
-			handle.Ability?.UpdateBehaviors(deltaTime);
+			return;
+		}
+
+		try
+		{
+			for (int i = 0; i < _updateBuffer.Count; i++)
+			{
+				AbilityHandle handle = _updateBuffer[i];
+
+				if (_grantedAbilities.Contains(handle))
+				{
+					handle.Ability?.UpdateBehaviors(deltaTime);
+				}
+			}
+		}
+		finally
+		{
+			_updating = false;
+		}
+	}
+
+	/// <summary>
+	/// Advances the parts of every active ability behavior that have to run at a rate agreed in advance. Call this from
+	/// the game's fixed callback - a physics step, or a network tick - alongside
+	/// <see cref="UpdateAbilities(double)"/> in its frame callback.
+	/// </summary>
+	/// <remarks>
+	/// A game with no fixed step of its own never calls this, and the behaviors that need one stop running rather
+	/// than running at the frame rate.
+	/// </remarks>
+	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
+	public void FixedUpdateAbilities(double deltaTime)
+	{
+		if (!BufferGrantedAbilities())
+		{
+			return;
+		}
+
+		try
+		{
+			for (int i = 0; i < _updateBuffer.Count; i++)
+			{
+				AbilityHandle handle = _updateBuffer[i];
+
+				// Re-checked because an earlier behavior in this same walk may have cleared this ability, and an
+				// ability that is no longer granted should not be advanced.
+				if (_grantedAbilities.Contains(handle))
+				{
+					handle.Ability?.FixedUpdateBehaviors(deltaTime);
+				}
+			}
+		}
+		finally
+		{
+			_updating = false;
 		}
 	}
 
@@ -588,6 +650,34 @@ public class EntityAbilities(IForgeEntity owner)
 	private static bool MatchesTags(Ability ability, TagContainer tagsToActivate)
 	{
 		return ability.AbilityData.AbilityTags?.HasAny(tagsToActivate) == true;
+	}
+
+	// Snapshots the granted set before an update walks it. A behavior is free to grant, revoke or clear abilities from
+	// inside its own update - a graph node granting one is the ordinary way to reach it - and adding to the set
+	// invalidates any enumerator open over it.
+	//
+	// What it may not do is drive another update of this same entity, because the buffer is one list reused per call:
+	// a nested pass would clear and refill the list the outer walk is still indexing, advancing some abilities twice
+	// and skipping others. Refused rather than tolerated, so a validation-disabled build drops the nested pass instead
+	// of miscounting time.
+	private bool BufferGrantedAbilities()
+	{
+		if (_updating)
+		{
+			Validation.Fail(
+				"An ability update was re-entered while one was already running on this entity, which would corrupt " +
+				"the walk in progress. Drive UpdateAbilities and FixedUpdateAbilities from the game loop, never " +
+				"from inside an ability behavior.");
+
+			return false;
+		}
+
+		_updating = true;
+
+		_updateBuffer.Clear();
+		_updateBuffer.AddRange(_grantedAbilities);
+
+		return true;
 	}
 
 	// Snapshots the granted abilities and seeds the per-ability failure flags for a tag-driven activation. The snapshot

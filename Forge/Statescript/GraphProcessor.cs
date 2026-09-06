@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Core;
+
 namespace Gamesmiths.Forge.Statescript;
 
 /// <summary>
@@ -16,6 +18,8 @@ namespace Gamesmiths.Forge.Statescript;
 public class GraphProcessor
 {
 	private readonly List<Node> _updateBuffer = [];
+
+	private bool _updating;
 
 	/// <summary>
 	/// Gets the graph that this processor is responsible for executing.
@@ -81,17 +85,50 @@ public class GraphProcessor
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
 	public void UpdateGraph(double deltaTime)
 	{
-		if (!GraphContext.HasStarted)
+		if (!BufferActiveNodes())
 		{
 			return;
 		}
 
-		_updateBuffer.Clear();
-		_updateBuffer.AddRange(GraphContext.ActiveStateNodes);
-
-		for (int i = 0; i < _updateBuffer.Count; i++)
+		try
 		{
-			_updateBuffer[i].Update(deltaTime, GraphContext);
+			for (int i = 0; i < _updateBuffer.Count; i++)
+			{
+				_updateBuffer[i].Update(deltaTime, GraphContext);
+			}
+		}
+		finally
+		{
+			_updating = false;
+		}
+	}
+
+	/// <summary>
+	/// Updates all active state nodes on the host's fixed step. Call this from the game's fixed callback - a physics
+	/// step, or a network tick - alongside <see cref="UpdateGraph"/> in its frame callback.
+	/// </summary>
+	/// <remarks>
+	/// A host with no fixed step of its own simply never calls this, and the nodes that need one stop running rather
+	/// than running at the frame rate. Nothing in the graph requires both to be driven.
+	/// </remarks>
+	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
+	public void FixedUpdateGraph(double deltaTime)
+	{
+		if (!BufferActiveNodes())
+		{
+			return;
+		}
+
+		try
+		{
+			for (int i = 0; i < _updateBuffer.Count; i++)
+			{
+				_updateBuffer[i].FixedUpdate(deltaTime, GraphContext);
+			}
+		}
+		finally
+		{
+			_updating = false;
 		}
 	}
 
@@ -108,9 +145,9 @@ public class GraphProcessor
 			return;
 		}
 
-		// Clear HasStarted first so the disable cascade is re-entrancy safe (e.g. an ExitNode triggering StopGraph, or a
-		// state node reaching FinalizeGraph) without nulling Processor yet. Keeping Processor set throughout the cascade
-		// lets action nodes on OnDeactivate paths still resolve property-backed inputs.
+		// Clear HasStarted first so the disable cascade is re-entrancy safe (e.g. an ExitNode triggering StopGraph, or
+		// a state node reaching FinalizeGraph) without nulling Processor yet. Keeping Processor set throughout the
+		// cascade lets action nodes on OnDeactivate paths still resolve property-backed inputs.
 		GraphContext.HasStarted = false;
 		Graph.EntryNode.StopGraph(GraphContext);
 		GraphContext.Processor = null;
@@ -138,5 +175,40 @@ public class GraphProcessor
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();
 		OnGraphCompleted?.Invoke();
+	}
+
+	// Snapshots the active nodes before either update walks them, because a node updated part way through can
+	// deactivate itself or another and modify the set being walked. Stamping here rather than in each caller is what
+	// makes the frame and fixed updates count as the separate passes they are.
+	private bool BufferActiveNodes()
+	{
+		if (!GraphContext.HasStarted)
+		{
+			return false;
+		}
+
+		// The buffer is one list reused per call, so a nested pass would clear and refill the list the outer walk is
+		// still indexing: some nodes updated twice, others skipped, silently and depending on set order. Nesting is
+		// never useful here - updates cascade downward through messages, not by re-driving the graph - so it is
+		// refused outright rather than made to work. Refusing also keeps a validation-disabled build safe: it drops
+		// the nested pass instead of miscounting everyone's time.
+		if (_updating)
+		{
+			Validation.Fail(
+				"A graph update was re-entered while one was already running, which would corrupt the walk in " +
+				"progress. Drive UpdateGraph and FixedUpdateGraph from the host's own callbacks, never from inside " +
+				"a node or an ability behavior.");
+
+			return false;
+		}
+
+		_updating = true;
+
+		GraphContext.UpdateStamp++;
+
+		_updateBuffer.Clear();
+		_updateBuffer.AddRange(GraphContext.ActiveStateNodes);
+
+		return true;
 	}
 }

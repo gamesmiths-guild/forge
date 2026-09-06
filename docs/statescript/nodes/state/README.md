@@ -23,11 +23,26 @@ State nodes **persist over time**. They activate when receiving a message, remai
 
 1. Message on **Input** → node activates → `OnActivate()` is called.
 2. **OnActivate** and **Subgraph** ports emit regular messages.
-3. Each frame, `OnUpdate(deltaTime)` is called by the graph processor.
+3. Each frame, `OnUpdate(deltaTime)` is called by the graph processor. On each fixed step, `OnFixedUpdate(deltaTime)` is called instead — see [Two update rails](#two-update-rails).
 4. When internal logic completes → `OnDeactivate` emits, Subgraph ports send disable signals.
 5. If **Abort** receives a message → `OnAbort` emits, then node deactivates normally.
 
 **Deferred actions:** If activation logic triggers immediate deactivation (e.g., a timer with duration 0), the deactivation is **deferred** until activation completes. This guarantees that OnActivate and Subgraph ports fire before any deactivation processing begins.
+
+## Two update rails
+
+A state node can be advanced on either of two independent rails, and it should override exactly one of them.
+
+| Hook | Driven by | Delta | Use it for |
+|---|---|---|---|
+| `OnUpdate(deltaTime, graphContext)` | `GraphProcessor.UpdateGraph` | The frame's elapsed time | Timers, animations, input, anything counting wall-clock time |
+| `OnFixedUpdate(deltaTime, graphContext)` | `GraphProcessor.FixedUpdateGraph` | The fixed step's length | Moving a body, steering a character, querying the physics world, anything a networked peer must reproduce step for step |
+
+The two rates differ and neither substitutes for the other. The frame rate is whatever the machine manages and drifts far above or below the fixed rate, so a body driven from `OnUpdate` is pushed a different amount per second on a fast machine than on a slow one, and a query asked from there is asked several times about a world that has not changed, or not at all in the step where it did.
+
+The hook is called **fixed** rather than **physics** because the interval is the guarantee and physics is only the most common reason to want one. A dedicated server with physics switched off still runs this rail, and a networked simulation drives it from its own clock rather than from the engine's.
+
+**A host drives whichever rails it has.** Godot calls `UpdateGraph` from `_Process` and `FixedUpdateGraph` from `_PhysicsProcess`; a turn-based game may call only the first. A host with no fixed step never calls `FixedUpdateGraph`, and nodes that override `OnFixedUpdate` simply do not run — which is the honest failure, since falling back to the frame would reintroduce exactly what overriding it avoids.
 
 ## Creating Custom State Nodes
 

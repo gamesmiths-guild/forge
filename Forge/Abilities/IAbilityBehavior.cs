@@ -27,6 +27,19 @@ public interface IAbilityBehavior
 	void OnUpdate(double deltaTime)
 	{
 	}
+
+	/// <summary>
+	/// Called on the host's fixed step to advance the parts of the behavior that have to run at a rate agreed in
+	/// advance. The default implementation does nothing.
+	/// </summary>
+	/// <remarks>
+	/// Separate from <see cref="OnUpdate"/> because a body moved at the frame rate moves a different amount per second
+	/// on every machine, while the fixed step does not vary. A host with no fixed step never calls this.
+	/// </remarks>
+	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
+	void OnFixedUpdate(double deltaTime)
+	{
+	}
 }
 
 /// <summary>

@@ -9,7 +9,7 @@ For an overview of the Statescript system, see the [Statescript overview](README
 `GraphAbilityBehavior` bridges the ability lifecycle and the graph processor:
 
 - When the ability **starts** → the graph begins processing from its Entry node.
-- Each frame → `OnUpdate(deltaTime)` advances all active state nodes.
+- Each frame → `OnUpdate(deltaTime)` advances all active state nodes; each fixed step → `OnFixedUpdate(deltaTime)` advances the ones on that rail.
 - When the graph **completes** (all state nodes deactivate) or an Exit node is reached → the ability instance ends automatically.
 - When the ability is **canceled** → the graph is stopped and all active nodes are disabled.
 
@@ -51,15 +51,25 @@ When the ability is canceled:
 
 ### The Update Loop
 
-`GraphAbilityBehavior` implements `IAbilityBehavior.OnUpdate(deltaTime)`, which calls `GraphProcessor.UpdateGraph(deltaTime)` to tick all active state nodes. The Abilities system calls this automatically each frame for active ability instances.
+`GraphAbilityBehavior` implements both update hooks. `IAbilityBehavior.OnUpdate(deltaTime)` calls `GraphProcessor.UpdateGraph(deltaTime)`, and `IAbilityBehavior.OnFixedUpdate(deltaTime)` calls `GraphProcessor.FixedUpdateGraph(deltaTime)`. Each advances the state nodes that override the matching hook — see [Two update rails](nodes/state/README.md#two-update-rails).
 
 ```csharp
 // In your game loop, update the entity's abilities
 // (This is handled by whatever drives your abilities, typically alongside EffectsManager)
 behavior.Processor.UpdateGraph(deltaTime);
+
+// And from the fixed callback, if your host has one
+behavior.Processor.FixedUpdateGraph(fixedDeltaTime);
 ```
 
-If you're using `GraphAbilityBehavior` through the standard Abilities system, the update is called automatically by the ability instance.
+If you're using `GraphAbilityBehavior` through the standard Abilities system, drive the entity instead and both rails reach the graph:
+
+```csharp
+entity.Abilities.UpdateAbilities(deltaTime);           // from the frame callback
+entity.Abilities.FixedUpdateAbilities(fixedDeltaTime); // from the fixed callback
+```
+
+**Drive whichever rails your host has.** A turn-based game may call only `UpdateAbilities`; a host with no fixed step never calls `FixedUpdateAbilities`, and nodes on that rail simply do not run. Effects have no fixed half — `EffectsManager.UpdateEffects` counts wall-clock time, so durations and periods belong on the frame rail regardless.
 
 ## Typed Activation Data
 
