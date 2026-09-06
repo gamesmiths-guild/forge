@@ -18,8 +18,9 @@ public class EntityAbilities(IForgeEntity owner)
 	private readonly Dictionary<Ability, List<IAbilityGrantSource>> _grantSources = [];
 	private readonly HashSet<AbilityHandle> _grantedAbilities = [];
 
-	// Reused by both update rails so the per-frame walk allocates nothing. They never overlap: a host drives one and
-	// then the other, and neither re-enters itself.
+	// Reused by both update rails so the per-frame walk allocates nothing. That makes the walk non-re-entrant, which is
+	// the one constraint on a callback: it may grant, clear or end abilities, but it must not drive an update of this
+	// same entity from inside one.
 	private readonly List<AbilityHandle> _updateBuffer = [];
 
 	private Action<Ability>? _removeAbility;
@@ -630,8 +631,6 @@ public class EntityAbilities(IForgeEntity owner)
 		return ability.AbilityData.AbilityTags?.HasAny(tagsToActivate) == true;
 	}
 
-	// Snapshots the granted abilities and seeds the per-ability failure flags for a tag-driven activation. The snapshot
-	// keeps the indices stable while activations grant or remove other abilities.
 	// Snapshots the granted set before an update walks it. A behavior is free to grant, revoke or clear abilities from
 	// inside its own update - a graph node granting one is the ordinary way to reach it - and adding to the set
 	// invalidates any enumerator open over it.
@@ -641,6 +640,8 @@ public class EntityAbilities(IForgeEntity owner)
 		_updateBuffer.AddRange(_grantedAbilities);
 	}
 
+	// Snapshots the granted abilities and seeds the per-ability failure flags for a tag-driven activation. The snapshot
+	// keeps the indices stable while activations grant or remove other abilities.
 	private bool TryBeginActivationByTag(
 		TagContainer tagsToActivate,
 		out AbilityHandle[] handles,

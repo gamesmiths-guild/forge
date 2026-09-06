@@ -41,8 +41,8 @@ internal sealed class Ability
 
 	private readonly Dictionary<AbilityInstance, BehaviorBinding> _behaviors = [];
 
-	// Reused by both update rails so the per-frame walk allocates nothing. They never overlap: a host drives one and
-	// then the other, and neither re-enters itself.
+	// Reused by both update rails so the per-frame walk allocates nothing, which makes the walk non-re-entrant. Nothing
+	// in the library re-enters it; a host must not drive an update of this same ability from inside a behavior.
 	private readonly List<AbilityInstance> _behaviorBuffer = [];
 
 	private readonly Action<TagContainer>? _tagChangedHandler;
