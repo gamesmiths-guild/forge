@@ -13,6 +13,14 @@ namespace Gamesmiths.Forge.Statescript;
 /// </summary>
 public class GraphVariableDefinitions
 {
+	private readonly List<PropertyDefinition> _propertyDefinitions = [];
+
+	private readonly List<ObjectPropertyDefinition> _objectPropertyDefinitions = [];
+
+	private readonly List<ArrayPropertyDefinition> _arrayPropertyDefinitions = [];
+
+	private readonly List<ObjectArrayPropertyDefinition> _objectArrayPropertyDefinitions = [];
+
 	/// <summary>
 	/// Gets the list of variable definitions for the graph.
 	/// </summary>
@@ -34,26 +42,43 @@ public class GraphVariableDefinitions
 	public List<ObjectArrayVariableDefinition> ObjectArrayVariableDefinitions { get; } = [];
 
 	/// <summary>
-	/// Gets the list of property definitions for the graph. Properties are read-only computed values resolved on demand
-	/// from external sources (attributes, tags, comparisons, etc.).
+	/// Gets the property definitions for the graph, in definition order. Properties are read-only computed values
+	/// resolved on demand from external sources (attributes, tags, comparisons, etc.).
 	/// </summary>
-	public List<PropertyDefinition> PropertyDefinitions { get; } = [];
+	/// <remarks>
+	/// Read-only because a property is also indexed by name, and the index is what every lookup consults. Add one with
+	/// <see cref="DefineProperty"/>, which writes both.
+	/// </remarks>
+	public IReadOnlyList<PropertyDefinition> PropertyDefinitions => _propertyDefinitions;
 
 	/// <summary>
-	/// Gets the list of object-backed property definitions for the graph.
+	/// Gets the object-backed property definitions for the graph, in definition order.
 	/// </summary>
-	public List<ObjectPropertyDefinition> ObjectPropertyDefinitions { get; } = [];
+	/// <remarks>
+	/// Read-only for the same reason <see cref="PropertyDefinitions"/> is. Add one with
+	/// <see cref="DefineObjectProperty"/>.
+	/// </remarks>
+	public IReadOnlyList<ObjectPropertyDefinition> ObjectPropertyDefinitions => _objectPropertyDefinitions;
 
 	/// <summary>
-	/// Gets the list of array property definitions for the graph. Array properties are read-only computed values that
-	/// resolve to arrays (e.g., a list of entity IDs within a radius).
+	/// Gets the array property definitions for the graph, in definition order. Array properties are read-only computed
+	/// values that resolve to arrays (e.g., a list of entity IDs within a radius).
 	/// </summary>
-	public List<ArrayPropertyDefinition> ArrayPropertyDefinitions { get; } = [];
+	/// <remarks>
+	/// Read-only for the same reason <see cref="PropertyDefinitions"/> is. Add one with
+	/// <see cref="DefineArrayProperty"/>.
+	/// </remarks>
+	public IReadOnlyList<ArrayPropertyDefinition> ArrayPropertyDefinitions => _arrayPropertyDefinitions;
 
 	/// <summary>
-	/// Gets the list of object-backed array property definitions for the graph.
+	/// Gets the object-backed array property definitions for the graph, in definition order.
 	/// </summary>
-	public List<ObjectArrayPropertyDefinition> ObjectArrayPropertyDefinitions { get; } = [];
+	/// <remarks>
+	/// Read-only for the same reason <see cref="PropertyDefinitions"/> is. Add one with
+	/// <see cref="DefineObjectArrayProperty"/>.
+	/// </remarks>
+	public IReadOnlyList<ObjectArrayPropertyDefinition> ObjectArrayPropertyDefinitions =>
+		_objectArrayPropertyDefinitions;
 
 	internal Dictionary<StringKey, PropertyDefinition> PropertiesByName { get; } = [];
 
@@ -127,7 +152,7 @@ public class GraphVariableDefinitions
 	public void DefineProperty(StringKey name, IPropertyResolver resolver)
 	{
 		var definition = new PropertyDefinition(name, resolver);
-		PropertyDefinitions.Add(definition);
+		_propertyDefinitions.Add(definition);
 		PropertiesByName.TryAdd(name, definition);
 	}
 
@@ -139,7 +164,7 @@ public class GraphVariableDefinitions
 	public void DefineObjectProperty(StringKey name, IObjectResolver resolver)
 	{
 		var definition = new ObjectPropertyDefinition(name, resolver);
-		ObjectPropertyDefinitions.Add(definition);
+		_objectPropertyDefinitions.Add(definition);
 		ObjectPropertiesByName.TryAdd(name, definition);
 	}
 
@@ -151,7 +176,7 @@ public class GraphVariableDefinitions
 	public void DefineArrayProperty(StringKey name, IArrayPropertyResolver resolver)
 	{
 		var definition = new ArrayPropertyDefinition(name, resolver);
-		ArrayPropertyDefinitions.Add(definition);
+		_arrayPropertyDefinitions.Add(definition);
 		ArrayPropertiesByName.TryAdd(name, definition);
 	}
 
@@ -163,7 +188,7 @@ public class GraphVariableDefinitions
 	public void DefineObjectArrayProperty(StringKey name, IObjectArrayResolver resolver)
 	{
 		var definition = new ObjectArrayPropertyDefinition(name, resolver);
-		ObjectArrayPropertyDefinitions.Add(definition);
+		_objectArrayPropertyDefinitions.Add(definition);
 		ObjectArrayPropertiesByName.TryAdd(name, definition);
 	}
 
@@ -177,47 +202,37 @@ public class GraphVariableDefinitions
 	/// <see langword="false"/> otherwise.</returns>
 	public bool ValidatePropertyType(StringKey name, Type expectedType)
 	{
-		foreach (PropertyDefinition definition in PropertyDefinitions)
+		// Through the same indexes the resolve paths use, so validation and resolution can never disagree about which
+		// definition a name refers to.
+		if (PropertiesByName.TryGetValue(name, out PropertyDefinition property))
 		{
-			if (definition.Name == name)
-			{
-				return expectedType.IsAssignableFrom(definition.Resolver.ValueType);
-			}
+			return expectedType.IsAssignableFrom(property.Resolver.ValueType);
 		}
 
-		foreach (ObjectPropertyDefinition definition in ObjectPropertyDefinitions)
+		if (ObjectPropertiesByName.TryGetValue(name, out ObjectPropertyDefinition objectProperty))
 		{
-			if (definition.Name == name)
-			{
-				return expectedType.IsAssignableFrom(definition.Resolver.ValueType);
-			}
+			return expectedType.IsAssignableFrom(objectProperty.Resolver.ValueType);
 		}
 
-		foreach (ArrayPropertyDefinition definition in ArrayPropertyDefinitions)
+		if (ArrayPropertiesByName.TryGetValue(name, out ArrayPropertyDefinition arrayProperty))
 		{
-			if (definition.Name == name)
+			// expectedType should be an array type (e.g., typeof(int[])), and element type must match
+			if (expectedType.IsArray && expectedType.GetElementType() is Type elementType)
 			{
-				// expectedType should be an array type (e.g., typeof(int[])), and element type must match
-				if (expectedType.IsArray && expectedType.GetElementType() is Type elementType)
-				{
-					return elementType.IsAssignableFrom(definition.Resolver.ElementType);
-				}
-
-				return false;
+				return elementType.IsAssignableFrom(arrayProperty.Resolver.ElementType);
 			}
+
+			return false;
 		}
 
-		foreach (ObjectArrayPropertyDefinition definition in ObjectArrayPropertyDefinitions)
+		if (ObjectArrayPropertiesByName.TryGetValue(name, out ObjectArrayPropertyDefinition objectArrayProperty))
 		{
-			if (definition.Name == name)
+			if (expectedType.IsArray && expectedType.GetElementType() is Type objectElementType)
 			{
-				if (expectedType.IsArray && expectedType.GetElementType() is Type elementType)
-				{
-					return elementType.IsAssignableFrom(definition.Resolver.ElementType);
-				}
-
-				return false;
+				return objectElementType.IsAssignableFrom(objectArrayProperty.Resolver.ElementType);
 			}
+
+			return false;
 		}
 
 		foreach (VariableDefinition definition in VariableDefinitions)
