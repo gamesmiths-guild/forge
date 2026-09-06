@@ -125,14 +125,11 @@ public sealed class GraphContext
 			return false;
 		}
 
-		foreach (PropertyDefinition definition in Processor.Graph.VariableDefinitions.PropertyDefinitions)
+		if (Processor.Graph.VariableDefinitions.PropertiesByName.TryGetValue(name, out PropertyDefinition definition))
 		{
-			if (definition.Name == name)
-			{
-				Variant128 resolved = definition.Resolver.Resolve(this);
-				value = resolved.Get<T>();
-				return true;
-			}
+			Variant128 resolved = definition.Resolver.Resolve(this);
+			value = resolved.Get<T>();
+			return true;
 		}
 
 		return false;
@@ -157,13 +154,10 @@ public sealed class GraphContext
 			return false;
 		}
 
-		foreach (PropertyDefinition definition in Processor.Graph.VariableDefinitions.PropertyDefinitions)
+		if (Processor.Graph.VariableDefinitions.PropertiesByName.TryGetValue(name, out PropertyDefinition definition))
 		{
-			if (definition.Name == name)
-			{
-				value = definition.Resolver.Resolve(this);
-				return true;
-			}
+			value = definition.Resolver.Resolve(this);
+			return true;
 		}
 
 		return false;
@@ -191,17 +185,13 @@ public sealed class GraphContext
 			return true;
 		}
 
-		if (Processor is not null)
+		if (Processor is not null
+			&& Processor.Graph.VariableDefinitions.ArrayPropertiesByName.TryGetValue(
+				name,
+				out ArrayPropertyDefinition definition))
 		{
-			foreach (ArrayPropertyDefinition definition in
-				Processor.Graph.VariableDefinitions.ArrayPropertyDefinitions)
-			{
-				if (definition.Name == name)
-				{
-					values = definition.Resolver.ResolveArray(this);
-					return true;
-				}
-			}
+			values = definition.Resolver.ResolveArray(this);
+			return true;
 		}
 
 		values = null;
@@ -230,19 +220,18 @@ public sealed class GraphContext
 			return false;
 		}
 
-		foreach (ObjectPropertyDefinition definition in Processor.Graph.VariableDefinitions.ObjectPropertyDefinitions)
+		if (Processor.Graph.VariableDefinitions.ObjectPropertiesByName.TryGetValue(
+			name,
+			out ObjectPropertyDefinition definition))
 		{
-			if (definition.Name == name)
+			if (!typeof(T).IsAssignableFrom(definition.Resolver.ValueType))
 			{
-				if (!typeof(T).IsAssignableFrom(definition.Resolver.ValueType))
-				{
-					value = default!;
-					return false;
-				}
-
-				value = (T)definition.Resolver.Resolve(this)!;
-				return true;
+				value = default!;
+				return false;
 			}
+
+			value = (T)definition.Resolver.Resolve(this)!;
+			return true;
 		}
 
 		value = default!;
@@ -271,19 +260,18 @@ public sealed class GraphContext
 			return false;
 		}
 
-		foreach (ObjectPropertyDefinition definition in Processor.Graph.VariableDefinitions.ObjectPropertyDefinitions)
+		if (Processor.Graph.VariableDefinitions.ObjectPropertiesByName.TryGetValue(
+			name,
+			out ObjectPropertyDefinition definition))
 		{
-			if (definition.Name == name)
+			if (!expectedType.IsAssignableFrom(definition.Resolver.ValueType))
 			{
-				if (!expectedType.IsAssignableFrom(definition.Resolver.ValueType))
-				{
-					value = null;
-					return false;
-				}
-
-				value = definition.Resolver.Resolve(this);
-				return true;
+				value = null;
+				return false;
 			}
+
+			value = definition.Resolver.Resolve(this);
+			return true;
 		}
 
 		value = null;
@@ -306,29 +294,25 @@ public sealed class GraphContext
 			return true;
 		}
 
-		if (Processor is not null)
+		if (Processor is not null
+			&& Processor.Graph.VariableDefinitions.ObjectArrayPropertiesByName.TryGetValue(
+				name,
+				out ObjectArrayPropertyDefinition definition))
 		{
-			foreach (ObjectArrayPropertyDefinition definition in
-				Processor.Graph.VariableDefinitions.ObjectArrayPropertyDefinitions)
+			if (!typeof(T).IsAssignableFrom(definition.Resolver.ElementType))
 			{
-				if (definition.Name == name)
-				{
-					if (!typeof(T).IsAssignableFrom(definition.Resolver.ElementType))
-					{
-						values = null;
-						return false;
-					}
-
-					object?[] resolved = definition.Resolver.ResolveArray(this);
-					values = new T[resolved.Length];
-					for (int i = 0; i < resolved.Length; i++)
-					{
-						values[i] = (T)resolved[i]!;
-					}
-
-					return true;
-				}
+				values = null;
+				return false;
 			}
+
+			object?[] resolved = definition.Resolver.ResolveArray(this);
+			values = new T[resolved.Length];
+			for (int i = 0; i < resolved.Length; i++)
+			{
+				values[i] = (T)resolved[i]!;
+			}
+
+			return true;
 		}
 
 		values = null;
@@ -354,23 +338,19 @@ public sealed class GraphContext
 			return true;
 		}
 
-		if (Processor is not null)
+		if (Processor is not null
+			&& Processor.Graph.VariableDefinitions.ObjectArrayPropertiesByName.TryGetValue(
+				name,
+				out ObjectArrayPropertyDefinition definition))
 		{
-			foreach (ObjectArrayPropertyDefinition definition in
-				Processor.Graph.VariableDefinitions.ObjectArrayPropertyDefinitions)
+			if (!expectedElementType.IsAssignableFrom(definition.Resolver.ElementType))
 			{
-				if (definition.Name == name)
-				{
-					if (!expectedElementType.IsAssignableFrom(definition.Resolver.ElementType))
-					{
-						values = null;
-						return false;
-					}
-
-					values = definition.Resolver.ResolveArray(this);
-					return true;
-				}
+				values = null;
+				return false;
 			}
+
+			values = definition.Resolver.ResolveArray(this);
+			return true;
 		}
 
 		values = null;

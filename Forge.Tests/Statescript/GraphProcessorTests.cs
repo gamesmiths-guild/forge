@@ -1,6 +1,8 @@
 // Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
+using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.State;
@@ -995,5 +997,133 @@ public class GraphProcessorTests
 		definitions.ValidatePropertyType("ids", typeof(int)).Should().BeFalse();
 		definitions.ValidatePropertyType("ids", typeof(double[])).Should().BeFalse();
 		definitions.ValidatePropertyType("ids", typeof(int[])).Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolve_uses_the_first_of_two_properties_sharing_a_name()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineProperty(
+			"value",
+			new VariantResolver(new Variant128(11.0), typeof(double)));
+		graph.VariableDefinitions.DefineProperty(
+			"value",
+			new VariantResolver(new Variant128(22.0), typeof(double)));
+
+		var node = new ReadPropertyNode<double>();
+		node.BindInput(ReadPropertyNode<double>.ValueInput, "value");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.Found.Should().BeTrue();
+		node.LastReadValue.Should().Be(11.0);
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolveArray_uses_the_first_of_two_array_properties_sharing_a_name()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineArrayProperty(
+			"ids",
+			new TestArrayPropertyResolver(typeof(int), [[new Variant128(1), new Variant128(2)]]));
+		graph.VariableDefinitions.DefineArrayProperty(
+			"ids",
+			new TestArrayPropertyResolver(typeof(int), [[new Variant128(9)]]));
+
+		var node = new ReadArrayPropertyNode();
+		node.BindInput(ReadArrayPropertyNode.InputArray, "ids");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.LastReadArray.Should().BeEquivalentTo([new Variant128(1), new Variant128(2)]);
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolveObject_uses_the_first_of_two_object_properties_sharing_a_name()
+	{
+		var firstData = new EffectData("First", new DurationData(DurationType.Instant));
+		var secondData = new EffectData("Second", new DurationData(DurationType.Instant));
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectFromDataResolver(firstData));
+		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectFromDataResolver(secondData));
+
+		var node = new ReadObjectPropertyNode<Effect>();
+		node.BindInput(0, "effect");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.LastReadValue.Should().NotBeNull();
+		node.LastReadValue!.EffectData.Name.Should().Be(firstData.Name);
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolveObjectArray_uses_the_first_of_two_object_array_properties_sharing_a_name()
+	{
+		var firstData = new EffectData("First", new DurationData(DurationType.Instant));
+		var secondData = new EffectData("Second", new DurationData(DurationType.Instant));
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectArrayProperty(
+			"effects",
+			new EffectArrayFromDataResolver([firstData]));
+		graph.VariableDefinitions.DefineObjectArrayProperty(
+			"effects",
+			new EffectArrayFromDataResolver([secondData]));
+
+		var node = new ReadObjectArrayPropertyNode<Effect>();
+		node.BindInput(0, "effects");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.LastReadArray.Should().ContainSingle();
+		node.LastReadArray![0].EffectData.Name.Should().Be(firstData.Name);
+	}
+
+	[Fact]
+	[Trait("Graph", "Resolve")]
+	public void TryResolve_reports_a_name_that_is_neither_a_variable_nor_a_property()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineProperty(
+			"defined",
+			new VariantResolver(new Variant128(1.0), typeof(double)));
+
+		var node = new ReadPropertyNode<double>();
+		node.BindInput(ReadPropertyNode<double>.ValueInput, "missing");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.ExecutionCount.Should().Be(1);
+		node.Found.Should().BeFalse();
 	}
 }
