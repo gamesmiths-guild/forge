@@ -238,6 +238,58 @@ public class FixedUpdateTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 		behavior.UpdateCount.Should().Be(1);
 	}
 
+	[Fact]
+	[Trait("GraphBehavior", "FixedUpdate")]
+	public void A_behavior_may_end_its_own_instance_from_a_fixed_update()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var behavior = new SelfEndingBehavior(endOnFixedUpdate: true);
+
+		AbilityHandle handle = GrantAndActivate(entity, behavior);
+		handle.IsActive.Should().BeTrue();
+
+		// Ending an instance removes the behavior from the dictionary being walked. A graph completing on the fixed
+		// step does exactly this, so it is the ordinary case rather than an exotic one.
+		entity.Abilities.Invoking(x => x.FixedUpdateAbilities(1.0 / 60.0)).Should().NotThrow();
+
+		handle.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("GraphBehavior", "FixedUpdate")]
+	public void A_behavior_may_clear_its_own_ability_from_a_fixed_update()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var behavior = new SelfClearingBehavior(entity, clearOnFixedUpdate: true);
+
+		AbilityHandle handle = GrantAndActivate(entity, behavior);
+		handle.IsActive.Should().BeTrue();
+		entity.Abilities.GrantedAbilities.Should().ContainSingle();
+
+		// Clearing removes the handle from the granted set being walked.
+		entity.Abilities.Invoking(x => x.FixedUpdateAbilities(1.0 / 60.0)).Should().NotThrow();
+
+		entity.Abilities.GrantedAbilities.Should().BeEmpty("the clear has to actually remove, or this proves nothing");
+	}
+
+	[Fact]
+	[Trait("GraphBehavior", "FixedUpdate")]
+	public void A_behavior_may_grant_another_ability_from_a_fixed_update()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var granted = new AbilityData("GrantedDuringFixedUpdate");
+		var behavior = new GrantingBehavior(entity, granted, grantOnFixedUpdate: true);
+
+		AbilityHandle handle = GrantAndActivate(entity, behavior);
+		handle.IsActive.Should().BeTrue();
+
+		// Adding to the granted set is what still invalidates an enumerator - a graph node granting an ability is the
+		// ordinary way to reach it.
+		entity.Abilities.Invoking(x => x.FixedUpdateAbilities(1.0 / 60.0)).Should().NotThrow();
+
+		entity.Abilities.GrantedAbilities.Should().HaveCount(2);
+	}
+
 	private static GraphProcessor StartGraphWith(TrackingStateNode node)
 	{
 		var graph = new Graph();

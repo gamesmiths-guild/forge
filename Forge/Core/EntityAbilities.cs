@@ -17,6 +17,11 @@ public class EntityAbilities(IForgeEntity owner)
 {
 	private readonly Dictionary<Ability, List<IAbilityGrantSource>> _grantSources = [];
 	private readonly HashSet<AbilityHandle> _grantedAbilities = [];
+
+	// Reused by both update rails so the per-frame walk allocates nothing. They never overlap: a host drives one and
+	// then the other, and neither re-enters itself.
+	private readonly List<AbilityHandle> _updateBuffer = [];
+
 	private Action<Ability>? _removeAbility;
 	private Action<Ability>? _inhibitAbility;
 
@@ -87,8 +92,9 @@ public class EntityAbilities(IForgeEntity owner)
 	/// Read-only: the manager keeps this set in step with the grant sources behind each ability, so grant and removal
 	/// go through <see cref="GrantAbilityPermanently"/>, <c>TryGrantAbilityAndActivateOnce</c>,
 	/// <see cref="RevokeAbility"/>, <see cref="ClearAbility"/> and the effect components rather than through this set.
-	/// The collection is live, so a handle removed while it is being enumerated invalidates the enumeration; copy it
-	/// first when the loop body can remove abilities.
+	/// The collection is live, so copy it first when the loop body can grant or clear abilities. Granting is the case
+	/// that throws: adding invalidates any open enumerator, while removing from a <see cref="HashSet{T}"/> no longer
+	/// does. Both are worth copying for, since a loop that skips whatever a removal moved is wrong just as quietly.
 	/// </remarks>
 	public IReadOnlyCollection<AbilityHandle> GrantedAbilities => _grantedAbilities;
 
@@ -503,9 +509,18 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
 	public void FixedUpdateAbilities(double deltaTime)
 	{
-		foreach (AbilityHandle handle in GrantedAbilities)
+		BufferGrantedAbilities();
+
+		for (int i = 0; i < _updateBuffer.Count; i++)
 		{
-			handle.Ability?.FixedUpdateBehaviors(deltaTime);
+			AbilityHandle handle = _updateBuffer[i];
+
+			// Re-checked because an earlier behavior in this same walk may have cleared this ability, and an ability
+			// that is no longer granted should not be advanced.
+			if (_grantedAbilities.Contains(handle))
+			{
+				handle.Ability?.FixedUpdateBehaviors(deltaTime);
+			}
 		}
 	}
 
@@ -610,6 +625,15 @@ public class EntityAbilities(IForgeEntity owner)
 
 	// Snapshots the granted abilities and seeds the per-ability failure flags for a tag-driven activation. The snapshot
 	// keeps the indices stable while activations grant or remove other abilities.
+	// Snapshots the granted set before an update walks it. A behavior is free to grant, revoke or clear abilities from
+	// inside its own update - a graph node granting one is the ordinary way to reach it - and adding to the set
+	// invalidates any enumerator open over it.
+	private void BufferGrantedAbilities()
+	{
+		_updateBuffer.Clear();
+		_updateBuffer.AddRange(_grantedAbilities);
+	}
+
 	private bool TryBeginActivationByTag(
 		TagContainer tagsToActivate,
 		out AbilityHandle[] handles,

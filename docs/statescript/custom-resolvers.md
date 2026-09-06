@@ -390,17 +390,19 @@ This means a graph variable with the same name as a property definition will sha
 `Resolve` runs every time a node reads the bound property, which for a resolver bound inside an array lambda means once per element. If a resolver is expensive — a spatial query, a scan of the scene — and you know its answer cannot change within a single update pass, you can cache it against `GraphContext.UpdateStamp`:
 
 ```csharp
-private ulong _stamp;
+private GraphContext? _cachedContext;
+private ulong _cachedStamp;
 private Variant128 _cached;
 
 public Variant128 Resolve(GraphContext graphContext)
 {
-    if (graphContext.UpdateStamp == _stamp)
+    if (ReferenceEquals(_cachedContext, graphContext) && _cachedStamp == graphContext.UpdateStamp)
     {
         return _cached;
     }
 
-    _stamp = graphContext.UpdateStamp;
+    _cachedContext = graphContext;
+    _cachedStamp = graphContext.UpdateStamp;
     _cached = /* the expensive computation */;
     return _cached;
 }
@@ -408,6 +410,8 @@ public Variant128 Resolve(GraphContext graphContext)
 
 `UpdateStamp` is a monotonic counter of update passes, advanced by the processor on both the frame and fixed rails so the two never share a value.
 
-**Only the resolver can decide whether this is safe, and for most resolvers it is not.** Nodes also run in cascades *between* passes — an event listener firing, an ability activating, one node's message reaching the next — so a value held for a whole pass can be read after a Set Variable or a Set Position that changed what it was computed from. Anything reading graph variables, entity state, or world transforms is a poor candidate. This is why nothing in the framework caches property definitions on your behalf.
+**The context is part of the key, and leaving it out is the mistake that looks like it works.** Resolver instances belong to the shared `Graph`, not to one execution of it, so every processor running that graph calls the *same* resolver object with its *own* context — and two contexts reach the same numeric stamp at different moments. Keyed on the stamp alone, one entity's answer is served to another. The context check is also what makes the first call compute: a stamp-only cache starts with `_cachedStamp` and `UpdateStamp` both at zero, so the very first resolve — during `StartGraph`, before any update pass has run — returns an uncomputed value.
 
-`UpdateStamp` is **not a clock and not a network tick**. It is local to one graph execution, restarts at zero each time the graph starts, and only counts up — a shared simulation tick has to mean the same number on every peer and has to be settable, because reconciliation rewinds it. Read a network tick from your networking layer, never from here.
+**Only the resolver can decide whether this is safe at all, and for most resolvers it is not.** Nodes also run in cascades *between* passes — an event listener firing, an ability activating, one node's message reaching the next — so a value held for a whole pass can be read after a Set Variable or a Set Position that changed what it was computed from. Anything reading graph variables, entity state, or world transforms is a poor candidate. This is why nothing in the framework caches property definitions on your behalf.
+
+`UpdateStamp` is **not a clock and not a network tick**. It is local to one `GraphContext`, counts up for that context's whole life and is never reset — not even when a reusable `GraphProcessor` is started again, since resetting would let a cache entry from the previous execution match a stamp from the new one. A shared simulation tick is the opposite on both counts: it has to mean the same number on every peer, and it has to be settable, because reconciliation rewinds it. Read a network tick from your networking layer, never from here.

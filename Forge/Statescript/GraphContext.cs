@@ -58,11 +58,19 @@ public sealed class GraphContext
 	/// exist to keep apart. One counter rather than one per rail for the same reason: a resolver cannot tell which
 	/// rail it is being evaluated on, since nodes also run in cascades that begin on either or on neither, so a
 	/// per-rail counter would be read unchanged across passes that are not the same pass.</para>
-	/// <para><b>This is a cache epoch, not a clock, and in particular it is not a network tick.</b> It is local to one
-	/// graph execution, starts at zero every time a graph starts, and only ever counts up. A simulation tick shared
-	/// between peers is none of those things - it has to mean the same number on every machine and has to be settable,
-	/// because reconciliation rewinds it. A stamp that could go backwards would serve a value cached before the rewind
-	/// as though it were current.</para>
+	/// <para><b>It counts up for the whole life of this context and is never reset</b>, including when a reusable
+	/// <see cref="GraphProcessor"/> is started again - the processor keeps its context, so the count carries across
+	/// restarts. That is deliberate rather than an oversight: resetting to zero would let a resolver holding a cache
+	/// entry from the previous execution match a stamp from the new one and serve a value computed before the
+	/// restart.</para>
+	/// <para><b>It is a cache epoch, not a clock, and in particular it is not a network tick.</b> It is local to one
+	/// context and only ever counts up. A simulation tick shared between peers is neither - it has to mean the same
+	/// number on every machine and has to be settable, because reconciliation rewinds it. A stamp that could go
+	/// backwards would serve a value cached before the rewind as though it were current, which is the same reason it
+	/// is not reset.</para>
+	/// <para>Because the counter is per context and resolver instances belong to the shared <see cref="Graph"/>, a
+	/// resolver caching against it must key on the context as well: two processors over one graph reach the same
+	/// numeric stamp at different moments.</para>
 	/// <para><b>It is also not a licence to memoize a property definition on.</b> Every resolver bound to a node input
 	/// is defined as a property, and nodes run in cascades <em>between</em> passes - an event listener firing, an
 	/// ability activating - so a value held for a whole pass would be read after a Set Variable or a Set Position that

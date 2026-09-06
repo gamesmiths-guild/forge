@@ -352,6 +352,142 @@ internal sealed class FrameOnlyBehavior : IAbilityBehavior
 }
 
 /// <summary>
+/// An ability behavior that ends its own instance from inside an update, which is what a graph completing on that
+/// rail does. Ending removes the behavior from the dictionary the dispatch loop is walking.
+/// </summary>
+/// <param name="endOnFixedUpdate">Whether to end from the fixed hook rather than the frame hook.</param>
+internal sealed class SelfEndingBehavior(bool endOnFixedUpdate) : IAbilityBehavior
+{
+	private readonly bool _endOnFixedUpdate = endOnFixedUpdate;
+
+	private AbilityBehaviorContext? _context;
+
+	public void OnStarted(AbilityBehaviorContext context)
+	{
+		_context = context;
+	}
+
+	public void OnEnded(AbilityBehaviorContext context)
+	{
+	}
+
+	public void OnUpdate(double deltaTime)
+	{
+		if (!_endOnFixedUpdate)
+		{
+			_context?.InstanceHandle.End();
+		}
+	}
+
+	public void OnFixedUpdate(double deltaTime)
+	{
+		if (_endOnFixedUpdate)
+		{
+			_context?.InstanceHandle.End();
+		}
+	}
+}
+
+/// <summary>
+/// An ability behavior that clears its own ability from inside an update, removing the handle from the granted set the
+/// entity-level dispatch loop is walking.
+/// </summary>
+/// <param name="entity">The entity whose ability is cleared.</param>
+/// <param name="clearOnFixedUpdate">Whether to clear from the fixed hook rather than the frame hook.</param>
+internal sealed class SelfClearingBehavior(TestEntity entity, bool clearOnFixedUpdate) : IAbilityBehavior
+{
+	private readonly TestEntity _entity = entity;
+	private readonly bool _clearOnFixedUpdate = clearOnFixedUpdate;
+
+	private AbilityBehaviorContext? _context;
+
+	public void OnStarted(AbilityBehaviorContext context)
+	{
+		_context = context;
+	}
+
+	public void OnEnded(AbilityBehaviorContext context)
+	{
+	}
+
+	public void OnUpdate(double deltaTime)
+	{
+		if (!_clearOnFixedUpdate)
+		{
+			Clear();
+		}
+	}
+
+	public void OnFixedUpdate(double deltaTime)
+	{
+		if (_clearOnFixedUpdate)
+		{
+			Clear();
+		}
+	}
+
+	private void Clear()
+	{
+		if (_context is not null)
+		{
+			_entity.Abilities.ClearAbility(_context.AbilityHandle);
+		}
+	}
+}
+
+/// <summary>
+/// An ability behavior that grants a second ability from inside an update, adding to the granted set the entity-level
+/// dispatch loop is walking. Adding invalidates an enumerator where removing no longer does.
+/// </summary>
+/// <param name="entity">The entity the new ability is granted to.</param>
+/// <param name="granted">The ability to grant.</param>
+/// <param name="grantOnFixedUpdate">Whether to grant from the fixed hook rather than the frame hook.</param>
+internal sealed class GrantingBehavior(TestEntity entity, AbilityData granted, bool grantOnFixedUpdate)
+	: IAbilityBehavior
+{
+	private readonly TestEntity _entity = entity;
+	private readonly AbilityData _granted = granted;
+	private readonly bool _grantOnFixedUpdate = grantOnFixedUpdate;
+
+	private bool _done;
+
+	public void OnStarted(AbilityBehaviorContext context)
+	{
+	}
+
+	public void OnEnded(AbilityBehaviorContext context)
+	{
+	}
+
+	public void OnUpdate(double deltaTime)
+	{
+		if (!_grantOnFixedUpdate)
+		{
+			Grant();
+		}
+	}
+
+	public void OnFixedUpdate(double deltaTime)
+	{
+		if (_grantOnFixedUpdate)
+		{
+			Grant();
+		}
+	}
+
+	private void Grant()
+	{
+		if (_done)
+		{
+			return;
+		}
+
+		_done = true;
+		_entity.Abilities.GrantAbilityPermanently(_granted, 1, LevelComparison.Higher, null);
+	}
+}
+
+/// <summary>
 /// A state node that deactivates another one from inside its own fixed update, for the case where the set of active
 /// nodes changes while it is being walked.
 /// </summary>

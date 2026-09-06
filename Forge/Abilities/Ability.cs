@@ -41,6 +41,10 @@ internal sealed class Ability
 
 	private readonly Dictionary<AbilityInstance, BehaviorBinding> _behaviors = [];
 
+	// Reused by both update rails so the per-frame walk allocates nothing. They never overlap: a host drives one and
+	// then the other, and neither re-enters itself.
+	private readonly List<AbilityInstance> _behaviorBuffer = [];
+
 	private readonly Action<TagContainer>? _tagChangedHandler;
 
 	private readonly EventSubscriptionToken? _eventSubscriptionToken;
@@ -341,9 +345,16 @@ internal sealed class Ability
 
 	internal void FixedUpdateBehaviors(double deltaTime)
 	{
-		foreach (BehaviorBinding binding in _behaviors.Values)
+		BufferBehaviorInstances();
+
+		for (int i = 0; i < _behaviorBuffer.Count; i++)
 		{
-			binding.Behavior.OnFixedUpdate(deltaTime);
+			// Looked up rather than snapshotted, so an instance ended earlier in this same walk - by itself or by
+			// another behavior - is skipped instead of being advanced after it finished.
+			if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
+			{
+				binding.Behavior.OnFixedUpdate(deltaTime);
+			}
 		}
 	}
 
@@ -590,6 +601,15 @@ internal sealed class Ability
 		ActiveEffect? activeEffect = _activeCooldownHandles?[index]?.ActiveEffect;
 
 		return activeEffect ?? Owner.EffectsManager.FindActiveEffectByData(_cooldownEffects![index].EffectData);
+	}
+
+	// Snapshots the instances before an update walks their behaviors. A behavior may start or end an instance from
+	// inside its own update - a graph completing on this rail ends its own - and starting one adds to the dictionary,
+	// which invalidates any enumerator open over it.
+	private void BufferBehaviorInstances()
+	{
+		_behaviorBuffer.Clear();
+		_behaviorBuffer.AddRange(_behaviors.Keys);
 	}
 
 	private bool CanCommitCooldown()
