@@ -41,8 +41,8 @@ internal sealed class Ability
 
 	private readonly Dictionary<AbilityInstance, BehaviorBinding> _behaviors = [];
 
-	// Reused by both update rails so the per-frame walk allocates nothing, which makes the walk non-re-entrant. Nothing
-	// in the library re-enters it; a host must not drive an update of this same ability from inside a behavior.
+	// Reused by both update rails so the per-frame walk allocates nothing. Sharing one list is what makes the walk
+	// non-re-entrant, which BufferBehaviorInstances enforces rather than leaves to trust.
 	private readonly List<AbilityInstance> _behaviorBuffer = [];
 
 	private readonly Action<TagContainer>? _tagChangedHandler;
@@ -50,6 +50,8 @@ internal sealed class Ability
 	private readonly EventSubscriptionToken? _eventSubscriptionToken;
 
 	private AbilityInstance? _persistentInstance;
+
+	private bool _updating;
 
 	internal event Action<Ability>? OnAbilityDeactivated;
 
@@ -337,29 +339,49 @@ internal sealed class Ability
 
 	internal void UpdateBehaviors(double deltaTime)
 	{
-		BufferBehaviorInstances();
-
-		for (int i = 0; i < _behaviorBuffer.Count; i++)
+		if (!BufferBehaviorInstances())
 		{
-			if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
+			return;
+		}
+
+		try
+		{
+			for (int i = 0; i < _behaviorBuffer.Count; i++)
 			{
-				binding.Behavior.OnUpdate(deltaTime);
+				if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
+				{
+					binding.Behavior.OnUpdate(deltaTime);
+				}
 			}
+		}
+		finally
+		{
+			_updating = false;
 		}
 	}
 
 	internal void FixedUpdateBehaviors(double deltaTime)
 	{
-		BufferBehaviorInstances();
-
-		for (int i = 0; i < _behaviorBuffer.Count; i++)
+		if (!BufferBehaviorInstances())
 		{
-			// Looked up rather than snapshotted, so an instance ended earlier in this same walk - by itself or by
-			// another behavior - is skipped instead of being advanced after it finished.
-			if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
+			return;
+		}
+
+		try
+		{
+			for (int i = 0; i < _behaviorBuffer.Count; i++)
 			{
-				binding.Behavior.OnFixedUpdate(deltaTime);
+				// Looked up rather than snapshotted, so an instance ended earlier in this same walk - by itself or by
+				// another behavior - is skipped instead of being advanced after it finished.
+				if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
+				{
+					binding.Behavior.OnFixedUpdate(deltaTime);
+				}
 			}
+		}
+		finally
+		{
+			_updating = false;
 		}
 	}
 
@@ -611,10 +633,29 @@ internal sealed class Ability
 	// Snapshots the instances before an update walks their behaviors. A behavior may start or end an instance from
 	// inside its own update - a graph completing on this rail ends its own - and starting one adds to the dictionary,
 	// which invalidates any enumerator open over it.
-	private void BufferBehaviorInstances()
+	//
+	// What it may not do is drive another update of this same ability, because the buffer is one list reused per call:
+	// a nested pass would clear and refill the list the outer walk is still indexing, advancing some behaviors twice
+	// and skipping others. Refused rather than tolerated, so a validation-disabled build drops the nested pass instead
+	// of miscounting time.
+	private bool BufferBehaviorInstances()
 	{
+		if (_updating)
+		{
+			Validation.Fail(
+				$"An update of ability '{AbilityData.Name}' was re-entered while one was already running, which " +
+				"would corrupt the walk in progress. Drive ability updates from the game loop, never from inside a " +
+				"behavior.");
+
+			return false;
+		}
+
+		_updating = true;
+
 		_behaviorBuffer.Clear();
 		_behaviorBuffer.AddRange(_behaviors.Keys);
+
+		return true;
 	}
 
 	private bool CanCommitCooldown()

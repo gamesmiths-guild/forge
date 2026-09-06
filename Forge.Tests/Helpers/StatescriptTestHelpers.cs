@@ -352,6 +352,67 @@ internal sealed class FrameOnlyBehavior : IAbilityBehavior
 }
 
 /// <summary>
+/// A state node that runs an arbitrary callback from its own update, so a test can re-enter the processor that is
+/// walking it.
+/// </summary>
+/// <param name="onUpdate">What to run from the frame update.</param>
+internal sealed class CallbackStateNode(Action onUpdate) : StateNode<StateNodeContext>
+{
+	private readonly Action _onUpdate = onUpdate;
+
+	public int UpdateCount { get; private set; }
+
+	protected override void OnActivate(GraphContext graphContext)
+	{
+	}
+
+	protected override void OnDeactivate(GraphContext graphContext)
+	{
+	}
+
+	protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+	{
+		UpdateCount++;
+		_onUpdate();
+	}
+}
+
+/// <summary>
+/// An ability behavior that drives another update of its own entity from inside one, which is the misuse the
+/// re-entrancy guard exists to catch.
+/// </summary>
+/// <param name="entity">The entity whose update is re-entered.</param>
+internal sealed class ReenteringBehavior(TestEntity entity) : IAbilityBehavior
+{
+	private readonly TestEntity _entity = entity;
+
+	private bool _reentered;
+
+	public int UpdateCount { get; private set; }
+
+	public void OnStarted(AbilityBehaviorContext context)
+	{
+	}
+
+	public void OnEnded(AbilityBehaviorContext context)
+	{
+	}
+
+	public void OnUpdate(double deltaTime)
+	{
+		UpdateCount++;
+
+		if (_reentered)
+		{
+			return;
+		}
+
+		_reentered = true;
+		_entity.Abilities.UpdateAbilities(deltaTime);
+	}
+}
+
+/// <summary>
 /// An ability behavior that ends its own instance from inside an update, which is what a graph completing on that
 /// rail does. Ending removes the behavior from the dictionary the dispatch loop is walking.
 /// </summary>

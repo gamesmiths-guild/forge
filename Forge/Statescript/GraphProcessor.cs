@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Core;
+
 namespace Gamesmiths.Forge.Statescript;
 
 /// <summary>
@@ -16,6 +18,8 @@ namespace Gamesmiths.Forge.Statescript;
 public class GraphProcessor
 {
 	private readonly List<Node> _updateBuffer = [];
+
+	private bool _updating;
 
 	/// <summary>
 	/// Gets the graph that this processor is responsible for executing.
@@ -86,9 +90,16 @@ public class GraphProcessor
 			return;
 		}
 
-		for (int i = 0; i < _updateBuffer.Count; i++)
+		try
 		{
-			_updateBuffer[i].Update(deltaTime, GraphContext);
+			for (int i = 0; i < _updateBuffer.Count; i++)
+			{
+				_updateBuffer[i].Update(deltaTime, GraphContext);
+			}
+		}
+		finally
+		{
+			_updating = false;
 		}
 	}
 
@@ -108,9 +119,16 @@ public class GraphProcessor
 			return;
 		}
 
-		for (int i = 0; i < _updateBuffer.Count; i++)
+		try
 		{
-			_updateBuffer[i].FixedUpdate(deltaTime, GraphContext);
+			for (int i = 0; i < _updateBuffer.Count; i++)
+			{
+				_updateBuffer[i].FixedUpdate(deltaTime, GraphContext);
+			}
+		}
+		finally
+		{
+			_updating = false;
 		}
 	}
 
@@ -168,6 +186,23 @@ public class GraphProcessor
 		{
 			return false;
 		}
+
+		// The buffer is one list reused per call, so a nested pass would clear and refill the list the outer walk is
+		// still indexing: some nodes updated twice, others skipped, silently and depending on set order. Nesting is
+		// never useful here - updates cascade downward through messages, not by re-driving the graph - so it is
+		// refused outright rather than made to work. Refusing also keeps a validation-disabled build safe: it drops
+		// the nested pass instead of miscounting everyone's time.
+		if (_updating)
+		{
+			Validation.Fail(
+				"A graph update was re-entered while one was already running, which would corrupt the walk in " +
+				"progress. Drive UpdateGraph and FixedUpdateGraph from the host's own callbacks, never from inside " +
+				"a node or an ability behavior.");
+
+			return false;
+		}
+
+		_updating = true;
 
 		GraphContext.UpdateStamp++;
 
