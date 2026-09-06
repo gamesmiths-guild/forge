@@ -491,9 +491,16 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
 	public void UpdateAbilities(double deltaTime)
 	{
-		foreach (AbilityHandle handle in GrantedAbilities)
+		BufferGrantedAbilities();
+
+		for (int i = 0; i < _updateBuffer.Count; i++)
 		{
-			handle.Ability?.UpdateBehaviors(deltaTime);
+			AbilityHandle handle = _updateBuffer[i];
+
+			if (_grantedAbilities.Contains(handle))
+			{
+				handle.Ability?.UpdateBehaviors(deltaTime);
+			}
 		}
 	}
 

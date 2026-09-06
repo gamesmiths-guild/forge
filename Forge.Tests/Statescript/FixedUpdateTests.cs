@@ -290,6 +290,38 @@ public class FixedUpdateTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 		entity.Abilities.GrantedAbilities.Should().HaveCount(2);
 	}
 
+	[Fact]
+	[Trait("GraphBehavior", "Update")]
+	public void A_behavior_may_grant_another_ability_from_a_frame_update()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var granted = new AbilityData("GrantedDuringFrameUpdate");
+		var behavior = new GrantingBehavior(entity, granted, grantOnFixedUpdate: false);
+
+		AbilityHandle handle = GrantAndActivate(entity, behavior);
+		handle.IsActive.Should().BeTrue();
+
+		// The frame rail has always had the same hazard; it was simply never covered.
+		entity.Abilities.Invoking(x => x.UpdateAbilities(0.016)).Should().NotThrow();
+
+		entity.Abilities.GrantedAbilities.Should().HaveCount(2);
+	}
+
+	[Fact]
+	[Trait("GraphBehavior", "Update")]
+	public void A_behavior_may_end_its_own_instance_from_a_frame_update()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var behavior = new SelfEndingBehavior(endOnFixedUpdate: false);
+
+		AbilityHandle handle = GrantAndActivate(entity, behavior);
+		handle.IsActive.Should().BeTrue();
+
+		entity.Abilities.Invoking(x => x.UpdateAbilities(0.016)).Should().NotThrow();
+
+		handle.IsActive.Should().BeFalse();
+	}
+
 	private static GraphProcessor StartGraphWith(TrackingStateNode node)
 	{
 		var graph = new Graph();

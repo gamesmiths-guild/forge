@@ -337,9 +337,14 @@ internal sealed class Ability
 
 	internal void UpdateBehaviors(double deltaTime)
 	{
-		foreach (BehaviorBinding binding in _behaviors.Values)
+		BufferBehaviorInstances();
+
+		for (int i = 0; i < _behaviorBuffer.Count; i++)
 		{
-			binding.Behavior.OnUpdate(deltaTime);
+			if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
+			{
+				binding.Behavior.OnUpdate(deltaTime);
+			}
 		}
 	}
 
