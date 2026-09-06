@@ -25,7 +25,7 @@ When the graph starts:
 4. **Condition nodes** evaluate and route the message to the True or False output.
 5. **State nodes** activate when they receive a message and remain active over time.
 
-Once all synchronous propagation is complete, only **state nodes** remain active. These nodes are updated each frame via `GraphProcessor.UpdateGraph(deltaTime)`. When a state node deactivates (e.g., a timer expires), it may emit messages that trigger further actions, conditions, or other state nodes.
+Once all synchronous propagation is complete, only **state nodes** remain active. These nodes are updated each frame via `GraphProcessor.UpdateGraph(deltaTime)`, and on each fixed step via `GraphProcessor.FixedUpdateGraph(deltaTime)`. When a state node deactivates (e.g., a timer expires), it may emit messages that trigger further actions, conditions, or other state nodes.
 
 **The graph completes when no state nodes remain active.**
 
@@ -88,7 +88,7 @@ When a filter needs three states rather than two, use a separate explicit flag i
 Statescript integrates with the Abilities system through `GraphAbilityBehavior`:
 
 1. When the ability **activates**, the graph starts processing.
-2. Each frame, `OnUpdate(deltaTime)` drives `GraphProcessor.UpdateGraph(deltaTime)`.
+2. Each frame, `OnUpdate(deltaTime)` drives `GraphProcessor.UpdateGraph(deltaTime)`; each fixed step, `OnFixedUpdate(deltaTime)` drives `GraphProcessor.FixedUpdateGraph(deltaTime)`.
 3. When the graph **completes** or an **Exit node** is reached, the ability instance ends.
 4. If the ability is **canceled**, the graph is stopped and all active nodes are disabled.
 
