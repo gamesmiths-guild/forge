@@ -63,7 +63,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <remarks>
 	/// The manager-wide counterpart of <see cref="IEffectComponent.OnEffectExecuted"/>: only instant and periodic
 	/// effects execute, and a periodic effect raises it on every tick. The execution has already changed the base
-	/// values by this point, so handlers read post-execution attributes.
+	/// values by this point, so handlers read post-execution attributes, and its cues have already fired, so a handler
+	/// that applies further effects to the owner cannot disturb what they report.
 	/// </remarks>
 	public event Action<EffectEvaluatedData>? OnEffectExecuted;
 
@@ -374,6 +375,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		EffectEvaluatedData executedEffectEvaluatedData,
 		IEffectComponent[]? componentInstances)
 	{
+		// Cues read the attribute deltas still pending from this execution, and a hook can land another effect on the
+		// owner — a raised event activating an ability that commits its cost — whose own application flushes them.
+		// Reading the cues first keeps them describing this execution alone.
+		_cuesManager.ExecuteCues(in executedEffectEvaluatedData);
+
 		foreach (IEffectComponent component in componentInstances
 			?? executedEffectEvaluatedData.Effect.EffectData.EffectComponents)
 		{
@@ -381,8 +387,6 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		}
 
 		OnEffectExecuted?.Invoke(executedEffectEvaluatedData);
-
-		_cuesManager.ExecuteCues(in executedEffectEvaluatedData);
 	}
 
 	internal void OnActiveEffectUnapplied_InternalCall(ActiveEffect removedEffect, EffectRemovalReason reason)

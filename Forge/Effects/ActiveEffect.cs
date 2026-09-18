@@ -548,14 +548,16 @@ internal sealed class ActiveEffect
 
 		Apply(reApplication: true);
 
-		EffectEvaluatedData.Target.EffectsManager.OnActiveEffectChanged_InternalCall(this);
-
 		EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
 
+		// Same order as an execution: the cues read this re-application's pending deltas before a changed hook — a
+		// stack threshold applying its effects, say — can flush them by landing another effect on the target.
 		if (!Effect.EffectData.SuppressStackingCues || !isStackingCall)
 		{
 			EffectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData);
 		}
+
+		EffectEvaluatedData.Target.EffectsManager.OnActiveEffectChanged_InternalCall(this);
 
 		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 	}
