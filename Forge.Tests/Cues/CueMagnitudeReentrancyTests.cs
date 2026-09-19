@@ -18,12 +18,13 @@ using static Gamesmiths.Forge.Tests.Helpers.TagsAndCuesFixture;
 namespace Gamesmiths.Forge.Tests.Cues;
 
 /// <summary>
-/// An <see cref="CueMagnitudeType.AttributeValueChange"/> cue reads the deltas an effect has left pending on its
-/// target, and any effect landing on that same target flushes them. A hook that runs between the effect's attribute
-/// writes and its cues — an executed hook raising an event that activates an ability, a changed hook applying
-/// threshold effects — can therefore land such an effect, and the cue must still report what its own effect did.
-/// The cue handlers themselves are arbitrary code too, so they keep running after the hooks: reading early is what
-/// protects the magnitudes, not dispatching early.
+/// An <see cref="CueMagnitudeType.AttributeValueChange"/> cue and the modifier-success check read the changes the
+/// effect's own operation made to its target, tallied apart from every other operation on that entity. A hook that
+/// runs between the effect's attribute writes and its cues — an executed hook raising an event that activates an
+/// ability, a changed hook applying threshold effects — can land another effect on the same target, and neither that
+/// effect's cues nor the original's may read each other's changes. The cue handlers themselves are arbitrary code
+/// too, so they keep running after the hooks: closing the tally early is what protects the magnitudes, not
+/// dispatching early.
 /// </summary>
 /// <param name="tagsAndCuesFixture">The fixture providing the <see cref="TagsManager"/> and <see cref="CuesManager"/>.
 /// </param>
@@ -31,10 +32,14 @@ public class CueMagnitudeReentrancyTests(TagsAndCuesFixture tagsAndCuesFixture) 
 {
 	private const string CueAttribute = "TestAttributeSet.Attribute90";
 	private const string SideAttribute = "TestAttributeSet.Attribute1";
+	private const string KeptAttribute = "TestAttributeSet.Attribute1000";
+	private const string ArrivingAttribute = "VitalAttributeSet.CurrentHealth";
 
 	private readonly TagsManager _tagsManager = tagsAndCuesFixture.TagsManager;
 	private readonly CuesManager _cuesManager = tagsAndCuesFixture.CuesManager;
 	private readonly TestCue _cue = tagsAndCuesFixture.TestCueInstances[0];
+	private readonly TestCue _sideCue = tagsAndCuesFixture.TestCueInstances[1];
+	private readonly TestCue _otherCue = tagsAndCuesFixture.TestCueInstances[2];
 
 	[Fact]
 	[Trait("Execute", null)]
@@ -134,12 +139,96 @@ public class CueMagnitudeReentrancyTests(TagsAndCuesFixture tagsAndCuesFixture) 
 		}
 	}
 
-	private static Effect CreateSideEffect(TestEntity target)
+	[Fact]
+	[Trait("Execute", null)]
+	public void A_nested_effects_cues_read_the_changes_of_its_own_execution_and_not_the_outer_ones()
 	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		_cue.Reset();
+		_sideCue.Reset();
+		_otherCue.Reset();
+
+		// The side effect lands while the outer hit's change to Attribute90 is still pending on the entity. Its cue on
+		// that attribute must read nothing, and only its cue on the attribute it touched must read its own change.
+		target.Events.Subscribe(
+			EventTag(),
+			_ => target.EffectsManager.ApplyEffect(CreateSideEffect(
+				target,
+				CreateCue("test.cue2"),
+				CreateCue("test.cue3", SideAttribute))));
+
+		target.EffectsManager.ApplyEffect(CreateInstantEffect(target));
+
+		_cue.ExecuteData.Value.Should().Be(-10);
+		_sideCue.ExecuteData.Count.Should().Be(1);
+		_sideCue.ExecuteData.Value.Should().Be(0);
+		_otherCue.ExecuteData.Count.Should().Be(1);
+		_otherCue.ExecuteData.Value.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Execute", null)]
+	public void Modifier_success_is_judged_on_the_effects_own_execution()
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		_cue.Reset();
+		_sideCue.Reset();
+
+		// A nested effect whose modifier changes nothing must not have its cues fired by the outer hit's pending
+		// change.
+		target.Events.Subscribe(
+			EventTag(),
+			_ => target.EffectsManager.ApplyEffect(CreateSideEffect(
+				target,
+				CreateCue("test.cue2"),
+				magnitude: 0,
+				requireModifierSuccess: true)));
+
+		target.EffectsManager.ApplyEffect(CreateInstantEffect(target));
+
+		_cue.ExecuteData.Value.Should().Be(-10);
+		_sideCue.ExecuteData.Count.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Update", null)]
+	public void Update_cues_after_an_attribute_set_arrives_report_what_the_effect_now_contributes()
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		_cue.Reset();
+		_sideCue.Reset();
+
+		// Applied while the entity lacks the set, so only the kept attribute is modified at first.
+		target.EffectsManager.ApplyEffect(CreateCrossSetEffect(target));
+
+		target.Attributes.AddAttributeSet(new VitalAttributeSet());
+
+		// The arriving attribute takes the effect's full modifier; the kept one is unapplied and re-applied, which nets
+		// to nothing. Both are read after every effect was rebuilt and the attributes flushed.
+		target.Attributes[ArrivingAttribute].CurrentValue.Should().Be(90);
+		_cue.UpdateData.Count.Should().Be(1);
+		_cue.UpdateData.Value.Should().Be(-10);
+		_sideCue.UpdateData.Count.Should().Be(1);
+		_sideCue.UpdateData.Value.Should().Be(0);
+	}
+
+	private static Effect CreateSideEffect(
+		TestEntity target,
+		CueData? cue = null,
+		CueData? otherCue = null,
+		float magnitude = 1,
+		bool requireModifierSuccess = false)
+	{
+		CueTriggerRequirement requirement = requireModifierSuccess
+			? CueTriggerRequirement.OnExecute
+			: CueTriggerRequirement.None;
+
 		var effectData = new EffectData(
 			"Side Effect",
 			new DurationData(DurationType.Instant),
-			[CreateModifier(SideAttribute, 1)]);
+			[CreateModifier(SideAttribute, magnitude)],
+			requireModifierSuccessToTriggerCue: requirement,
+			cues: [.. new[] { cue, otherCue }.OfType<CueData>()]);
 
 		return new Effect(effectData, new EffectOwnership(target, target));
 	}
@@ -150,6 +239,37 @@ public class CueMagnitudeReentrancyTests(TagsAndCuesFixture tagsAndCuesFixture) 
 			attribute,
 			ModifierOperation.FlatBonus,
 			new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(magnitude)));
+	}
+
+	private static CueData CreateCue(Tag cueTag, string attribute)
+	{
+		return new CueData(
+			cueTag.GetSingleTagContainer(),
+			-100,
+			100,
+			CueMagnitudeType.AttributeValueChange,
+			attribute);
+	}
+
+	private CueData CreateCue(Tag? cueTag = null)
+	{
+		return CreateCue(cueTag ?? Tag.RequestTag(_tagsManager, "test.cue1"), CueAttribute);
+	}
+
+	private CueData CreateCue(string cueTagName, string attribute = CueAttribute)
+	{
+		return CreateCue(Tag.RequestTag(_tagsManager, cueTagName), attribute);
+	}
+
+	private Effect CreateCrossSetEffect(TestEntity target)
+	{
+		var effectData = new EffectData(
+			"Cross Set Buff",
+			new DurationData(DurationType.Infinite),
+			[CreateModifier(KeptAttribute, 10), CreateModifier(ArrivingAttribute, -10)],
+			cues: [CreateCue("test.cue1", ArrivingAttribute), CreateCue("test.cue2", KeptAttribute)]);
+
+		return new Effect(effectData, new EffectOwnership(target, target));
 	}
 
 	private Effect CreateInstantEffect(TestEntity target)
@@ -199,16 +319,6 @@ public class CueMagnitudeReentrancyTests(TagsAndCuesFixture tagsAndCuesFixture) 
 			cues: [CreateCue(cueTag)]);
 
 		return new Effect(effectData, new EffectOwnership(target, target));
-	}
-
-	private CueData CreateCue(Tag? cueTag = null)
-	{
-		return new CueData(
-			(cueTag ?? Tag.RequestTag(_tagsManager, "test.cue1")).GetSingleTagContainer(),
-			-100,
-			100,
-			CueMagnitudeType.AttributeValueChange,
-			CueAttribute);
 	}
 
 	private Tag EventTag()

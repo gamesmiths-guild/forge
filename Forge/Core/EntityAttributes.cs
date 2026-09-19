@@ -21,6 +21,8 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 	private readonly Dictionary<StringKey, EntityAttribute> _attributes = [];
 	private readonly List<AttributeSet> _attributeSets = [];
 	private readonly HashSet<ActiveEffect> _dependentEffects = [];
+	private readonly List<AttributeChangeSet> _openChanges = [];
+	private readonly Stack<AttributeChangeSet> _changeSetPool = new();
 
 	/// <summary>
 	/// Event invoked when an attribute set is added to this entity, carrying the set.
@@ -214,9 +216,56 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 	}
 
 	internal void UnregisterDependent(ActiveEffect activeEffect)
-#pragma warning restore T0009 // Internal Styling Rule T0009
 	{
 		_dependentEffects.Remove(activeEffect);
+	}
+
+	/// <summary>
+	/// Opens a scope that tallies, into the returned set, the net change every attribute write makes until
+	/// <see cref="EndChanges"/> closes it. Scopes nest, and a write lands in the innermost open one, so an operation
+	/// that re-enters through a hook — an event activating an ability that applies its own effects — keeps its tally
+	/// apart from theirs.
+	/// </summary>
+	/// <param name="changes">A set closed earlier to keep adding to, when one operation spans two scopes, or
+	/// <see langword="null"/> for a fresh one.</param>
+	/// <returns>The set the scope tallies into.</returns>
+	internal AttributeChangeSet BeginChanges(AttributeChangeSet? changes = null)
+	{
+		changes ??= _changeSetPool.TryPop(out AttributeChangeSet? pooled) ? pooled : new AttributeChangeSet();
+		_openChanges.Add(changes);
+
+		return changes;
+	}
+
+	/// <summary>
+	/// Closes the innermost scope. Its set stays readable until <see cref="ReleaseChanges"/> hands it back.
+	/// </summary>
+	/// <param name="changes">The set the scope being closed tallies into.</param>
+	internal void EndChanges(AttributeChangeSet changes)
+	{
+		Validation.Assert(
+			_openChanges.Count > 0 && _openChanges[^1] == changes,
+			"Change scopes close innermost first.");
+
+		_openChanges.RemoveAt(_openChanges.Count - 1);
+	}
+
+	/// <summary>
+	/// Returns a set whose scope is closed to the pool once nothing reads it anymore.
+	/// </summary>
+	/// <param name="changes">The set to hand back.</param>
+	internal void ReleaseChanges(AttributeChangeSet changes)
+	{
+		changes.Clear();
+		_changeSetPool.Push(changes);
+	}
+
+	internal void RecordChange(EntityAttribute attribute, int delta)
+	{
+		if (_openChanges.Count > 0)
+		{
+			_openChanges[^1].Record(attribute, delta);
+		}
 	}
 
 	private void AttachAttributeSet(AttributeSet attributeSet)
@@ -224,6 +273,7 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 		foreach (KeyValuePair<StringKey, EntityAttribute> attribute in attributeSet.AttributesMap)
 		{
 			_attributes.Add(attribute.Key, attribute.Value);
+			attribute.Value.Container = this;
 		}
 
 		_attributeSets.Add(attributeSet);
@@ -231,9 +281,10 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 
 	private void DetachAttributeSet(AttributeSet attributeSet)
 	{
-		foreach (StringKey attributeKey in attributeSet.AttributesMap.Keys)
+		foreach (KeyValuePair<StringKey, EntityAttribute> attribute in attributeSet.AttributesMap)
 		{
-			_attributes.Remove(attributeKey);
+			_attributes.Remove(attribute.Key);
+			attribute.Value.Container = null;
 		}
 
 		_attributeSets.Remove(attributeSet);

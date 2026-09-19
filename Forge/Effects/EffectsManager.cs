@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects.Components;
@@ -47,8 +48,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// necessarily landed yet: an instant effect has yet to execute, and a duration effect has yet to apply its
 	/// modifiers. For stack applications, the existing active effect may already have re-evaluated and applied its
 	/// modifiers by the time this event fires. Use <see cref="OnEffectExecuted"/>, <see cref="OnActiveEffectAdded"/>,
-	/// <see cref="OnActiveEffectChanged"/> or <see cref="Attributes.EntityAttribute.OnValueChanged"/> when you need a
-	/// settled post-change view.
+	/// <see cref="OnActiveEffectChanged"/> or <see cref="EntityAttribute.OnValueChanged"/> when you need a settled
+	/// post-change view.
 	/// </para>
 	/// <para>
 	/// For the buff-bar lifecycle — one event per active effect appearing and disappearing — use
@@ -102,7 +103,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// </para>
 	/// <para>
 	/// The owner's attributes still carry the effect's modifiers at this point; they are released immediately after,
-	/// and <see cref="Attributes.EntityAttribute.OnValueChanged"/> is the seam for observing that.
+	/// and <see cref="EntityAttribute.OnValueChanged"/> is the seam for observing that.
 	/// </para>
 	/// </remarks>
 	public event Action<ActiveEffectHandle, EffectRemovalReason>? OnActiveEffectRemoved;
@@ -373,21 +374,9 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	internal void OnEffectExecuted_InternalCall(
 		EffectEvaluatedData executedEffectEvaluatedData,
-		IEffectComponent[]? componentInstances)
+		IEffectComponent[]? componentInstances,
+		AttributeChangeSet changes)
 	{
-		// Cues read the attribute deltas still pending from this execution, and a hook can land another effect on the
-		// owner — a raised event activating an ability that commits its cost — whose own application flushes them.
-		// Their magnitudes are read before the hooks and their handlers run after, so they describe this execution
-		// alone while the components keep running first, which is what an accumulator tallying it relies on.
-		CueData[] cues = executedEffectEvaluatedData.Effect.EffectData.Cues;
-		Span<int> cueMagnitudes = cues.Length <= CuesManager.MaxStackCueMagnitudes
-			? stackalloc int[cues.Length]
-			: new int[cues.Length];
-		bool triggerCues = CuesManager.TryCaptureCueMagnitudes(
-			in executedEffectEvaluatedData,
-			CueTriggerRequirement.OnExecute,
-			cueMagnitudes);
-
 		foreach (IEffectComponent component in componentInstances
 			?? executedEffectEvaluatedData.Effect.EffectData.EffectComponents)
 		{
@@ -396,10 +385,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		OnEffectExecuted?.Invoke(executedEffectEvaluatedData);
 
-		if (triggerCues)
-		{
-			_cuesManager.ExecuteCues(in executedEffectEvaluatedData, cueMagnitudes);
-		}
+		_cuesManager.ExecuteCues(in executedEffectEvaluatedData, changes);
 	}
 
 	internal void OnActiveEffectUnapplied_InternalCall(ActiveEffect removedEffect, EffectRemovalReason reason)
@@ -436,16 +422,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		OnActiveEffectChanged?.Invoke(removedEffect.Handle);
 	}
 
-	internal void TriggerCuesUpdate_InternalCall(in EffectEvaluatedData effectEvaluatedData)
-	{
-		_cuesManager.UpdateCues(in effectEvaluatedData);
-	}
-
 	internal void TriggerCuesUpdate_InternalCall(
 		in EffectEvaluatedData effectEvaluatedData,
-		ReadOnlySpan<int> magnitudes)
+		AttributeChangeSet? changes)
 	{
-		_cuesManager.UpdateCues(in effectEvaluatedData, magnitudes);
+		_cuesManager.UpdateCues(in effectEvaluatedData, changes);
 	}
 
 	internal void RemoveActiveEffect_InternalCall(ActiveEffect effect)
@@ -477,26 +458,45 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		ActiveEffect[] activeEffects = [.. _activeEffects, .. Owner.Attributes.DependentEffects];
 
-		foreach (ActiveEffect activeEffect in activeEffects)
+		// Each effect's writes are tallied across its unapply here and its rebuild below, so its update cues report
+		// the net change the membership change made through it — nothing for an attribute it modified before and
+		// after, its full modifier for one that just arrived. The scope belongs to the effect's own target, which is
+		// where a dependent effect's modifiers live.
+		var changeSets = new AttributeChangeSet[activeEffects.Length];
+
+		for (int i = 0; i < activeEffects.Length; i++)
 		{
+			ActiveEffect activeEffect = activeEffects[i];
+			EntityAttributes targetAttributes = activeEffect.EffectEvaluatedData.Target.Attributes;
+
+			changeSets[i] = targetAttributes.BeginChanges();
 			activeEffect.DetachAttributeBindings();
 			activeEffect.Unapply(reApplication: true);
+			targetAttributes.EndChanges(changeSets[i]);
 		}
 
 		applyChange();
 
-		var changedEffects = new List<ActiveEffect>();
+		var changedEffects = new List<int>();
 
-		foreach (ActiveEffect activeEffect in activeEffects)
+		for (int i = 0; i < activeEffects.Length; i++)
 		{
+			ActiveEffect activeEffect = activeEffects[i];
+
 			if (!IsStillActive(activeEffect))
 			{
 				continue;
 			}
 
-			if (activeEffect.RebuildAfterAttributeChange())
+			EntityAttributes targetAttributes = activeEffect.EffectEvaluatedData.Target.Attributes;
+
+			targetAttributes.BeginChanges(changeSets[i]);
+			bool changed = activeEffect.RebuildAfterAttributeChange();
+			targetAttributes.EndChanges(changeSets[i]);
+
+			if (changed)
 			{
-				changedEffects.Add(activeEffect);
+				changedEffects.Add(i);
 			}
 		}
 
@@ -507,8 +507,10 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			activeEffect.EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 		}
 
-		foreach (ActiveEffect activeEffect in changedEffects)
+		foreach (int i in changedEffects)
 		{
+			ActiveEffect activeEffect = activeEffects[i];
+
 			if (!IsStillActive(activeEffect))
 			{
 				continue;
@@ -518,7 +520,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			effectsManager.OnActiveEffectChanged_InternalCall(activeEffect);
 
 			EffectEvaluatedData effectEvaluatedData = activeEffect.EffectEvaluatedData;
-			effectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData);
+			effectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData, changeSets[i]);
+		}
+
+		for (int i = 0; i < activeEffects.Length; i++)
+		{
+			activeEffects[i].EffectEvaluatedData.Target.Attributes.ReleaseChanges(changeSets[i]);
 		}
 
 		foreach (ActiveEffect activeEffect in activeEffects)
@@ -788,6 +795,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		OnEffectApplied?.Invoke(activeEffect.EffectEvaluatedData);
 
 		EffectEvaluatedData effectEvaluatedData = activeEffect.EffectEvaluatedData;
+		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
+		AttributeChangeSet changes = targetAttributes.BeginChanges();
 
 		bool triggerApplyCuesEarly = effect.EffectData.PeriodicData.HasValue
 			&& effect.EffectData.PeriodicData.Value.ExecuteOnApplication
@@ -795,17 +804,20 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		if (triggerApplyCuesEarly)
 		{
-			_cuesManager.ApplyCues(in effectEvaluatedData);
+			_cuesManager.ApplyCues(in effectEvaluatedData, changes);
 		}
 
 		activeEffect.Apply(inhibited: !remainActive);
 
+		targetAttributes.EndChanges(changes);
+
 		if (!triggerApplyCuesEarly)
 		{
-			_cuesManager.ApplyCues(in effectEvaluatedData);
+			_cuesManager.ApplyCues(in effectEvaluatedData, changes);
 		}
 
-		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
+		targetAttributes.ReleaseChanges(changes);
+		targetAttributes.ApplyPendingValueChanges();
 
 		foreach (IEffectComponent component in activeEffect.ComponentInstances)
 		{
