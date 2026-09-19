@@ -69,7 +69,7 @@ var cueData = new CueData(
 - **AttributeMax**: Uses an attribute's maximum value constraint (requires `magnitudeAttribute`).
 - **AttributeMagnitudeEvaluatedUpToChannel**: Uses an attribute's magnitude calculated up to a specific channel (requires `magnitudeAttribute` and `finalChannel`).
 
-The attribute-based magnitudes are read the moment the effect's own attribute writes land, before its components and change notifications run, and the handlers are called afterwards with those values. Anything a component or listener applies in turn — an ability committing its cost, a threshold effect — is therefore never counted in a cue of the effect that triggered it.
+`AttributeValueChange` reports the net change the effect's own operation made to the attribute — an execution, an application, a stack or level change, or a rebuild after an attribute set arrived or left — tallied apart from every other operation on the entity. Anything a component, listener or cue handler applies in turn is an operation of its own with its own tally, so an ability committing its cost or a threshold effect landing is never counted in the cue of the effect that triggered it, and an effect applied while another is still landing never reads that one's changes as its own. An attribute that leaves with its set still reports the change its departure made through the effect, the same way its listeners hear that last change. Every cue of an operation is read at once, right after the operation's own writes, and the handlers run after the effect's components and change notifications with those values — so neither a hook nor an earlier handler can move what a later cue reports.
 
 ```csharp
 // Magnitude based on effect level

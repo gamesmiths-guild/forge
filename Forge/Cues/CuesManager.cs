@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Tags;
@@ -135,52 +136,68 @@ public sealed class CuesManager
 	/// <paramref name="magnitudes"/>, one slot per entry of the effect's cues.
 	/// </summary>
 	/// <remarks>
-	/// The read and the dispatch are separate on purpose. The magnitudes come from the attribute deltas still pending
-	/// from the operation that fires the cues, and any hook that runs before the handlers — a component, a manager
-	/// event — can land another effect on the target whose own application flushes them. Reading here and dispatching
-	/// through <see cref="ExecuteCues"/> or <see cref="UpdateCues(in EffectEvaluatedData, ReadOnlySpan{int})"/>
-	/// once the hooks are done keeps the cues describing that operation alone, without moving the handlers ahead of
-	/// the components that expect to run first.
+	/// <para>
+	/// The read and the dispatch are separate on purpose: every cue of an operation is read at once, right after the
+	/// operation's own writes, and the handlers run later with those values. Reading at dispatch instead would let a
+	/// hook, or an earlier handler of the same operation, move a value before a later cue looks at it, so the cues of
+	/// one operation would not describe one state.
+	/// </para>
+	/// <para>
+	/// An attribute's change comes from the <see cref="AttributeChangeSet"/> the operation tallied its writes into,
+	/// never from the entity-wide pending values: those accumulate across every operation until the next flush, so a
+	/// nested one — a raised event activating an ability that applies its own effects while a hit is still landing —
+	/// would read the hit's deltas as its own.
+	/// </para>
 	/// </remarks>
 	/// <param name="effectEvaluatedData">The evaluated data of the effect whose cues are being read.</param>
 	/// <param name="triggerRequirement">The trigger the cues are being read for.</param>
+	/// <param name="changes">The changes the operation made to the target's attributes, or <see langword="null"/>
+	/// when it made none.</param>
 	/// <param name="magnitudes">Receives one magnitude per cue; at least as long as the effect's cues.</param>
 	/// <returns><see langword="true"/> if the cues fire and <paramref name="magnitudes"/> was filled; otherwise,
 	/// <see langword="false"/>.</returns>
 	internal static bool TryCaptureCueMagnitudes(
 		in EffectEvaluatedData effectEvaluatedData,
 		CueTriggerRequirement triggerRequirement,
+		AttributeChangeSet? changes,
 		Span<int> magnitudes)
 	{
 		EffectData effectData = effectEvaluatedData.Effect.EffectData;
 
-		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
-		if (!ShouldTriggerCue(in effectData, in targetAttributes, triggerRequirement))
+		if (!ShouldTriggerCue(in effectData, changes, triggerRequirement))
 		{
 			return false;
 		}
 
 		for (int i = 0; i < effectData.Cues.Length; i++)
 		{
-			magnitudes[i] = CalculateMagnitude(in effectData.Cues[i], in effectEvaluatedData);
+			magnitudes[i] = CalculateMagnitude(in effectData.Cues[i], in effectEvaluatedData, changes);
 		}
 
 		return true;
 	}
 
-	internal void ApplyCues(in EffectEvaluatedData effectEvaluatedData)
+	/// <summary>
+	/// Applies the cues of an effect that just landed on its target. Nothing runs between an application and its
+	/// cues, so they are read and dispatched here in one go.
+	/// </summary>
+	/// <param name="effectEvaluatedData">The evaluated data of the applied effect.</param>
+	/// <param name="changes">The changes the application made to the target's attributes.</param>
+	internal void ApplyCues(in EffectEvaluatedData effectEvaluatedData, AttributeChangeSet changes)
 	{
-		EffectData effectData = effectEvaluatedData.Effect.EffectData;
+		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
+		Span<int> magnitudes = cues.Length <= MaxStackCueMagnitudes
+			? stackalloc int[cues.Length]
+			: new int[cues.Length];
 
-		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
-		if (!ShouldTriggerCue(in effectData, in targetAttributes, CueTriggerRequirement.OnApply))
+		if (!TryCaptureCueMagnitudes(in effectEvaluatedData, CueTriggerRequirement.OnApply, changes, magnitudes))
 		{
 			return;
 		}
 
-		foreach (CueData cueData in effectData.Cues)
+		for (int i = 0; i < cues.Length; i++)
 		{
-			int magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
+			CueData cueData = cues[i];
 
 			if (cueData.CueTags is null)
 			{
@@ -193,8 +210,8 @@ public sealed class CuesManager
 				cueTag,
 				effectEvaluatedData.Target,
 				new CueParameters(
-					magnitude,
-					cueData.NormalizedMagnitude(magnitude),
+					magnitudes[i],
+					cueData.NormalizedMagnitude(magnitudes[i]),
 					effectEvaluatedData.Effect.Ownership.Source,
 					effectEvaluatedData.CustomCueParameters));
 			}
@@ -219,6 +236,12 @@ public sealed class CuesManager
 		}
 	}
 
+	/// <summary>
+	/// Executes the cues of an effect that just executed on its target, with the magnitudes
+	/// <see cref="TryCaptureCueMagnitudes"/> read before the execution's hooks ran.
+	/// </summary>
+	/// <param name="effectEvaluatedData">The evaluated data of the executed effect.</param>
+	/// <param name="magnitudes">The captured magnitude of each cue.</param>
 	internal void ExecuteCues(in EffectEvaluatedData effectEvaluatedData, ReadOnlySpan<int> magnitudes)
 	{
 		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
@@ -246,17 +269,31 @@ public sealed class CuesManager
 		}
 	}
 
-	internal void UpdateCues(in EffectEvaluatedData effectEvaluatedData)
+	/// <summary>
+	/// Updates the cues of an active effect whose change ran no hooks, reading and dispatching them in one go.
+	/// </summary>
+	/// <param name="effectEvaluatedData">The evaluated data of the changed effect.</param>
+	/// <param name="changes">The changes the operation made to the target's attributes, or <see langword="null"/>
+	/// when it made none.</param>
+	internal void UpdateCues(in EffectEvaluatedData effectEvaluatedData, AttributeChangeSet? changes)
 	{
 		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
-		Span<int> magnitudes = cues.Length <= MaxStackCueMagnitudes ? stackalloc int[cues.Length] : new int[cues.Length];
+		Span<int> magnitudes = cues.Length <= MaxStackCueMagnitudes
+			? stackalloc int[cues.Length]
+			: new int[cues.Length];
 
-		if (TryCaptureCueMagnitudes(in effectEvaluatedData, CueTriggerRequirement.OnUpdate, magnitudes))
+		if (TryCaptureCueMagnitudes(in effectEvaluatedData, CueTriggerRequirement.OnUpdate, changes, magnitudes))
 		{
 			UpdateCues(in effectEvaluatedData, magnitudes);
 		}
 	}
 
+	/// <summary>
+	/// Updates the cues of an active effect that just changed on its target, with the magnitudes
+	/// <see cref="TryCaptureCueMagnitudes"/> read before the change's hooks ran.
+	/// </summary>
+	/// <param name="effectEvaluatedData">The evaluated data of the changed effect.</param>
+	/// <param name="magnitudes">The captured magnitude of each cue.</param>
 	internal void UpdateCues(in EffectEvaluatedData effectEvaluatedData, ReadOnlySpan<int> magnitudes)
 	{
 		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
@@ -286,7 +323,7 @@ public sealed class CuesManager
 
 	private static bool ShouldTriggerCue(
 		in EffectData effectData,
-		in EntityAttributes attributes,
+		AttributeChangeSet? changes,
 		CueTriggerRequirement triggerRequirements)
 	{
 		if (!effectData.RequireModifierSuccessToTriggerCue.HasFlag(triggerRequirements))
@@ -294,12 +331,13 @@ public sealed class CuesManager
 			return true;
 		}
 
-		return attributes.Any(x => x.PendingValueChange != 0);
+		return changes?.HasChanges == true;
 	}
 
 	private static int CalculateMagnitude(
 		in CueData cueData,
-		in EffectEvaluatedData effectEvaluatedData)
+		in EffectEvaluatedData effectEvaluatedData,
+		AttributeChangeSet? changes)
 	{
 		switch (cueData.MagnitudeType)
 		{
@@ -314,12 +352,7 @@ public sealed class CuesManager
 					cueData.MagnitudeAttribute is not null,
 					"Cues with CueMagnitudeType.AttributeMagnitude must contains a configured MagnitudeAttribute.");
 
-				if (!effectEvaluatedData.Target.Attributes.ContainsAttribute(cueData.MagnitudeAttribute))
-				{
-					return 0;
-				}
-
-				return effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute].PendingValueChange;
+				return changes?.DeltaOf(cueData.MagnitudeAttribute) ?? 0;
 
 			case CueMagnitudeType.AttributeBaseValue:
 				Validation.Assert(

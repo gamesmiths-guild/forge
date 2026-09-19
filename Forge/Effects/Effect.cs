@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Calculator;
 using Gamesmiths.Forge.Effects.Components;
@@ -151,6 +152,11 @@ public class Effect
 	{
 		CustomExecution[] customExecutions = effectEvaluatedData.Effect.EffectData.CustomExecutions;
 
+		// Tallied per execution, and closed before any hook runs, so the cues report what this execution did to the
+		// attributes and nothing an executed hook goes on to apply.
+		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
+		AttributeChangeSet changes = targetAttributes.BeginChanges();
+
 		if (customExecutions.Length > 0)
 		{
 			var allModifiers = new List<ModifierEvaluatedData>(effectEvaluatedData.ModifierCount);
@@ -217,11 +223,15 @@ public class Effect
 			}
 		}
 
+		targetAttributes.EndChanges(changes);
+
 		effectEvaluatedData.Target.EffectsManager.OnEffectExecuted_InternalCall(
 			effectEvaluatedData,
-			componentInstances);
+			componentInstances,
+			changes);
 
-		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
+		targetAttributes.ReleaseChanges(changes);
+		targetAttributes.ApplyPendingValueChanges();
 	}
 
 	/// <summary>

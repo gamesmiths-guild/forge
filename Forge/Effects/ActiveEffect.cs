@@ -294,8 +294,11 @@ internal sealed class ActiveEffect
 		}
 		else
 		{
+			// Nothing was re-applied, so there are no attribute changes for the update cues to report.
 			EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
-			effectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData);
+			effectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(
+				in effectEvaluatedData,
+				changes: null);
 		}
 
 		if (stackingData.ApplicationRefreshPolicy == StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication)
@@ -543,18 +546,24 @@ internal sealed class ActiveEffect
 
 	private void ReapplyEffect(Effect effect, int? level = null, bool isStackingCall = false)
 	{
+		// Tallied across the unapply and the re-application, and closed before any hook runs, so the update cues report
+		// the net change this re-application made and nothing a changed hook goes on to apply.
+		EntityAttributes targetAttributes = EffectEvaluatedData.Target.Attributes;
+		AttributeChangeSet changes = targetAttributes.BeginChanges();
+
 		Unapply(true);
 
 		EffectEvaluatedData.ReEvaluate(effect, StackCount, level);
 
 		Apply(reApplication: true);
 
+		targetAttributes.EndChanges(changes);
+
 		EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
 		EffectsManager effectsManager = effectEvaluatedData.Target.EffectsManager;
 
-		// Same two phases as an execution: the update cues read this re-application's pending deltas, which a changed
-		// hook — a stack threshold applying its effects, say — can flush by landing another effect on the target, so
-		// their magnitudes are read before the hooks and their handlers run after, on a handle the hooks saw whole.
+		// Read before the changed hooks, on the state this re-application left, and dispatched after them, on a handle
+		// the hooks saw whole.
 		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
 		Span<int> cueMagnitudes = cues.Length <= CuesManager.MaxStackCueMagnitudes
 			? stackalloc int[cues.Length]
@@ -563,6 +572,7 @@ internal sealed class ActiveEffect
 			&& CuesManager.TryCaptureCueMagnitudes(
 				in effectEvaluatedData,
 				CueTriggerRequirement.OnUpdate,
+				changes,
 				cueMagnitudes);
 
 		effectsManager.OnActiveEffectChanged_InternalCall(this);
@@ -572,7 +582,8 @@ internal sealed class ActiveEffect
 			effectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData, cueMagnitudes);
 		}
 
-		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
+		targetAttributes.ReleaseChanges(changes);
+		targetAttributes.ApplyPendingValueChanges();
 	}
 
 	private void ApplyModifiers(bool unapply = false)

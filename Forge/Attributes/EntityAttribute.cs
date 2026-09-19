@@ -110,6 +110,12 @@ public sealed class EntityAttribute
 
 	internal int PendingValueChange { get; private set; }
 
+	/// <summary>
+	/// Gets or sets the entity's attribute container this attribute is attached to, which tallies its changes per
+	/// operation; <see langword="null"/> while it belongs to no entity.
+	/// </summary>
+	internal EntityAttributes? Container { get; set; }
+
 	internal EntityAttribute(
 		StringKey key,
 		int defaultValue,
@@ -440,7 +446,9 @@ public sealed class EntityAttribute
 
 		if (CurrentValue != oldValue)
 		{
-			PendingValueChange += CurrentValue - oldValue;
+			int delta = CurrentValue - oldValue;
+			PendingValueChange += delta;
+			Container?.RecordChange(this, delta);
 		}
 	}
 
