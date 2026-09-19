@@ -26,6 +26,8 @@ Every state node has both an **OnActivate** port (Event port) and a **Subgraph**
 - **OnActivate** → downstream nodes are **independent siblings**. They outlive the port and must manage their own lifetime.
 - **Subgraph** → downstream nodes are **owned by the port**. They are automatically disabled when the parent node deactivates.
 
+The distinction is made where the disable signal *starts*: a node that deactivates on its own sends it through its Subgraph ports only. A node that *receives* the signal forwards it through every one of its output ports, event ports included, so once a node is inside a subgraph its whole downstream tree goes with it, however the links inside are wired. Chaining `A → OnActivate → B → OnActivate → C` under a Subgraph port is therefore fine: `B` and `C` are still torn down with the subgraph. Only a chain hanging off the OnActivate port of a node that ends *itself* — the root of a graph, a timer running out — survives that node.
+
 ### Example: The Difference in Practice
 
 ```csharp

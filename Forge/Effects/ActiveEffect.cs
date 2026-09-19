@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
@@ -549,15 +550,27 @@ internal sealed class ActiveEffect
 		Apply(reApplication: true);
 
 		EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
+		EffectsManager effectsManager = effectEvaluatedData.Target.EffectsManager;
 
-		// Same order as an execution: the cues read this re-application's pending deltas before a changed hook — a
-		// stack threshold applying its effects, say — can flush them by landing another effect on the target.
-		if (!Effect.EffectData.SuppressStackingCues || !isStackingCall)
+		// Same two phases as an execution: the update cues read this re-application's pending deltas, which a changed
+		// hook — a stack threshold applying its effects, say — can flush by landing another effect on the target, so
+		// their magnitudes are read before the hooks and their handlers run after, on a handle the hooks saw whole.
+		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
+		Span<int> cueMagnitudes = cues.Length <= CuesManager.MaxStackCueMagnitudes
+			? stackalloc int[cues.Length]
+			: new int[cues.Length];
+		bool triggerCues = (!Effect.EffectData.SuppressStackingCues || !isStackingCall)
+			&& CuesManager.TryCaptureCueMagnitudes(
+				in effectEvaluatedData,
+				CueTriggerRequirement.OnUpdate,
+				cueMagnitudes);
+
+		effectsManager.OnActiveEffectChanged_InternalCall(this);
+
+		if (triggerCues)
 		{
-			EffectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData);
+			effectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData, cueMagnitudes);
 		}
-
-		EffectEvaluatedData.Target.EffectsManager.OnActiveEffectChanged_InternalCall(this);
 
 		effectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 	}

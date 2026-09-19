@@ -11,6 +11,11 @@ namespace Gamesmiths.Forge.Cues;
 /// </summary>
 public sealed class CuesManager
 {
+	/// <summary>
+	/// The most cues one effect can have before the magnitudes held across its hooks move from the stack to the heap.
+	/// </summary>
+	internal const int MaxStackCueMagnitudes = 8;
+
 	private readonly Dictionary<Tag, HashSet<ICueHandler>> _registeredCues = [];
 
 	/// <summary>
@@ -125,6 +130,44 @@ public sealed class CuesManager
 		}
 	}
 
+	/// <summary>
+	/// Decides whether an effect's cues fire for a trigger and, when they do, reads the magnitude of each one into
+	/// <paramref name="magnitudes"/>, one slot per entry of the effect's cues.
+	/// </summary>
+	/// <remarks>
+	/// The read and the dispatch are separate on purpose. The magnitudes come from the attribute deltas still pending
+	/// from the operation that fires the cues, and any hook that runs before the handlers — a component, a manager
+	/// event — can land another effect on the target whose own application flushes them. Reading here and dispatching
+	/// through <see cref="ExecuteCues"/> or <see cref="UpdateCues(in EffectEvaluatedData, ReadOnlySpan{int})"/>
+	/// once the hooks are done keeps the cues describing that operation alone, without moving the handlers ahead of
+	/// the components that expect to run first.
+	/// </remarks>
+	/// <param name="effectEvaluatedData">The evaluated data of the effect whose cues are being read.</param>
+	/// <param name="triggerRequirement">The trigger the cues are being read for.</param>
+	/// <param name="magnitudes">Receives one magnitude per cue; at least as long as the effect's cues.</param>
+	/// <returns><see langword="true"/> if the cues fire and <paramref name="magnitudes"/> was filled; otherwise,
+	/// <see langword="false"/>.</returns>
+	internal static bool TryCaptureCueMagnitudes(
+		in EffectEvaluatedData effectEvaluatedData,
+		CueTriggerRequirement triggerRequirement,
+		Span<int> magnitudes)
+	{
+		EffectData effectData = effectEvaluatedData.Effect.EffectData;
+
+		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
+		if (!ShouldTriggerCue(in effectData, in targetAttributes, triggerRequirement))
+		{
+			return false;
+		}
+
+		for (int i = 0; i < effectData.Cues.Length; i++)
+		{
+			magnitudes[i] = CalculateMagnitude(in effectData.Cues[i], in effectEvaluatedData);
+		}
+
+		return true;
+	}
+
 	internal void ApplyCues(in EffectEvaluatedData effectEvaluatedData)
 	{
 		EffectData effectData = effectEvaluatedData.Effect.EffectData;
@@ -176,19 +219,13 @@ public sealed class CuesManager
 		}
 	}
 
-	internal void ExecuteCues(in EffectEvaluatedData effectEvaluatedData)
+	internal void ExecuteCues(in EffectEvaluatedData effectEvaluatedData, ReadOnlySpan<int> magnitudes)
 	{
-		EffectData effectData = effectEvaluatedData.Effect.EffectData;
+		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
 
-		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
-		if (!ShouldTriggerCue(in effectData, in targetAttributes, CueTriggerRequirement.OnExecute))
+		for (int i = 0; i < cues.Length; i++)
 		{
-			return;
-		}
-
-		foreach (CueData cueData in effectData.Cues)
-		{
-			int magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
+			CueData cueData = cues[i];
 
 			if (cueData.CueTags is null)
 			{
@@ -201,8 +238,8 @@ public sealed class CuesManager
 				cueTag,
 				effectEvaluatedData.Target,
 				new CueParameters(
-					magnitude,
-					cueData.NormalizedMagnitude(magnitude),
+					magnitudes[i],
+					cueData.NormalizedMagnitude(magnitudes[i]),
 					effectEvaluatedData.Effect.Ownership.Source,
 					effectEvaluatedData.CustomCueParameters));
 			}
@@ -211,17 +248,22 @@ public sealed class CuesManager
 
 	internal void UpdateCues(in EffectEvaluatedData effectEvaluatedData)
 	{
-		EffectData effectData = effectEvaluatedData.Effect.EffectData;
+		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
+		Span<int> magnitudes = cues.Length <= MaxStackCueMagnitudes ? stackalloc int[cues.Length] : new int[cues.Length];
 
-		EntityAttributes targetAttributes = effectEvaluatedData.Target.Attributes;
-		if (!ShouldTriggerCue(in effectData, in targetAttributes, CueTriggerRequirement.OnUpdate))
+		if (TryCaptureCueMagnitudes(in effectEvaluatedData, CueTriggerRequirement.OnUpdate, magnitudes))
 		{
-			return;
+			UpdateCues(in effectEvaluatedData, magnitudes);
 		}
+	}
 
-		foreach (CueData cueData in effectData.Cues)
+	internal void UpdateCues(in EffectEvaluatedData effectEvaluatedData, ReadOnlySpan<int> magnitudes)
+	{
+		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
+
+		for (int i = 0; i < cues.Length; i++)
 		{
-			int magnitude = CalculateMagnitude(in cueData, in effectEvaluatedData);
+			CueData cueData = cues[i];
 
 			if (cueData.CueTags is null)
 			{
@@ -234,8 +276,8 @@ public sealed class CuesManager
 				cueTag,
 				effectEvaluatedData.Target,
 				new CueParameters(
-					magnitude,
-					cueData.NormalizedMagnitude(magnitude),
+					magnitudes[i],
+					cueData.NormalizedMagnitude(magnitudes[i]),
 					effectEvaluatedData.Effect.Ownership.Source,
 					effectEvaluatedData.CustomCueParameters));
 			}
