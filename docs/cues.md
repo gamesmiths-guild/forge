@@ -69,6 +69,8 @@ var cueData = new CueData(
 - **AttributeMax**: Uses an attribute's maximum value constraint (requires `magnitudeAttribute`).
 - **AttributeMagnitudeEvaluatedUpToChannel**: Uses an attribute's magnitude calculated up to a specific channel (requires `magnitudeAttribute` and `finalChannel`).
 
+The attribute-based magnitudes are read the moment the effect's own attribute writes land, before its components and change notifications run, and the handlers are called afterwards with those values. Anything a component or listener applies in turn — an ability committing its cost, a threshold effect — is therefore never counted in a cue of the effect that triggered it.
+
 ```csharp
 // Magnitude based on effect level
 var levelBasedCue = new CueData(

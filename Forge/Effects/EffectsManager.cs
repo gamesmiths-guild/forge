@@ -63,7 +63,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <remarks>
 	/// The manager-wide counterpart of <see cref="IEffectComponent.OnEffectExecuted"/>: only instant and periodic
 	/// effects execute, and a periodic effect raises it on every tick. The execution has already changed the base
-	/// values by this point, so handlers read post-execution attributes.
+	/// values by this point, so handlers read post-execution attributes. Its cues fire after the handlers, but read
+	/// their magnitudes before, so a handler that applies further effects to the owner cannot disturb what they report.
 	/// </remarks>
 	public event Action<EffectEvaluatedData>? OnEffectExecuted;
 
@@ -374,6 +375,19 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		EffectEvaluatedData executedEffectEvaluatedData,
 		IEffectComponent[]? componentInstances)
 	{
+		// Cues read the attribute deltas still pending from this execution, and a hook can land another effect on the
+		// owner — a raised event activating an ability that commits its cost — whose own application flushes them.
+		// Their magnitudes are read before the hooks and their handlers run after, so they describe this execution
+		// alone while the components keep running first, which is what an accumulator tallying it relies on.
+		CueData[] cues = executedEffectEvaluatedData.Effect.EffectData.Cues;
+		Span<int> cueMagnitudes = cues.Length <= CuesManager.MaxStackCueMagnitudes
+			? stackalloc int[cues.Length]
+			: new int[cues.Length];
+		bool triggerCues = CuesManager.TryCaptureCueMagnitudes(
+			in executedEffectEvaluatedData,
+			CueTriggerRequirement.OnExecute,
+			cueMagnitudes);
+
 		foreach (IEffectComponent component in componentInstances
 			?? executedEffectEvaluatedData.Effect.EffectData.EffectComponents)
 		{
@@ -382,7 +396,10 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		OnEffectExecuted?.Invoke(executedEffectEvaluatedData);
 
-		_cuesManager.ExecuteCues(in executedEffectEvaluatedData);
+		if (triggerCues)
+		{
+			_cuesManager.ExecuteCues(in executedEffectEvaluatedData, cueMagnitudes);
+		}
 	}
 
 	internal void OnActiveEffectUnapplied_InternalCall(ActiveEffect removedEffect, EffectRemovalReason reason)
@@ -422,6 +439,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	internal void TriggerCuesUpdate_InternalCall(in EffectEvaluatedData effectEvaluatedData)
 	{
 		_cuesManager.UpdateCues(in effectEvaluatedData);
+	}
+
+	internal void TriggerCuesUpdate_InternalCall(
+		in EffectEvaluatedData effectEvaluatedData,
+		ReadOnlySpan<int> magnitudes)
+	{
+		_cuesManager.UpdateCues(in effectEvaluatedData, magnitudes);
 	}
 
 	internal void RemoveActiveEffect_InternalCall(ActiveEffect effect)
