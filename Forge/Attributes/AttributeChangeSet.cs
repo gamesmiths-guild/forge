@@ -45,15 +45,27 @@ internal sealed class AttributeChangeSet
 	}
 
 	/// <summary>
-	/// Gets the net change the operation made to an attribute's current value; zero for one it never touched.
+	/// Gets the net change the operation made to the current value of the attribute with a key; zero for one it never
+	/// touched.
 	/// </summary>
-	/// <param name="attribute">The attribute to look up.</param>
+	/// <remarks>
+	/// Looked up by key rather than through the entity's attributes so the change survives the attribute leaving: an
+	/// attribute set being removed unapplies its modifiers, which is recorded here, and detaches the attributes before
+	/// the update cues read it, and a hook can swap a set for a fresh instance between an operation and its cues.
+	/// </remarks>
+	/// <param name="attributeKey">The key of the attribute to look up.</param>
 	/// <returns>The net change to the attribute's current value.</returns>
-	internal int DeltaOf(EntityAttribute attribute)
+	internal int DeltaOf(StringKey attributeKey)
 	{
-		int index = IndexOf(attribute);
+		for (int i = 0; i < _changes.Count; i++)
+		{
+			if (_changes[i].Attribute.Key == attributeKey)
+			{
+				return _changes[i].Delta;
+			}
+		}
 
-		return index < 0 ? 0 : _changes[index].Delta;
+		return 0;
 	}
 
 	internal void Record(EntityAttribute attribute, int delta)

@@ -267,6 +267,7 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 			_openChanges[^1].Record(attribute, delta);
 		}
 	}
+#pragma warning restore T0009 // Internal Styling Rule T0009
 
 	private void AttachAttributeSet(AttributeSet attributeSet)
 	{

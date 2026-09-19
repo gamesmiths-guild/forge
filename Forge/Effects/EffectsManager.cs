@@ -377,6 +377,19 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		IEffectComponent[]? componentInstances,
 		AttributeChangeSet changes)
 	{
+		// Read before the hooks, so every cue of this execution sees the state its own writes left — the change from
+		// the closed set, the rest from the attributes as they stand — and dispatched after them, so the handlers keep
+		// running behind the components, which an accumulator tallying this execution relies on.
+		CueData[] cues = executedEffectEvaluatedData.Effect.EffectData.Cues;
+		Span<int> cueMagnitudes = cues.Length <= CuesManager.MaxStackCueMagnitudes
+			? stackalloc int[cues.Length]
+			: new int[cues.Length];
+		bool triggerCues = CuesManager.TryCaptureCueMagnitudes(
+			in executedEffectEvaluatedData,
+			CueTriggerRequirement.OnExecute,
+			changes,
+			cueMagnitudes);
+
 		foreach (IEffectComponent component in componentInstances
 			?? executedEffectEvaluatedData.Effect.EffectData.EffectComponents)
 		{
@@ -385,7 +398,10 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		OnEffectExecuted?.Invoke(executedEffectEvaluatedData);
 
-		_cuesManager.ExecuteCues(in executedEffectEvaluatedData, changes);
+		if (triggerCues)
+		{
+			_cuesManager.ExecuteCues(in executedEffectEvaluatedData, cueMagnitudes);
+		}
 	}
 
 	internal void OnActiveEffectUnapplied_InternalCall(ActiveEffect removedEffect, EffectRemovalReason reason)
@@ -427,6 +443,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		AttributeChangeSet? changes)
 	{
 		_cuesManager.UpdateCues(in effectEvaluatedData, changes);
+	}
+
+	internal void TriggerCuesUpdate_InternalCall(
+		in EffectEvaluatedData effectEvaluatedData,
+		ReadOnlySpan<int> magnitudes)
+	{
+		_cuesManager.UpdateCues(in effectEvaluatedData, magnitudes);
 	}
 
 	internal void RemoveActiveEffect_InternalCall(ActiveEffect effect)
@@ -507,9 +530,35 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			activeEffect.EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 		}
 
-		foreach (int i in changedEffects)
+		// Every changed effect's cues are read here, on the settled attributes, before any of their hooks run; a hook
+		// of one effect must not move what another's cues report. A rare path, so the buffers can live on the heap.
+		int[]?[] cueMagnitudes = new int[changedEffects.Count][];
+
+		for (int j = 0; j < changedEffects.Count; j++)
 		{
-			ActiveEffect activeEffect = activeEffects[i];
+			ActiveEffect activeEffect = activeEffects[changedEffects[j]];
+
+			if (!IsStillActive(activeEffect))
+			{
+				continue;
+			}
+
+			EffectEvaluatedData effectEvaluatedData = activeEffect.EffectEvaluatedData;
+			int[] magnitudes = new int[effectEvaluatedData.Effect.EffectData.Cues.Length];
+
+			if (CuesManager.TryCaptureCueMagnitudes(
+				in effectEvaluatedData,
+				CueTriggerRequirement.OnUpdate,
+				changeSets[changedEffects[j]],
+				magnitudes))
+			{
+				cueMagnitudes[j] = magnitudes;
+			}
+		}
+
+		for (int j = 0; j < changedEffects.Count; j++)
+		{
+			ActiveEffect activeEffect = activeEffects[changedEffects[j]];
 
 			if (!IsStillActive(activeEffect))
 			{
@@ -519,8 +568,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			EffectsManager effectsManager = activeEffect.EffectEvaluatedData.Target.EffectsManager;
 			effectsManager.OnActiveEffectChanged_InternalCall(activeEffect);
 
-			EffectEvaluatedData effectEvaluatedData = activeEffect.EffectEvaluatedData;
-			effectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData, changeSets[i]);
+			if (cueMagnitudes[j] is int[] magnitudes)
+			{
+				EffectEvaluatedData effectEvaluatedData = activeEffect.EffectEvaluatedData;
+				effectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData, magnitudes);
+			}
 		}
 
 		for (int i = 0; i < activeEffects.Length; i++)
@@ -804,7 +856,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		if (triggerApplyCuesEarly)
 		{
+			// Handlers only ever run on a closed set: a handler writing an attribute directly must not tally into the
+			// application it is answering. The set is still empty here and is reopened for the application itself.
+			targetAttributes.EndChanges(changes);
 			_cuesManager.ApplyCues(in effectEvaluatedData, changes);
+			targetAttributes.BeginChanges(changes);
 		}
 
 		activeEffect.Apply(inhibited: !remainActive);

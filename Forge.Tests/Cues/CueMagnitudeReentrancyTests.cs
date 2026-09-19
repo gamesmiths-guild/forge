@@ -154,8 +154,8 @@ public class CueMagnitudeReentrancyTests(TagsAndCuesFixture tagsAndCuesFixture) 
 			EventTag(),
 			_ => target.EffectsManager.ApplyEffect(CreateSideEffect(
 				target,
-				CreateCue("test.cue2"),
-				CreateCue("test.cue3", SideAttribute))));
+				cue: CreateCue("test.cue2"),
+				otherCue: CreateCue("test.cue3", SideAttribute))));
 
 		target.EffectsManager.ApplyEffect(CreateInstantEffect(target));
 
@@ -180,14 +180,73 @@ public class CueMagnitudeReentrancyTests(TagsAndCuesFixture tagsAndCuesFixture) 
 			EventTag(),
 			_ => target.EffectsManager.ApplyEffect(CreateSideEffect(
 				target,
-				CreateCue("test.cue2"),
 				magnitude: 0,
+				cue: CreateCue("test.cue2"),
 				requireModifierSuccess: true)));
 
 		target.EffectsManager.ApplyEffect(CreateInstantEffect(target));
 
 		_cue.ExecuteData.Value.Should().Be(-10);
 		_sideCue.ExecuteData.Count.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Execute", null)]
+	public void Every_cue_of_an_execution_is_read_before_its_hooks_and_handlers_can_move_the_attributes()
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		_cue.Reset();
+		_sideCue.Reset();
+
+		// Both an executed hook and the first cue's own handler take another 5 off the attribute; the second cue, read
+		// after the execution's writes and before either ran, still reports the 80 this execution left.
+		target.Events.Subscribe(
+			EventTag(),
+			_ => target.EffectsManager.ApplyEffect(CreateSideEffect(target, CueAttribute, -5)));
+
+		void ReenterFromCue()
+		{
+			target.EffectsManager.ApplyEffect(CreateSideEffect(target, CueAttribute, -5));
+		}
+
+		_cue.OnExecuted += ReenterFromCue;
+
+		try
+		{
+			target.EffectsManager.ApplyEffect(CreateInstantEffect(
+				target,
+				CreateCue("test.cue2", CueAttribute, CueMagnitudeType.AttributeCurrentValue)));
+
+			target.PlayerAttributeSet.Attribute90.CurrentValue.Should().Be(70);
+			_cue.ExecuteData.Value.Should().Be(-10);
+			_sideCue.ExecuteData.Value.Should().Be(80);
+		}
+		finally
+		{
+			_cue.OnExecuted -= ReenterFromCue;
+		}
+	}
+
+	[Fact]
+	[Trait("Update", null)]
+	public void Update_cues_after_an_attribute_set_leaves_report_the_modifier_it_took_with_it()
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		var vitalSet = new VitalAttributeSet();
+		target.Attributes.AddAttributeSet(vitalSet);
+		_cue.Reset();
+		_sideCue.Reset();
+
+		target.EffectsManager.ApplyEffect(CreateCrossSetEffect(target));
+		target.Attributes[ArrivingAttribute].CurrentValue.Should().Be(90);
+
+		// The departing attribute is detached before the update cues run, but the unapply that gave it its 10 back was
+		// this effect's doing and is still reported, the way its listeners still hear that last change.
+		target.Attributes.RemoveAttributeSet(vitalSet);
+
+		_cue.UpdateData.Count.Should().Be(1);
+		_cue.UpdateData.Value.Should().Be(10);
+		_sideCue.UpdateData.Value.Should().Be(0);
 	}
 
 	[Fact]
@@ -214,9 +273,10 @@ public class CueMagnitudeReentrancyTests(TagsAndCuesFixture tagsAndCuesFixture) 
 
 	private static Effect CreateSideEffect(
 		TestEntity target,
+		string attribute = SideAttribute,
+		float magnitude = 1,
 		CueData? cue = null,
 		CueData? otherCue = null,
-		float magnitude = 1,
 		bool requireModifierSuccess = false)
 	{
 		CueTriggerRequirement requirement = requireModifierSuccess
@@ -226,7 +286,7 @@ public class CueMagnitudeReentrancyTests(TagsAndCuesFixture tagsAndCuesFixture) 
 		var effectData = new EffectData(
 			"Side Effect",
 			new DurationData(DurationType.Instant),
-			[CreateModifier(SideAttribute, magnitude)],
+			[CreateModifier(attribute, magnitude)],
 			requireModifierSuccessToTriggerCue: requirement,
 			cues: [.. new[] { cue, otherCue }.OfType<CueData>()]);
 
@@ -241,14 +301,12 @@ public class CueMagnitudeReentrancyTests(TagsAndCuesFixture tagsAndCuesFixture) 
 			new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(magnitude)));
 	}
 
-	private static CueData CreateCue(Tag cueTag, string attribute)
+	private static CueData CreateCue(
+		Tag cueTag,
+		string attribute,
+		CueMagnitudeType magnitudeType = CueMagnitudeType.AttributeValueChange)
 	{
-		return new CueData(
-			cueTag.GetSingleTagContainer(),
-			-100,
-			100,
-			CueMagnitudeType.AttributeValueChange,
-			attribute);
+		return new CueData(cueTag.GetSingleTagContainer(), -100, 100, magnitudeType, attribute);
 	}
 
 	private CueData CreateCue(Tag? cueTag = null)
@@ -256,9 +314,12 @@ public class CueMagnitudeReentrancyTests(TagsAndCuesFixture tagsAndCuesFixture) 
 		return CreateCue(cueTag ?? Tag.RequestTag(_tagsManager, "test.cue1"), CueAttribute);
 	}
 
-	private CueData CreateCue(string cueTagName, string attribute = CueAttribute)
+	private CueData CreateCue(
+		string cueTagName,
+		string attribute = CueAttribute,
+		CueMagnitudeType magnitudeType = CueMagnitudeType.AttributeValueChange)
 	{
-		return CreateCue(Tag.RequestTag(_tagsManager, cueTagName), attribute);
+		return CreateCue(Tag.RequestTag(_tagsManager, cueTagName), attribute, magnitudeType);
 	}
 
 	private Effect CreateCrossSetEffect(TestEntity target)
@@ -272,7 +333,7 @@ public class CueMagnitudeReentrancyTests(TagsAndCuesFixture tagsAndCuesFixture) 
 		return new Effect(effectData, new EffectOwnership(target, target));
 	}
 
-	private Effect CreateInstantEffect(TestEntity target)
+	private Effect CreateInstantEffect(TestEntity target, CueData? extraCue = null)
 	{
 		var effectData = new EffectData(
 			"Instant Effect",
@@ -282,7 +343,7 @@ public class CueMagnitudeReentrancyTests(TagsAndCuesFixture tagsAndCuesFixture) 
 			[
 				new RaiseEventEffectComponent(EventTag().GetSingleTagContainer()!, EffectEventTrigger.Executed)
 			],
-			cues: [CreateCue()]);
+			cues: [.. new[] { CreateCue(), extraCue }.OfType<CueData>()]);
 
 		return new Effect(effectData, new EffectOwnership(target, target));
 	}

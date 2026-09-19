@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
@@ -295,7 +296,9 @@ internal sealed class ActiveEffect
 		{
 			// Nothing was re-applied, so there are no attribute changes for the update cues to report.
 			EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
-			effectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData, null);
+			effectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(
+				in effectEvaluatedData,
+				changes: null);
 		}
 
 		if (stackingData.ApplicationRefreshPolicy == StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication)
@@ -559,11 +562,24 @@ internal sealed class ActiveEffect
 		EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
 		EffectsManager effectsManager = effectEvaluatedData.Target.EffectsManager;
 
+		// Read before the changed hooks, on the state this re-application left, and dispatched after them, on a handle
+		// the hooks saw whole.
+		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
+		Span<int> cueMagnitudes = cues.Length <= CuesManager.MaxStackCueMagnitudes
+			? stackalloc int[cues.Length]
+			: new int[cues.Length];
+		bool triggerCues = (!Effect.EffectData.SuppressStackingCues || !isStackingCall)
+			&& CuesManager.TryCaptureCueMagnitudes(
+				in effectEvaluatedData,
+				CueTriggerRequirement.OnUpdate,
+				changes,
+				cueMagnitudes);
+
 		effectsManager.OnActiveEffectChanged_InternalCall(this);
 
-		if (!Effect.EffectData.SuppressStackingCues || !isStackingCall)
+		if (triggerCues)
 		{
-			effectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData, changes);
+			effectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData, cueMagnitudes);
 		}
 
 		targetAttributes.ReleaseChanges(changes);
