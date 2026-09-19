@@ -839,7 +839,7 @@ var cueEnabledEffectData = new EffectData(
 
 **Cue-related properties:**
 
-- **RequireModifierSuccessToTriggerCue**: Specifies for which effect lifecycle events a cue should only trigger if at least one attribute was successfully modified.
+- **RequireModifierSuccessToTriggerCue**: Specifies for which effect lifecycle events a cue should only trigger if at least one attribute was successfully modified by the effect's own operation — changes another effect is making to the same entity at the time do not count.
     - `None`: No modifier success required; cues may trigger regardless of success.
     - `OnApply`: Only trigger cues on application if at least one attribute is modified.
     - `OnUpdate`: Only trigger cues on update if at least one attribute is modified.
