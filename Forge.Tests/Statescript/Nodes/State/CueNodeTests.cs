@@ -139,7 +139,39 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			.Should().Be(TestCueCustomParametersProvider.PowerValue);
 	}
 
-	private (GraphProcessor Processor, RecordingCueHandler Handler) BuildSingleCueGraph(bool abortOnStart = false)
+	[Fact]
+	[Trait("Graph", "CueNode")]
+	public void A_retriggered_cue_node_applies_its_cue_once_by_default()
+	{
+		(GraphProcessor processor, RecordingCueHandler handler) = BuildSingleCueGraph(retriggerAt: 1.0);
+
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		handler.ApplyCount.Should().Be(1);
+		handler.RemoveCount.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Graph", "CueNode")]
+	public void A_restarting_cue_node_cuts_its_cue_short_and_applies_it_again()
+	{
+		(GraphProcessor processor, RecordingCueHandler handler) =
+			BuildSingleCueGraph(retriggerAt: 1.0, restartOnRetrigger: true);
+
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		handler.ApplyCount.Should().Be(2);
+		handler.RemoveCount.Should().Be(1);
+		handler.LastInterrupted.Should().BeTrue();
+		handler.IsApplied.Should().BeTrue();
+	}
+
+	private (GraphProcessor Processor, RecordingCueHandler Handler) BuildSingleCueGraph(
+		bool abortOnStart = false,
+		double? retriggerAt = null,
+		bool restartOnRetrigger = false)
 	{
 		var cuesManager = new CuesManager();
 		var handler = new RecordingCueHandler();
@@ -151,7 +183,9 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		graph.VariableDefinitions.DefineObjectVariable("cueTag", cue);
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", target);
 
-		CueNode node = CreateCueNode("cueTag", "target");
+		var node = new CueNode(restartOnRetrigger);
+		node.BindInput(CueNode.CueTagInput, "cueTag");
+		node.BindInput(CueNode.TargetInput, "target");
 		graph.AddNode(node);
 		graph.AddConnection(new Connection(
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -162,6 +196,11 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			graph.AddConnection(new Connection(
 				graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 				node.InputPorts[StateNode<CueNodeContext>.AbortPort]));
+		}
+
+		if (retriggerAt is double delay)
+		{
+			ConnectRetrigger(graph, node, delay);
 		}
 
 		return (new GraphProcessor(graph), handler);

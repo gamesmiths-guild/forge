@@ -259,4 +259,61 @@ public class TimerNodeTests
 		processor2.UpdateGraph(1.0);
 		processor2.GraphContext.IsActive.Should().BeFalse();
 	}
+
+	[Fact]
+	[Trait("Graph", "Timer")]
+	public void A_retriggered_timer_keeps_its_original_end_by_default()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 2.0);
+		TimerNode timer = CreateTimerNode("duration");
+		TrackingActionNode onTimerEnd = AddTimer(graph, timer);
+		ConnectRetrigger(graph, timer, 1.5);
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.5);
+		processor.UpdateGraph(0.5);
+
+		onTimerEnd.ExecutionCount.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Graph", "Timer")]
+	public void A_restarting_timer_runs_a_full_duration_from_the_retrigger()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 2.0);
+		var timer = new TimerNode(restartOnRetrigger: true);
+		timer.BindInput(TimerNode.DurationInput, "duration");
+		TrackingActionNode onTimerEnd = AddTimer(graph, timer);
+		ConnectRetrigger(graph, timer, 1.5);
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+		processor.UpdateGraph(0.5);
+		processor.UpdateGraph(1.0);
+
+		onTimerEnd.ExecutionCount.Should().Be(0);
+
+		processor.UpdateGraph(1.0);
+
+		onTimerEnd.ExecutionCount.Should().Be(1);
+	}
+
+	private static TrackingActionNode AddTimer(Graph graph, TimerNode timer)
+	{
+		var onTimerEnd = new TrackingActionNode();
+		graph.AddNode(timer);
+		graph.AddNode(onTimerEnd);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnTimerEndPort],
+			onTimerEnd.InputPorts[ActionNode.InputPort]));
+
+		return onTimerEnd;
+	}
 }

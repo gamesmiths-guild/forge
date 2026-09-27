@@ -550,6 +550,78 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		capture.ReceivedContext.Should().BeFalse();
 	}
 
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void A_retriggered_effect_node_applies_its_effect_once_and_removes_it_all_by_default()
+	{
+		TestEntity target = CreateTestEntity();
+		EffectData effect = CreateFlatEffectData(
+			"Effect",
+			"TestAttributeSet.Attribute1",
+			10,
+			DurationType.Infinite);
+
+		Graph graph = CreateGraph(target, effect);
+		EffectNode node = CreateEffectNode("effect", "target");
+		AddFromEntry(graph, node);
+		ConnectRetrigger(graph, node, 1.0);
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		processor.StopGraph();
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void A_restarting_effect_node_replaces_its_effect_with_a_fresh_application()
+	{
+		TestEntity target = CreateTestEntity();
+		var counter = new ActiveEffectCounterComponent();
+		EffectData effect = CreateTrackingEffectData("Tracked Effect", counter);
+
+		Graph graph = CreateGraph(target, effect);
+		var node = new EffectNode(restartOnRetrigger: true);
+		node.BindInput(EffectNode.EffectInput, "effect");
+		node.BindInput(EffectNode.TargetInput, "target");
+		AddFromEntry(graph, node);
+		ConnectRetrigger(graph, node, 1.0);
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		counter.AddedCount.Should().Be(2);
+		counter.RemovedCount.Should().Be(1);
+		processor.GraphContext.IsActive.Should().BeTrue();
+
+		processor.StopGraph();
+
+		counter.RemovedCount.Should().Be(2);
+	}
+
+	private static Graph CreateGraph(TestEntity target, EffectData effect)
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectProperty("effect", new EffectFromDataResolver(effect));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", target);
+
+		return graph;
+	}
+
+	private static void AddFromEntry(Graph graph, EffectNode node)
+	{
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+	}
+
 	private static void ConfigureEffectInput(
 		Graph graph,
 		bool useEffectArray,
@@ -702,6 +774,31 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		{
 			graphContext.TryResolve("damage", out int damage);
 			return new DamageContext(damage);
+		}
+	}
+
+	private sealed class ActiveEffectCounterComponent : IEffectComponent
+	{
+		public int AddedCount { get; private set; }
+
+		public int RemovedCount { get; private set; }
+
+		public bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+		{
+			AddedCount++;
+			return true;
+		}
+
+		public void OnActiveEffectUnapplied(
+			IForgeEntity target,
+			in ActiveEffectEvaluatedData activeEffectEvaluatedData,
+			bool removed,
+			EffectRemovalReason reason)
+		{
+			if (removed)
+			{
+				RemovedCount++;
+			}
 		}
 	}
 

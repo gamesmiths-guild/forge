@@ -21,8 +21,12 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// <para>The optional context-data input supplies a custom <see cref="EffectApplicationContext"/> (typically built by
 /// an <see cref="Providers.IEffectContextDataProvider"/>) that is passed through the effect pipeline for every
 /// application. When the input is unbound, effects are applied without context data.</para>
+/// <para>A retrigger while the node is active is ignored, or with <paramref name="restartOnRetrigger"/> the node
+/// removes the instances it applied and applies the effects again with its inputs re-resolved: a refresh that starts
+/// durations and stacks over, firing the effects' removal and application cues on the way.</para>
 /// </remarks>
-public class EffectNode : StateNode<EffectNodeContext>
+/// <param name="restartOnRetrigger">Whether a retrigger re-applies the effects instead of being ignored.</param>
+public class EffectNode(bool restartOnRetrigger = false) : StateNode<EffectNodeContext>(restartOnRetrigger)
 {
 	/// <summary>
 	/// Input property index for the effect instance.
@@ -99,6 +103,15 @@ public class EffectNode : StateNode<EffectNodeContext>
 	{
 		EffectNodeContext nodeContext = graphContext.GetNodeContext<EffectNodeContext>(NodeID);
 		EffectApplicationUtilities.RemoveEffects(nodeContext.ActiveEffectHandles);
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestart(GraphContext graphContext)
+	{
+		// Removed before applying again: a stacking effect applied first would stack onto the running instance, and the
+		// removal would then take the new application down with it.
+		OnDeactivate(graphContext);
+		OnActivate(graphContext);
 	}
 
 	/// <inheritdoc/>

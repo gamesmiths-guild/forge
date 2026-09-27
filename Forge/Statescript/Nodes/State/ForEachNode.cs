@@ -18,11 +18,12 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// alone.</para>
 /// <para>The array is <b>snapshotted on activation</b>, so an iteration that mutates the source variable does not
 /// change the sequence being walked, and a loop spread over several frames by the interval input keeps iterating the
-/// array it started with.</para>
+/// array it started with. A restart takes a fresh snapshot.</para>
 /// <para>See <see cref="IterationNode{T}"/> for the condition, interval and ending semantics shared with
-/// <see cref="RepeatNode"/>.</para>
+/// <see cref="RepeatNode"/>, including what a retrigger does.</para>
 /// </remarks>
-public class ForEachNode : IterationNode<ForEachNodeContext>
+/// <param name="restartOnRetrigger">Whether a retrigger restarts the loop instead of being ignored.</param>
+public class ForEachNode(bool restartOnRetrigger = false) : IterationNode<ForEachNodeContext>(restartOnRetrigger)
 {
 	/// <summary>
 	/// Input property index for the array to iterate.

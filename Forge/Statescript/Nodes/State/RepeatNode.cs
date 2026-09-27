@@ -12,9 +12,10 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// runs no iterations at all and finishes immediately — an unbound count is never an endless loop, which matters
 /// because the whole loop can run within a single frame.</para>
 /// <para>See <see cref="IterationNode{T}"/> for the condition, interval and ending semantics shared with
-/// <see cref="ForEachNode"/>.</para>
+/// <see cref="ForEachNode"/>, including what a retrigger does.</para>
 /// </remarks>
-public class RepeatNode : IterationNode<IterationNodeContext>
+/// <param name="restartOnRetrigger">Whether a retrigger restarts the loop instead of being ignored.</param>
+public class RepeatNode(bool restartOnRetrigger = false) : IterationNode<IterationNodeContext>(restartOnRetrigger)
 {
 	/// <summary>
 	/// Input property index for the number of iterations to run.

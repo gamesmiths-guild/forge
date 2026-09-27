@@ -28,6 +28,30 @@ internal static class NodeBindings
 		return node;
 	}
 
+	/// <summary>
+	/// Wires a timer into the target's input that fires once, the given delay after the graph starts: a retrigger, when
+	/// the target is still active by then.
+	/// </summary>
+	/// <param name="graph">The graph holding the target.</param>
+	/// <param name="target">The node to send the second activation to.</param>
+	/// <param name="delay">Seconds after the graph starts.</param>
+	/// <param name="delayVariableName">The variable holding the delay, when a graph needs more than one retrigger.
+	/// </param>
+	public static void ConnectRetrigger(Graph graph, Node target, double delay, StringKey delayVariableName = default)
+	{
+		StringKey name = delayVariableName == StringKey.Empty ? "retriggerDelay" : delayVariableName;
+		graph.VariableDefinitions.DefineVariable(name, delay);
+
+		TimerNode timer = CreateTimerNode(name);
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnTimerEndPort],
+			target.InputPorts[ActionNode.InputPort]));
+	}
+
 	public static ExpressionNode CreateExpressionNode(StringKey conditionPropertyName)
 	{
 		var node = new ExpressionNode();
@@ -327,6 +351,43 @@ internal sealed class TrackingStateNode : StateNode<StateNodeContext>
 		FixedUpdateCount++;
 		LastFixedUpdateDelta = deltaTime;
 		LastSeenUpdateStamp = graphContext.UpdateStamp;
+	}
+}
+
+/// <summary>
+/// A state node that can restart and counts every lifecycle call it receives, so a test can tell an ignored retrigger
+/// from a restart and from a fresh activation.
+/// </summary>
+/// <param name="restartOnRetrigger">Whether a retrigger restarts the node.</param>
+internal sealed class RestartableTrackingNode(bool restartOnRetrigger = false)
+	: StateNode<StateNodeContext>(restartOnRetrigger)
+{
+	public int ActivateCount { get; private set; }
+
+	public int ActivatedCount { get; private set; }
+
+	public int RestartCount { get; private set; }
+
+	public int DeactivateCount { get; private set; }
+
+	protected override void OnActivate(GraphContext graphContext)
+	{
+		ActivateCount++;
+	}
+
+	protected override void OnActivated(GraphContext graphContext)
+	{
+		ActivatedCount++;
+	}
+
+	protected override void OnRestart(GraphContext graphContext)
+	{
+		RestartCount++;
+	}
+
+	protected override void OnDeactivate(GraphContext graphContext)
+	{
+		DeactivateCount++;
 	}
 }
 

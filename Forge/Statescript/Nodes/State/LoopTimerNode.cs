@@ -19,8 +19,11 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// dropped.</para>
 /// <para>When the configured number of loops completes, the node emits a final <see cref="OnIntervalPort"/> followed
 /// by <see cref="OnFinishedPort"/> and deactivates itself.</para>
+/// <para>A retrigger while the timer runs is ignored, or with <paramref name="restartOnRetrigger"/> the interval and
+/// the loop count both start again from zero.</para>
 /// </remarks>
-public class LoopTimerNode : StateNode<LoopTimerNodeContext>
+/// <param name="restartOnRetrigger">Whether a retrigger restarts the timer instead of being ignored.</param>
+public class LoopTimerNode(bool restartOnRetrigger = false) : StateNode<LoopTimerNodeContext>(restartOnRetrigger)
 {
 	/// <summary>
 	/// Input property index for the interval duration.
@@ -72,6 +75,12 @@ public class LoopTimerNode : StateNode<LoopTimerNodeContext>
 	/// <inheritdoc/>
 	protected override void OnDeactivate(GraphContext graphContext)
 	{
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestart(GraphContext graphContext)
+	{
+		OnActivate(graphContext);
 	}
 
 	/// <inheritdoc/>
