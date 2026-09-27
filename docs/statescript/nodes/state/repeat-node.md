@@ -20,6 +20,16 @@ Standard state ports, plus:
 
 **Every way the loop can end has its own port, and exactly one of them fires:** `OnFinished` (the count was reached), `OnConditionFailed` (the guard stopped holding, possibly before the first iteration), or the standard `OnAbort` (the node was aborted from outside). `OnDeactivate` still fires for all three, so a graph that only cares that the loop is over can route that instead of wiring each ending.
 
+## Constructor
+
+```csharp
+new RepeatNode(restartOnRetrigger = false)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| restartOnRetrigger | `bool` | When `true`, a [retrigger](README.md#retriggers) starts the loop over instead of being ignored. |
+
 ## Parameters
 
 **Input Properties:**
@@ -44,6 +54,7 @@ Standard state ports, plus:
 4. When several intervals elapse in a single update, the loop catches up within that update.
 5. The loop finishes on the same tick as its final iteration: `OnFinished` fires, then the node deactivates. A condition that stops holding is discovered when the next iteration comes due, which in a paced loop is one interval later — the same way a guarded loop with a delay in its body behaves; it ends through `OnConditionFailed`.
 6. Aborting the node emits `OnAbort` and neither ending event. An iteration that stops the graph or aborts the node drops the iterations that would have followed.
+7. A retrigger while the loop is running is ignored. With `restartOnRetrigger`, the walk starts over from index 0 and its first iteration runs on the retrigger's frame, just as it does on activation — a burst that starts again from the top when fired mid-way.
 
 **An unbound count is never an endless loop.** Because the whole loop can run within one frame, a count that resolves to nothing runs zero iterations and finishes immediately, rather than spinning.
 

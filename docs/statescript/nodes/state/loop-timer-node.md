@@ -15,6 +15,16 @@ Standard state ports, plus:
 | 4 | OnInterval | Event | Emits once per completed interval. |
 | 5 | OnFinished | Event | Emits when the configured number of loops completes, just before self-deactivation. |
 
+## Constructor
+
+```csharp
+new LoopTimerNode(restartOnRetrigger = false)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| restartOnRetrigger | `bool` | When `true`, a [retrigger](README.md#retriggers) starts the timer over instead of being ignored. |
+
 ## Parameters
 
 **Input Properties:**
@@ -28,6 +38,7 @@ Standard state ports, plus:
 
 1. Accumulates elapsed time each update. When more than one interval elapses in a single update, `OnInterval` is emitted once per completed interval.
 2. When the configured number of loops completes, it emits a final `OnInterval` followed by `OnFinished`, then self-deactivates.
+3. A retrigger is ignored, so the cadence and the loops already counted carry on. With `restartOnRetrigger`, the interval and the loop count both start again from zero.
 
 ## Usage
 
