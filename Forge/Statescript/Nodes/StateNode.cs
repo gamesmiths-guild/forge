@@ -316,13 +316,15 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 			return;
 		}
 
+		ulong run = graphContext.RunStamp;
 		graphContext.FinalizationDeferralCount++;
 
 		try
 		{
 			DeactivateNode(graphContext);
 
-			for (int i = 0; i < eventPortIds.Length; i++)
+			// A port whose message ends the graph ends the ones after it too.
+			for (int i = 0; i < eventPortIds.Length && graphContext.RunStamp == run; i++)
 			{
 				Validation.Assert(
 					eventPortIds[i] > OnAbortPort,
@@ -335,14 +337,16 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		}
 		finally
 		{
-			graphContext.FinalizationDeferralCount--;
+			// A run that ended along the way took its count with it, and the next one keeps its own.
+			if (graphContext.RunStamp == run)
+			{
+				graphContext.FinalizationDeferralCount--;
+			}
 		}
 
-		if (graphContext.HasStarted
-			&& graphContext.FinalizationDeferralCount == 0
-			&& graphContext.ActiveStateNodes.Count == 0)
+		if (graphContext.RunStamp == run)
 		{
-			graphContext.Processor?.FinalizeGraph();
+			graphContext.FinalizeIfIdle();
 		}
 	}
 
@@ -407,12 +411,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		base.AfterDisable(graphContext);
 
 		OnDeactivate(graphContext);
-
-		if (graphContext.FinalizationDeferralCount == 0
-			&& graphContext.ActiveStateNodes.Count == 0)
-		{
-			graphContext.Processor?.FinalizeGraph();
-		}
+		graphContext.FinalizeIfIdle();
 	}
 
 	// A node restarted by one updated before it in the same pass would otherwise count that pass's delta - time from

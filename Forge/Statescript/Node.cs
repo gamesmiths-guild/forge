@@ -280,9 +280,12 @@ public abstract class Node
 	/// <param name="portIds">The IDs of the output ports to emit the message from.</param>
 	protected virtual void EmitMessage(GraphContext graphContext, params int[] portIds)
 	{
-		foreach (int portId in portIds)
+		ulong run = graphContext.RunStamp;
+
+		// A port whose message ends the graph ends the ones after it too.
+		for (int i = 0; i < portIds.Length && graphContext.RunStamp == run; i++)
 		{
-			OutputPorts[portId].EmitMessage(graphContext);
+			OutputPorts[portIds[i]].EmitMessage(graphContext);
 		}
 	}
 

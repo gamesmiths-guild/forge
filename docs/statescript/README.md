@@ -27,11 +27,13 @@ When the graph starts:
 
 Once all synchronous propagation is complete, only **state nodes** remain active. These nodes are updated each frame via `GraphProcessor.UpdateGraph(deltaTime)`, and on each fixed step via `GraphProcessor.FixedUpdateGraph(deltaTime)`. When a state node deactivates (e.g., a timer expires), it may emit messages that trigger further actions, conditions, or other state nodes.
 
-**The graph completes when no state nodes remain active.**
+**The graph completes when no state nodes remain active**, checked once the message that ended the last one has reached every connection: a node it has yet to reach can start and keep the graph running.
 
 ### Message Propagation
 
 Messages flow from output ports to input ports. This propagation is **synchronous within a single cascade**: when a node emits a message, all downstream nodes process it immediately, depth-first, before returning control to the emitting node.
+
+A connection whose cascade stops the graph — an Exit node, or an ability ended along the way — ends the message there: the connections after it, and any further ports the same node was emitting, are not reached.
 
 ### Node Categories
 

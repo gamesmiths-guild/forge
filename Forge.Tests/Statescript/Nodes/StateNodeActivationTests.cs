@@ -3,6 +3,7 @@
 using FluentAssertions;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
+using Gamesmiths.Forge.Statescript.Nodes.State;
 using Gamesmiths.Forge.Statescript.Ports;
 using Gamesmiths.Forge.Tests.Helpers;
 

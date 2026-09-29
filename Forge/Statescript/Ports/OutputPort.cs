@@ -95,10 +95,19 @@ public class OutputPort : Port
 		}
 		finally
 		{
-			ports[i].ReceiveMessage(graphContext);
+			// A run that ended along the way took its count with it, and the next one keeps its own.
+			if (graphContext.RunStamp == run)
+			{
+				graphContext.FinalizationDeferralCount--;
+			}
 		}
 
 		OnEmitMessage?.Invoke(PortID);
+
+		if (graphContext.RunStamp == run)
+		{
+			graphContext.FinalizeIfIdle();
+		}
 	}
 
 	internal void InternalEmitDisableSubgraphMessage(GraphContext graphContext)

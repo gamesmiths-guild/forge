@@ -450,4 +450,14 @@ public sealed class GraphContext
 	{
 		_nodeContexts.Clear();
 	}
+
+	// A run is over once no state node is left active, but not while a message is still on its way to a connection that
+	// can start one.
+	internal void FinalizeIfIdle()
+	{
+		if (HasStarted && FinalizationDeferralCount == 0 && ActiveStateNodes.Count == 0)
+		{
+			Processor?.FinalizeGraph();
+		}
+	}
 }
