@@ -87,6 +87,10 @@ public sealed class GraphContext
 
 	internal bool HasStarted { get; set; }
 
+	// Counts every start and end of a run, so a message still being delivered can tell that the graph it set out in
+	// has since stopped or started over.
+	internal ulong RunStamp { get; set; }
+
 	internal int FinalizationDeferralCount { get; set; }
 
 	internal int NodeContextCount => _nodeContexts.Count;

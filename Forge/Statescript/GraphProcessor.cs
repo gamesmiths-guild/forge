@@ -63,6 +63,7 @@ public class GraphProcessor
 	{
 		GraphContext.Processor = this;
 		GraphContext.HasStarted = true;
+		GraphContext.RunStamp++;
 		GraphContext.FinalizationDeferralCount = 0;
 		GraphContext.GraphVariables.InitializeFrom(Graph.VariableDefinitions);
 		variableOverrides?.Invoke(GraphContext.GraphVariables);
@@ -149,6 +150,7 @@ public class GraphProcessor
 		// a state node reaching FinalizeGraph) without nulling Processor yet. Keeping Processor set throughout the
 		// cascade lets action nodes on OnDeactivate paths still resolve property-backed inputs.
 		GraphContext.HasStarted = false;
+		GraphContext.RunStamp++;
 		Graph.EntryNode.StopGraph(GraphContext);
 		GraphContext.Processor = null;
 		GraphContext.ActiveStateNodes.Clear();
@@ -171,6 +173,7 @@ public class GraphProcessor
 		}
 
 		GraphContext.HasStarted = false;
+		GraphContext.RunStamp++;
 		GraphContext.Processor = null;
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();

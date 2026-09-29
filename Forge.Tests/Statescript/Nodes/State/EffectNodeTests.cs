@@ -611,7 +611,16 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 	{
 		TestEntity target = CreateTestEntity();
 		var counter = new ActiveEffectCounterComponent();
-		EffectData effect = CreateTrackingEffectData("Tracked Effect", counter);
+		var effect = new EffectData(
+			"Tracked Effect",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10))),
+			],
+			effectComponents: [counter]);
 
 		Graph graph = CreateGraph(target, effect);
 		var node = new EffectNode(restartOnRetrigger: true);
@@ -630,6 +639,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 		counter.AddedCount.Should().Be(1, "the restart ended with the graph instead of applying again");
 		counter.RemovedCount.Should().Be(1, "the graph stopping does not remove the effect a second time");
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 	}
 
 	private static Graph CreateGraph(TestEntity target, EffectData effect)

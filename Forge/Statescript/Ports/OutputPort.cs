@@ -79,8 +79,21 @@ public class OutputPort : Port
 	internal void EmitMessage(GraphContext graphContext)
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
+		ulong run = graphContext.RunStamp;
 
-		for (int i = 0; i < ports.Length; i++)
+		// The run cannot finish part way through a message, since a connection it has yet to reach can start a node
+		// that keeps it going. A connection that ends the graph - an Exit, an ability ended on the way - ends the
+		// delivery with it, rather than reaching the rest in a graph that has been torn down or started over.
+		graphContext.FinalizationDeferralCount++;
+
+		try
+		{
+			for (int i = 0; i < ports.Length && graphContext.RunStamp == run; i++)
+			{
+				ports[i].ReceiveMessage(graphContext);
+			}
+		}
+		finally
 		{
 			ports[i].ReceiveMessage(graphContext);
 		}

@@ -14,6 +14,103 @@ public class StateNodeActivationTests
 {
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void A_connection_that_stops_the_graph_ends_the_delivery_to_the_rest()
+	{
+		var graph = new Graph();
+		var node = new TrackingStateNode();
+		var exit = new ExitNode();
+		var later = new TrackingStateNode();
+		graph.AddNode(node);
+		graph.AddNode(exit);
+		graph.AddNode(later);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[TrackingStateNode.OnActivatePort],
+			exit.InputPorts[ExitNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[TrackingStateNode.OnActivatePort],
+			later.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		later.ActivateCount.Should().Be(0, "a node reached after the graph stopped would run in a graph that is gone");
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_stop_reached_from_one_ending_port_ends_the_ones_after_it()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("interval", 1.0);
+		graph.VariableDefinitions.DefineVariable("loops", 1);
+
+		// Its last interval ends it through OnInterval and then OnFinished.
+		var loopTimer = new LoopTimerNode();
+		loopTimer.BindInput(LoopTimerNode.IntervalInput, "interval");
+		loopTimer.BindInput(LoopTimerNode.LoopCountInput, "loops");
+		var exit = new ExitNode();
+		var later = new TrackingStateNode();
+		graph.AddNode(loopTimer);
+		graph.AddNode(exit);
+		graph.AddNode(later);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			loopTimer.InputPorts[LoopTimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			loopTimer.OutputPorts[LoopTimerNode.OnIntervalPort],
+			exit.InputPorts[ExitNode.InputPort]));
+		graph.AddConnection(new Connection(
+			loopTimer.OutputPorts[LoopTimerNode.OnFinishedPort],
+			later.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		later.ActivateCount.Should().Be(0, "a node reached after the graph stopped would run in a graph that is gone");
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_stop_reached_from_one_port_ends_the_ports_emitted_after_it()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("condition", false);
+
+		// Becoming true emits OnBecameTrue and then the true subgraph.
+		var monitor = new ConditionMonitorNode();
+		monitor.BindInput(ConditionMonitorNode.ConditionInput, "condition");
+		var exit = new ExitNode();
+		var later = new TrackingStateNode();
+		graph.AddNode(monitor);
+		graph.AddNode(exit);
+		graph.AddNode(later);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			monitor.InputPorts[ConditionMonitorNode.InputPort]));
+		graph.AddConnection(new Connection(
+			monitor.OutputPorts[ConditionMonitorNode.OnBecameTruePort],
+			exit.InputPorts[ExitNode.InputPort]));
+		graph.AddConnection(new Connection(
+			monitor.OutputPorts[ConditionMonitorNode.TrueSubgraphPort],
+			later.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.GraphContext.GraphVariables.SetVar("condition", true);
+		processor.UpdateGraph(1.0);
+
+		later.ActivateCount.Should().Be(0, "a node reached after the graph stopped would run in a graph that is gone");
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void An_activation_that_stops_the_graph_emits_nothing_after_it()
 	{
 		var graph = new Graph();
