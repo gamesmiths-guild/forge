@@ -605,6 +605,33 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		counter.RemovedCount.Should().Be(2);
 	}
 
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void A_restart_whose_removal_stops_the_graph_applies_nothing_more()
+	{
+		TestEntity target = CreateTestEntity();
+		var counter = new ActiveEffectCounterComponent();
+		EffectData effect = CreateTrackingEffectData("Tracked Effect", counter);
+
+		Graph graph = CreateGraph(target, effect);
+		var node = new EffectNode(restartOnRetrigger: true);
+		node.BindInput(EffectNode.EffectInput, "effect");
+		node.BindInput(EffectNode.TargetInput, "target");
+		AddFromEntry(graph, node);
+		ConnectRetrigger(graph, node, 1.0);
+
+		var processor = new GraphProcessor(graph);
+
+		// Losing an effect can end the ability the graph runs for, which stops the graph from under the restart.
+		counter.Removed = processor.StopGraph;
+		processor.StartGraph();
+
+		processor.Invoking(x => x.UpdateGraph(1.0)).Should().NotThrow();
+
+		counter.AddedCount.Should().Be(1, "the restart ended with the graph instead of applying again");
+		counter.RemovedCount.Should().Be(1, "the graph stopping does not remove the effect a second time");
+	}
+
 	private static Graph CreateGraph(TestEntity target, EffectData effect)
 	{
 		var graph = new Graph();
@@ -783,6 +810,8 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 		public int RemovedCount { get; private set; }
 
+		public System.Action? Removed { get; set; }
+
 		public bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 		{
 			AddedCount++;
@@ -798,6 +827,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 			if (removed)
 			{
 				RemovedCount++;
+				Removed?.Invoke();
 			}
 		}
 	}

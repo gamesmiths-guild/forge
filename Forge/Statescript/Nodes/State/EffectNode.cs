@@ -111,6 +111,13 @@ public class EffectNode(bool restartOnRetrigger = false) : StateNode<EffectNodeC
 		// Removed before applying again: a stacking effect applied first would stack onto the running instance, and the
 		// removal would then take the new application down with it.
 		OnDeactivate(graphContext);
+
+		// Losing an effect can end this node or the graph - it can cancel the ability the graph runs for.
+		if (!IsNodeActive(graphContext))
+		{
+			return;
+		}
+
 		OnActivate(graphContext);
 	}
 

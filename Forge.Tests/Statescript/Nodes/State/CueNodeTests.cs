@@ -168,6 +168,23 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		handler.IsApplied.Should().BeTrue();
 	}
 
+	[Fact]
+	[Trait("Graph", "CueNode")]
+	public void A_restart_whose_removal_stops_the_graph_applies_nothing_more()
+	{
+		(GraphProcessor processor, RecordingCueHandler handler) =
+			BuildSingleCueGraph(retriggerAt: 1.0, restartOnRetrigger: true);
+
+		// A handler's removal can end the ability the graph runs for, which stops the graph from under the restart.
+		handler.Removed = processor.StopGraph;
+		processor.StartGraph();
+
+		processor.Invoking(x => x.UpdateGraph(1.0)).Should().NotThrow();
+
+		handler.ApplyCount.Should().Be(1, "the restart ended with the graph instead of applying again");
+		handler.RemoveCount.Should().Be(1, "the graph stopping does not remove the cue a second time");
+	}
+
 	private (GraphProcessor Processor, RecordingCueHandler Handler) BuildSingleCueGraph(
 		bool abortOnStart = false,
 		double? retriggerAt = null,

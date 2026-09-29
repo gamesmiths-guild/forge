@@ -201,8 +201,10 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// </summary>
 	/// <remarks>
 	/// <para>No deactivation runs first: the node stays active throughout, so an override releases whatever the running
-	/// activation holds - an applied effect, a spawned instance - before acquiring it again, or it is left behind. A
-	/// node whose activation only resets its own counters can simply call <see cref="OnActivate"/>.</para>
+	/// activation holds - an applied effect, a spawned instance - before acquiring it again, or it is left behind.
+	/// Releasing can reach the rest of the graph and end the node or stop the graph, so an override checks
+	/// <see cref="IsNodeActive"/> before acquiring again. A node whose activation only resets its own counters can
+	/// simply call <see cref="OnActivate"/>.</para>
 	/// <para>The rest of the restart runs like an activation: <see cref="OnActivatePort"/> and
 	/// <see cref="SubgraphPort"/> emit again, messages emitted from here are deferred until they have, and
 	/// <see cref="OnActivated"/> runs once it is complete. Like an activation, it is first updated on the next pass,

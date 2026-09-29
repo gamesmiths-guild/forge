@@ -101,7 +101,18 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 	protected override void OnRestart(GraphContext graphContext)
 	{
 		CueNodeContext nodeContext = graphContext.GetNodeContext<CueNodeContext>(NodeID);
-		CueApplicationUtilities.RemoveCues(nodeContext.AppliedCues, interrupted: true);
+
+		// A handler's removal can end this node or the graph - it can cancel the ability the graph runs for - and the
+		// deactivation that follows must find nothing left to remove a second time.
+		AppliedCue[] applied = [.. nodeContext.AppliedCues];
+		nodeContext.AppliedCues.Clear();
+		CueApplicationUtilities.RemoveCues(applied, interrupted: true);
+
+		if (!IsNodeActive(graphContext))
+		{
+			return;
+		}
+
 		OnActivate(graphContext);
 	}
 }
