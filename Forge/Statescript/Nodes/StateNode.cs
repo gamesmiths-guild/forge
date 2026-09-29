@@ -437,7 +437,14 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		}
 
 		OutputPorts[OnActivatePort].EmitMessage(graphContext);
-		OutputPorts[SubgraphPort].EmitMessage(graphContext);
+
+		// Whatever OnActivate reaches can abort this node or stop the graph, and a subgraph started after that would
+		// run under a node that is already gone, with nothing left to disable it.
+		if (IsNodeActive(graphContext))
+		{
+			OutputPorts[SubgraphPort].EmitMessage(graphContext);
+		}
+
 		nodeContext.Activating = false;
 
 		HandleDeferredEmitMessages(graphContext, nodeContext);
@@ -457,25 +464,28 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		OnActivate(graphContext);
 	}
 
+	// What was deferred belongs to the activation, so a node aborted or a graph stopped along the way drops the rest: a
+	// node that has already ended must not keep emitting, or report a second ending, or reach for a discarded context.
 	private void HandleDeferredEmitMessages(GraphContext graphContext, StateNodeContext nodeContext)
 	{
-		if (nodeContext.DeferredEmitMessageData.Count > 0)
-		{
-			foreach (int emitEvent in nodeContext.DeferredEmitMessageData)
-			{
-				OutputPorts[emitEvent].EmitMessage(graphContext);
-			}
+		List<int> deferred = nodeContext.DeferredEmitMessageData;
 
-			nodeContext.DeferredEmitMessageData.Clear();
+		for (int i = 0; i < deferred.Count && IsNodeActive(graphContext); i++)
+		{
+			OutputPorts[deferred[i]].EmitMessage(graphContext);
 		}
+
+		deferred.Clear();
 	}
 
 	private void HandleDeferredDeactivationMessages(GraphContext graphContext, StateNodeContext nodeContext)
 	{
-		if (nodeContext.DeferredDeactivationEventPortIds is not null)
+		int[]? eventPortIds = nodeContext.DeferredDeactivationEventPortIds;
+		nodeContext.DeferredDeactivationEventPortIds = null;
+
+		if (eventPortIds is not null && IsNodeActive(graphContext))
 		{
-			DeactivateNodeAndEmitMessage(graphContext, nodeContext.DeferredDeactivationEventPortIds);
-			nodeContext.DeferredDeactivationEventPortIds = null;
+			DeactivateNodeAndEmitMessage(graphContext, eventPortIds);
 		}
 	}
 }
