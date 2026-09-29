@@ -74,28 +74,28 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	public bool RestartOnRetrigger { get; } = restartOnRetrigger;
 
 	/// <summary>
-	/// Updates this state node with the given delta time. Only processes the update if the node is currently active.
+	/// Updates this state node with the given delta time. Only processes the update if the node is currently active,
+	/// and did not restart during this update.
 	/// </summary>
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
 	/// <param name="graphContext">The graph's context.</param>
-#pragma warning disable SA1202 // Elements should be ordered by access
 	internal override void Update(double deltaTime, GraphContext graphContext)
-#pragma warning restore SA1202 // Elements should be ordered by access
 	{
-		if (IsNodeActive(graphContext))
+		if (ShouldUpdate(graphContext))
 		{
 			OnUpdate(deltaTime, graphContext);
 		}
 	}
 
 	/// <summary>
-	/// Updates this state node on the host's fixed step. Only processes the update if the node is currently active.
+	/// Updates this state node on the host's fixed step. Only processes the update if the node is currently active,
+	/// and did not restart during this step.
 	/// </summary>
 	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
 	/// <param name="graphContext">The graph's context.</param>
 	internal override void FixedUpdate(double deltaTime, GraphContext graphContext)
 	{
-		if (IsNodeActive(graphContext))
+		if (ShouldUpdate(graphContext))
 		{
 			OnFixedUpdate(deltaTime, graphContext);
 		}
@@ -175,9 +175,10 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	}
 
 	/// <summary>
-	/// Called once the node has finished activating, after <see cref="OnActivate"/>, after
-	/// <see cref="OnActivatePort"/> and <see cref="SubgraphPort"/> have been emitted, and after any messages deferred
-	/// during activation have been flushed. Not called when the node deactivated itself while activating.
+	/// Called once the node has finished activating or restarting, after <see cref="OnActivate"/> or
+	/// <see cref="OnRestart"/>, after <see cref="OnActivatePort"/> and <see cref="SubgraphPort"/> have been emitted,
+	/// and after any messages deferred during activation have been flushed. Not called when the node deactivated
+	/// itself while activating.
 	/// </summary>
 	/// <remarks>
 	/// <para>Use this instead of <see cref="OnActivate"/> for work that must emit messages <b>interleaved</b> with
@@ -204,9 +205,10 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// node whose activation only resets its own counters can simply call <see cref="OnActivate"/>.</para>
 	/// <para>The rest of the restart runs like an activation: <see cref="OnActivatePort"/> and
 	/// <see cref="SubgraphPort"/> emit again, messages emitted from here are deferred until they have, and
-	/// <see cref="OnActivated"/> runs once it is complete. The subgraph is retriggered rather than torn down, so each
-	/// node in it follows its own <see cref="RestartOnRetrigger"/>; a node whose subgraph depends on what the restart
-	/// replaces disables that subgraph here first, so it comes back fresh.</para>
+	/// <see cref="OnActivated"/> runs once it is complete. Like an activation, it is first updated on the next pass,
+	/// so no time from before the retrigger counts toward the new run. The subgraph is retriggered rather than torn
+	/// down, so each node in it follows its own <see cref="RestartOnRetrigger"/>; a node whose subgraph depends on what
+	/// the restart replaces disables that subgraph here first, so it comes back fresh.</para>
 	/// <para>A node that overrides this takes a <c>restartOnRetrigger</c> constructor parameter and passes it to the
 	/// base constructor, which is how an editor knows to offer the choice.</para>
 	/// </remarks>
@@ -411,12 +413,22 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		}
 	}
 
+	// A node restarted by one updated before it in the same pass would otherwise count that pass's delta - time from
+	// before the retrigger - toward the new run. A node activated mid-pass is not in the pass at all, so waiting for
+	// the next one starts a restart's clock where an activation's starts.
+	private bool ShouldUpdate(GraphContext graphContext)
+	{
+		return IsNodeActive(graphContext)
+			&& graphContext.GetNodeContext<StateNodeContext>(NodeID).RestartStamp != graphContext.UpdateStamp;
+	}
+
 	private void RunActivation(GraphContext graphContext, StateNodeContext nodeContext, bool restarting)
 	{
 		nodeContext.Activating = true;
 
 		if (restarting)
 		{
+			nodeContext.RestartStamp = graphContext.UpdateStamp;
 			OnRestart(graphContext);
 		}
 		else

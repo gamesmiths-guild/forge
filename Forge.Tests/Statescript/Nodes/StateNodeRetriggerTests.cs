@@ -89,6 +89,42 @@ public class StateNodeRetriggerTests
 
 	[Fact]
 	[Trait("Graph", "Retrigger")]
+	public void A_restarted_node_is_first_updated_on_the_next_pass_wherever_it_sits_in_this_one()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 10.0);
+		graph.VariableDefinitions.DefineVariable("retriggerDelay", 1.0);
+
+		// Activated around the retrigger, so one is updated before it fires in the pass and the other after.
+		TimerNode updatedBefore = CreateRestartingTimer("duration");
+		TimerNode retrigger = CreateTimerNode("retriggerDelay");
+		TimerNode updatedAfter = CreateRestartingTimer("duration");
+
+		foreach (Node node in (Node[])[updatedBefore, retrigger, updatedAfter])
+		{
+			graph.AddNode(node);
+			graph.AddConnection(new Connection(
+				graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+				node.InputPorts[ActionNode.InputPort]));
+		}
+
+		graph.AddConnection(new Connection(
+			retrigger.OutputPorts[TimerNode.OnTimerEndPort],
+			updatedBefore.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			retrigger.OutputPorts[TimerNode.OnTimerEndPort],
+			updatedAfter.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		ElapsedTime(processor, updatedBefore).Should().Be(0);
+		ElapsedTime(processor, updatedAfter).Should().Be(0, "the pass's delta is time from before the retrigger");
+	}
+
+	[Fact]
+	[Trait("Graph", "Retrigger")]
 	public void An_ending_requested_by_a_restart_waits_until_the_restart_has_emitted()
 	{
 		var log = new List<string>();
@@ -197,6 +233,18 @@ public class StateNodeRetriggerTests
 		var logger = new TrackingActionNode(name, log);
 		graph.AddNode(logger);
 		graph.AddConnection(new Connection(node.OutputPorts[outputPort], logger.InputPorts[ActionNode.InputPort]));
+	}
+
+	private static TimerNode CreateRestartingTimer(string durationPropertyName)
+	{
+		var timer = new TimerNode(restartOnRetrigger: true);
+		timer.BindInput(TimerNode.DurationInput, durationPropertyName);
+		return timer;
+	}
+
+	private static double ElapsedTime(GraphProcessor processor, TimerNode timer)
+	{
+		return processor.GraphContext.GetNodeContext<TimerNodeContext>(timer.NodeID).ElapsedTime;
 	}
 
 	private static IEnumerable<Type> ConcreteStateNodeTypes()

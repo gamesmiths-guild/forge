@@ -50,6 +50,7 @@ A restart runs in place of an activation, and the node stays active throughout:
 1. `OnRestart()` is called instead of `OnActivate()`. `OnDeactivate()` is **not** called first.
 2. **OnActivate** and **Subgraph** emit again; **OnDeactivate** does not.
 3. `OnActivated()` runs once the restart is complete, as it does after an activation. Messages emitted from `OnRestart()` are deferred until then, and so is a deactivation it asks for.
+4. The node is first updated on the next pass, as an activated node is, even when the retrigger came from a node updated before it in the current one. No time from before the retrigger counts toward the new run.
 
 The subgraph is **retriggered, not rebuilt**: its nodes are already active, so each one follows its own `restartOnRetrigger`. See [Subgraphs](../../subgraphs.md#retriggering-a-parent).
 
