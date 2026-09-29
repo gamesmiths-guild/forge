@@ -436,10 +436,14 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 			ActivateNode(graphContext);
 		}
 
-		OutputPorts[OnActivatePort].EmitMessage(graphContext);
+		// The node's own work can end it or stop the whole graph - an effect cancelling the ability this graph runs
+		// for - and so can whatever OnActivate reaches. Nothing is emitted for a node that is already gone: a subgraph
+		// started under one would run with nothing left to disable it.
+		if (IsNodeActive(graphContext))
+		{
+			OutputPorts[OnActivatePort].EmitMessage(graphContext);
+		}
 
-		// Whatever OnActivate reaches can abort this node or stop the graph, and a subgraph started after that would
-		// run under a node that is already gone, with nothing left to disable it.
 		if (IsNodeActive(graphContext))
 		{
 			OutputPorts[SubgraphPort].EmitMessage(graphContext);

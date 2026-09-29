@@ -6,10 +6,44 @@ using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Ports;
 using Gamesmiths.Forge.Tests.Helpers;
 
+using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
+
 namespace Gamesmiths.Forge.Tests.Statescript.Nodes;
 
 public class StateNodeActivationTests
 {
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void An_activation_that_stops_the_graph_emits_nothing_after_it()
+	{
+		var graph = new Graph();
+		var node = new StopsGraphNode(onActivate: true);
+		TrackingActionNode onActivate = ConnectOnActivateTracker(graph, node);
+
+		var processor = new GraphProcessor(graph);
+		node.Processor = processor;
+		processor.StartGraph();
+
+		onActivate.ExecutionCount.Should().Be(0, "the graph stopped before the node finished activating");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_restart_that_stops_the_graph_emits_nothing_after_it()
+	{
+		var graph = new Graph();
+		var node = new StopsGraphNode(onActivate: false);
+		TrackingActionNode onActivate = ConnectOnActivateTracker(graph, node);
+		ConnectRetrigger(graph, node, 1.0);
+
+		var processor = new GraphProcessor(graph);
+		node.Processor = processor;
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		onActivate.ExecutionCount.Should().Be(1, "the graph stopped before the restart finished");
+	}
+
 	[Fact]
 	[Trait("Graph", "Activation")]
 	public void An_abort_reached_from_OnActivate_leaves_the_subgraph_unstarted()
@@ -71,6 +105,21 @@ public class StateNodeActivationTests
 		onEnded.ExecutionCount.Should().Be(0);
 	}
 
+	private static TrackingActionNode ConnectOnActivateTracker(Graph graph, StopsGraphNode node)
+	{
+		var onActivate = new TrackingActionNode();
+		graph.AddNode(node);
+		graph.AddNode(onActivate);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[StopsGraphNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[StopsGraphNode.OnActivatePort],
+			onActivate.InputPorts[ActionNode.InputPort]));
+
+		return onActivate;
+	}
+
 	// The node asks to end during its activation, which is deferred until the activation completes, and its own
 	// OnActivate port aborts it before then.
 	private static TrackingActionNode ConnectAbortedEndingNode(Graph graph, EndsOnActivateNode node)
@@ -89,6 +138,30 @@ public class StateNodeActivationTests
 			onEnded.InputPorts[ActionNode.InputPort]));
 
 		return onEnded;
+	}
+
+	// Stops the graph from its own activation or restart, as an effect it applies might by cancelling the ability the
+	// graph runs for.
+	private sealed class StopsGraphNode(bool onActivate) : StateNode<StateNodeContext>(restartOnRetrigger: true)
+	{
+		public GraphProcessor? Processor { get; set; }
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+			if (onActivate)
+			{
+				Processor!.StopGraph();
+			}
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnRestart(GraphContext graphContext)
+		{
+			Processor!.StopGraph();
+		}
 	}
 
 	private sealed class EndsOnActivateNode : StateNode<StateNodeContext>
