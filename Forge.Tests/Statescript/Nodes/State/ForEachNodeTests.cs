@@ -11,6 +11,8 @@ using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
+using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
+
 namespace Gamesmiths.Forge.Tests.Statescript.Nodes.State;
 
 public class ForEachNodeTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFixture>
@@ -340,9 +342,77 @@ public class ForEachNodeTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 		processor.GraphContext.IsActive.Should().BeFalse();
 	}
 
-	private static ForEachNode CreateForEach(Graph graph, StringKey sourceName = default)
+	[Fact]
+	[Trait("Graph", "ForEach")]
+	public void A_retriggered_for_each_keeps_walking_its_snapshot_by_default()
 	{
-		var forEach = new ForEachNode();
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineArrayVariable("source", 10, 20, 30);
+		graph.VariableDefinitions.DefineVariable("interval", 1.0);
+		graph.VariableDefinitions.DefineVariable("element", 0);
+
+		ForEachNode forEach = CreateForEach(graph);
+		RecordVariableNode<int> elements = RecordElements(graph, forEach);
+		ConnectRetrigger(graph, forEach, 1.5);
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+		processor.UpdateGraph(0.5);
+		processor.UpdateGraph(0.5);
+
+		elements.ReadValues.Should().Equal(10, 20, 30);
+	}
+
+	[Fact]
+	[Trait("Graph", "ForEach")]
+	public void A_restarting_for_each_walks_a_fresh_snapshot_from_the_first_element()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineArrayVariable("source", 10, 20, 30);
+		graph.VariableDefinitions.DefineVariable("interval", 1.0);
+		graph.VariableDefinitions.DefineVariable("element", 0);
+
+		ForEachNode forEach = CreateForEach(graph, restartOnRetrigger: true);
+		RecordVariableNode<int> elements = RecordElements(graph, forEach);
+		TrackingActionNode onFinished = ConnectFinishedTracker(graph, forEach);
+		ConnectRetrigger(graph, forEach, 1.5);
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		// Changed after the first snapshot was taken, so only a fresh one sees it.
+		processor.GraphContext.GraphVariables.SetArrayElement("source", 0, 99);
+
+		processor.UpdateGraph(0.5);
+		processor.UpdateGraph(1.0);
+		processor.UpdateGraph(1.0);
+
+		elements.ReadValues.Should().Equal(10, 20, 99, 20, 30);
+		onFinished.ExecutionCount.Should().Be(1);
+	}
+
+	private static RecordVariableNode<int> RecordElements(Graph graph, ForEachNode forEach)
+	{
+		forEach.BindInput(ForEachNode.IntervalInput, "interval");
+		forEach.BindOutput(ForEachNode.ElementOutput, "element");
+
+		var elements = new RecordVariableNode<int>("element");
+		graph.AddNode(elements);
+		graph.AddConnection(new Connection(
+			forEach.OutputPorts[ForEachNode.OnIterationPort],
+			elements.InputPorts[ActionNode.InputPort]));
+
+		return elements;
+	}
+
+	private static ForEachNode CreateForEach(
+		Graph graph,
+		StringKey sourceName = default,
+		bool restartOnRetrigger = false)
+	{
+		var forEach = new ForEachNode(restartOnRetrigger);
 		forEach.BindInput(ForEachNode.ArrayInput, sourceName == StringKey.Empty ? "source" : sourceName);
 
 		graph.AddNode(forEach);

@@ -211,7 +211,24 @@ public class EventListenerNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		listenerGraph.Tracking.ExecutionCount.Should().Be(1);
 	}
 
-	private ListenerGraph BuildListenerGraph()
+	[Fact]
+	[Trait("Graph", "EventListener")]
+	public void A_retriggered_listener_hears_each_event_once()
+	{
+		ListenerGraph listenerGraph = BuildListenerGraph(retriggerAt: 1.0);
+		listenerGraph.Processor.StartGraph();
+		listenerGraph.Processor.UpdateGraph(1.0);
+
+		listenerGraph.Entity.Events.Raise(new EventData
+		{
+			EventTags = listenerGraph.EventTag.GetSingleTagContainer()!,
+			Target = listenerGraph.Entity,
+		});
+
+		listenerGraph.Tracking.ExecutionCount.Should().Be(1);
+	}
+
+	private ListenerGraph BuildListenerGraph(double? retriggerAt = null)
 	{
 		var cuesManager = new CuesManager();
 		var entity = new TestEntity(_tagsManager, cuesManager);
@@ -231,6 +248,11 @@ public class EventListenerNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		graph.AddConnection(new Connection(
 			listener.OutputPorts[EventListenerNode.OnEventPort],
 			tracking.InputPorts[ActionNode.InputPort]));
+
+		if (retriggerAt is double delay)
+		{
+			ConnectRetrigger(graph, listener, delay);
+		}
 
 		return new ListenerGraph(new GraphProcessor(graph), entity, eventTag, tracking);
 	}

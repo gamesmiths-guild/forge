@@ -92,6 +92,12 @@ This cascade ensures complete cleanup regardless of nesting depth.
 
 The Entry node's output port is a **Subgraph port**. This means the entire graph is itself a subgraph of the entry point. When `GraphProcessor.StopGraph()` is called, a disable-subgraph signal propagates from the Entry node, cleaning up every active state node in the graph.
 
+## Retriggering a Parent
+
+A message that reaches an active state node is a [retrigger](nodes/state/README.md#retriggers), and it is ignored unless the node was built to restart. When a parent restarts, its Subgraph port emits again, but no disable signal is sent first: the subgraph is **retriggered, not rebuilt**. Its nodes are still active, so each one follows its own rule — most ignore the message and keep running, and those built to restart start over too.
+
+This is what keeps a restart cheap. Refreshing a buff with a restarting [EffectNode](nodes/state/effect-node.md) leaves the looping sound in its subgraph playing rather than cutting and restarting it. A node whose subgraph genuinely depends on what its restart replaces disables that subgraph itself before restarting, so the subgraph comes back fresh when the port emits.
+
 ## Common Patterns
 
 ### Timed Behavior with Cleanup

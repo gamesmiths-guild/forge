@@ -18,8 +18,12 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// <para>Whether the removal counts as an interruption is derived from how the node was deactivated: a natural shutdown
 /// (parent subgraph ending or graph stop) passes <c>interrupted: false</c>, while a deactivation forced through the
 /// <c>Abort</c> port passes <c>interrupted: true</c>.</para>
+/// <para>A retrigger while the node is active is ignored, or with <paramref name="restartOnRetrigger"/> the node
+/// removes the cues it applied - as interrupted, since the restart cuts them short - and applies them again with its
+/// inputs re-resolved.</para>
 /// </remarks>
-public class CueNode : StateNode<CueNodeContext>
+/// <param name="restartOnRetrigger">Whether a retrigger re-applies the cues instead of being ignored.</param>
+public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext>(restartOnRetrigger)
 {
 	/// <summary>
 	/// Input property index for the cue tag(s).
@@ -91,5 +95,13 @@ public class CueNode : StateNode<CueNodeContext>
 
 		// Natural shutdown (subgraph end / graph stop) is not an interruption; an Abort-port deactivation is.
 		CueApplicationUtilities.RemoveCues(nodeContext.AppliedCues, nodeContext.WasAborted);
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestart(GraphContext graphContext)
+	{
+		CueNodeContext nodeContext = graphContext.GetNodeContext<CueNodeContext>(NodeID);
+		CueApplicationUtilities.RemoveCues(nodeContext.AppliedCues, interrupted: true);
+		OnActivate(graphContext);
 	}
 }

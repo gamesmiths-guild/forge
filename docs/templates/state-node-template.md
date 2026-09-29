@@ -28,6 +28,19 @@
 > Remove the custom port rows if the node defines no additional ports beyond the standard four.
 > Port names should match the labels defined in code via `CreatePort<T>(index, "Label")`.
 
+## Constructor
+
+```csharp
+new {ClassName}({parameter} = {default}, restartOnRetrigger = false)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| {parameter} | `{Type}` | {Description.} |
+| restartOnRetrigger | `bool` | When `true`, a [retrigger](../statescript/nodes/state/README.md#retriggers) {what the restart does} instead of being ignored. |
+
+> Remove this section if the node takes no constructor parameters. List `restartOnRetrigger` only if the node overrides `OnRestart`.
+
 ## Parameters
 
 **Input Properties:**
@@ -53,6 +66,7 @@
 1. **Activation:** {What happens on activation.}
 2. **Update:** {What happens each frame while active.}
 3. **Deactivation:** {What triggers deactivation and what cleanup occurs.}
+4. **Retrigger:** {Ignored. For a node that overrides `OnRestart`, add what `restartOnRetrigger` makes a retrigger do instead, and what the restart releases before acquiring again.}
 
 ## Usage
 

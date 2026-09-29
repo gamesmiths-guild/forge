@@ -14,8 +14,11 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// <para>The node accumulates elapsed time in its <see cref="TimerNodeContext"/> during
 /// <see cref="StateNode{T}.OnUpdate"/> calls. When the elapsed time reaches or exceeds the duration, the node
 /// deactivates itself.</para>
+/// <para>A retrigger while the timer runs is ignored, or with <paramref name="restartOnRetrigger"/> the elapsed time
+/// starts again from zero, so the timer runs a full duration from the retrigger.</para>
 /// </remarks>
-public class TimerNode : StateNode<TimerNodeContext>
+/// <param name="restartOnRetrigger">Whether a retrigger restarts the timer instead of being ignored.</param>
+public class TimerNode(bool restartOnRetrigger = false) : StateNode<TimerNodeContext>(restartOnRetrigger)
 {
 	/// <summary>
 	/// Input property index for the timer duration.
@@ -54,6 +57,12 @@ public class TimerNode : StateNode<TimerNodeContext>
 	/// <inheritdoc/>
 	protected override void OnDeactivate(GraphContext graphContext)
 	{
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestart(GraphContext graphContext)
+	{
+		OnActivate(graphContext);
 	}
 
 	/// <inheritdoc/>

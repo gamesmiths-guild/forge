@@ -6,6 +6,8 @@ using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.State;
 using Gamesmiths.Forge.Tests.Helpers;
 
+using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
+
 namespace Gamesmiths.Forge.Tests.Statescript.Nodes.State;
 
 public class LoopTimerNodeTests
@@ -107,9 +109,59 @@ public class LoopTimerNodeTests
 		processor.GraphContext.IsActive.Should().BeFalse();
 	}
 
-	private static LoopTimerNode CreateLoopTimer(Graph graph, bool bindLoopCount)
+	[Fact]
+	[Trait("Graph", "LoopTimer")]
+	public void A_retriggered_loop_timer_keeps_its_cadence_by_default()
 	{
-		var loopTimer = new LoopTimerNode();
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("interval", 1.0);
+		graph.VariableDefinitions.DefineVariable("loops", 3);
+
+		LoopTimerNode loopTimer = CreateLoopTimer(graph, bindLoopCount: true);
+		(TrackingActionNode onInterval, TrackingActionNode onFinished) = ConnectTrackers(graph, loopTimer);
+		ConnectRetrigger(graph, loopTimer, 1.5);
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+		processor.UpdateGraph(0.5);
+		processor.UpdateGraph(0.5);
+		processor.UpdateGraph(1.0);
+
+		onInterval.ExecutionCount.Should().Be(3);
+		onFinished.ExecutionCount.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Graph", "LoopTimer")]
+	public void A_restarting_loop_timer_starts_its_intervals_and_loops_over()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("interval", 1.0);
+		graph.VariableDefinitions.DefineVariable("loops", 3);
+
+		LoopTimerNode loopTimer = CreateLoopTimer(graph, bindLoopCount: true, restartOnRetrigger: true);
+		(TrackingActionNode onInterval, TrackingActionNode onFinished) = ConnectTrackers(graph, loopTimer);
+		ConnectRetrigger(graph, loopTimer, 1.5);
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+		processor.UpdateGraph(0.5);
+		processor.UpdateGraph(1.0);
+		processor.UpdateGraph(1.0);
+
+		onFinished.ExecutionCount.Should().Be(0);
+
+		processor.UpdateGraph(1.0);
+
+		onInterval.ExecutionCount.Should().Be(4);
+		onFinished.ExecutionCount.Should().Be(1);
+	}
+
+	private static LoopTimerNode CreateLoopTimer(Graph graph, bool bindLoopCount, bool restartOnRetrigger = false)
+	{
+		var loopTimer = new LoopTimerNode(restartOnRetrigger);
 		loopTimer.BindInput(LoopTimerNode.IntervalInput, "interval");
 
 		if (bindLoopCount)

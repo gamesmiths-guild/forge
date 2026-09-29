@@ -25,6 +25,16 @@ Applies one or more effects, stays active while any applied instance remains act
 | 3 | Subgraph | Subgraph | Remains active while the node is active; sends disable signal on deactivation. |
 | 4 | OnEffectEnd | Event | Emits only when all applied effects ended without this node removing them during external deactivation. |
 
+## Constructor
+
+```csharp
+new EffectNode(restartOnRetrigger = false)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| restartOnRetrigger | `bool` | When `true`, a [retrigger](README.md#retriggers) re-applies the effects instead of being ignored. |
+
 ## Parameters
 
 **Input Properties:**
@@ -55,6 +65,7 @@ Applies one or more effects, stays active while any applied instance remains act
 10. Instant effects and duration effects that already expired before deactivation are ignored.
 11. This is useful for buffs, auras, toggles, and other state-owned effects that should end when the state ends.
 12. Removal is best-effort: if an effect already ended naturally, the node leaves it alone.
+13. A retrigger while the node is active is ignored, so feeding the node from something that fires repeatedly — an event listener on every hit — applies its effects once rather than stacking a new instance per message. With `restartOnRetrigger`, the node removes the instances it applied and applies the effects again with its inputs re-resolved: a refresh that starts durations and stacks over, rewrites the **Active Effect** output, and fires the effects' removal and application cues on the way. Removal comes first, so a stacking effect is not stacked onto the instance that is about to go.
 
 ## Usage
 

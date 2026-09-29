@@ -22,6 +22,16 @@ Standard state ports, plus:
 
 **Every way the loop can end has its own port, and exactly one of them fires:** `OnFinished` (the array ran out), `OnConditionFailed` (the guard stopped holding, possibly before the first element), or the standard `OnAbort` (the node was aborted from outside). `OnDeactivate` still fires for all three, so a graph that only cares that the loop is over can route that instead of wiring each ending.
 
+## Constructor
+
+```csharp
+new ForEachNode(restartOnRetrigger = false)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| restartOnRetrigger | `bool` | When `true`, a [retrigger](README.md#retriggers) starts the walk over instead of being ignored. |
+
 ## Parameters
 
 **Input Properties:**
@@ -59,6 +69,7 @@ So: to iterate entities, declare an `IForgeEntity` graph variable and bind it to
 4. With a positive interval, the elements after the first are spaced by it — so a 3-element array at `0.2` runs at `0.0`, `0.2` and `0.4`. When several intervals elapse in a single update, the loop catches up within that update.
 5. The loop finishes on the same tick as its final element: `OnFinished` fires, then the node deactivates. An empty or unresolvable source finishes immediately, having emitted nothing.
 6. Aborting the node emits `OnAbort` and neither ending event. An iteration that stops the graph or aborts the node drops the elements that would have followed.
+7. A retrigger while the loop is running is ignored. With `restartOnRetrigger`, the walk starts over from the first element of a **fresh snapshot**, so it sees the array as it is at the retrigger, and its first iteration runs on that frame.
 
 **Neither output can steer the loop.** Position lives in the node context and the elements come from the activation snapshot, so an iteration that writes the element or index variable — including rewinding the index — changes nothing: the next iteration simply overwrites both.
 

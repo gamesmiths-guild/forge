@@ -36,9 +36,12 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// <para>Derived nodes supply the sequence through <see cref="DefineSourceParameters"/>, <see cref="HasIteration"/>
 /// and <see cref="PrepareIteration"/>. Their source input always occupies index 0, because the shared condition and
 /// interval inputs are appended after it.</para>
+/// <para>A retrigger while the loop runs is ignored, or with <paramref name="restartOnRetrigger"/> the walk starts over
+/// from the first iteration, which runs on the restart frame just as it does on activation.</para>
 /// </remarks>
 /// <typeparam name="T">The type of the iteration node context.</typeparam>
-public abstract class IterationNode<T> : StateNode<T>
+/// <param name="restartOnRetrigger">Whether a retrigger restarts the loop instead of being ignored.</param>
+public abstract class IterationNode<T>(bool restartOnRetrigger = false) : StateNode<T>(restartOnRetrigger)
 	where T : IterationNodeContext, new()
 {
 #pragma warning disable RCS1158 // Static member in generic type should use a type parameter
@@ -171,6 +174,12 @@ public abstract class IterationNode<T> : StateNode<T>
 	/// <inheritdoc/>
 	protected override void OnDeactivate(GraphContext graphContext)
 	{
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestart(GraphContext graphContext)
+	{
+		OnActivate(graphContext);
 	}
 
 	/// <inheritdoc/>

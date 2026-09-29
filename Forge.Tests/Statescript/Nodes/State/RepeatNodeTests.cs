@@ -7,6 +7,8 @@ using Gamesmiths.Forge.Statescript.Nodes.State;
 using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tests.Helpers;
 
+using static Gamesmiths.Forge.Tests.Helpers.NodeBindings;
+
 namespace Gamesmiths.Forge.Tests.Statescript.Nodes.State;
 
 public class RepeatNodeTests
@@ -339,9 +341,63 @@ public class RepeatNodeTests
 		processor.GraphContext.IsActive.Should().BeFalse();
 	}
 
-	private static RepeatNode CreateRepeat(Graph graph)
+	[Fact]
+	[Trait("Graph", "Repeat")]
+	public void A_retriggered_repeat_keeps_walking_its_count_by_default()
 	{
-		var repeat = new RepeatNode();
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("count", 3);
+		graph.VariableDefinitions.DefineVariable("interval", 1.0);
+
+		RepeatNode repeat = CreateRepeat(graph);
+		repeat.BindInput(RepeatNode.IntervalInput, "interval");
+		(TrackingActionNode onIteration, TrackingActionNode onFinished) = ConnectTrackers(graph, repeat);
+		ConnectRetrigger(graph, repeat, 1.5);
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+		processor.UpdateGraph(0.5);
+		processor.UpdateGraph(0.5);
+
+		onIteration.ExecutionCount.Should().Be(3);
+		onFinished.ExecutionCount.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Graph", "Repeat")]
+	public void A_restarting_repeat_walks_its_whole_count_again_from_the_retrigger()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("count", 3);
+		graph.VariableDefinitions.DefineVariable("interval", 1.0);
+
+		RepeatNode repeat = CreateRepeat(graph, restartOnRetrigger: true);
+		repeat.BindInput(RepeatNode.IntervalInput, "interval");
+		(TrackingActionNode onIteration, TrackingActionNode onFinished) = ConnectTrackers(graph, repeat);
+		ConnectRetrigger(graph, repeat, 1.5);
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+		processor.UpdateGraph(0.5);
+
+		// Two iterations before the retrigger, and the restart runs its first one on the same frame.
+		onIteration.ExecutionCount.Should().Be(3);
+
+		processor.UpdateGraph(1.0);
+
+		onFinished.ExecutionCount.Should().Be(0);
+
+		processor.UpdateGraph(1.0);
+
+		onIteration.ExecutionCount.Should().Be(5);
+		onFinished.ExecutionCount.Should().Be(1);
+	}
+
+	private static RepeatNode CreateRepeat(Graph graph, bool restartOnRetrigger = false)
+	{
+		var repeat = new RepeatNode(restartOnRetrigger);
 		repeat.BindInput(RepeatNode.CountInput, "count");
 
 		graph.AddNode(repeat);

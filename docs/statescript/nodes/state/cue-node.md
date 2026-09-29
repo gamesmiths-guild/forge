@@ -24,6 +24,16 @@ Applies one or more persistent cues (`CuesManager.ApplyCue`) on activation and r
 | 2 | OnAbort | Event | Emits only when aborted via the Abort port. |
 | 3 | Subgraph | Subgraph | Remains active while the node is active; sends disable signal on deactivation. |
 
+## Constructor
+
+```csharp
+new CueNode(restartOnRetrigger = false)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| restartOnRetrigger | `bool` | When `true`, a [retrigger](README.md#retriggers) re-applies the cues instead of being ignored. |
+
 ## Parameters
 
 **Input Properties:**
@@ -47,6 +57,7 @@ This node has no output variables, cues are addressed entirely by tag.
 2. The exact cue/target pairs applied on activation are recorded in `CueNodeContext`.
 3. The node has **no timer**: it stays active until deactivated externally. It is typically placed as a subgraph of another state node so it lives for that state's duration.
 4. On deactivation, the node removes exactly the recorded cue/target pairs. Whether the removal is an interruption is derived from how the node was deactivated: a natural shutdown (parent subgraph ending or `GraphProcessor.StopGraph`) passes `interrupted: false`, while a deactivation forced through the **Abort** port passes `interrupted: true`. No interrupt input is needed.
+5. A retrigger while the node is active is ignored, so the cues are applied once however often the node is fed. With `restartOnRetrigger`, the node removes the recorded pairs — as `interrupted: true`, since the restart cuts them short — and applies the cues again with its inputs re-resolved, which replays their apply phase.
 
 ## Usage
 

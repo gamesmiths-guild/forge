@@ -21,13 +21,38 @@ State nodes **persist over time**. They activate when receiving a message, remai
 
 **Lifecycle:**
 
-1. Message on **Input** → node activates → `OnActivate()` is called.
+1. Message on **Input** → node activates → `OnActivate()` is called. A message that arrives while the node is already active is a [retrigger](#retriggers) instead.
 2. **OnActivate** and **Subgraph** ports emit regular messages.
 3. Each frame, `OnUpdate(deltaTime)` is called by the graph processor. On each fixed step, `OnFixedUpdate(deltaTime)` is called instead — see [Two update rails](#two-update-rails).
 4. When internal logic completes → `OnDeactivate` emits, Subgraph ports send disable signals.
 5. If **Abort** receives a message → `OnAbort` emits, then node deactivates normally.
 
 **Deferred actions:** If activation logic triggers immediate deactivation (e.g., a timer with duration 0), the deactivation is **deferred** until activation completes. This guarantees that OnActivate and Subgraph ports fire before any deactivation processing begins.
+
+## Retriggers
+
+A message that reaches **Input** while the node is already active is a **retrigger**: a Loop Timer re-kicking a walk, an event listener feeding the same Effect node on every hit. By default a retrigger is **ignored** — nothing is called, no port emits, and whatever the running activation holds (an applied effect, a subscription, a spawned instance) carries on untouched. Only a node that has ended can be activated again.
+
+Some nodes can instead **restart**, and do so when built with `restartOnRetrigger: true`:
+
+| Node | What a restart does |
+|------|---------------------|
+| [TimerNode](timer-node.md) | The elapsed time starts again from zero, so the timer runs a full duration from the retrigger. |
+| [LoopTimerNode](loop-timer-node.md) | The interval and the loop count both start again from zero. |
+| [RepeatNode](repeat-node.md), [ForEachNode](for-each-node.md) | The walk starts over from the first iteration, which runs on the restart frame. ForEachNode snapshots its array again. |
+| [EffectNode](effect-node.md) | The effects it applied are removed and applied again with the inputs re-resolved — a refresh. |
+| [CueNode](cue-node.md) | The cues it applied are removed, as interrupted, and applied again with the inputs re-resolved. |
+
+The rest have nothing a restart would mean — they re-evaluate their inputs every update anyway, or hold something that starting over would only drop and take back — so a retrigger stays ignored for them.
+
+A restart runs in place of an activation, and the node stays active throughout:
+
+1. `OnRestart()` is called instead of `OnActivate()`. `OnDeactivate()` is **not** called first.
+2. **OnActivate** and **Subgraph** emit again; **OnDeactivate** does not.
+3. `OnActivated()` runs once the restart is complete, as it does after an activation. Messages emitted from `OnRestart()` are deferred until then, and so is a deactivation it asks for.
+4. The node is first updated on the next pass, as an activated node is, even when the retrigger came from a node updated before it in the current one. No time from before the retrigger counts toward the new run.
+
+The subgraph is **retriggered, not rebuilt**: its nodes are already active, so each one follows its own `restartOnRetrigger`. See [Subgraphs](../../subgraphs.md#retriggering-a-parent).
 
 ## Two update rails
 
@@ -106,6 +131,24 @@ protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort>
 ```
 
 That label becomes the canonical port name surfaced by editor integrations such as Forge for Godot.
+
+**Supporting restarts.** A node that can start over when [retriggered](#retriggers) overrides `OnRestart` and takes a `restartOnRetrigger` constructor parameter, passing it on to the base constructor. The parameter is what tells an editor to offer the choice, so a node without it is never asked to restart, and one with it but no `OnRestart` would offer a choice that changes nothing:
+
+```csharp
+public class WaitForTagNode(Tag tag, bool restartOnRetrigger = false)
+    : StateNode<WaitForTagNodeContext>(restartOnRetrigger)
+{
+    // ...
+
+    protected override void OnRestart(GraphContext graphContext)
+    {
+        // Activation only records the tag, so starting over is activating again.
+        OnActivate(graphContext);
+    }
+}
+```
+
+No deactivation runs before `OnRestart`: the node stays active, so one that holds something — an applied effect, a subscription, a spawned instance — releases it there before acquiring it again, or the first one is left behind. A node whose subgraph depends on what the restart replaces, such as a spawned instance that the subgraph moves around, disables that subgraph first (`((SubgraphPort)OutputPorts[SubgraphPort]).EmitDisableSubgraphMessage(graphContext)`), so it comes back fresh when the Subgraph port emits again.
 
 ## Built-in State Nodes
 
