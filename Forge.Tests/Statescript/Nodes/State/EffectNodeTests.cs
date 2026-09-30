@@ -682,6 +682,66 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 	}
 
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void An_instant_effect_that_stops_the_graph_as_it_applies_ends_the_node_with_it()
+	{
+		TestEntity target = CreateTestEntity();
+		var stopper = new StopsGraphComponent();
+		GraphProcessor processor = CreateProcessor(target, CreateStoppingEffect(DurationType.Instant, stopper));
+
+		// Applying an effect can end the ability the graph runs for, which stops the graph before the node holds it.
+		stopper.Applied = processor.StopGraph;
+
+		processor.Invoking(x => x.StartGraph()).Should().NotThrow();
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void An_effect_that_stops_the_graph_as_it_applies_is_removed_with_it()
+	{
+		TestEntity target = CreateTestEntity();
+		var stopper = new StopsGraphComponent();
+		GraphProcessor processor = CreateProcessor(target, CreateStoppingEffect(DurationType.Infinite, stopper));
+		stopper.Applied = processor.StopGraph;
+
+		processor.StartGraph();
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void The_effects_after_one_that_stops_the_graph_as_it_applies_go_unapplied()
+	{
+		TestEntity target = CreateTestEntity();
+		var stopper = new StopsGraphComponent();
+		EffectData later = CreateFlatEffectData("Later", "TestAttributeSet.Attribute2", 10, DurationType.Instant);
+		GraphProcessor processor =
+			CreateProcessor(target, CreateStoppingEffect(DurationType.Instant, stopper), later);
+		stopper.Applied = processor.StopGraph;
+
+		processor.StartGraph();
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
+	}
+
+	// Adds 10 to Attribute1, and calls back as it applies.
+	private static EffectData CreateStoppingEffect(DurationType durationType, StopsGraphComponent stopper)
+	{
+		return new EffectData(
+			"Stopping Effect",
+			new DurationData(durationType),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10))),
+			],
+			effectComponents: [stopper]);
+	}
+
 	private static Graph CreateGraph(TestEntity target, EffectData effect)
 	{
 		var graph = new Graph();
@@ -879,6 +939,16 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 				RemovedCount++;
 				Removed?.Invoke();
 			}
+		}
+	}
+
+	private sealed class StopsGraphComponent : IEffectComponent
+	{
+		public System.Action? Applied { get; set; }
+
+		public void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
+		{
+			Applied?.Invoke();
 		}
 	}
 

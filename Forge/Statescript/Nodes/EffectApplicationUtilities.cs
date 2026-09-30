@@ -23,12 +23,15 @@ internal static class EffectApplicationUtilities
 
 		// Resolved once per node execution and shared across the whole effect x target cross-product.
 		EffectApplicationContext? applicationContext = ResolveContextData(graphContext, contextDataInputName);
+		ulong run = graphContext.RunStamp;
 
 		for (int entityIndex = 0; entityIndex < entities.Count; entityIndex++)
 		{
 			IForgeEntity entity = entities[entityIndex];
 
-			for (int effectIndex = 0; effectIndex < effects.Count; effectIndex++)
+			// An effect can end the graph as it applies - cancelling the ability it runs for - and the rest are then
+			// not applied for a graph that is gone.
+			for (int effectIndex = 0; effectIndex < effects.Count && graphContext.RunStamp == run; effectIndex++)
 			{
 				// applicationContext is null when no context-data input is bound; ApplyEffectInternal handles both
 				// cases.

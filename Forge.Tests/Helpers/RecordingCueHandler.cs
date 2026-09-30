@@ -27,6 +27,8 @@ internal sealed class RecordingCueHandler : ICueHandler
 
 	public CueParameters? LastParameters { get; private set; }
 
+	public Action? Applied { get; set; }
+
 	public Action? Removed { get; set; }
 
 	public void OnExecute(IForgeEntity? target, CueParameters? parameters)
@@ -42,6 +44,7 @@ internal sealed class RecordingCueHandler : ICueHandler
 		IsApplied = true;
 		LastTarget = target;
 		LastParameters = parameters;
+		Applied?.Invoke();
 	}
 
 	public void OnRemove(IForgeEntity? target, bool interrupted)

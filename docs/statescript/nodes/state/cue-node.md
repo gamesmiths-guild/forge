@@ -54,7 +54,7 @@ This node has no output variables, cues are addressed entirely by tag.
 ## Behavior
 
 1. On activation, the node resolves the **Cue Tags** and **Target** inputs (single or array each) and applies every cue tag to every target, the full `cueTag[] x target[]` matrix, through each target's `IForgeEntity.CuesManager`. The optional **Magnitude** / **Normalized Magnitude** / **Source** / **Custom Parameters** inputs are resolved once and shared (`null` parameters when all are unbound).
-2. The exact cue/target pairs applied on activation are recorded in `CueNodeContext`.
+2. The exact cue/target pairs applied on activation are recorded in `CueNodeContext`. A handler that ends the node or the graph as its cue applies has the recorded pairs removed again.
 3. The node has **no timer**: it stays active until deactivated externally. It is typically placed as a subgraph of another state node so it lives for that state's duration.
 4. On deactivation, the node removes exactly the recorded cue/target pairs. Whether the removal is an interruption is derived from how the node was deactivated: a natural shutdown (parent subgraph ending or `GraphProcessor.StopGraph`) passes `interrupted: false`, while a deactivation forced through the **Abort** port passes `interrupted: true`. No interrupt input is needed.
 5. A retrigger while the node is active is ignored, so the cues are applied once however often the node is fed. With `restartOnRetrigger`, the node removes the recorded pairs — as `interrupted: true`, since the restart cuts them short — and applies the cues again with its inputs re-resolved, which replays their apply phase.
