@@ -118,7 +118,7 @@ public class EffectNode(bool restartOnRetrigger = false) : StateNode<EffectNodeC
 		nodeContext.ActiveEffectHandles.Clear();
 		EffectApplicationUtilities.RemoveEffects(applied);
 
-		if (!IsNodeActive(graphContext))
+		if (!nodeContext.Active)
 		{
 			return;
 		}

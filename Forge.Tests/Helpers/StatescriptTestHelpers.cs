@@ -52,6 +52,25 @@ internal static class NodeBindings
 			target.InputPorts[ActionNode.InputPort]));
 	}
 
+	/// <summary>
+	/// Starts the graph over from inside the call that completed it, the first time it completes, so whatever that call
+	/// still had to do runs after the new run has begun.
+	/// </summary>
+	/// <param name="processor">The processor to start over.</param>
+	public static void RestartOnFirstCompletion(GraphProcessor processor)
+	{
+		bool restarted = false;
+
+		processor.OnGraphCompleted = () =>
+		{
+			if (!restarted)
+			{
+				restarted = true;
+				processor.StartGraph();
+			}
+		};
+	}
+
 	public static ExpressionNode CreateExpressionNode(StringKey conditionPropertyName)
 	{
 		var node = new ExpressionNode();
@@ -646,6 +665,27 @@ internal sealed class TrackingActionNode(string? name = null, List<string>? exec
 		if (_name is not null)
 		{
 			_executionLog?.Add(_name);
+		}
+	}
+}
+
+/// <summary>
+/// An action node that stops its graph on one of its executions, as one cancelling the ability the graph runs for does.
+/// </summary>
+/// <param name="stopOnExecution">The execution, counting from one, that stops the graph.</param>
+internal sealed class StopsGraphActionNode(int stopOnExecution = 1) : ActionNode
+{
+	private readonly int _stopOnExecution = stopOnExecution;
+
+	public GraphProcessor? Processor { get; set; }
+
+	public int ExecutionCount { get; private set; }
+
+	protected override void Execute(GraphContext graphContext)
+	{
+		if (++ExecutionCount == _stopOnExecution)
+		{
+			Processor!.StopGraph();
 		}
 	}
 }

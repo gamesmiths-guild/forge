@@ -47,7 +47,13 @@ public abstract class ActionNode : Node
 	/// <inheritdoc/>
 	protected override void HandleMessage(InputPort receiverPort, GraphContext graphContext)
 	{
+		ulong run = graphContext.RunStamp;
 		Execute(graphContext);
-		OutputPorts[OutputPort].EmitMessage(graphContext);
+
+		// An action can end the graph - cancelling the ability it runs for - and then leads nowhere.
+		if (graphContext.RunStamp == run)
+		{
+			OutputPorts[OutputPort].EmitMessage(graphContext);
+		}
 	}
 }

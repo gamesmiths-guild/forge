@@ -91,9 +91,13 @@ public class GraphProcessor
 			return;
 		}
 
+		ulong run = GraphContext.RunStamp;
+
 		try
 		{
-			for (int i = 0; i < _updateBuffer.Count; i++)
+			// A node can end the graph part way through the pass, and a graph started over from there has nodes of its
+			// own that the rest of this delta must not reach.
+			for (int i = 0; i < _updateBuffer.Count && GraphContext.RunStamp == run; i++)
 			{
 				_updateBuffer[i].Update(deltaTime, GraphContext);
 			}
@@ -120,9 +124,11 @@ public class GraphProcessor
 			return;
 		}
 
+		ulong run = GraphContext.RunStamp;
+
 		try
 		{
-			for (int i = 0; i < _updateBuffer.Count; i++)
+			for (int i = 0; i < _updateBuffer.Count && GraphContext.RunStamp == run; i++)
 			{
 				_updateBuffer[i].FixedUpdate(deltaTime, GraphContext);
 			}

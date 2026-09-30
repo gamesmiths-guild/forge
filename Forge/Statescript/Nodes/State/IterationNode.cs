@@ -252,7 +252,7 @@ public abstract class IterationNode<T>(bool restartOnRetrigger = false) : StateN
 
 		// An iteration can abort this node or stop the graph, either of which invalidates the loop state this method
 		// walks, so the caller must stop rather than run the next one.
-		if (!IsNodeActive(graphContext))
+		if (!nodeContext.Active)
 		{
 			return IterationOutcome.Interrupted;
 		}

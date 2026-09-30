@@ -165,11 +165,14 @@ public abstract class Node
 			graphContext.InternalNodeActivationStatus[NodeID] = false;
 		}
 
+		ulong run = graphContext.RunStamp;
 		BeforeDisable(graphContext);
 
-		foreach (OutputPort outputPort in OutputPorts)
+		// A state node's OnDeactivate can end the graph, and the rest of this disabling belongs to the run that
+		// ended: a graph started over from there has nodes of its own.
+		for (int i = 0; i < OutputPorts.Length && graphContext.RunStamp == run; i++)
 		{
-			outputPort.InternalEmitDisableSubgraphMessage(graphContext);
+			OutputPorts[i].InternalEmitDisableSubgraphMessage(graphContext);
 		}
 
 		AfterDisable(graphContext);

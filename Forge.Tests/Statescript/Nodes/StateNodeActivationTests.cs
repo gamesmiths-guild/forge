@@ -144,6 +144,243 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void An_activation_whose_graph_starts_over_emits_nothing_into_the_new_run()
+	{
+		var graph = new Graph();
+		var node = new DefersThenStopsGraphNode();
+		var onActivate = new TrackingActionNode();
+		var subgraph = new TrackingActionNode();
+		var onEmitted = new TrackingActionNode();
+		var onEnded = new TrackingActionNode();
+		graph.AddNode(node);
+		graph.AddNode(onActivate);
+		graph.AddNode(subgraph);
+		graph.AddNode(onEmitted);
+		graph.AddNode(onEnded);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[DefersThenStopsGraphNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[DefersThenStopsGraphNode.OnActivatePort],
+			onActivate.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[DefersThenStopsGraphNode.SubgraphPort],
+			subgraph.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[DefersThenStopsGraphNode.OnEmittedPort],
+			onEmitted.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[DefersThenStopsGraphNode.OnEndedPort],
+			onEnded.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		node.Processor = processor;
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+
+		// Only the new run's activation got as far as emitting, and what the stopped one deferred went with it.
+		onActivate.ExecutionCount.Should().Be(1);
+		subgraph.ExecutionCount.Should().Be(1);
+		node.ActivatedCount.Should().Be(1);
+		onEmitted.ExecutionCount.Should().Be(0);
+		onEnded.ExecutionCount.Should().Be(0);
+		IsActive(processor, node).Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_deactivation_whose_graph_starts_over_leaves_the_new_run_running()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		// The timer's ending reaches an Exit before its subgraph is disabled.
+		TimerNode timer = CreateTimerNode("duration");
+		var child = new TrackingStateNode();
+		var exit = new ExitNode();
+		graph.AddNode(timer);
+		graph.AddNode(child);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnDeactivatePort],
+			exit.InputPorts[ExitNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.SubgraphPort],
+			child.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		child.ActivateCount.Should().Be(2);
+		child.DeactivateCount.Should().Be(1, "the stop ended the first run's child, and nothing ends the new one's");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void An_abort_whose_graph_starts_over_leaves_the_new_run_running()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("abortDelay", 1.0);
+
+		// The node's OnAbort reaches an Exit before the node itself is deactivated.
+		var node = new TrackingStateNode();
+		TimerNode abortTimer = CreateTimerNode("abortDelay");
+		var exit = new ExitNode();
+		graph.AddNode(node);
+		graph.AddNode(abortTimer);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			abortTimer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			abortTimer.OutputPorts[TimerNode.OnTimerEndPort],
+			node.InputPorts[TrackingStateNode.AbortPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[TrackingStateNode.OnAbortPort],
+			exit.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		node.ActivateCount.Should().Be(2);
+		node.DeactivateCount.Should().Be(1, "the stop ended the first run's node, and nothing ends the new one's");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_subgraph_whose_disabling_starts_the_graph_over_leaves_the_new_run_running()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		// Disabling the timer's subgraph reaches a node that exits as it is disabled, and each of the two before it
+		// has a sibling still to disable.
+		TimerNode timer = CreateTimerNode("duration");
+		var parent = new TrackingStateNode();
+		var parentSibling = new TrackingStateNode();
+		var exiting = new TrackingStateNode();
+		var exitingSibling = new TrackingStateNode();
+		var exit = new ExitNode();
+		graph.AddNode(timer);
+		graph.AddNode(parent);
+		graph.AddNode(parentSibling);
+		graph.AddNode(exiting);
+		graph.AddNode(exitingSibling);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.SubgraphPort],
+			parent.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.SubgraphPort],
+			parentSibling.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			parent.OutputPorts[TrackingStateNode.SubgraphPort],
+			exiting.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			parent.OutputPorts[TrackingStateNode.SubgraphPort],
+			exitingSibling.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			exiting.OutputPorts[TrackingStateNode.OnDeactivatePort],
+			exit.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		IsActive(processor, parentSibling).Should().BeTrue("the first run's disabling ends none of the next run's");
+		IsActive(processor, exitingSibling).Should().BeTrue("the first run's disabling ends none of the next run's");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_node_whose_disabling_starts_the_graph_over_leaves_its_new_subgraph_running()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		// The timer's subgraph node exits as it is disabled, before its own subgraph is.
+		TimerNode timer = CreateTimerNode("duration");
+		var node = new TrackingStateNode();
+		var child = new TrackingStateNode();
+		var exit = new ExitNode();
+		graph.AddNode(timer);
+		graph.AddNode(node);
+		graph.AddNode(child);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.SubgraphPort],
+			node.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[TrackingStateNode.OnDeactivatePort],
+			exit.InputPorts[ExitNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[TrackingStateNode.SubgraphPort],
+			child.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		IsActive(processor, child).Should().BeTrue("the first run's disabling ends none of the next run's");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_node_started_by_one_being_disabled_emits_nothing_once_it_stops_the_graph()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		// The timer's subgraph node starts the stopping one as it is disabled, where the stop cannot reach it.
+		TimerNode timer = CreateTimerNode("duration");
+		var disabled = new TrackingStateNode();
+		var node = new StopsGraphNode(onActivate: true);
+		var onActivate = new TrackingActionNode();
+		graph.AddNode(timer);
+		graph.AddNode(disabled);
+		graph.AddNode(node);
+		graph.AddNode(onActivate);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.SubgraphPort],
+			disabled.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			disabled.OutputPorts[TrackingStateNode.OnDeactivatePort],
+			node.InputPorts[StopsGraphNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[StopsGraphNode.OnActivatePort],
+			onActivate.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		node.Processor = processor;
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		onActivate.ExecutionCount.Should().Be(0, "the graph stopped before the node finished activating");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void An_abort_reached_from_OnActivate_leaves_the_subgraph_unstarted()
 	{
 		var graph = new Graph();
@@ -203,6 +440,11 @@ public class StateNodeActivationTests
 		onEnded.ExecutionCount.Should().Be(0);
 	}
 
+	private static bool IsActive(GraphProcessor processor, Node node)
+	{
+		return processor.GraphContext.GetNodeContext<StateNodeContext>(node.NodeID).Active;
+	}
+
 	private static TrackingActionNode ConnectOnActivateTracker(Graph graph, StopsGraphNode node)
 	{
 		var onActivate = new TrackingActionNode();
@@ -259,6 +501,50 @@ public class StateNodeActivationTests
 		protected override void OnRestart(GraphContext graphContext)
 		{
 			Processor!.StopGraph();
+		}
+	}
+
+	// Emits and asks to end from its activation, both of which wait for the activation to complete, and stops the graph
+	// before it does. It does so once, as the ability it cancels is then gone.
+	private sealed class DefersThenStopsGraphNode : StateNode<StateNodeContext>
+	{
+		public const byte OnEmittedPort = 4;
+
+		public const byte OnEndedPort = 5;
+
+		public GraphProcessor? Processor { get; set; }
+
+		public int ActivatedCount { get; private set; }
+
+		protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
+		{
+			base.DefinePorts(inputPorts, outputPorts);
+			outputPorts.Add(CreatePort<EventPort>(OnEmittedPort, "OnEmitted"));
+			outputPorts.Add(CreatePort<EventPort>(OnEndedPort, "OnEnded"));
+		}
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+			GraphProcessor? processor = Processor;
+
+			if (processor is null)
+			{
+				return;
+			}
+
+			Processor = null;
+			EmitMessage(graphContext, OnEmittedPort);
+			DeactivateNodeAndEmitMessage(graphContext, OnEndedPort);
+			processor.StopGraph();
+		}
+
+		protected override void OnActivated(GraphContext graphContext)
+		{
+			ActivatedCount++;
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
 		}
 	}
 

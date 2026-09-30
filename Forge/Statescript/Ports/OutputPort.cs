@@ -113,8 +113,10 @@ public class OutputPort : Port
 	internal void InternalEmitDisableSubgraphMessage(GraphContext graphContext)
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
+		ulong run = graphContext.RunStamp;
 
-		for (int i = 0; i < ports.Length; i++)
+		// A connection whose disabling ends the graph ends the rest of them too.
+		for (int i = 0; i < ports.Length && graphContext.RunStamp == run; i++)
 		{
 			ports[i].ReceiveDisableSubgraphMessage(graphContext);
 		}

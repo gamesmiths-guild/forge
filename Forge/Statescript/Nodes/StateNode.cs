@@ -186,8 +186,8 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// for example. Messages emitted from <see cref="OnActivate"/> are deferred and flushed as a batch afterwards, so
 	/// any per-emission state written alongside them would already hold its final value by the time they fire.</para>
 	/// <para>The node is guaranteed to be active when this is called, but anything reached from here can deactivate it
-	/// or stop the graph. Implementations that emit more than once must re-check <see cref="IsNodeActive"/> between
-	/// emissions.</para>
+	/// or stop the graph. Implementations that emit more than once must re-check between emissions that the context
+	/// they hold is still <see cref="StateNodeContext.Active"/>.</para>
 	/// </remarks>
 	/// <param name="graphContext">The graph's context.</param>
 	protected virtual void OnActivated(GraphContext graphContext)
@@ -202,9 +202,9 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// <remarks>
 	/// <para>No deactivation runs first: the node stays active throughout, so an override releases whatever the running
 	/// activation holds - an applied effect, a spawned instance - before acquiring it again, or it is left behind.
-	/// Releasing can reach the rest of the graph and end the node or stop the graph, so an override checks
-	/// <see cref="IsNodeActive"/> before acquiring again. A node whose activation only resets its own counters can
-	/// simply call <see cref="OnActivate"/>.</para>
+	/// Releasing can reach the rest of the graph and end the node or stop the graph, so an override checks that the
+	/// context it released from is still <see cref="StateNodeContext.Active"/> before acquiring again. A node whose
+	/// activation only resets its own counters can simply call <see cref="OnActivate"/>.</para>
 	/// <para>The rest of the restart runs like an activation: <see cref="OnActivatePort"/> and
 	/// <see cref="SubgraphPort"/> emit again, messages emitted from here are deferred until they have, and
 	/// <see cref="OnActivated"/> runs once it is complete. Like an activation, it is first updated on the next pass,
@@ -220,11 +220,15 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	}
 
 	/// <summary>
-	/// Checks whether this node is still active in the given context. Emitting a message can synchronously deactivate
-	/// this node (an <see cref="AbortPort"/> message) or tear the whole graph down (an <see cref="ExitNode"/>, which
-	/// discards every node context), so any node that emits repeatedly within a single call must re-check this between
-	/// emissions instead of trusting a node context it captured earlier.
+	/// Checks whether this node is active in the graph's current run.
 	/// </summary>
+	/// <remarks>
+	/// Code that carries on after reaching outside the node - emitting a message, applying or removing an effect -
+	/// checks the context it held from before instead, whose <see cref="StateNodeContext.Active"/> turns false once the
+	/// node ends or its run does. What it reached can deactivate the node (an <see cref="AbortPort"/> message) or end
+	/// the graph (an <see cref="ExitNode"/>), and a graph started over from there has a context of its own for this
+	/// node, which is the one this finds.
+	/// </remarks>
 	/// <param name="graphContext">The graph's context.</param>
 	/// <returns><see langword="true"/> if the node context still exists and the node is still active; otherwise,
 	/// <see langword="false"/>.</returns>
@@ -274,8 +278,15 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 				graphContext.GetNodeContext<StateNodeContext>(NodeID).WasAborted = true;
 			}
 
+			ulong run = graphContext.RunStamp;
 			OutputPorts[OnAbortPort].EmitMessage(graphContext);
-			DeactivateNode(graphContext);
+
+			// OnAbort can end the graph, which deactivates this node already, and a graph started over from there has
+			// one of its own.
+			if (graphContext.RunStamp == run)
+			{
+				DeactivateNode(graphContext);
+			}
 		}
 	}
 
@@ -356,11 +367,14 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// <param name="graphContext">The graph's context.</param>
 	protected void DeactivateNode(GraphContext graphContext)
 	{
+		ulong run = graphContext.RunStamp;
 		BeforeDisable(graphContext);
 
-		foreach (SubgraphPort subgraphPort in SubgraphPorts)
+		// OnDeactivate can end the graph, which deactivates everything this would have, and a graph started over from
+		// there has nodes of its own.
+		for (int i = 0; i < SubgraphPorts.Length && graphContext.RunStamp == run; i++)
 		{
-			subgraphPort.EmitDisableSubgraphMessage(graphContext);
+			SubgraphPorts[i].EmitDisableSubgraphMessage(graphContext);
 		}
 
 		AfterDisable(graphContext);
@@ -439,13 +453,14 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 
 		// The node's own work can end it or stop the whole graph - an effect cancelling the ability this graph runs
 		// for - and so can whatever OnActivate reaches. Nothing is emitted for a node that is already gone: a subgraph
-		// started under one would run with nothing left to disable it.
-		if (IsNodeActive(graphContext))
+		// started under one would run with nothing left to disable it. The context checked is this activation's own,
+		// since a graph started over from inside it has another.
+		if (nodeContext.Active)
 		{
 			OutputPorts[OnActivatePort].EmitMessage(graphContext);
 		}
 
-		if (IsNodeActive(graphContext))
+		if (nodeContext.Active)
 		{
 			OutputPorts[SubgraphPort].EmitMessage(graphContext);
 		}
@@ -455,7 +470,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		HandleDeferredEmitMessages(graphContext, nodeContext);
 		HandleDeferredDeactivationMessages(graphContext, nodeContext);
 
-		if (IsNodeActive(graphContext))
+		if (nodeContext.Active)
 		{
 			OnActivated(graphContext);
 		}
@@ -475,7 +490,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	{
 		List<int> deferred = nodeContext.DeferredEmitMessageData;
 
-		for (int i = 0; i < deferred.Count && IsNodeActive(graphContext); i++)
+		for (int i = 0; i < deferred.Count && nodeContext.Active; i++)
 		{
 			OutputPorts[deferred[i]].EmitMessage(graphContext);
 		}
@@ -488,7 +503,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		int[]? eventPortIds = nodeContext.DeferredDeactivationEventPortIds;
 		nodeContext.DeferredDeactivationEventPortIds = null;
 
-		if (eventPortIds is not null && IsNodeActive(graphContext))
+		if (eventPortIds is not null && nodeContext.Active)
 		{
 			DeactivateNodeAndEmitMessage(graphContext, eventPortIds);
 		}

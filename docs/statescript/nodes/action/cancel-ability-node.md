@@ -21,7 +21,7 @@ Unlike reaching an [Exit node](../../README.md), which ends the ability instance
 
 | Index | Name | Type | Description |
 |-------|------|------|-------------|
-| 0 | Output | Event | Emits after the cancel is requested (the graph stops immediately afterward). |
+| 0 | Output | Event | Emits only when there was no ability to cancel: canceling stops the graph, which ends the message here. |
 
 ## Behavior
 

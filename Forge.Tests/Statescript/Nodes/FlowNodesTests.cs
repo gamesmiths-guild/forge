@@ -127,6 +127,47 @@ public class FlowNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		stateChanged.ExecutionCount.Should().Be(2);
 	}
 
+	[Fact]
+	[Trait("Graph", "StateMachine")]
+	public void State_machine_node_enters_no_state_when_leaving_the_old_one_stops_the_graph()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("state", 0);
+
+		var stateMachine = new StateMachineNode(stateCount: 2);
+		stateMachine.BindInput(StateMachineNode.StateInput, "state");
+
+		// State 0's node exits as it is disabled, before state 1 is entered.
+		var stateZeroChild = new TrackingStateNode();
+		var stateOneChild = new TrackingStateNode();
+		var exit = new ExitNode();
+		graph.AddNode(stateMachine);
+		graph.AddNode(stateZeroChild);
+		graph.AddNode(stateOneChild);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			stateMachine.InputPorts[StateNode<StateMachineNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			stateMachine.OutputPorts[StateMachineNode.FirstStatePort],
+			stateZeroChild.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			stateZeroChild.OutputPorts[TrackingStateNode.OnDeactivatePort],
+			exit.InputPorts[ExitNode.InputPort]));
+		graph.AddConnection(new Connection(
+			stateMachine.OutputPorts[StateMachineNode.FirstStatePort + 1],
+			stateOneChild.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.GraphContext.GraphVariables.SetVar("state", 1);
+
+		processor.Invoking(x => x.UpdateGraph(0.1)).Should().NotThrow();
+
+		stateOneChild.ActivateCount.Should().Be(0, "the graph stopped before state 1 was entered");
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
 	[Theory]
 	[Trait("Graph", "RandomBranch")]
 	[InlineData(0.3, true)]

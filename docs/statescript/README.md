@@ -33,7 +33,7 @@ Once all synchronous propagation is complete, only **state nodes** remain active
 
 Messages flow from output ports to input ports. This propagation is **synchronous within a single cascade**: when a node emits a message, all downstream nodes process it immediately, depth-first, before returning control to the emitting node.
 
-A connection whose cascade stops the graph — an Exit node, or an ability ended along the way — ends the message there: the connections after it, and any further ports the same node was emitting, are not reached.
+A connection whose cascade stops the graph — an Exit node, or an ability ended along the way — ends the message there: the connections after it, and any further ports the same node was emitting, are not reached. A node whose own work stops the graph, such as a [CancelAbilityNode](nodes/action/cancel-ability-node.md) canceling the ability it runs for, emits nothing afterwards either. When the graph is started over from inside that cascade, whatever the stopped run had left to do does not carry into the new one.
 
 ### Node Categories
 

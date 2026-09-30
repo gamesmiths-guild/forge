@@ -642,6 +642,46 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 	}
 
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void A_restart_whose_removal_starts_the_graph_over_leaves_the_new_run_its_own_effect()
+	{
+		TestEntity target = CreateTestEntity();
+		var counter = new ActiveEffectCounterComponent();
+		var effect = new EffectData(
+			"Tracked Effect",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10))),
+			],
+			effectComponents: [counter]);
+
+		Graph graph = CreateGraph(target, effect);
+		var node = new EffectNode(restartOnRetrigger: true);
+		node.BindInput(EffectNode.EffectInput, "effect");
+		node.BindInput(EffectNode.TargetInput, "target");
+		AddFromEntry(graph, node);
+		ConnectRetrigger(graph, node, 1.0);
+
+		var processor = new GraphProcessor(graph);
+
+		// Losing the effect stops the graph, and the graph starts over before the restart it cut short returns.
+		counter.Removed = processor.StopGraph;
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		counter.AddedCount.Should().Be(2, "the new run applied the effect, and the restart it replaced did not");
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+
+		processor.StopGraph();
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+	}
+
 	private static Graph CreateGraph(TestEntity target, EffectData effect)
 	{
 		var graph = new Graph();

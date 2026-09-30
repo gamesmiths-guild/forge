@@ -845,6 +845,89 @@ public class GraphProcessorTests
 
 	[Fact]
 	[Trait("Graph", "Lifecycle")]
+	public void An_update_that_starts_the_graph_over_counts_nothing_toward_the_new_run()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		// Either timer exits as it runs out, and whichever is updated first starts the graph over.
+		TimerNode first = CreateTimerNode("duration");
+		TimerNode second = CreateTimerNode("duration");
+		var exit = new ExitNode();
+		graph.AddNode(first);
+		graph.AddNode(second);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			first.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			second.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			first.OutputPorts[TimerNode.OnTimerEndPort],
+			exit.InputPorts[ExitNode.InputPort]));
+		graph.AddConnection(new Connection(
+			second.OutputPorts[TimerNode.OnTimerEndPort],
+			exit.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		processor.GraphContext.IsActive.Should().BeTrue("the update that ended the first run reaches none of the next");
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void An_action_that_stops_the_graph_reaches_nothing_after_it()
+	{
+		var graph = new Graph();
+		var stop = new StopsGraphActionNode();
+		var after = new TrackingStateNode();
+		graph.AddNode(stop);
+		graph.AddNode(after);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			stop.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			stop.OutputPorts[ActionNode.OutputPort],
+			after.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		stop.Processor = processor;
+		processor.StartGraph();
+
+		after.ActivateCount.Should().Be(0, "a node reached after the graph stopped would run in a graph that is gone");
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void A_condition_whose_test_stops_the_graph_reaches_neither_branch()
+	{
+		var graph = new Graph();
+		var condition = new StopsGraphConditionNode();
+		var after = new TrackingStateNode();
+		graph.AddNode(condition);
+		graph.AddNode(after);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			condition.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			condition.OutputPorts[ConditionNode.TruePort],
+			after.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		condition.Processor = processor;
+		processor.StartGraph();
+
+		after.ActivateCount.Should().Be(0, "a node reached after the graph stopped would run in a graph that is gone");
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
 	public void Update_graph_does_nothing_after_completion()
 	{
 		var graph = new Graph();
@@ -1258,5 +1341,17 @@ public class GraphProcessorTests
 
 		node.ExecutionCount.Should().Be(1);
 		node.Found.Should().BeFalse();
+	}
+
+	// Stops the graph from its test, as committing or revoking the ability the graph runs for can.
+	private sealed class StopsGraphConditionNode : ConditionNode
+	{
+		public GraphProcessor? Processor { get; set; }
+
+		protected override bool Test(GraphContext graphContext)
+		{
+			Processor!.StopGraph();
+			return true;
+		}
 	}
 }

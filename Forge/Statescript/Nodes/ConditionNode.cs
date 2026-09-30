@@ -55,7 +55,16 @@ public abstract class ConditionNode : Node
 	/// <inheritdoc/>
 	protected sealed override void HandleMessage(InputPort receiverPort, GraphContext graphContext)
 	{
-		if (Test(graphContext))
+		ulong run = graphContext.RunStamp;
+		bool result = Test(graphContext);
+
+		// A test can end the graph - committing or revoking the ability it runs for - and then leads nowhere.
+		if (graphContext.RunStamp != run)
+		{
+			return;
+		}
+
+		if (result)
 		{
 			OutputPorts[TruePort].EmitMessage(graphContext);
 		}

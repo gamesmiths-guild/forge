@@ -126,6 +126,12 @@ public class ConditionMonitorNode(bool deactivateWhenTrue = false, bool initialC
 		{
 			var previousSubgraphPort = (SubgraphPort)OutputPorts[condition ? FalseSubgraphPort : TrueSubgraphPort];
 			previousSubgraphPort.EmitDisableSubgraphMessage(graphContext);
+
+			// Disabling the old subgraph can end this node or the graph, and then there is nothing to switch to.
+			if (!nodeContext.Active)
+			{
+				return;
+			}
 		}
 
 		if (condition)

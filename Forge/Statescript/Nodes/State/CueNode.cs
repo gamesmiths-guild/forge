@@ -108,7 +108,7 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 		nodeContext.AppliedCues.Clear();
 		CueApplicationUtilities.RemoveCues(applied, interrupted: true);
 
-		if (!IsNodeActive(graphContext))
+		if (!nodeContext.Active)
 		{
 			return;
 		}
