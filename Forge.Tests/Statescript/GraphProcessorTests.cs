@@ -928,6 +928,81 @@ public class GraphProcessorTests
 
 	[Fact]
 	[Trait("Graph", "Lifecycle")]
+	public void A_stop_that_interrupts_a_subgraph_being_disabled_still_ends_it()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		// The timer's subgraph node exits as it is disabled, before its own subgraph is.
+		TimerNode timer = CreateTimerNode("duration");
+		var node = new TrackingStateNode();
+		var child = new TrackingStateNode();
+		var exit = new ExitNode();
+		graph.AddNode(timer);
+		graph.AddNode(node);
+		graph.AddNode(child);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.SubgraphPort],
+			node.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[TrackingStateNode.OnDeactivatePort],
+			exit.InputPorts[ExitNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[TrackingStateNode.SubgraphPort],
+			child.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		node.DeactivateCount.Should().Be(1, "the stop finishes ending the node it found being disabled");
+		child.DeactivateCount.Should().Be(1, "the stop reaches the subgraph that disabling had yet to");
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void A_stop_reached_from_a_node_started_by_one_being_disabled_ends_that_node()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		// The timer's subgraph node starts another as it is disabled, and that one stops the graph as it activates.
+		TimerNode timer = CreateTimerNode("duration");
+		var disabled = new TrackingStateNode();
+		var started = new TrackingStateNode();
+		var stop = new StopsGraphActionNode();
+		graph.AddNode(timer);
+		graph.AddNode(disabled);
+		graph.AddNode(started);
+		graph.AddNode(stop);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.SubgraphPort],
+			disabled.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			disabled.OutputPorts[TrackingStateNode.OnDeactivatePort],
+			started.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			started.OutputPorts[TrackingStateNode.OnActivatePort],
+			stop.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		stop.Processor = processor;
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		started.ActivateCount.Should().Be(1);
+		started.DeactivateCount.Should().Be(1, "the stop ends a node it can only reach through one being disabled");
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
 	public void Update_graph_does_nothing_after_completion()
 	{
 		var graph = new Graph();

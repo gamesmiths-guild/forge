@@ -349,7 +349,7 @@ public class StateNodeActivationTests
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 1.0);
 
-		// The timer's subgraph node starts the stopping one as it is disabled, where the stop cannot reach it.
+		// The timer's subgraph node starts the stopping one as it is disabled.
 		TimerNode timer = CreateTimerNode("duration");
 		var disabled = new TrackingStateNode();
 		var node = new StopsGraphNode(onActivate: true);
@@ -375,6 +375,35 @@ public class StateNodeActivationTests
 		node.Processor = processor;
 		processor.StartGraph();
 		processor.UpdateGraph(1.0);
+
+		onActivate.ExecutionCount.Should().Be(0, "the graph stopped before the node finished activating");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_node_started_from_outside_the_graph_emits_nothing_once_it_stops_the_graph()
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var node = new StopsGraphNode(onActivate: true);
+		var onActivate = new TrackingActionNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(node);
+		graph.AddNode(onActivate);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[StopsGraphNode.OnActivatePort],
+			onActivate.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		node.Processor = processor;
+		processor.StartGraph();
+
+		// Nothing in the graph leads to the node, so the stop never reaches it, and the run ending is all it has left
+		// to go by.
+		node.InputPorts[StopsGraphNode.InputPort].ReceiveMessage(processor.GraphContext);
 
 		onActivate.ExecutionCount.Should().Be(0, "the graph stopped before the node finished activating");
 	}

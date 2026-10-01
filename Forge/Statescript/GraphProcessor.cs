@@ -157,6 +157,10 @@ public class GraphProcessor
 		// cascade lets action nodes on OnDeactivate paths still resolve property-backed inputs.
 		GraphContext.HasStarted = false;
 		GraphContext.RunStamp++;
+
+		// The stop walks the graph afresh: a disabling still under way has already marked its node as passed, and
+		// the stop would otherwise go no further than it, leaving that node and what lies below it never ended.
+		GraphContext.InternalNodeActivationStatus.Clear();
 		Graph.EntryNode.StopGraph(GraphContext);
 		GraphContext.Processor = null;
 		GraphContext.ActiveStateNodes.Clear();
