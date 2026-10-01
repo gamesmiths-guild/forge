@@ -39,7 +39,7 @@ Applies one or more `Effect` instances to one or more targets, then immediately 
 
 1. The node resolves the **Effect** input as either a single `Effect` or an array of `Effect` instances.
 2. It resolves the **Target** input as either a single `IForgeEntity` or an array of entities.
-3. Every resolved effect is applied to every resolved target, forming a full `effect[] x target[]` cross-product. An effect that ends the graph as it applies — cancelling the ability the graph runs for — leaves the rest unapplied.
+3. Every resolved effect is applied to every resolved target, forming a full `effect[] x target[]` cross-product. An effect that ends the graph as it applies — cancelling the ability the graph runs for — leaves the rest unapplied and the **Active Effect** output unwritten.
 4. Level and ownership are baked into each resolved `Effect`; configure them on the resolver that produces the effect (typically [EffectFromDataResolver](../../resolvers/effect-from-data-resolver.md)) rather than on the node.
 5. Instant, duration, and infinite effects are all supported.
 6. The node is fire-and-forget, so it does not keep handles for later removal.

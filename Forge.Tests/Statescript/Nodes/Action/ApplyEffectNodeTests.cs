@@ -11,6 +11,7 @@ using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Action;
+using Gamesmiths.Forge.Statescript.Nodes.Condition;
 using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Statescript.Providers;
 using Gamesmiths.Forge.Tags;
@@ -297,6 +298,46 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		capture.ReceivedContext.Should().BeFalse();
 	}
 
+	[Fact]
+	[Trait("Graph", "ApplyEffect")]
+	public void Apply_effect_node_writes_no_handle_into_a_graph_its_effect_started_over()
+	{
+		TestEntity target = CreateTestEntity();
+		var stopper = new StopsGraphComponent();
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineVariable("isFirstRun", true);
+		graph.VariableDefinitions.DefineObjectProperty(
+			"effect",
+			new EffectFromDataResolver(CreateTrackingEffectData("Stopping", DurationType.Infinite, stopper)));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
+		graph.VariableDefinitions.DefineObjectVariable<ActiveEffectHandle>("activeEffect");
+
+		// Only the first run applies the effect.
+		ExpressionNode isFirstRun = CreateExpressionNode("isFirstRun");
+		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
+		node.BindOutput(ApplyEffectNode.ActiveEffectOutput, "activeEffect");
+		graph.AddNode(isFirstRun);
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			isFirstRun.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			isFirstRun.OutputPorts[ConditionNode.TruePort],
+			node.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+
+		// Applying the effect ends the graph, and it starts over before the node returns.
+		stopper.Applied = processor.StopGraph;
+		RestartOnFirstCompletion(processor, variables => variables.SetVar("isFirstRun", false));
+		processor.StartGraph();
+
+		processor.GraphContext.GraphVariables.TryGetObject("activeEffect", out ActiveEffectHandle? handle)
+			.Should().BeTrue();
+		handle.Should().BeNull("the new run applied nothing, and the handle belongs to the run that ended");
+	}
+
 	private static void ConfigureEffectInput(
 		Graph graph,
 		bool useEffectArray,
@@ -410,6 +451,16 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		{
 			graphContext.TryResolve("damage", out int damage);
 			return new DamageContext(damage);
+		}
+	}
+
+	private sealed class StopsGraphComponent : IEffectComponent
+	{
+		public System.Action? Applied { get; set; }
+
+		public void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
+		{
+			Applied?.Invoke();
 		}
 	}
 

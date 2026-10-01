@@ -52,7 +52,7 @@ new TryGrantAbilityAndActivateOnceNode(levelOverridePolicy = LevelComparison.Non
 
 1. Resolves the ability data, entity (default owner), level, and optional target.
 2. Calls `EntityAbilities.TryGrantAbilityAndActivateOnce(...)`, or `EntityAbilities.TryGrantAbilityAndActivateOnce<TData>(...)` when the **Activation Data** input is bound.
-3. Writes the granted `AbilityHandle` to the **Ability** output when bound, on both outcomes — so a failed proc clears a handle left by an earlier one.
+3. Writes the granted `AbilityHandle` to the **Ability** output when bound, on both outcomes — so a failed proc clears a handle left by an earlier one — unless granting or activating ended the graph.
 4. Routes to **True** when the call reports the ability activated, otherwise **False**. An ability that activates and ends immediately still routes to **True**.
 
 The **Ability** output is not a success signal. A one-shot proc that finishes as it activates takes its transient grant with it, leaving the output `null` on the **True** branch. Bind it when the graph needs to reach a proc that keeps running — to cancel it later, or to read its cooldown — and branch on True/False for everything else.

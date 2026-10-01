@@ -57,7 +57,8 @@ internal static class NodeBindings
 	/// still had to do runs after the new run has begun.
 	/// </summary>
 	/// <param name="processor">The processor to start over.</param>
-	public static void RestartOnFirstCompletion(GraphProcessor processor)
+	/// <param name="variableOverrides">Values the new run starts with, so it can take a different path.</param>
+	public static void RestartOnFirstCompletion(GraphProcessor processor, Action<Variables>? variableOverrides = null)
 	{
 		bool restarted = false;
 
@@ -66,7 +67,7 @@ internal static class NodeBindings
 			if (!restarted)
 			{
 				restarted = true;
-				processor.StartGraph();
+				processor.StartGraph(variableOverrides);
 			}
 		};
 	}
