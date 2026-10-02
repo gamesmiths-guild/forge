@@ -90,7 +90,7 @@ This cascade ensures complete cleanup regardless of nesting depth.
 
 ### The Entry Node's Subgraph Port
 
-The Entry node's output port is a **Subgraph port**. This means the entire graph is itself a subgraph of the entry point. When `GraphProcessor.StopGraph()` is called, a disable-subgraph signal propagates from the Entry node, cleaning up every active state node in the graph.
+The Entry node's output port is a **Subgraph port**. This means the entire graph is itself a subgraph of the entry point. When `GraphProcessor.StopGraph()` is called, a disable-subgraph signal propagates from the Entry node, cleaning up every active state node in the graph. No state node starts while the stop is under way: a message that would start or restart one is ignored, so nothing is left running once it completes.
 
 ## Retriggering a Parent
 

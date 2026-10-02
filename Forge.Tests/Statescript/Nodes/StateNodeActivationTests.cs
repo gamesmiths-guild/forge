@@ -619,6 +619,38 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void A_message_reaching_a_node_while_the_graph_stops_starts_nothing()
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var ending = new TrackingStateNode();
+		var started = new TrackingStateNode();
+		var start = new StartsNodeOnceNode(started);
+		graph.AddNode(keepAlive);
+		graph.AddNode(ending);
+		graph.AddNode(started);
+		graph.AddNode(start);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			ending.OutputPorts[TrackingStateNode.OnDeactivatePort],
+			start.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		// Nothing in the graph leads to either node, so the stop ends the first by itself, which starts the second as it
+		// ends.
+		ending.InputPorts[TrackingStateNode.InputPort].ReceiveMessage(processor.GraphContext);
+		processor.StopGraph();
+
+		ending.DeactivateCount.Should().Be(1);
+		started.ActivateCount.Should().Be(0, "nothing starts in a graph that is stopping");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void An_abort_reached_from_OnActivate_leaves_the_subgraph_unstarted()
 	{
 		var graph = new Graph();

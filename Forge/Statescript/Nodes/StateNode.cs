@@ -263,6 +263,13 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	{
 		if (receiverPort.Index == InputPort)
 		{
+			// Nothing starts in a graph that is stopping: the stop may already have passed the node, leaving it running
+			// in a graph that is gone.
+			if (graphContext.IsStopping)
+			{
+				return;
+			}
+
 			if (graphContext.HasNodeContext(NodeID))
 			{
 				T nodeContext = graphContext.GetNodeContext<T>(NodeID);
