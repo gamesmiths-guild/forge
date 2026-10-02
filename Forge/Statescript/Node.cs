@@ -166,16 +166,23 @@ public abstract class Node
 		}
 
 		ulong run = graphContext.RunStamp;
-		BeforeDisable(graphContext);
 
-		// A state node's OnDeactivate can end the graph, and the rest of this disabling belongs to the run that
-		// ended: a graph started over from there has nodes of its own.
-		for (int i = 0; i < OutputPorts.Length && graphContext.RunStamp == run; i++)
+		// A disabling that throws further down still lets this node finish its own instead of leaving it half done.
+		try
 		{
-			OutputPorts[i].InternalEmitDisableSubgraphMessage(graphContext);
-		}
+			BeforeDisable(graphContext);
 
-		AfterDisable(graphContext);
+			// A state node's OnDeactivate can end the graph, and the rest of this disabling belongs to the run that
+			// ended: a graph started over from there has nodes of its own.
+			for (int i = 0; i < OutputPorts.Length && graphContext.RunStamp == run; i++)
+			{
+				OutputPorts[i].InternalEmitDisableSubgraphMessage(graphContext);
+			}
+		}
+		finally
+		{
+			AfterDisable(graphContext);
+		}
 	}
 
 	/// <summary>

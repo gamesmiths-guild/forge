@@ -199,9 +199,7 @@ public class GraphProcessor
 		}
 
 		// A node the walk did not reach - started from outside the graph's connections, or passed over when a teardown
-		// threw - is ended here instead, walked afresh so that one left part way through its deactivation finishes it.
-		GraphContext.InternalNodeActivationStatus.Clear();
-
+		// threw - is ended here instead.
 		foreach (Node node in GraphContext.ActiveStateNodes.ToArray())
 		{
 			try

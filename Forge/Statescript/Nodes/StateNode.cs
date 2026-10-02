@@ -420,16 +420,24 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	protected void DeactivateNode(GraphContext graphContext)
 	{
 		ulong run = graphContext.RunStamp;
-		BeforeDisable(graphContext);
 
-		// OnDeactivate can end the graph, which deactivates everything this would have, and a graph started over from
-		// there has nodes of its own.
-		for (int i = 0; i < SubgraphPorts.Length && graphContext.RunStamp == run; i++)
+		// A subgraph that throws as it is disabled still lets the node finish deactivating, rather than leave it part
+		// way through and ignoring every start.
+		try
 		{
-			SubgraphPorts[i].EmitDisableSubgraphMessage(graphContext);
-		}
+			BeforeDisable(graphContext);
 
-		AfterDisable(graphContext);
+			// OnDeactivate can end the graph, which deactivates everything this would have, and a graph started over
+			// from there has nodes of its own.
+			for (int i = 0; i < SubgraphPorts.Length && graphContext.RunStamp == run; i++)
+			{
+				SubgraphPorts[i].EmitDisableSubgraphMessage(graphContext);
+			}
+		}
+		finally
+		{
+			AfterDisable(graphContext);
+		}
 	}
 
 	/// <inheritdoc/>
