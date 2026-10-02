@@ -405,6 +405,65 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void An_abort_reaching_a_node_that_never_started_is_ignored()
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var node = new TrackingStateNode();
+		var onAbort = new TrackingActionNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(node);
+		graph.AddNode(onAbort);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[TrackingStateNode.OnAbortPort],
+			onAbort.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		node.InputPorts[TrackingStateNode.AbortPort].ReceiveMessage(processor.GraphContext);
+
+		onAbort.ExecutionCount.Should().Be(0, "a node that is not running has nothing to abort");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void An_abort_reaching_a_node_ending_by_itself_is_ignored()
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var node = new EndsOnDemandNode();
+		var abort = new AbortsNodeOnceNode(node);
+		var onAbort = new TrackingActionNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(node);
+		graph.AddNode(abort);
+		graph.AddNode(onAbort);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[EndsOnDemandNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[EndsOnDemandNode.OnDeactivatePort],
+			abort.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[EndsOnDemandNode.OnAbortPort],
+			onAbort.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		node.End(processor.GraphContext);
+
+		node.EndedAborted.Should().BeFalse("the node ended by itself before the abort reached it");
+		onAbort.ExecutionCount.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void A_deactivation_whose_graph_starts_over_leaves_the_new_run_running()
 	{
 		var graph = new Graph();
@@ -966,6 +1025,26 @@ public class StateNodeActivationTests
 		}
 	}
 
+	// Ends when told to, as a timer running out does, and records whether its ending was an abort.
+	private sealed class EndsOnDemandNode : StateNode<StateNodeContext>
+	{
+		public bool EndedAborted { get; private set; }
+
+		public void End(GraphContext graphContext)
+		{
+			DeactivateNode(graphContext);
+		}
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+			EndedAborted = graphContext.GetNodeContext<StateNodeContext>(NodeID).WasAborted;
+		}
+	}
+
 	// Sends its own input a message as it cleans up, once, as an event that releasing what it holds might.
 	private sealed class StartsItselfOnDeactivateNode : StateNode<StateNodeContext>
 	{
@@ -1037,6 +1116,22 @@ public class StateNodeActivationTests
 				_sent = true;
 				target.InputPorts[StateNode<StateNodeContext>.AbortPort].ReceiveMessage(graphContext);
 				target.InputPorts[StateNode<StateNodeContext>.InputPort].ReceiveMessage(graphContext);
+			}
+		}
+	}
+
+	// Aborts its target from outside the graph's connections, once, as an event set off by the target's own ending
+	// might.
+	private sealed class AbortsNodeOnceNode(Node target) : ActionNode
+	{
+		private bool _sent;
+
+		protected override void Execute(GraphContext graphContext)
+		{
+			if (!_sent)
+			{
+				_sent = true;
+				target.InputPorts[StateNode<StateNodeContext>.AbortPort].ReceiveMessage(graphContext);
 			}
 		}
 	}

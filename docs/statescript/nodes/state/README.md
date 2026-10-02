@@ -25,7 +25,7 @@ State nodes **persist over time**. They activate when receiving a message, remai
 2. **OnActivate** and **Subgraph** ports emit regular messages.
 3. Each frame, `OnUpdate(deltaTime)` is called by the graph processor. On each fixed step, `OnFixedUpdate(deltaTime)` is called instead — see [Two update rails](#two-update-rails).
 4. When internal logic completes → `OnDeactivate` emits, Subgraph ports send disable signals.
-5. If **Abort** receives a message → `OnAbort` emits, then node deactivates normally.
+5. If **Abort** receives a message while the node is active → `OnAbort` emits, then node deactivates normally. A node that is not running — never started, ended, or still deactivating — ignores it.
 
 **Deferred actions:** If activation logic triggers immediate deactivation (e.g., a timer with duration 0), the deactivation is **deferred** until activation completes. This guarantees that OnActivate and Subgraph ports fire before any deactivation processing begins.
 

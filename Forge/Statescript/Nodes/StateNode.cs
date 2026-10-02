@@ -12,7 +12,8 @@ namespace Gamesmiths.Forge.Statescript.Nodes;
 /// <remarks>
 /// A message that reaches the input while the node is already active - a retrigger - is ignored, unless the node was
 /// built to restart (<see cref="RestartOnRetrigger"/>), in which case it starts over through <see cref="OnRestart"/>.
-/// One that reaches it while the node is still deactivating is ignored either way.
+/// One that reaches it while the node is still deactivating is ignored either way. An abort that reaches a node that
+/// is not running is ignored too.
 /// </remarks>
 /// <typeparam name="T">The type of the state node context.</typeparam>
 /// <param name="restartOnRetrigger">Whether a retrigger restarts the node through <see cref="OnRestart"/> instead of
@@ -308,9 +309,10 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		}
 		else if (receiverPort.Index == AbortPort)
 		{
-			if (!graphContext.HasNodeContext(NodeID))
+			// Only a running node is aborted: one that never started, has ended or is still ending has nothing to
+			// abort.
+			if (!IsNodeActive(graphContext))
 			{
-				OutputPorts[OnAbortPort].EmitMessage(graphContext);
 				return;
 			}
 
