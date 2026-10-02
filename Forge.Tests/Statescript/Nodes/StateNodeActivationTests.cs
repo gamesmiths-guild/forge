@@ -492,6 +492,92 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void A_graph_started_from_inside_its_stop_starts_once_the_stop_completes()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("run", 1);
+		var node = new StartsGraphOnDeactivateNode(variables => variables.SetVar("run", 2));
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[StartsGraphOnDeactivateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		int completions = 0;
+		bool activeOnCompletion = true;
+		processor.OnGraphCompleted = () =>
+		{
+			completions++;
+			activeOnCompletion = processor.GraphContext.IsActive;
+		};
+
+		node.Processor = processor;
+		processor.StartGraph();
+		processor.StopGraph();
+
+		completions.Should().Be(1, "only the stopped run completed");
+		activeOnCompletion.Should().BeFalse("the new run starts after the stop completes");
+		node.ActivateCount.Should().Be(2);
+		processor.GraphContext.GraphVariables.TryGetVar("run", out int run).Should().BeTrue();
+		run.Should().Be(2);
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_graph_started_from_inside_its_stop_and_again_as_it_completes_starts_once()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("run", 1);
+		var node = new StartsGraphOnDeactivateNode(variables => variables.SetVar("run", 2));
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[StartsGraphOnDeactivateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		int completions = 0;
+		processor.OnGraphCompleted = () =>
+		{
+			if (++completions == 1)
+			{
+				processor.StartGraph(variables => variables.SetVar("run", 3));
+			}
+		};
+
+		node.Processor = processor;
+		processor.StartGraph();
+		processor.StopGraph();
+
+		completions.Should().Be(1);
+		node.ActivateCount.Should().Be(2);
+		processor.GraphContext.IsActive.Should().BeTrue();
+		processor.GraphContext.GraphVariables.TryGetVar("run", out int run).Should().BeTrue();
+		run.Should().Be(3, "the start made as the stop completed is the one the graph runs");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_graph_whose_stop_threw_can_start_again()
+	{
+		var graph = new Graph();
+		var node = new ThrowsOnDeactivateOnceNode();
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ThrowsOnDeactivateOnceNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.Invoking(x => x.StopGraph()).Should().Throw<InvalidOperationException>();
+		processor.StartGraph();
+
+		node.ActivateCount.Should().Be(2);
+		processor.GraphContext.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void A_deactivation_whose_graph_starts_over_leaves_the_new_run_running()
 	{
 		var graph = new Graph();
@@ -1070,6 +1156,27 @@ public class StateNodeActivationTests
 		protected override void OnDeactivate(GraphContext graphContext)
 		{
 			EndedAborted = graphContext.GetNodeContext<StateNodeContext>(NodeID).WasAborted;
+		}
+	}
+
+	// Starts its graph again as it is deactivated, once, as an ability activated by what its cleanup sets off might.
+	private sealed class StartsGraphOnDeactivateNode(Action<Variables> variableOverrides)
+		: StateNode<StateNodeContext>
+	{
+		public GraphProcessor? Processor { get; set; }
+
+		public int ActivateCount { get; private set; }
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+			ActivateCount++;
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+			GraphProcessor? processor = Processor;
+			Processor = null;
+			processor?.StartGraph(variableOverrides);
 		}
 	}
 

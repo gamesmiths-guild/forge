@@ -87,8 +87,7 @@ public sealed class GraphContext
 
 	internal bool HasStarted { get; set; }
 
-	// A stop clears HasStarted before it ends the run's nodes, and lets go of the processor only once they have ended.
-	internal bool IsStopping => !HasStarted && Processor is not null;
+	internal bool IsStopping { get; set; }
 
 	// Counts every start and end of a run, so a message still being delivered can tell that the graph it set out in
 	// has since stopped or started over.
