@@ -75,7 +75,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 
 	/// <summary>
 	/// Updates this state node with the given delta time. Only processes the update if the node is currently active,
-	/// and did not restart during this update.
+	/// and did not start or restart during this update.
 	/// </summary>
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
 	/// <param name="graphContext">The graph's context.</param>
@@ -89,7 +89,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 
 	/// <summary>
 	/// Updates this state node on the host's fixed step. Only processes the update if the node is currently active,
-	/// and did not restart during this step.
+	/// and did not start or restart during this step.
 	/// </summary>
 	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
 	/// <param name="graphContext">The graph's context.</param>
@@ -433,22 +433,22 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		graphContext.FinalizeIfIdle();
 	}
 
-	// A node restarted by one updated before it in the same pass would otherwise count that pass's delta - time from
-	// before the retrigger - toward the new run. A node activated mid-pass is not in the pass at all, so waiting for
-	// the next one starts a restart's clock where an activation's starts.
+	// A node that starts during a pass, restarted or ended and started again by one updated before it, would otherwise
+	// count that pass's delta - time from before it started - toward the new run. Waiting for the next pass starts its
+	// clock where an activation between passes starts it.
 	private bool ShouldUpdate(GraphContext graphContext)
 	{
 		return IsNodeActive(graphContext)
-			&& graphContext.GetNodeContext<StateNodeContext>(NodeID).RestartStamp != graphContext.UpdateStamp;
+			&& graphContext.GetNodeContext<StateNodeContext>(NodeID).ActivationStamp != graphContext.UpdateStamp;
 	}
 
 	private void RunActivation(GraphContext graphContext, StateNodeContext nodeContext, bool restarting)
 	{
 		nodeContext.Activating = true;
+		nodeContext.ActivationStamp = graphContext.UpdateStamp;
 
 		if (restarting)
 		{
-			nodeContext.RestartStamp = graphContext.UpdateStamp;
 			OnRestart(graphContext);
 		}
 		else

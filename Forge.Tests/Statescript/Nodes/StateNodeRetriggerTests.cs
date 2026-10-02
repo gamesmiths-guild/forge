@@ -125,6 +125,46 @@ public class StateNodeRetriggerTests
 
 	[Fact]
 	[Trait("Graph", "Retrigger")]
+	public void A_node_ended_and_started_again_is_first_updated_on_the_next_pass_wherever_it_sits_in_this_one()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 10.0);
+		graph.VariableDefinitions.DefineVariable("restartDelay", 1.0);
+
+		// Activated around the timer that aborts and starts them again, so one is updated before it fires in the pass
+		// and the other after.
+		TimerNode updatedBefore = CreateTimerNode("duration");
+		TimerNode restarter = CreateTimerNode("restartDelay");
+		TimerNode updatedAfter = CreateTimerNode("duration");
+
+		foreach (Node node in (Node[])[updatedBefore, restarter, updatedAfter])
+		{
+			graph.AddNode(node);
+			graph.AddConnection(new Connection(
+				graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+				node.InputPorts[TimerNode.InputPort]));
+		}
+
+		foreach (TimerNode timer in (TimerNode[])[updatedBefore, updatedAfter])
+		{
+			graph.AddConnection(new Connection(
+				restarter.OutputPorts[TimerNode.OnTimerEndPort],
+				timer.InputPorts[TimerNode.AbortPort]));
+			graph.AddConnection(new Connection(
+				restarter.OutputPorts[TimerNode.OnTimerEndPort],
+				timer.InputPorts[TimerNode.InputPort]));
+		}
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		ElapsedTime(processor, updatedBefore).Should().Be(0);
+		ElapsedTime(processor, updatedAfter).Should().Be(0, "the pass's delta is time from before it started again");
+	}
+
+	[Fact]
+	[Trait("Graph", "Retrigger")]
 	public void An_ending_requested_by_a_restart_waits_until_the_restart_has_emitted()
 	{
 		var log = new List<string>();
