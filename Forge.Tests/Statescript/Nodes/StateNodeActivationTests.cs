@@ -189,6 +189,58 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void A_message_reaching_a_node_that_is_still_deactivating_is_ignored()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		// The timer's OnDeactivate starts it again from outside the graph's connections, before its subgraph is
+		// disabled.
+		TimerNode timer = CreateTimerNode("duration");
+		var child = new TrackingStateNode();
+		var startAgain = new StartsNodeOnceNode(timer);
+		graph.AddNode(timer);
+		graph.AddNode(child);
+		graph.AddNode(startAgain);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnDeactivatePort],
+			startAgain.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.SubgraphPort],
+			child.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		child.DeactivateCount.Should().Be(1);
+		processor.GraphContext.IsActive.Should().BeFalse("the timer ended along with its subgraph");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_message_set_off_by_a_node_cleaning_up_after_itself_is_ignored()
+	{
+		var graph = new Graph();
+		var node = new StartsItselfOnDeactivateNode();
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[StartsItselfOnDeactivateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		node.InputPorts[StartsItselfOnDeactivateNode.AbortPort].ReceiveMessage(processor.GraphContext);
+
+		node.ActivateCount.Should().Be(1);
+		processor.GraphContext.IsActive.Should().BeFalse("the node had not finished deactivating");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void A_deactivation_whose_graph_starts_over_leaves_the_new_run_running()
 	{
 		var graph = new Graph();
@@ -577,6 +629,28 @@ public class StateNodeActivationTests
 		}
 	}
 
+	// Sends its own input a message as it cleans up, once, as an event that releasing what it holds might.
+	private sealed class StartsItselfOnDeactivateNode : StateNode<StateNodeContext>
+	{
+		private bool _sent;
+
+		public int ActivateCount { get; private set; }
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+			ActivateCount++;
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+			if (!_sent)
+			{
+				_sent = true;
+				InputPorts[InputPort].ReceiveMessage(graphContext);
+			}
+		}
+	}
+
 	private sealed class EndsOnActivateNode : StateNode<StateNodeContext>
 	{
 		public const byte OnEndedPort = 4;
@@ -594,6 +668,22 @@ public class StateNodeActivationTests
 
 		protected override void OnDeactivate(GraphContext graphContext)
 		{
+		}
+	}
+
+	// Sends its target's input a message from outside the graph's connections, once, as an event set off by the
+	// target's own deactivation might.
+	private sealed class StartsNodeOnceNode(Node target) : ActionNode
+	{
+		private bool _sent;
+
+		protected override void Execute(GraphContext graphContext)
+		{
+			if (!_sent)
+			{
+				_sent = true;
+				target.InputPorts[0].ReceiveMessage(graphContext);
+			}
 		}
 	}
 }

@@ -12,6 +12,7 @@ namespace Gamesmiths.Forge.Statescript.Nodes;
 /// <remarks>
 /// A message that reaches the input while the node is already active - a retrigger - is ignored, unless the node was
 /// built to restart (<see cref="RestartOnRetrigger"/>), in which case it starts over through <see cref="OnRestart"/>.
+/// One that reaches it while the node is still deactivating is ignored either way.
 /// </remarks>
 /// <typeparam name="T">The type of the state node context.</typeparam>
 /// <param name="restartOnRetrigger">Whether a retrigger restarts the node through <see cref="OnRestart"/> instead of
@@ -268,6 +269,13 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 				return;
 			}
 
+			// Still deactivating. Starting over in the middle of that would leave the rest of the deactivation to tear
+			// down the new activation instead of the old one.
+			if (nodeContext.Deactivating)
+			{
+				return;
+			}
+
 			nodeContext.WasAborted = false;
 			RunActivation(graphContext, nodeContext, restarting: false);
 		}
@@ -401,6 +409,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		}
 
 		nodeContext.Active = false;
+		nodeContext.Deactivating = true;
 
 		base.BeforeDisable(graphContext);
 
@@ -430,6 +439,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		base.AfterDisable(graphContext);
 
 		OnDeactivate(graphContext);
+		nodeContext.Deactivating = false;
 		graphContext.FinalizeIfIdle();
 	}
 

@@ -31,7 +31,7 @@ State nodes **persist over time**. They activate when receiving a message, remai
 
 ## Retriggers
 
-A message that reaches **Input** while the node is already active is a **retrigger**: a Loop Timer re-kicking a walk, an event listener feeding the same Effect node on every hit. By default a retrigger is **ignored** — nothing is called, no port emits, and whatever the running activation holds (an applied effect, a subscription, a spawned instance) carries on untouched. Only a node that has ended can be activated again.
+A message that reaches **Input** while the node is already active is a **retrigger**: a Loop Timer re-kicking a walk, an event listener feeding the same Effect node on every hit. By default a retrigger is **ignored** — nothing is called, no port emits, and whatever the running activation holds (an applied effect, a subscription, a spawned instance) carries on untouched. Only a node that has ended can be activated again: a message that reaches one still deactivating, from something its OnDeactivate set off, is ignored too, whether or not the node can restart.
 
 Some nodes can instead **restart**, and do so when built with `restartOnRetrigger: true`:
 

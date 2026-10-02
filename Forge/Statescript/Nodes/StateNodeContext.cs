@@ -23,6 +23,8 @@ public class StateNodeContext : INodeContext
 
 	internal bool Activating { get; set; }
 
+	internal bool Deactivating { get; set; }
+
 	internal ulong ActivationStamp { get; set; }
 
 	internal int[]? DeferredDeactivationEventPortIds { get; set; }
