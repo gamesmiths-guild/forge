@@ -188,6 +188,28 @@ public class StateNodeRetriggerTests
 
 	[Fact]
 	[Trait("Graph", "Retrigger")]
+	public void A_retrigger_reaching_a_node_while_it_starts_is_ignored()
+	{
+		var log = new List<string>();
+		var graph = new Graph();
+		var node = new RetriggersItselfOnStartNode();
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActionNode.InputPort]));
+		ConnectLogger(graph, node, RetriggersItselfOnStartNode.OnActivatePort, "activate", log);
+		ConnectLogger(graph, node, RetriggersItselfOnStartNode.SubgraphPort, "subgraph", log);
+		ConnectLogger(graph, node, RetriggersItselfOnStartNode.OnEmittedPort, "emitted", log);
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		node.RestartCount.Should().Be(0);
+		log.Should().Equal("activate", "subgraph", "emitted");
+	}
+
+	[Fact]
+	[Trait("Graph", "Retrigger")]
 	public void A_node_that_has_ended_activates_again_instead_of_restarting()
 	{
 		var graph = new Graph();
@@ -363,6 +385,42 @@ public class StateNodeRetriggerTests
 		protected override void OnRestart(GraphContext graphContext)
 		{
 			DeactivateNodeAndEmitMessage(graphContext, OnEndedPort);
+		}
+	}
+
+	// Emits from its activation, then retriggers itself from there, once, as an event its activation sets off might.
+	private sealed class RetriggersItselfOnStartNode() : StateNode<StateNodeContext>(restartOnRetrigger: true)
+	{
+		public const byte OnEmittedPort = 4;
+
+		private bool _retriggered;
+
+		public int RestartCount { get; private set; }
+
+		protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
+		{
+			base.DefinePorts(inputPorts, outputPorts);
+			outputPorts.Add(CreatePort<EventPort>(OnEmittedPort, "OnEmitted"));
+		}
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+			EmitMessage(graphContext, OnEmittedPort);
+
+			if (!_retriggered)
+			{
+				_retriggered = true;
+				InputPorts[InputPort].ReceiveMessage(graphContext);
+			}
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnRestart(GraphContext graphContext)
+		{
+			RestartCount++;
 		}
 	}
 }
