@@ -302,7 +302,12 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 			return;
 		}
 
-		base.EmitMessage(graphContext, portIds);
+		// A port whose message ends this node, or the graph, ends the ones after it too: a subgraph started after that
+		// would run under a node that is already gone.
+		for (int i = 0; i < portIds.Length && nodeContext.Active; i++)
+		{
+			OutputPorts[portIds[i]].EmitMessage(graphContext);
+		}
 	}
 
 	/// <summary>

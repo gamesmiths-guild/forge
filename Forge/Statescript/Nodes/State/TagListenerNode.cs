@@ -127,14 +127,15 @@ public class TagListenerNode : StateNode<TagListenerNodeContext>
 
 		TagListenerNodeContext nodeContext = graphContext.GetNodeContext<TagListenerNodeContext>(NodeID);
 
-		if (!nodeContext.Active)
-		{
-			return;
-		}
-
-		// Snapshot the watched tags to allow presence updates while iterating.
+		// Snapshot the watched tags to allow presence updates while iterating. A report can end this node or the graph,
+		// which clears what it watches, so each tag checks the node is still listening.
 		foreach (Tag watchedTag in nodeContext.LastPresence.Keys.ToArray())
 		{
+			if (!nodeContext.Active)
+			{
+				return;
+			}
+
 			bool isPresent = allTags.HasTag(watchedTag);
 			bool wasPresent = nodeContext.LastPresence[watchedTag];
 
