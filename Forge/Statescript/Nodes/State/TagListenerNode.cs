@@ -147,7 +147,12 @@ public class TagListenerNode : StateNode<TagListenerNodeContext>
 			nodeContext.LastPresence[watchedTag] = isPresent;
 
 			WriteTagOutput(graphContext, watchedTag);
+
+			// Counted as running for this activation, so a listener aborted and started again from the report gets a
+			// context of its own rather than this one.
+			nodeContext.RunningFrames++;
 			OutputPorts[isPresent ? OnTagAddedPort : OnTagRemovedPort].EmitMessage(graphContext);
+			nodeContext.RunningFrames--;
 		}
 	}
 

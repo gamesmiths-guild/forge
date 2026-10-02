@@ -189,6 +189,140 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void An_activation_ended_and_started_again_from_inside_it_leaves_the_new_one_to_itself()
+	{
+		var graph = new Graph();
+		var node = new StartsAgainNode();
+		var onActivate = new TrackingActionNode();
+		var onEmitted = new TrackingActionNode();
+		graph.AddNode(node);
+		graph.AddNode(onActivate);
+		graph.AddNode(onEmitted);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[StartsAgainNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[StartsAgainNode.OnActivatePort],
+			onActivate.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[StartsAgainNode.OnEmittedPort],
+			onEmitted.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		// Only the activation that is still running emits, and what the ended one deferred went with it.
+		onActivate.ExecutionCount.Should().Be(1);
+		onEmitted.ExecutionCount.Should().Be(1);
+		node.ActivatedCount.Should().Be(1);
+		IsActive(processor, node).Should().BeTrue();
+	}
+
+	[Theory]
+	[Trait("Graph", "Activation")]
+	[InlineData(false)]
+	[InlineData(true)]
+	public void A_node_ended_and_started_again_from_its_update_leaves_the_new_activation_to_itself(bool fixedStep)
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var node = new StartsAgainOnUpdateNode();
+		var onUpdated = new TrackingActionNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(node);
+		graph.AddNode(onUpdated);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[StartsAgainOnUpdateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[StartsAgainOnUpdateNode.OnUpdatedPort],
+			onUpdated.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		if (fixedStep)
+		{
+			processor.FixedUpdateGraph(1.0);
+		}
+		else
+		{
+			processor.UpdateGraph(1.0);
+		}
+
+		onUpdated.ExecutionCount.Should().Be(0, "the update that would report belongs to the activation that ended");
+		IsActive(processor, node).Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_node_ended_and_started_again_by_one_port_emits_none_after_it()
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var node = new ReportsTwiceNode();
+		var startAgain = new EndsAndStartsNodeOnceNode(node);
+		var onSecond = new TrackingActionNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(node);
+		graph.AddNode(startAgain);
+		graph.AddNode(onSecond);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ReportsTwiceNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[ReportsTwiceNode.OnFirstPort],
+			startAgain.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[ReportsTwiceNode.OnSecondPort],
+			onSecond.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		// Reported from outside the graph's own calls, as an event handler does.
+		node.Report(processor.GraphContext);
+
+		onSecond.ExecutionCount.Should().Be(0, "the report belongs to the activation that ended");
+		IsActive(processor, node).Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_node_started_again_once_its_last_activation_is_over_keeps_its_context()
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var node = new TrackingStateNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		StateNodeContext context = processor.GraphContext.GetNodeContext<StateNodeContext>(node.NodeID);
+
+		node.InputPorts[TrackingStateNode.AbortPort].ReceiveMessage(processor.GraphContext);
+		node.InputPorts[TrackingStateNode.InputPort].ReceiveMessage(processor.GraphContext);
+
+		processor.GraphContext.GetNodeContext<StateNodeContext>(node.NodeID).Should().BeSameAs(context);
+		context.Active.Should().BeTrue();
+		context.WasAborted.Should().BeFalse("the abort ended the activation before this one");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void A_message_reaching_a_node_that_is_still_deactivating_is_ignored()
 	{
 		var graph = new Graph();
@@ -629,6 +763,124 @@ public class StateNodeActivationTests
 		}
 	}
 
+	// Emits from its activation, which waits for the activation to complete, then is aborted and started again before
+	// it does, as an effect it applies might through an event that both aborts and retriggers it. It does so once.
+	private sealed class StartsAgainNode : StateNode<StateNodeContext>
+	{
+		public const byte OnEmittedPort = 4;
+
+		private bool _startedAgain;
+
+		public int ActivatedCount { get; private set; }
+
+		protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
+		{
+			base.DefinePorts(inputPorts, outputPorts);
+			outputPorts.Add(CreatePort<EventPort>(OnEmittedPort, "OnEmitted"));
+		}
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+			EmitMessage(graphContext, OnEmittedPort);
+
+			if (_startedAgain)
+			{
+				return;
+			}
+
+			_startedAgain = true;
+			InputPorts[AbortPort].ReceiveMessage(graphContext);
+			InputPorts[InputPort].ReceiveMessage(graphContext);
+		}
+
+		protected override void OnActivated(GraphContext graphContext)
+		{
+			ActivatedCount++;
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+		}
+	}
+
+	// Is aborted and started again from its own update, once, as an event the update sets off might, and reports the
+	// update after that only if the activation it ran for is still going.
+	private sealed class StartsAgainOnUpdateNode : StateNode<StateNodeContext>
+	{
+		public const byte OnUpdatedPort = 4;
+
+		private bool _startedAgain;
+
+		protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
+		{
+			base.DefinePorts(inputPorts, outputPorts);
+			outputPorts.Add(CreatePort<EventPort>(OnUpdatedPort, "OnUpdated"));
+		}
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+		{
+			StartAgainThenReport(graphContext);
+		}
+
+		protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
+		{
+			StartAgainThenReport(graphContext);
+		}
+
+		private void StartAgainThenReport(GraphContext graphContext)
+		{
+			if (_startedAgain)
+			{
+				return;
+			}
+
+			_startedAgain = true;
+			StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
+			InputPorts[AbortPort].ReceiveMessage(graphContext);
+			InputPorts[InputPort].ReceiveMessage(graphContext);
+
+			if (nodeContext.Active)
+			{
+				EmitMessage(graphContext, OnUpdatedPort);
+			}
+		}
+	}
+
+	private sealed class ReportsTwiceNode : StateNode<StateNodeContext>
+	{
+		public const byte OnFirstPort = 4;
+
+		public const byte OnSecondPort = 5;
+
+		public void Report(GraphContext graphContext)
+		{
+			EmitMessage(graphContext, OnFirstPort, OnSecondPort);
+		}
+
+		protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
+		{
+			base.DefinePorts(inputPorts, outputPorts);
+			outputPorts.Add(CreatePort<EventPort>(OnFirstPort, "OnFirst"));
+			outputPorts.Add(CreatePort<EventPort>(OnSecondPort, "OnSecond"));
+		}
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+		}
+	}
+
 	// Sends its own input a message as it cleans up, once, as an event that releasing what it holds might.
 	private sealed class StartsItselfOnDeactivateNode : StateNode<StateNodeContext>
 	{
@@ -683,6 +935,23 @@ public class StateNodeActivationTests
 			{
 				_sent = true;
 				target.InputPorts[0].ReceiveMessage(graphContext);
+			}
+		}
+	}
+
+	// Aborts its target and starts it again from outside the graph's connections, once, as an event that does both
+	// might.
+	private sealed class EndsAndStartsNodeOnceNode(Node target) : ActionNode
+	{
+		private bool _sent;
+
+		protected override void Execute(GraphContext graphContext)
+		{
+			if (!_sent)
+			{
+				_sent = true;
+				target.InputPorts[StateNode<StateNodeContext>.AbortPort].ReceiveMessage(graphContext);
+				target.InputPorts[StateNode<StateNodeContext>.InputPort].ReceiveMessage(graphContext);
 			}
 		}
 	}

@@ -302,6 +302,54 @@ public class FlowNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	}
 
 	[Fact]
+	[Trait("Graph", "TagListener")]
+	public void Tag_listener_node_started_over_by_a_report_leaves_the_rest_of_the_change_unreported()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var firstTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		var secondTag = Tag.RequestTag(_tagsManager, "other.tag");
+		var otherTag = Tag.RequestTag(_tagsManager, "color.red");
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", entity);
+		graph.VariableDefinitions.DefineObjectArrayVariable("watchedTags", firstTag, secondTag);
+
+		var listener = new TagListenerNode();
+		listener.BindInput(TagListenerNode.EntityInput, "entity");
+		listener.BindInput(TagListenerNode.TagInput, "watchedTags");
+
+		// Both tags arrive in one change, and reporting the first starts the listener over, watching another tag in
+		// place of the second.
+		var onAdded = new TrackingActionNode();
+		var startOver = new WatchesOtherTagAndStartsOverNode(listener, otherTag);
+		graph.AddNode(listener);
+		graph.AddNode(onAdded);
+		graph.AddNode(startOver);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			listener.InputPorts[StateNode<TagListenerNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			listener.OutputPorts[TagListenerNode.OnTagAddedPort],
+			onAdded.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			onAdded.OutputPorts[ActionNode.OutputPort],
+			startOver.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		var tagEffectData = new EffectData(
+			"Tag Granter",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [new ModifierTagsEffectComponent(new TagContainer(_tagsManager, [firstTag, secondTag]))]);
+
+		entity.EffectsManager
+			.Invoking(x => x.ApplyEffect(new Effect(tagEffectData, new EffectOwnership(entity, entity))))
+			.Should().NotThrow();
+		onAdded.ExecutionCount.Should().Be(1, "the rest of the change was the ended activation's to report");
+	}
+
+	[Fact]
 	[Trait("Graph", "EventListener")]
 	public void Event_listener_node_deactivates_after_the_first_event_when_configured()
 	{
@@ -338,5 +386,25 @@ public class FlowNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		entity.Events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
 
 		onEvent.ExecutionCount.Should().Be(1);
+	}
+
+	// Has the listener watch another tag in place of its second, then aborts it and starts it again from outside the
+	// graph's connections, once, as an event that does all of that might.
+	private sealed class WatchesOtherTagAndStartsOverNode(TagListenerNode listener, Tag otherTag) : ActionNode
+	{
+		private bool _done;
+
+		protected override void Execute(GraphContext graphContext)
+		{
+			if (_done)
+			{
+				return;
+			}
+
+			_done = true;
+			graphContext.GraphVariables.SetObjectArrayElement("watchedTags", 1, otherTag);
+			listener.InputPorts[StateNode<TagListenerNodeContext>.AbortPort].ReceiveMessage(graphContext);
+			listener.InputPorts[StateNode<TagListenerNodeContext>.InputPort].ReceiveMessage(graphContext);
+		}
 	}
 }

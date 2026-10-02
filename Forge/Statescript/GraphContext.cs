@@ -427,9 +427,15 @@ public sealed class GraphContext
 			return (T)context;
 		}
 
-		var newContext = new T();
-		_nodeContexts[nodeID] = newContext;
-		return newContext;
+		return CreateNodeContext<T>(nodeID);
+	}
+
+	internal T CreateNodeContext<T>(Guid nodeID)
+		where T : INodeContext, new()
+	{
+		var context = new T();
+		_nodeContexts[nodeID] = context;
+		return context;
 	}
 
 	internal void PushElement(in ElementFrame frame)
