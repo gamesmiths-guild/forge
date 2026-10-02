@@ -596,6 +596,29 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void A_node_started_from_outside_the_graph_ends_when_the_graph_stops()
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var node = new TrackingStateNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		// Nothing in the graph leads to the node, so the stop has no way to reach it.
+		node.InputPorts[TrackingStateNode.InputPort].ReceiveMessage(processor.GraphContext);
+		processor.StopGraph();
+
+		node.DeactivateCount.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void An_abort_reached_from_OnActivate_leaves_the_subgraph_unstarted()
 	{
 		var graph = new Graph();

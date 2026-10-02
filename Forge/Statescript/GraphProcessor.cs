@@ -162,6 +162,13 @@ public class GraphProcessor
 		// the stop would otherwise go no further than it, leaving that node and what lies below it never ended.
 		GraphContext.InternalNodeActivationStatus.Clear();
 		Graph.EntryNode.StopGraph(GraphContext);
+
+		// A node started from outside the graph's connections is out of the stop's reach, and is ended here instead.
+		foreach (Node node in GraphContext.ActiveStateNodes.ToArray())
+		{
+			node.OnSubgraphDisabledMessageReceived(GraphContext);
+		}
+
 		GraphContext.Processor = null;
 		GraphContext.ActiveStateNodes.Clear();
 		GraphContext.InternalNodeActivationStatus.Clear();

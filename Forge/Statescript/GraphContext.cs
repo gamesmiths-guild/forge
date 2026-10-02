@@ -2,7 +2,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Core;
-using Gamesmiths.Forge.Statescript.Nodes;
 
 namespace Gamesmiths.Forge.Statescript;
 
@@ -453,18 +452,8 @@ public sealed class GraphContext
 		return _nodeContexts.ContainsKey(nodeID);
 	}
 
-	// A node still holding a context once its run is over reads it as inactive, whether the stop reached that node or
-	// not, rather than carry on in a graph that has stopped or started over.
 	internal void RemoveAllNodeContext()
 	{
-		foreach (INodeContext context in _nodeContexts.Values)
-		{
-			if (context is StateNodeContext stateNodeContext)
-			{
-				stateNodeContext.Active = false;
-			}
-		}
-
 		_nodeContexts.Clear();
 	}
 
