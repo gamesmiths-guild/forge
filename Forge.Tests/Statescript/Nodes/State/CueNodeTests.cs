@@ -209,6 +209,36 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 	[Trait("Graph", "CueNode")]
 	public void A_cue_that_stops_the_graph_as_it_applies_is_removed_with_the_rest()
 	{
+		(GraphProcessor processor, RecordingCueHandler firstHandler, RecordingCueHandler secondHandler) =
+			BuildTwoCueGraph();
+
+		// The second cue's handler ends the ability the graph runs for as it applies, which stops the graph before the
+		// node holds that cue.
+		secondHandler.Applied = processor.StopGraph;
+		processor.StartGraph();
+
+		firstHandler.RemoveCount.Should().Be(1, "the stop removed the cue the node already held");
+		secondHandler.RemoveCount.Should().Be(1, "the cue the node did not hold yet is removed once it does");
+	}
+
+	[Fact]
+	[Trait("Graph", "CueNode")]
+	public void The_cues_after_one_that_stops_the_graph_as_it_applies_go_unapplied()
+	{
+		(GraphProcessor processor, RecordingCueHandler firstHandler, RecordingCueHandler secondHandler) =
+			BuildTwoCueGraph();
+
+		// The first cue's handler ends the ability the graph runs for as it applies.
+		firstHandler.Applied = processor.StopGraph;
+		processor.StartGraph();
+
+		firstHandler.RemoveCount.Should().Be(1, "the cue the node did not hold yet is removed once it does");
+		secondHandler.ApplyCount.Should().Be(0, "nothing is applied for a graph that is gone");
+	}
+
+	private (GraphProcessor Processor, RecordingCueHandler FirstHandler, RecordingCueHandler SecondHandler)
+		BuildTwoCueGraph()
+	{
 		var cuesManager = new CuesManager();
 		var firstHandler = new RecordingCueHandler();
 		var secondHandler = new RecordingCueHandler();
@@ -230,15 +260,7 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 			node.InputPorts[StateNode<CueNodeContext>.InputPort]));
 
-		var processor = new GraphProcessor(graph);
-
-		// The second cue's handler ends the ability the graph runs for as it applies, which stops the graph before the
-		// node holds that cue.
-		secondHandler.Applied = processor.StopGraph;
-		processor.StartGraph();
-
-		firstHandler.RemoveCount.Should().Be(1, "the stop removed the cue the node already held");
-		secondHandler.RemoveCount.Should().Be(1, "the cue the node did not hold yet is removed once it does");
+		return (new GraphProcessor(graph), firstHandler, secondHandler);
 	}
 
 	private (GraphProcessor Processor, RecordingCueHandler Handler) BuildSingleCueGraph(

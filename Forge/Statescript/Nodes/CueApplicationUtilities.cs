@@ -116,12 +116,15 @@ internal static class CueApplicationUtilities
 			normalizedMagnitudeInputName,
 			sourceInputName,
 			customParametersInputName);
+		ulong run = graphContext.RunStamp;
 
 		for (int targetIndex = 0; targetIndex < targets.Count; targetIndex++)
 		{
 			IForgeEntity target = targets[targetIndex];
 
-			for (int tagIndex = 0; tagIndex < cueTags.Count; tagIndex++)
+			// A handler can end the graph - cancelling the ability it runs for - and the rest are then not fired for
+			// a graph that is gone.
+			for (int tagIndex = 0; tagIndex < cueTags.Count && graphContext.RunStamp == run; tagIndex++)
 			{
 				Tag cueTag = cueTags[tagIndex];
 
