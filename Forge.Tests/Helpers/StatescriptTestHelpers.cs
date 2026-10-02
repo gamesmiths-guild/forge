@@ -72,6 +72,27 @@ internal static class NodeBindings
 		};
 	}
 
+	/// <summary>
+	/// Starts the node from the entry on the graph's first run only, so a run started over from inside it with
+	/// <c>isFirstRun</c> set to <see langword="false"/> goes the other way.
+	/// </summary>
+	/// <param name="graph">The graph to add the node to.</param>
+	/// <param name="node">The node to start.</param>
+	public static void AddOnFirstRunOnly(Graph graph, Node node)
+	{
+		graph.VariableDefinitions.DefineVariable("isFirstRun", true);
+
+		ExpressionNode isFirstRun = CreateExpressionNode("isFirstRun");
+		graph.AddNode(isFirstRun);
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			isFirstRun.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			isFirstRun.OutputPorts[ConditionNode.TruePort],
+			node.InputPorts[0]));
+	}
+
 	public static ExpressionNode CreateExpressionNode(StringKey conditionPropertyName)
 	{
 		var node = new ExpressionNode();

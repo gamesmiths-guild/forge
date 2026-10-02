@@ -11,7 +11,6 @@ using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Action;
-using Gamesmiths.Forge.Statescript.Nodes.Condition;
 using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Statescript.Providers;
 using Gamesmiths.Forge.Tags;
@@ -306,25 +305,15 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		var stopper = new StopsGraphComponent();
 		var graph = new Graph();
 
-		graph.VariableDefinitions.DefineVariable("isFirstRun", true);
 		graph.VariableDefinitions.DefineObjectProperty(
 			"effect",
 			new EffectFromDataResolver(CreateTrackingEffectData("Stopping", DurationType.Infinite, stopper)));
 		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
 		graph.VariableDefinitions.DefineObjectVariable<ActiveEffectHandle>("activeEffect");
 
-		// Only the first run applies the effect.
-		ExpressionNode isFirstRun = CreateExpressionNode("isFirstRun");
 		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
 		node.BindOutput(ApplyEffectNode.ActiveEffectOutput, "activeEffect");
-		graph.AddNode(isFirstRun);
-		graph.AddNode(node);
-		graph.AddConnection(new Connection(
-			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
-			isFirstRun.InputPorts[ConditionNode.InputPort]));
-		graph.AddConnection(new Connection(
-			isFirstRun.OutputPorts[ConditionNode.TruePort],
-			node.InputPorts[ActionNode.InputPort]));
+		AddOnFirstRunOnly(graph, node);
 
 		var processor = new GraphProcessor(graph);
 

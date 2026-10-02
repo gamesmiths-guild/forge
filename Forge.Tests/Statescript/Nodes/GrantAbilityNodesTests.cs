@@ -678,7 +678,7 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		grantNode.BindInput(GrantAbilityPermanentlyNode.AbilityDataInput, "abilityData");
 		grantNode.BindInput(GrantAbilityPermanentlyNode.EntityInput, "target");
 		grantNode.BindOutput(GrantAbilityPermanentlyNode.AbilityOutput, "grantedAbility");
-		AddOnFirstRunOnly(graph, grantNode);
+		NodeBindings.AddOnFirstRunOnly(graph, grantNode);
 
 		var processor = new GraphProcessor(graph);
 
@@ -708,7 +708,7 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		procNode.BindInput(TryGrantAbilityAndActivateOnceNode.AbilityDataInput, "abilityData");
 		procNode.BindInput(TryGrantAbilityAndActivateOnceNode.EntityInput, "entity");
 		procNode.BindOutput(TryGrantAbilityAndActivateOnceNode.AbilityOutput, "grantedAbility");
-		AddOnFirstRunOnly(graph, procNode);
+		NodeBindings.AddOnFirstRunOnly(graph, procNode);
 
 		var processor = new GraphProcessor(graph);
 
@@ -720,22 +720,6 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		processor.GraphContext.GraphVariables.TryGetObject("grantedAbility", out object? outputHandle)
 			.Should().BeTrue();
 		outputHandle.Should().BeNull("the new run granted nothing, and the handle belongs to the run that ended");
-	}
-
-	// Reached only on the graph's first run, so a run started over from inside it goes the other way.
-	private static void AddOnFirstRunOnly(Graph graph, Node node)
-	{
-		graph.VariableDefinitions.DefineVariable("isFirstRun", true);
-
-		ExpressionNode isFirstRun = NodeBindings.CreateExpressionNode("isFirstRun");
-		graph.AddNode(isFirstRun);
-		graph.AddNode(node);
-		graph.AddConnection(new Connection(
-			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
-			isFirstRun.InputPorts[ConditionNode.InputPort]));
-		graph.AddConnection(new Connection(
-			isFirstRun.OutputPorts[ConditionNode.TruePort],
-			node.InputPorts[0]));
 	}
 
 	// Grants and activates an ability whose behavior parks on a long timer, so it stays active until something cancels
