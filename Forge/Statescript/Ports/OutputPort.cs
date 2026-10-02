@@ -92,21 +92,18 @@ public class OutputPort : Port
 			{
 				ports[i].ReceiveMessage(graphContext);
 			}
+
+			OnEmitMessage?.Invoke(PortID);
 		}
 		finally
 		{
-			// A run that ended along the way took its count with it, and the next one keeps its own.
+			// A run that ended along the way took its count with it, and the next one keeps its own. One still going
+			// completes once nothing is left running, even if a delivery threw.
 			if (graphContext.RunStamp == run)
 			{
 				graphContext.FinalizationDeferralCount--;
+				graphContext.FinalizeIfIdle();
 			}
-		}
-
-		OnEmitMessage?.Invoke(PortID);
-
-		if (graphContext.RunStamp == run)
-		{
-			graphContext.FinalizeIfIdle();
 		}
 	}
 

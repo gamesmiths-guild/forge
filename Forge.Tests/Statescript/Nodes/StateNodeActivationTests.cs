@@ -641,6 +641,8 @@ public class StateNodeActivationTests
 			sibling.InputPorts[TrackingStateNode.InputPort]));
 
 		var processor = new GraphProcessor(graph);
+		int completions = 0;
+		processor.OnGraphCompleted = () => completions++;
 		processor.StartGraph();
 		unreached.InputPorts[ThrowsOnDeactivateOnceNode.InputPort].ReceiveMessage(processor.GraphContext);
 
@@ -650,10 +652,69 @@ public class StateNodeActivationTests
 
 		parent.DeactivateCount.Should().Be(1, "the parent finishes the deactivation its child interrupted");
 		sibling.DeactivateCount.Should().Be(1, "the stop goes on past the node that threw");
+		completions.Should().Be(1, "the stop completes before the failure is reported");
 
 		processor.StartGraph();
 
 		sibling.ActivateCount.Should().Be(2, "the next run starts afresh rather than retriggering the last one");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_start_asked_for_during_a_stop_that_throws_still_follows_it()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("run", 1);
+		var thrower = new ThrowsOnDeactivateOnceNode();
+		var starter = new StartsGraphOnDeactivateNode(variables => variables.SetVar("run", 2));
+		graph.AddNode(thrower);
+		graph.AddNode(starter);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			thrower.InputPorts[ThrowsOnDeactivateOnceNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			starter.InputPorts[StartsGraphOnDeactivateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		starter.Processor = processor;
+		processor.StartGraph();
+
+		processor.Invoking(x => x.StopGraph()).Should().Throw<InvalidOperationException>();
+
+		thrower.ActivateCount.Should().Be(2);
+		processor.GraphContext.IsActive.Should().BeTrue();
+		processor.GraphContext.GraphVariables.TryGetVar("run", out int run).Should().BeTrue();
+		run.Should().Be(2);
+	}
+
+	[Theory]
+	[Trait("Graph", "Activation")]
+	[InlineData("itself")]
+	[InlineData("abort")]
+	[InlineData("message")]
+	public void A_graph_whose_last_node_throws_as_it_ends_still_completes(string endedBy)
+	{
+		var graph = new Graph();
+		var node = new ThrowsOnDeactivateOnceNode(endsOnUpdate: endedBy == "itself");
+		var relay = new TrackingActionNode();
+		graph.AddNode(node);
+		graph.AddNode(relay);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ThrowsOnDeactivateOnceNode.InputPort]));
+		graph.AddConnection(new Connection(
+			relay.OutputPorts[ActionNode.OutputPort],
+			node.InputPorts[ThrowsOnDeactivateOnceNode.AbortPort]));
+
+		var processor = new GraphProcessor(graph);
+		int completions = 0;
+		processor.OnGraphCompleted = () => completions++;
+		processor.StartGraph();
+
+		processor.Invoking(x => EndLastNode(x, node, relay, endedBy)).Should().Throw<InvalidOperationException>();
+
+		completions.Should().Be(1, "the node that threw has still ended, and nothing else is running");
 	}
 
 	[Fact]
@@ -998,6 +1059,24 @@ public class StateNodeActivationTests
 		return processor.GraphContext.GetNodeContext<StateNodeContext>(node.NodeID).Active;
 	}
 
+	private static void EndLastNode(GraphProcessor processor, Node node, Node relay, string endedBy)
+	{
+		switch (endedBy)
+		{
+			case "itself":
+				processor.UpdateGraph(1.0);
+				break;
+
+			case "abort":
+				node.InputPorts[StateNode<StateNodeContext>.AbortPort].ReceiveMessage(processor.GraphContext);
+				break;
+
+			default:
+				relay.InputPorts[ActionNode.InputPort].ReceiveMessage(processor.GraphContext);
+				break;
+		}
+	}
+
 	private static TrackingActionNode ConnectOnActivateTracker(Graph graph, StopsGraphNode node)
 	{
 		var onActivate = new TrackingActionNode();
@@ -1260,8 +1339,8 @@ public class StateNodeActivationTests
 		}
 	}
 
-	// Throws from its first cleanup, as a node with a bug in it might.
-	private sealed class ThrowsOnDeactivateOnceNode : StateNode<StateNodeContext>
+	// Throws from its first cleanup, as a node with a bug in it might, and can end itself on update as a timer does.
+	private sealed class ThrowsOnDeactivateOnceNode(bool endsOnUpdate = false) : StateNode<StateNodeContext>
 	{
 		private bool _threw;
 
@@ -1278,6 +1357,14 @@ public class StateNodeActivationTests
 			{
 				_threw = true;
 				throw new InvalidOperationException("The cleanup failed.");
+			}
+		}
+
+		protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+		{
+			if (endsOnUpdate)
+			{
+				DeactivateNodeAndEmitMessage(graphContext);
 			}
 		}
 	}

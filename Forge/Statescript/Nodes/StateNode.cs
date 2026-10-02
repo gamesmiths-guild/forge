@@ -400,16 +400,13 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		}
 		finally
 		{
-			// A run that ended along the way took its count with it, and the next one keeps its own.
+			// A run that ended along the way took its count with it, and the next one keeps its own. One still going
+			// completes once nothing is left running, even if an emission threw.
 			if (graphContext.RunStamp == run)
 			{
 				graphContext.FinalizationDeferralCount--;
+				graphContext.FinalizeIfIdle();
 			}
-		}
-
-		if (graphContext.RunStamp == run)
-		{
-			graphContext.FinalizeIfIdle();
 		}
 	}
 
@@ -485,8 +482,8 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 
 		base.AfterDisable(graphContext);
 
-		// A cleanup that throws has still ended the node, which would otherwise ignore every start for the rest of the
-		// run.
+		// A cleanup that throws has still ended the node: it can be started again rather than ignore every start for
+		// the rest of the run, and a graph it was the last one running in completes.
 		try
 		{
 			OnDeactivate(graphContext);
@@ -494,9 +491,8 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		finally
 		{
 			nodeContext.Deactivating = false;
+			graphContext.FinalizeIfIdle();
 		}
-
-		graphContext.FinalizeIfIdle();
 	}
 
 	// A node that starts during a pass, restarted or ended and started again by one updated before it, would otherwise
