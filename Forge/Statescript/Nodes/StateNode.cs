@@ -475,8 +475,17 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 
 		base.AfterDisable(graphContext);
 
-		OnDeactivate(graphContext);
-		nodeContext.Deactivating = false;
+		// A cleanup that throws has still ended the node, which would otherwise ignore every start for the rest of the
+		// run.
+		try
+		{
+			OnDeactivate(graphContext);
+		}
+		finally
+		{
+			nodeContext.Deactivating = false;
+		}
+
 		graphContext.FinalizeIfIdle();
 	}
 

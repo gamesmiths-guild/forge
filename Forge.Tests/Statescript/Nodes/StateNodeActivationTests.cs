@@ -464,6 +464,34 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void A_node_whose_cleanup_threw_can_start_again()
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var node = new ThrowsOnDeactivateOnceNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ThrowsOnDeactivateOnceNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext
+			.Invoking(x => node.InputPorts[ThrowsOnDeactivateOnceNode.AbortPort].ReceiveMessage(x))
+			.Should().Throw<InvalidOperationException>();
+		node.InputPorts[ThrowsOnDeactivateOnceNode.InputPort].ReceiveMessage(processor.GraphContext);
+
+		node.ActivateCount.Should().Be(2);
+		IsActive(processor, node).Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void A_deactivation_whose_graph_starts_over_leaves_the_new_run_running()
 	{
 		var graph = new Graph();
@@ -1042,6 +1070,28 @@ public class StateNodeActivationTests
 		protected override void OnDeactivate(GraphContext graphContext)
 		{
 			EndedAborted = graphContext.GetNodeContext<StateNodeContext>(NodeID).WasAborted;
+		}
+	}
+
+	// Throws from its first cleanup, as a node with a bug in it might.
+	private sealed class ThrowsOnDeactivateOnceNode : StateNode<StateNodeContext>
+	{
+		private bool _threw;
+
+		public int ActivateCount { get; private set; }
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+			ActivateCount++;
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+			if (!_threw)
+			{
+				_threw = true;
+				throw new InvalidOperationException("The cleanup failed.");
+			}
 		}
 	}
 
