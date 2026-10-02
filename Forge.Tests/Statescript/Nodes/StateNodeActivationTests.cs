@@ -578,6 +578,45 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void A_stop_whose_teardown_throws_still_ends_every_node_and_the_run()
+	{
+		var graph = new Graph();
+		var parent = new TrackingStateNode();
+		var child = new ThrowsOnDeactivateOnceNode();
+		var sibling = new TrackingStateNode();
+		var unreached = new ThrowsOnDeactivateOnceNode();
+		graph.AddNode(parent);
+		graph.AddNode(child);
+		graph.AddNode(sibling);
+		graph.AddNode(unreached);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			parent.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			parent.OutputPorts[TrackingStateNode.SubgraphPort],
+			child.InputPorts[ThrowsOnDeactivateOnceNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			sibling.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		unreached.InputPorts[ThrowsOnDeactivateOnceNode.InputPort].ReceiveMessage(processor.GraphContext);
+
+		// The child throws as the stop disables the parent's subgraph, before the stop reaches the sibling, and the node
+		// nothing leads to throws as it is ended after the walk.
+		processor.Invoking(x => x.StopGraph()).Should().Throw<InvalidOperationException>();
+
+		parent.DeactivateCount.Should().Be(1, "the parent finishes the deactivation its child interrupted");
+		sibling.DeactivateCount.Should().Be(1, "the stop goes on past the node that threw");
+
+		processor.StartGraph();
+
+		sibling.ActivateCount.Should().Be(2, "the next run starts afresh rather than retriggering the last one");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void A_deactivation_whose_graph_starts_over_leaves_the_new_run_running()
 	{
 		var graph = new Graph();

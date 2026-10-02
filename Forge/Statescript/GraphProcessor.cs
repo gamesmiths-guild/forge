@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Statescript;
@@ -164,6 +165,11 @@ public class GraphProcessor
 	/// execution. This method is safe to call re-entrantly (e.g., from an <see cref="Nodes.ExitNode"/> triggered
 	/// during the disable cascade).
 	/// </summary>
+	/// <remarks>
+	/// A node that throws as it is ended does not keep the others from ending: the stop ends every node and clears the
+	/// run, then rethrows the first exception instead of completing, so <see cref="OnGraphCompleted"/> is not invoked
+	/// and a start asked for during the stop is dropped.
+	/// </remarks>
 	public void StopGraph()
 	{
 		if (GraphContext.Processor != this || !GraphContext.HasStarted)
@@ -177,30 +183,43 @@ public class GraphProcessor
 		GraphContext.HasStarted = false;
 		GraphContext.RunStamp++;
 		GraphContext.IsStopping = true;
+		ExceptionDispatchInfo? failure = null;
+
+		// The stop walks the graph afresh: a disabling still under way has already marked its node as passed, and the
+		// stop would otherwise go no further than it, leaving that node and what lies below it never ended.
+		GraphContext.InternalNodeActivationStatus.Clear();
 
 		try
 		{
-			// The stop walks the graph afresh: a disabling still under way has already marked its node as passed, and
-			// the stop would otherwise go no further than it, leaving that node and what lies below it never ended.
-			GraphContext.InternalNodeActivationStatus.Clear();
 			Graph.EntryNode.StopGraph(GraphContext);
+		}
+		catch (Exception exception)
+		{
+			failure = ExceptionDispatchInfo.Capture(exception);
+		}
 
-			// A node started from outside the graph's connections is out of the stop's reach, and is ended here
-			// instead.
-			foreach (Node node in GraphContext.ActiveStateNodes.ToArray())
+		// A node the walk did not reach - started from outside the graph's connections, or passed over when a teardown
+		// threw - is ended here instead, walked afresh so that one left part way through its deactivation finishes it.
+		GraphContext.InternalNodeActivationStatus.Clear();
+
+		foreach (Node node in GraphContext.ActiveStateNodes.ToArray())
+		{
+			try
 			{
 				node.OnSubgraphDisabledMessageReceived(GraphContext);
 			}
-		}
-		finally
-		{
-			GraphContext.IsStopping = false;
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 
+		GraphContext.IsStopping = false;
 		GraphContext.Processor = null;
 		GraphContext.ActiveStateNodes.Clear();
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();
+		failure?.Throw();
 		OnGraphCompleted?.Invoke();
 
 		if (_startAfterStop)
