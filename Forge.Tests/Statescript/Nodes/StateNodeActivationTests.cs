@@ -323,6 +323,36 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void A_node_ended_and_started_again_from_its_abort_leaves_the_new_activation_running()
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var node = new TrackingStateNode();
+		var startAgain = new EndsAndStartsNodeOnceNode(node);
+		graph.AddNode(keepAlive);
+		graph.AddNode(node);
+		graph.AddNode(startAgain);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[TrackingStateNode.OnAbortPort],
+			startAgain.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		node.InputPorts[TrackingStateNode.AbortPort].ReceiveMessage(processor.GraphContext);
+
+		node.ActivateCount.Should().Be(2);
+		node.DeactivateCount.Should().Be(1, "the abort ends only the activation it reached");
+		IsActive(processor, node).Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void A_message_reaching_a_node_that_is_still_deactivating_is_ignored()
 	{
 		var graph = new Graph();

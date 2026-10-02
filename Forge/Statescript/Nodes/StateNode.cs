@@ -308,17 +308,21 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		}
 		else if (receiverPort.Index == AbortPort)
 		{
-			if (graphContext.HasNodeContext(NodeID))
+			if (!graphContext.HasNodeContext(NodeID))
 			{
-				graphContext.GetNodeContext<StateNodeContext>(NodeID).WasAborted = true;
+				OutputPorts[OnAbortPort].EmitMessage(graphContext);
+				return;
 			}
 
-			ulong run = graphContext.RunStamp;
+			StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
+			nodeContext.WasAborted = true;
+			nodeContext.RunningFrames++;
 			OutputPorts[OnAbortPort].EmitMessage(graphContext);
+			nodeContext.RunningFrames--;
 
-			// OnAbort can end the graph, which deactivates this node already, and a graph started over from there has
-			// one of its own.
-			if (graphContext.RunStamp == run)
+			// OnAbort can end this node or the graph, and a node started again or a graph started over from there has a
+			// context of its own, which this abort never reached.
+			if (nodeContext.Active)
 			{
 				DeactivateNode(graphContext);
 			}
