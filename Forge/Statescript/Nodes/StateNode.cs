@@ -343,13 +343,14 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 			finally
 			{
 				nodeContext.RunningFrames--;
-			}
 
-			// OnAbort can end this node or the graph, and a node started again or a graph started over from there has a
-			// context of its own, which this abort never reached.
-			if (nodeContext.Active)
-			{
-				DeactivateNode(graphContext);
+				// OnAbort can end this node or the graph, and a node started again or a graph started over from there
+				// has a context of its own, which this abort never reached. A handler that throws still lets the abort
+				// end the node, rather than leave it running as aborted.
+				if (nodeContext.Active)
+				{
+					DeactivateNode(graphContext);
+				}
 			}
 		}
 	}

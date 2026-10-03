@@ -796,7 +796,7 @@ public class StateNodeActivationTests
 		processor.Invoking(x => ThrowOnceFrom(x, node, throwsFrom)).Should().Throw<NotSupportedException>();
 		StateNodeContext context = processor.GraphContext.GetNodeContext<StateNodeContext>(node.NodeID);
 
-		// The throw left the node running, so it is ended before it is started again.
+		// Any throw but the abort's left the node running, so it is ended before it is started again.
 		node.InputPorts[ThrowsOnceFromNode.AbortPort].ReceiveMessage(processor.GraphContext);
 		node.InputPorts[ThrowsOnceFromNode.InputPort].ReceiveMessage(processor.GraphContext);
 
@@ -841,6 +841,39 @@ public class StateNodeActivationTests
 
 		onReport.ExecutionCount.Should().Be(1, "what the failed activation deferred went with it");
 		IsActive(processor, node).Should().BeTrue("the ending the failed activation asked for went with it");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void An_abort_whose_handler_threw_still_ends_the_node()
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var node = new TrackingStateNode();
+		var thrower = new ThrowsOnExecutionNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(node);
+		graph.AddNode(thrower);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[TrackingStateNode.OnAbortPort],
+			thrower.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext
+			.Invoking(x => node.InputPorts[TrackingStateNode.AbortPort].ReceiveMessage(x))
+			.Should().Throw<NotSupportedException>();
+
+		StateNodeContext context = processor.GraphContext.GetNodeContext<StateNodeContext>(node.NodeID);
+		context.Active.Should().BeFalse("the abort ends the node even though its handler threw");
+		context.WasAborted.Should().BeTrue();
 	}
 
 	[Fact]
