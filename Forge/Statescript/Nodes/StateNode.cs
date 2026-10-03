@@ -88,8 +88,15 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		if (nodeContext is not null)
 		{
 			nodeContext.RunningFrames++;
-			OnUpdate(deltaTime, graphContext);
-			nodeContext.RunningFrames--;
+
+			try
+			{
+				OnUpdate(deltaTime, graphContext);
+			}
+			finally
+			{
+				nodeContext.RunningFrames--;
+			}
 		}
 	}
 
@@ -106,8 +113,15 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		if (nodeContext is not null)
 		{
 			nodeContext.RunningFrames++;
-			OnFixedUpdate(deltaTime, graphContext);
-			nodeContext.RunningFrames--;
+
+			try
+			{
+				OnFixedUpdate(deltaTime, graphContext);
+			}
+			finally
+			{
+				nodeContext.RunningFrames--;
+			}
 		}
 	}
 
@@ -321,8 +335,15 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 			StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 			nodeContext.WasAborted = true;
 			nodeContext.RunningFrames++;
-			OutputPorts[OnAbortPort].EmitMessage(graphContext);
-			nodeContext.RunningFrames--;
+
+			try
+			{
+				OutputPorts[OnAbortPort].EmitMessage(graphContext);
+			}
+			finally
+			{
+				nodeContext.RunningFrames--;
+			}
 
 			// OnAbort can end this node or the graph, and a node started again or a graph started over from there has a
 			// context of its own, which this abort never reached.
@@ -347,14 +368,19 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 
 		nodeContext.RunningFrames++;
 
-		// A port whose message ends this node, or the graph, ends the ones after it too: a subgraph started after that
-		// would run under a node that is already gone.
-		for (int i = 0; i < portIds.Length && nodeContext.Active; i++)
+		try
 		{
-			OutputPorts[portIds[i]].EmitMessage(graphContext);
+			// A port whose message ends this node, or the graph, ends the ones after it too: a subgraph started after
+			// that would run under a node that is already gone.
+			for (int i = 0; i < portIds.Length && nodeContext.Active; i++)
+			{
+				OutputPorts[portIds[i]].EmitMessage(graphContext);
+			}
 		}
-
-		nodeContext.RunningFrames--;
+		finally
+		{
+			nodeContext.RunningFrames--;
+		}
 	}
 
 	/// <summary>
@@ -513,43 +539,49 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	private void RunActivation(GraphContext graphContext, StateNodeContext nodeContext, bool restarting)
 	{
 		nodeContext.RunningFrames++;
-		nodeContext.Activating = true;
-		nodeContext.ActivationStamp = graphContext.UpdateStamp;
 
-		if (restarting)
+		try
 		{
-			OnRestart(graphContext);
+			nodeContext.Activating = true;
+			nodeContext.ActivationStamp = graphContext.UpdateStamp;
+
+			if (restarting)
+			{
+				OnRestart(graphContext);
+			}
+			else
+			{
+				ActivateNode(graphContext);
+			}
+
+			// The node's own work can end it or stop the whole graph - an effect cancelling the ability this graph
+			// runs for - and so can whatever OnActivate reaches. Nothing is emitted for a node that is already gone: a
+			// subgraph started under one would run with nothing left to disable it. The context checked is this
+			// activation's own, since a node started again or a graph started over from inside it has another.
+			if (nodeContext.Active)
+			{
+				OutputPorts[OnActivatePort].EmitMessage(graphContext);
+			}
+
+			if (nodeContext.Active)
+			{
+				OutputPorts[SubgraphPort].EmitMessage(graphContext);
+			}
+
+			nodeContext.Activating = false;
+
+			HandleDeferredEmitMessages(graphContext, nodeContext);
+			HandleDeferredDeactivationMessages(graphContext, nodeContext);
+
+			if (nodeContext.Active)
+			{
+				OnActivated(graphContext);
+			}
 		}
-		else
+		finally
 		{
-			ActivateNode(graphContext);
+			nodeContext.RunningFrames--;
 		}
-
-		// The node's own work can end it or stop the whole graph - an effect cancelling the ability this graph runs
-		// for - and so can whatever OnActivate reaches. Nothing is emitted for a node that is already gone: a subgraph
-		// started under one would run with nothing left to disable it. The context checked is this activation's own,
-		// since a node started again or a graph started over from inside it has another.
-		if (nodeContext.Active)
-		{
-			OutputPorts[OnActivatePort].EmitMessage(graphContext);
-		}
-
-		if (nodeContext.Active)
-		{
-			OutputPorts[SubgraphPort].EmitMessage(graphContext);
-		}
-
-		nodeContext.Activating = false;
-
-		HandleDeferredEmitMessages(graphContext, nodeContext);
-		HandleDeferredDeactivationMessages(graphContext, nodeContext);
-
-		if (nodeContext.Active)
-		{
-			OnActivated(graphContext);
-		}
-
-		nodeContext.RunningFrames--;
 	}
 
 	private void ActivateNode(GraphContext graphContext)

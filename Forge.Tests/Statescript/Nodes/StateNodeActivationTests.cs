@@ -717,6 +717,49 @@ public class StateNodeActivationTests
 		completions.Should().Be(1, "the node that threw has still ended, and nothing else is running");
 	}
 
+	[Theory]
+	[Trait("Graph", "Activation")]
+	[InlineData("activate")]
+	[InlineData("update")]
+	[InlineData("fixed")]
+	[InlineData("emit")]
+	[InlineData("abort")]
+	public void A_node_whose_code_threw_still_reuses_its_context(string throwsFrom)
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var node = new ThrowsOnceFromNode(throwsFrom);
+		var thrower = new ThrowsOnExecutionNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(node);
+		graph.AddNode(thrower);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[throwsFrom == "abort" ? ThrowsOnceFromNode.OnAbortPort : ThrowsOnceFromNode.OnReportPort],
+			thrower.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		if (throwsFrom != "activate")
+		{
+			node.InputPorts[ThrowsOnceFromNode.InputPort].ReceiveMessage(processor.GraphContext);
+		}
+
+		processor.Invoking(x => ThrowOnceFrom(x, node, throwsFrom)).Should().Throw<NotSupportedException>();
+		StateNodeContext context = processor.GraphContext.GetNodeContext<StateNodeContext>(node.NodeID);
+
+		// The throw left the node running, so it is ended before it is started again.
+		node.InputPorts[ThrowsOnceFromNode.AbortPort].ReceiveMessage(processor.GraphContext);
+		node.InputPorts[ThrowsOnceFromNode.InputPort].ReceiveMessage(processor.GraphContext);
+
+		processor.GraphContext.GetNodeContext<StateNodeContext>(node.NodeID).Should().BeSameAs(
+			context,
+			"the code that threw is no longer running for the activation that ended");
+	}
+
 	[Fact]
 	[Trait("Graph", "Activation")]
 	public void A_deactivation_whose_graph_starts_over_leaves_the_new_run_running()
@@ -1059,6 +1102,32 @@ public class StateNodeActivationTests
 		return processor.GraphContext.GetNodeContext<StateNodeContext>(node.NodeID).Active;
 	}
 
+	private static void ThrowOnceFrom(GraphProcessor processor, ThrowsOnceFromNode node, string throwsFrom)
+	{
+		switch (throwsFrom)
+		{
+			case "activate":
+				node.InputPorts[ThrowsOnceFromNode.InputPort].ReceiveMessage(processor.GraphContext);
+				break;
+
+			case "update":
+				processor.UpdateGraph(1.0);
+				break;
+
+			case "fixed":
+				processor.FixedUpdateGraph(1.0);
+				break;
+
+			case "emit":
+				node.Report(processor.GraphContext);
+				break;
+
+			default:
+				node.InputPorts[ThrowsOnceFromNode.AbortPort].ReceiveMessage(processor.GraphContext);
+				break;
+		}
+	}
+
 	private static void EndLastNode(GraphProcessor processor, Node node, Node relay, string endedBy)
 	{
 		switch (endedBy)
@@ -1315,6 +1384,70 @@ public class StateNodeActivationTests
 		protected override void OnDeactivate(GraphContext graphContext)
 		{
 			EndedAborted = graphContext.GetNodeContext<StateNodeContext>(NodeID).WasAborted;
+		}
+	}
+
+	// Throws once from the step it is told, as a node with a bug in it might, and reports from outside the graph's own
+	// calls when asked, as an event handler does.
+	private sealed class ThrowsOnceFromNode(string throwsFrom) : StateNode<StateNodeContext>
+	{
+		public const byte OnReportPort = 4;
+
+		private bool _threw;
+
+		public void Report(GraphContext graphContext)
+		{
+			EmitMessage(graphContext, OnReportPort);
+		}
+
+		protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
+		{
+			base.DefinePorts(inputPorts, outputPorts);
+			outputPorts.Add(CreatePort<EventPort>(OnReportPort, "OnReport"));
+		}
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+			ThrowOnceFrom("activate");
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+		{
+			ThrowOnceFrom("update");
+		}
+
+		protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
+		{
+			ThrowOnceFrom("fixed");
+		}
+
+#pragma warning disable S3218 // Inner class members should not shadow outer class "static" or type members
+		private void ThrowOnceFrom(string step)
+#pragma warning restore S3218 // Inner class members should not shadow outer class "static" or type members
+		{
+			if (step == throwsFrom && !_threw)
+			{
+				_threw = true;
+				throw new NotSupportedException("The node failed.");
+			}
+		}
+	}
+
+	// Throws on the execution it is told, as a handler with a bug in it might.
+	private sealed class ThrowsOnExecutionNode(int throwOnExecution = 1) : ActionNode
+	{
+		private int _executions;
+
+		protected override void Execute(GraphContext graphContext)
+		{
+			if (++_executions == throwOnExecution)
+			{
+				throw new NotSupportedException("The handler failed.");
+			}
 		}
 	}
 

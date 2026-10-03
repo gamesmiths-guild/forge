@@ -151,8 +151,15 @@ public class TagListenerNode : StateNode<TagListenerNodeContext>
 			// Counted as running for this activation, so a listener aborted and started again from the report gets a
 			// context of its own rather than this one.
 			nodeContext.RunningFrames++;
-			OutputPorts[isPresent ? OnTagAddedPort : OnTagRemovedPort].EmitMessage(graphContext);
-			nodeContext.RunningFrames--;
+
+			try
+			{
+				OutputPorts[isPresent ? OnTagAddedPort : OnTagRemovedPort].EmitMessage(graphContext);
+			}
+			finally
+			{
+				nodeContext.RunningFrames--;
+			}
 		}
 	}
 

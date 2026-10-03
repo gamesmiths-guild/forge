@@ -350,6 +350,57 @@ public class FlowNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 	}
 
 	[Fact]
+	[Trait("Graph", "TagListener")]
+	public void Tag_listener_node_whose_report_threw_still_reuses_its_context()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var tag = Tag.RequestTag(_tagsManager, "simple.tag");
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", entity);
+		graph.VariableDefinitions.DefineObjectArrayVariable("watchedTags", tag);
+
+		var listener = new TagListenerNode();
+		listener.BindInput(TagListenerNode.EntityInput, "entity");
+		listener.BindInput(TagListenerNode.TagInput, "watchedTags");
+
+		var keepAlive = new TrackingStateNode();
+		var onAdded = new ThrowsOnceNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(listener);
+		graph.AddNode(onAdded);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			listener.InputPorts[StateNode<TagListenerNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			listener.OutputPorts[TagListenerNode.OnTagAddedPort],
+			onAdded.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		var tagEffectData = new EffectData(
+			"Tag Granter",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [new ModifierTagsEffectComponent(new TagContainer(_tagsManager, [tag]))]);
+
+		entity.EffectsManager
+			.Invoking(x => x.ApplyEffect(new Effect(tagEffectData, new EffectOwnership(entity, entity))))
+			.Should().Throw<NotSupportedException>();
+		TagListenerNodeContext context = processor.GraphContext.GetNodeContext<TagListenerNodeContext>(listener.NodeID);
+
+		listener.InputPorts[StateNode<TagListenerNodeContext>.AbortPort].ReceiveMessage(processor.GraphContext);
+		listener.InputPorts[StateNode<TagListenerNodeContext>.InputPort].ReceiveMessage(processor.GraphContext);
+
+		processor.GraphContext.GetNodeContext<TagListenerNodeContext>(listener.NodeID).Should().BeSameAs(
+			context,
+			"the report that threw is no longer running for the activation that ended");
+	}
+
+	[Fact]
 	[Trait("Graph", "EventListener")]
 	public void Event_listener_node_deactivates_after_the_first_event_when_configured()
 	{
@@ -386,6 +437,21 @@ public class FlowNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		entity.Events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
 
 		onEvent.ExecutionCount.Should().Be(1);
+	}
+
+	// Throws the first time it is reached, as a handler with a bug in it might.
+	private sealed class ThrowsOnceNode : ActionNode
+	{
+		private bool _threw;
+
+		protected override void Execute(GraphContext graphContext)
+		{
+			if (!_threw)
+			{
+				_threw = true;
+				throw new NotSupportedException("The handler failed.");
+			}
+		}
 	}
 
 	// Has the listener watch another tag in place of its second, then aborts it and starts it again from outside the
