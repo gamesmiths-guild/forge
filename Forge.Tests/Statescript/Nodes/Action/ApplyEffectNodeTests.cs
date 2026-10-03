@@ -297,6 +297,36 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		capture.ReceivedContext.Should().BeFalse();
 	}
 
+	[Fact]
+	[Trait("Graph", "ApplyEffect")]
+	public void Apply_effect_node_writes_no_handle_into_a_graph_its_effect_started_over()
+	{
+		TestEntity target = CreateTestEntity();
+		var stopper = new StopsGraphComponent();
+		var graph = new Graph();
+
+		graph.VariableDefinitions.DefineObjectProperty(
+			"effect",
+			new EffectFromDataResolver(CreateTrackingEffectData("Stopping", DurationType.Infinite, stopper)));
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", target);
+		graph.VariableDefinitions.DefineObjectVariable<ActiveEffectHandle>("activeEffect");
+
+		ApplyEffectNode node = CreateApplyEffectNode("effect", "entity");
+		node.BindOutput(ApplyEffectNode.ActiveEffectOutput, "activeEffect");
+		AddOnFirstRunOnly(graph, node);
+
+		var processor = new GraphProcessor(graph);
+
+		// Applying the effect ends the graph, and it starts over before the node returns.
+		stopper.Applied = processor.StopGraph;
+		RestartOnFirstCompletion(processor, variables => variables.SetVar("isFirstRun", false));
+		processor.StartGraph();
+
+		processor.GraphContext.GraphVariables.TryGetObject("activeEffect", out ActiveEffectHandle? handle)
+			.Should().BeTrue();
+		handle.Should().BeNull("the new run applied nothing, and the handle belongs to the run that ended");
+	}
+
 	private static void ConfigureEffectInput(
 		Graph graph,
 		bool useEffectArray,
@@ -410,6 +440,16 @@ public class ApplyEffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClas
 		{
 			graphContext.TryResolve("damage", out int damage);
 			return new DamageContext(damage);
+		}
+	}
+
+	private sealed class StopsGraphComponent : IEffectComponent
+	{
+		public System.Action? Applied { get; set; }
+
+		public void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
+		{
+			Applied?.Invoke();
 		}
 	}
 

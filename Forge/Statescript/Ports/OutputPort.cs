@@ -79,20 +79,41 @@ public class OutputPort : Port
 	internal void EmitMessage(GraphContext graphContext)
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
+		ulong run = graphContext.RunStamp;
 
-		for (int i = 0; i < ports.Length; i++)
+		// The run cannot finish part way through a message, since a connection it has yet to reach can start a node
+		// that keeps it going. A connection that ends the graph - an Exit, an ability ended on the way - ends the
+		// delivery with it, rather than reaching the rest in a graph that has been torn down or started over.
+		graphContext.FinalizationDeferralCount++;
+
+		try
 		{
-			ports[i].ReceiveMessage(graphContext);
-		}
+			for (int i = 0; i < ports.Length && graphContext.RunStamp == run; i++)
+			{
+				ports[i].ReceiveMessage(graphContext);
+			}
 
-		OnEmitMessage?.Invoke(PortID);
+			OnEmitMessage?.Invoke(PortID);
+		}
+		finally
+		{
+			// A run that ended along the way took its count with it, and the next one keeps its own. One still going
+			// completes once nothing is left running, even if a delivery threw.
+			if (graphContext.RunStamp == run)
+			{
+				graphContext.FinalizationDeferralCount--;
+				graphContext.FinalizeIfIdle();
+			}
+		}
 	}
 
 	internal void InternalEmitDisableSubgraphMessage(GraphContext graphContext)
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
+		ulong run = graphContext.RunStamp;
 
-		for (int i = 0; i < ports.Length; i++)
+		// A connection whose disabling ends the graph ends the rest of them too.
+		for (int i = 0; i < ports.Length && graphContext.RunStamp == run; i++)
 		{
 			ports[i].ReceiveDisableSubgraphMessage(graphContext);
 		}

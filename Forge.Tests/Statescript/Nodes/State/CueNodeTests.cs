@@ -168,6 +168,101 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		handler.IsApplied.Should().BeTrue();
 	}
 
+	[Fact]
+	[Trait("Graph", "CueNode")]
+	public void A_restart_whose_removal_stops_the_graph_applies_nothing_more()
+	{
+		(GraphProcessor processor, RecordingCueHandler handler) =
+			BuildSingleCueGraph(retriggerAt: 1.0, restartOnRetrigger: true);
+
+		// A handler's removal can end the ability the graph runs for, which stops the graph from under the restart.
+		handler.Removed = processor.StopGraph;
+		processor.StartGraph();
+
+		processor.Invoking(x => x.UpdateGraph(1.0)).Should().NotThrow();
+
+		handler.ApplyCount.Should().Be(1, "the restart ended with the graph instead of applying again");
+		handler.RemoveCount.Should().Be(1, "the graph stopping does not remove the cue a second time");
+	}
+
+	[Fact]
+	[Trait("Graph", "CueNode")]
+	public void A_restart_whose_removal_starts_the_graph_over_leaves_the_new_run_its_own_cue()
+	{
+		(GraphProcessor processor, RecordingCueHandler handler) =
+			BuildSingleCueGraph(retriggerAt: 1.0, restartOnRetrigger: true);
+
+		// A handler's removal stops the graph, and the graph starts over before the restart it cut short returns.
+		handler.Removed = processor.StopGraph;
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		handler.ApplyCount.Should().Be(2, "the new run applied the cue, and the restart it replaced did not");
+
+		processor.StopGraph();
+
+		handler.RemoveCount.Should().Be(2, "every cue applied was removed");
+	}
+
+	[Fact]
+	[Trait("Graph", "CueNode")]
+	public void A_cue_that_stops_the_graph_as_it_applies_is_removed_with_the_rest()
+	{
+		(GraphProcessor processor, RecordingCueHandler firstHandler, RecordingCueHandler secondHandler) =
+			BuildTwoCueGraph();
+
+		// The second cue's handler ends the ability the graph runs for as it applies, which stops the graph before the
+		// node holds that cue.
+		secondHandler.Applied = processor.StopGraph;
+		processor.StartGraph();
+
+		firstHandler.RemoveCount.Should().Be(1, "the stop removed the cue the node already held");
+		secondHandler.RemoveCount.Should().Be(1, "the cue the node did not hold yet is removed once it does");
+	}
+
+	[Fact]
+	[Trait("Graph", "CueNode")]
+	public void The_cues_after_one_that_stops_the_graph_as_it_applies_go_unapplied()
+	{
+		(GraphProcessor processor, RecordingCueHandler firstHandler, RecordingCueHandler secondHandler) =
+			BuildTwoCueGraph();
+
+		// The first cue's handler ends the ability the graph runs for as it applies.
+		firstHandler.Applied = processor.StopGraph;
+		processor.StartGraph();
+
+		firstHandler.RemoveCount.Should().Be(1, "the cue the node did not hold yet is removed once it does");
+		secondHandler.ApplyCount.Should().Be(0, "nothing is applied for a graph that is gone");
+	}
+
+	private (GraphProcessor Processor, RecordingCueHandler FirstHandler, RecordingCueHandler SecondHandler)
+		BuildTwoCueGraph()
+	{
+		var cuesManager = new CuesManager();
+		var firstHandler = new RecordingCueHandler();
+		var secondHandler = new RecordingCueHandler();
+		var firstCue = Tag.RequestTag(_tagsManager, "test.cue1");
+		var secondCue = Tag.RequestTag(_tagsManager, "test.cue2");
+		cuesManager.RegisterCue(firstCue, firstHandler);
+		cuesManager.RegisterCue(secondCue, secondHandler);
+		var target = new TestEntity(_tagsManager, cuesManager);
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectArrayVariable("cueTag", firstCue, secondCue);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", target);
+
+		var node = new CueNode();
+		node.BindInput(CueNode.CueTagInput, "cueTag");
+		node.BindInput(CueNode.TargetInput, "target");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[StateNode<CueNodeContext>.InputPort]));
+
+		return (new GraphProcessor(graph), firstHandler, secondHandler);
+	}
+
 	private (GraphProcessor Processor, RecordingCueHandler Handler) BuildSingleCueGraph(
 		bool abortOnStart = false,
 		double? retriggerAt = null,

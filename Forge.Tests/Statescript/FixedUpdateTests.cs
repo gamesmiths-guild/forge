@@ -191,6 +191,40 @@ public class FixedUpdateTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 	}
 
 	[Fact]
+	[Trait("Graph", "FixedUpdate")]
+	public void A_fixed_update_that_starts_the_graph_over_reaches_nothing_in_the_new_run()
+	{
+		// Either node exits as it ends on its first fixed step, and whichever is walked first starts the graph over.
+		var first = new EndsOnFixedUpdateNode();
+		var second = new EndsOnFixedUpdateNode();
+		var exit = new ExitNode();
+
+		var graph = new Graph();
+		graph.AddNode(first);
+		graph.AddNode(second);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			first.InputPorts[StateNode<StateNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			second.InputPorts[StateNode<StateNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			first.OutputPorts[StateNode<StateNodeContext>.OnDeactivatePort],
+			exit.InputPorts[ExitNode.InputPort]));
+		graph.AddConnection(new Connection(
+			second.OutputPorts[StateNode<StateNodeContext>.OnDeactivatePort],
+			exit.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+		processor.FixedUpdateGraph(0.016);
+
+		processor.GraphContext.IsActive.Should().BeTrue("the step that ended the first run reaches none of the next");
+	}
+
+	[Fact]
 	[Trait("GraphBehavior", "FixedUpdate")]
 	public void Fixed_update_abilities_drives_the_graph_behind_an_ability()
 	{
@@ -364,5 +398,21 @@ public class FixedUpdateTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 
 		return handle;
+	}
+
+	private sealed class EndsOnFixedUpdateNode : StateNode<StateNodeContext>
+	{
+		protected override void OnActivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
+		{
+			DeactivateNode(graphContext);
+		}
 	}
 }

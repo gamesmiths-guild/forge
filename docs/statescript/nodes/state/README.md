@@ -25,13 +25,13 @@ State nodes **persist over time**. They activate when receiving a message, remai
 2. **OnActivate** and **Subgraph** ports emit regular messages.
 3. Each frame, `OnUpdate(deltaTime)` is called by the graph processor. On each fixed step, `OnFixedUpdate(deltaTime)` is called instead — see [Two update rails](#two-update-rails).
 4. When internal logic completes → `OnDeactivate` emits, Subgraph ports send disable signals.
-5. If **Abort** receives a message → `OnAbort` emits, then node deactivates normally.
+5. If **Abort** receives a message while the node is active → `OnAbort` emits, then node deactivates normally. A node that is not running — never started, ended, or still deactivating — ignores it.
 
-**Deferred actions:** If activation logic triggers immediate deactivation (e.g., a timer with duration 0), the deactivation is **deferred** until activation completes. This guarantees that OnActivate and Subgraph ports fire before any deactivation processing begins.
+**Deferred actions:** If activation logic triggers immediate deactivation (e.g., a timer with duration 0), the deactivation is **deferred** until activation completes. This guarantees that OnActivate and Subgraph ports fire before any deactivation processing begins. An activation that throws drops whatever it deferred, and the node stays active and emits and ends as usual from then on.
 
 ## Retriggers
 
-A message that reaches **Input** while the node is already active is a **retrigger**: a Loop Timer re-kicking a walk, an event listener feeding the same Effect node on every hit. By default a retrigger is **ignored** — nothing is called, no port emits, and whatever the running activation holds (an applied effect, a subscription, a spawned instance) carries on untouched. Only a node that has ended can be activated again.
+A message that reaches **Input** while the node is already active is a **retrigger**: a Loop Timer re-kicking a walk, an event listener feeding the same Effect node on every hit. By default a retrigger is **ignored** — nothing is called, no port emits, and whatever the running activation holds (an applied effect, a subscription, a spawned instance) carries on untouched. Only a node that has ended can be activated again: a message that reaches one still deactivating, from something its OnDeactivate set off, is ignored too, whether or not the node can restart. So is a retrigger that reaches a node while it is still starting, from something its own activation set off: a restart there would run inside the activation it starts over.
 
 Some nodes can instead **restart**, and do so when built with `restartOnRetrigger: true`:
 
@@ -118,7 +118,7 @@ public class WaitForTagNode : StateNode<WaitForTagNodeContext>
 
 Use `DeactivateNode(graphContext)` for simple deactivation, or `DeactivateNodeAndEmitMessage(graphContext, portIds)` to emit custom event port messages before deactivation.
 
-**Emitting on the activation frame.** Messages emitted from `OnActivate` are *deferred* and flushed as a batch once activation completes, so `OnActivate` and Subgraph always fire first. That is fine for a fixed set of events, but it means any per-emission state you write alongside them already holds its final value by the time they fire. When you need emissions **interleaved** with state changes on the activation frame — a loop writing an iteration variable before each event — override `OnActivated` instead. It runs once activation is fully complete, and only if the node is still active. Anything you reach from there can deactivate the node or stop the graph, so a method that emits more than once must re-check `IsNodeActive(graphContext)` between emissions rather than trust a node context it captured earlier. The same caution applies to an `OnUpdate` that emits in a loop. `IterationNode<T>` (the base of [RepeatNode](repeat-node.md) and [ForEachNode](for-each-node.md)) is the worked example.
+**Emitting on the activation frame.** Messages emitted from `OnActivate` are *deferred* and flushed as a batch once activation completes, so `OnActivate` and Subgraph always fire first. That is fine for a fixed set of events, but it means any per-emission state you write alongside them already holds its final value by the time they fire. When you need emissions **interleaved** with state changes on the activation frame — a loop writing an iteration variable before each event — override `OnActivated` instead. It runs once activation is fully complete, and only if the node is still active. Anything you reach from there can deactivate the node or stop the graph, so a method that emits more than once must re-check between emissions that the node context it holds is still `Active`. Check that context rather than `IsNodeActive(graphContext)`: it reads inactive once the node ends or its run does, while a node started again or a graph started over from there gets a new one, which is the one `IsNodeActive` finds. The same caution applies to an `OnUpdate` that emits in a loop. `IterationNode<T>` (the base of [RepeatNode](repeat-node.md) and [ForEachNode](for-each-node.md)) is the worked example.
 
 If your state node defines additional event or subgraph ports, override `DefinePorts`, call `base.DefinePorts(...)`, and create each custom port with an explicit label:
 
@@ -148,7 +148,7 @@ public class WaitForTagNode(Tag tag, bool restartOnRetrigger = false)
 }
 ```
 
-No deactivation runs before `OnRestart`: the node stays active, so one that holds something — an applied effect, a subscription, a spawned instance — releases it there before acquiring it again, or the first one is left behind. A node whose subgraph depends on what the restart replaces, such as a spawned instance that the subgraph moves around, disables that subgraph first (`((SubgraphPort)OutputPorts[SubgraphPort]).EmitDisableSubgraphMessage(graphContext)`), so it comes back fresh when the Subgraph port emits again.
+No deactivation runs before `OnRestart`: the node stays active, so one that holds something — an applied effect, a subscription, a spawned instance — releases it there before acquiring it again, or the first one is left behind. Releasing can reach the rest of the graph — an effect's removal, a cue handler, a subgraph that ends — and end the node or stop the graph along the way, so check that the node context it released from is still `Active` before acquiring again. A node whose subgraph depends on what the restart replaces, such as a spawned instance that the subgraph moves around, disables that subgraph first (`((SubgraphPort)OutputPorts[SubgraphPort]).EmitDisableSubgraphMessage(graphContext)`), so it comes back fresh when the Subgraph port emits again.
 
 ## Built-in State Nodes
 

@@ -57,6 +57,7 @@ public class ApplyEffectNode : ActionNode
 	protected override void Execute(GraphContext graphContext)
 	{
 		var handles = new List<ActiveEffectHandle>();
+		ulong run = graphContext.RunStamp;
 
 		EffectApplicationUtilities.ApplyEffects(
 			graphContext,
@@ -65,6 +66,10 @@ public class ApplyEffectNode : ActionNode
 			handles,
 			InputProperties[ContextDataInput].BoundName);
 
-		EffectApplicationUtilities.WriteHandleOutput(graphContext, OutputVariables[ActiveEffectOutput], handles);
+		// An effect can end the graph as it applies, and one started over from there has outputs of its own.
+		if (graphContext.RunStamp == run)
+		{
+			EffectApplicationUtilities.WriteHandleOutput(graphContext, OutputVariables[ActiveEffectOutput], handles);
+		}
 	}
 }

@@ -88,12 +88,17 @@ public class GrantAbilityPermanentlyNode(LevelComparison levelOverridePolicy = L
 			graphContext,
 			InputProperties[SourceInput].BoundName);
 
+		ulong run = graphContext.RunStamp;
 		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
 			abilityData,
 			level,
 			_levelOverridePolicy,
 			source);
 
-		AbilityNodeUtilities.WriteHandleOutput(graphContext, OutputVariables[AbilityOutput], handle);
+		// What hears of the grant can end the graph, and one started over from there has outputs of its own.
+		if (graphContext.RunStamp == run)
+		{
+			AbilityNodeUtilities.WriteHandleOutput(graphContext, OutputVariables[AbilityOutput], handle);
+		}
 	}
 }

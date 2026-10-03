@@ -87,6 +87,14 @@ public class EffectNode(bool restartOnRetrigger = false) : StateNode<EffectNodeC
 			nodeContext.ActiveEffectHandles,
 			InputProperties[ContextDataInput].BoundName);
 
+		// An effect can end this node or the graph as it applies, and the deactivation that removes what the node
+		// holds has then already run, before it held the effect.
+		if (!nodeContext.Active)
+		{
+			EffectApplicationUtilities.RemoveEffects(nodeContext.ActiveEffectHandles);
+			return;
+		}
+
 		EffectApplicationUtilities.WriteHandleOutput(
 			graphContext,
 			OutputVariables[ActiveEffectOutput],
@@ -108,9 +116,21 @@ public class EffectNode(bool restartOnRetrigger = false) : StateNode<EffectNodeC
 	/// <inheritdoc/>
 	protected override void OnRestart(GraphContext graphContext)
 	{
+		EffectNodeContext nodeContext = graphContext.GetNodeContext<EffectNodeContext>(NodeID);
+
 		// Removed before applying again: a stacking effect applied first would stack onto the running instance, and the
-		// removal would then take the new application down with it.
-		OnDeactivate(graphContext);
+		// removal would then take the new application down with it. Losing an effect can also end this node or the
+		// graph - it can cancel the ability the graph runs for - and the deactivation that follows must find nothing
+		// left to remove a second time.
+		List<ActiveEffectHandle> applied = [.. nodeContext.ActiveEffectHandles];
+		nodeContext.ActiveEffectHandles.Clear();
+		EffectApplicationUtilities.RemoveEffects(applied);
+
+		if (!nodeContext.Active)
+		{
+			return;
+		}
+
 		OnActivate(graphContext);
 	}
 

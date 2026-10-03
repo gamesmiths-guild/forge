@@ -47,7 +47,7 @@ Forces the graph to stop when a message reaches it. All active state nodes are d
 |-------|------|-------------|
 | 0 | Input | Receiving a message stops the entire graph. |
 
-A graph may have zero or more Exit nodes. Place them at any point where you want to force an early termination.
+A graph may have zero or more Exit nodes. Place them at any point where you want to force an early termination. An Exit ends the message that reached it, so connections from the same port that come after it are not reached.
 
 ```csharp
 var exitNode = new ExitNode();

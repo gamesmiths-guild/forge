@@ -52,7 +52,7 @@ new GrantAbilityPermanentlyNode(levelOverridePolicy = LevelComparison.None)
 
 1. Resolves the ability data, entity (default owner), level (default context level), and optional source.
 2. Calls `EntityAbilities.GrantAbilityPermanently(...)`.
-3. Writes the resulting `AbilityHandle` to the **Ability** output when bound.
+3. Writes the resulting `AbilityHandle` to the **Ability** output when bound, unless what heard of the grant ended the graph.
 
 ## Usage
 

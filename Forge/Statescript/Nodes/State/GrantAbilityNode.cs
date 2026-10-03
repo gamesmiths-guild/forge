@@ -106,6 +106,14 @@ public class GrantAbilityNode(
 			grantSource,
 			source);
 
+		// What hears of the grant can end this node or the graph, and the deactivation that takes the grant back has
+		// then already run, before the node held it.
+		if (!nodeContext.Active)
+		{
+			entity.Abilities.RemoveGrantedAbility(handle, grantSource);
+			return;
+		}
+
 		nodeContext.GrantedHandle = handle;
 		nodeContext.GrantedOn = entity;
 		nodeContext.GrantSource = grantSource;

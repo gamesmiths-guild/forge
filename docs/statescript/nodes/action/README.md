@@ -18,7 +18,7 @@ Action nodes perform an **instant operation** then pass the message forward. The
 
 1. A message arrives on the input port.
 2. The node's `Execute` method runs.
-3. The output port emits a message.
+3. The output port emits a message, unless `Execute` stopped the graph.
 
 Action nodes are stateless and instantaneous. They do not persist between frames.
 

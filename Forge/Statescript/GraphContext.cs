@@ -87,6 +87,12 @@ public sealed class GraphContext
 
 	internal bool HasStarted { get; set; }
 
+	internal bool IsStopping { get; set; }
+
+	// Counts every start and end of a run, so a message still being delivered can tell that the graph it set out in
+	// has since stopped or started over.
+	internal ulong RunStamp { get; set; }
+
 	internal int FinalizationDeferralCount { get; set; }
 
 	internal int NodeContextCount => _nodeContexts.Count;
@@ -422,9 +428,15 @@ public sealed class GraphContext
 			return (T)context;
 		}
 
-		var newContext = new T();
-		_nodeContexts[nodeID] = newContext;
-		return newContext;
+		return CreateNodeContext<T>(nodeID);
+	}
+
+	internal T CreateNodeContext<T>(Guid nodeID)
+		where T : INodeContext, new()
+	{
+		var context = new T();
+		_nodeContexts[nodeID] = context;
+		return context;
 	}
 
 	internal void PushElement(in ElementFrame frame)
@@ -445,5 +457,15 @@ public sealed class GraphContext
 	internal void RemoveAllNodeContext()
 	{
 		_nodeContexts.Clear();
+	}
+
+	// A run is over once no state node is left active, but not while a message is still on its way to a connection that
+	// can start one.
+	internal void FinalizeIfIdle()
+	{
+		if (HasStarted && FinalizationDeferralCount == 0 && ActiveStateNodes.Count == 0)
+		{
+			Processor?.FinalizeGraph();
+		}
 	}
 }

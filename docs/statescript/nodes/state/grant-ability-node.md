@@ -44,7 +44,7 @@ new GrantAbilityNode(
 
 ## Behavior
 
-1. On activation, grants the ability through the internal grant-source machinery (the same path effects use) and writes the handle to the **Ability** output.
+1. On activation, grants the ability through the internal grant-source machinery (the same path effects use) and writes the handle to the **Ability** output. When what hears of the grant ends the node or the graph, the grant is taken back at once and nothing is written.
 2. On deactivation, removes this node's grant according to `removalPolicy`.
 
 To activate the granted ability, feed the **Ability** output into a [TryActivateAbilityNode](../condition/try-activate-ability-node.md).

@@ -634,6 +634,94 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		handle.Should().BeNull();
 	}
 
+	[Fact]
+	[Trait("Graph", "GrantAbility")]
+	public void Grant_ability_node_takes_back_a_grant_that_stopped_the_graph()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var abilityData = new AbilityData("Granted");
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable("abilityData", abilityData);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", owner);
+
+		var grantNode = new GrantAbilityNode();
+		grantNode.BindInput(GrantAbilityNode.AbilityDataInput, "abilityData");
+		grantNode.BindInput(GrantAbilityNode.EntityInput, "target");
+		graph.AddNode(grantNode);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			grantNode.InputPorts[StateNode<GrantAbilityNodeContext>.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+
+		// What hears of the grant ends the graph, whose stop runs the node's deactivation before the node holds it.
+		owner.Abilities.OnAbilityGranted += _ => processor.StopGraph();
+		processor.StartGraph();
+
+		owner.Abilities.TryGetAbility(abilityData, out _).Should().BeFalse("the grant ended with its node");
+	}
+
+	[Fact]
+	[Trait("Graph", "GrantAbility")]
+	public void Grant_ability_permanently_node_writes_no_handle_into_a_graph_its_grant_started_over()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var abilityData = new AbilityData("Unlocked");
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable("abilityData", abilityData);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", owner);
+		graph.VariableDefinitions.DefineObjectVariable<AbilityHandle>("grantedAbility");
+
+		var grantNode = new GrantAbilityPermanentlyNode();
+		grantNode.BindInput(GrantAbilityPermanentlyNode.AbilityDataInput, "abilityData");
+		grantNode.BindInput(GrantAbilityPermanentlyNode.EntityInput, "target");
+		grantNode.BindOutput(GrantAbilityPermanentlyNode.AbilityOutput, "grantedAbility");
+		NodeBindings.AddOnFirstRunOnly(graph, grantNode);
+
+		var processor = new GraphProcessor(graph);
+
+		// What hears of the grant ends the graph, and it starts over before the node returns.
+		owner.Abilities.OnAbilityGranted += _ => processor.StopGraph();
+		NodeBindings.RestartOnFirstCompletion(processor, variables => variables.SetVar("isFirstRun", false));
+		processor.StartGraph();
+
+		processor.GraphContext.GraphVariables.TryGetObject("grantedAbility", out object? outputHandle)
+			.Should().BeTrue();
+		outputHandle.Should().BeNull("the new run granted nothing, and the handle belongs to the run that ended");
+	}
+
+	[Fact]
+	[Trait("Graph", "GrantAbility")]
+	public void Try_grant_ability_and_activate_once_node_writes_no_handle_into_a_graph_its_grant_started_over()
+	{
+		var owner = new TestEntity(_tagsManager, _cuesManager);
+		var abilityData = new AbilityData("Proc");
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable("abilityData", abilityData);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("entity", owner);
+		graph.VariableDefinitions.DefineObjectVariable<AbilityHandle>("grantedAbility");
+
+		var procNode = new TryGrantAbilityAndActivateOnceNode();
+		procNode.BindInput(TryGrantAbilityAndActivateOnceNode.AbilityDataInput, "abilityData");
+		procNode.BindInput(TryGrantAbilityAndActivateOnceNode.EntityInput, "entity");
+		procNode.BindOutput(TryGrantAbilityAndActivateOnceNode.AbilityOutput, "grantedAbility");
+		NodeBindings.AddOnFirstRunOnly(graph, procNode);
+
+		var processor = new GraphProcessor(graph);
+
+		// What hears of the grant ends the graph, and it starts over before the node returns.
+		owner.Abilities.OnAbilityGranted += _ => processor.StopGraph();
+		NodeBindings.RestartOnFirstCompletion(processor, variables => variables.SetVar("isFirstRun", false));
+		processor.StartGraph();
+
+		processor.GraphContext.GraphVariables.TryGetObject("grantedAbility", out object? outputHandle)
+			.Should().BeTrue();
+		outputHandle.Should().BeNull("the new run granted nothing, and the handle belongs to the run that ended");
+	}
+
 	// Grants and activates an ability whose behavior parks on a long timer, so it stays active until something cancels
 	// it.
 	private AbilityHandle GrantAndActivateChannelingAbility(

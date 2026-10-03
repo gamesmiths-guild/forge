@@ -106,6 +106,7 @@ public class TryGrantAbilityAndActivateOnceNode(LevelComparison levelOverridePol
 			graphContext,
 			InputProperties[ActivationDataInput].BoundName);
 
+		ulong run = graphContext.RunStamp;
 		bool activated;
 		AbilityHandle? grantedAbility;
 
@@ -132,9 +133,13 @@ public class TryGrantAbilityAndActivateOnceNode(LevelComparison levelOverridePol
 				target);
 		}
 
-		// Written on both outcomes so a failed proc clears a handle left by an earlier one instead of leaving it to be
-		// read as if it were still live.
-		AbilityNodeUtilities.WriteHandleOutput(graphContext, OutputVariables[AbilityOutput], grantedAbility);
+		// Granting or activating can end the graph, and one started over from there has outputs of its own. Otherwise
+		// it is written on both outcomes so a failed proc clears a handle left by an earlier one instead of leaving it
+		// to be read as if it were still live.
+		if (graphContext.RunStamp == run)
+		{
+			AbilityNodeUtilities.WriteHandleOutput(graphContext, OutputVariables[AbilityOutput], grantedAbility);
+		}
 
 		return activated;
 	}

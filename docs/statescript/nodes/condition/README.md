@@ -19,7 +19,7 @@ Condition nodes evaluate a boolean test and route the message to one of two outp
 
 1. A message arrives on the input port.
 2. The node's `Test` method evaluates.
-3. Either the True or False port emits a message (never both).
+3. Either the True or False port emits a message (never both), unless `Test` stopped the graph.
 
 ## Creating Custom Condition Nodes
 

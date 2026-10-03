@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Statescript;
@@ -20,6 +21,10 @@ public class GraphProcessor
 	private readonly List<Node> _updateBuffer = [];
 
 	private bool _updating;
+
+	private bool _startAfterStop;
+
+	private Action<Variables>? _startAfterStopOverrides;
 
 	/// <summary>
 	/// Gets the graph that this processor is responsible for executing.
@@ -56,13 +61,29 @@ public class GraphProcessor
 	/// variable definitions, ensuring that each execution instance has independent state, and then initiates the
 	/// graph's entry node to begin processing.
 	/// </summary>
+	/// <remarks>
+	/// Called while the graph is stopping - from a node's teardown inside <see cref="StopGraph"/> - the graph starts
+	/// once the stop has completed and <see cref="OnGraphCompleted"/> has run, unless it was started again by then.
+	/// </remarks>
 	/// <param name="variableOverrides">An optional callback invoked after variables are initialized from definitions
 	/// but before the graph's entry node begins processing. Use this to overwrite specific variable values with
 	/// runtime data (e.g., activation context from an ability).</param>
 	public void StartGraph(Action<Variables>? variableOverrides = null)
 	{
+		// A start asked for during a stop waits for it to complete: started now, the run would be torn down by the rest
+		// of the stop.
+		if (GraphContext.IsStopping)
+		{
+			_startAfterStop = true;
+			_startAfterStopOverrides = variableOverrides;
+			return;
+		}
+
+		_startAfterStop = false;
+		_startAfterStopOverrides = null;
 		GraphContext.Processor = this;
 		GraphContext.HasStarted = true;
+		GraphContext.RunStamp++;
 		GraphContext.FinalizationDeferralCount = 0;
 		GraphContext.GraphVariables.InitializeFrom(Graph.VariableDefinitions);
 		variableOverrides?.Invoke(GraphContext.GraphVariables);
@@ -90,9 +111,13 @@ public class GraphProcessor
 			return;
 		}
 
+		ulong run = GraphContext.RunStamp;
+
 		try
 		{
-			for (int i = 0; i < _updateBuffer.Count; i++)
+			// A node can end the graph part way through the pass, and a graph started over from there has nodes of its
+			// own that the rest of this delta must not reach.
+			for (int i = 0; i < _updateBuffer.Count && GraphContext.RunStamp == run; i++)
 			{
 				_updateBuffer[i].Update(deltaTime, GraphContext);
 			}
@@ -119,9 +144,11 @@ public class GraphProcessor
 			return;
 		}
 
+		ulong run = GraphContext.RunStamp;
+
 		try
 		{
-			for (int i = 0; i < _updateBuffer.Count; i++)
+			for (int i = 0; i < _updateBuffer.Count && GraphContext.RunStamp == run; i++)
 			{
 				_updateBuffer[i].FixedUpdate(deltaTime, GraphContext);
 			}
@@ -138,6 +165,11 @@ public class GraphProcessor
 	/// execution. This method is safe to call re-entrantly (e.g., from an <see cref="Nodes.ExitNode"/> triggered
 	/// during the disable cascade).
 	/// </summary>
+	/// <remarks>
+	/// A node that throws as it is ended keeps neither the others from ending nor the stop from completing:
+	/// <see cref="OnGraphCompleted"/> runs and a start asked for during the stop follows as usual, even when one of
+	/// them throws as well, and the first exception is rethrown after.
+	/// </remarks>
 	public void StopGraph()
 	{
 		if (GraphContext.Processor != this || !GraphContext.HasStarted)
@@ -149,12 +181,65 @@ public class GraphProcessor
 		// a state node reaching FinalizeGraph) without nulling Processor yet. Keeping Processor set throughout the
 		// cascade lets action nodes on OnDeactivate paths still resolve property-backed inputs.
 		GraphContext.HasStarted = false;
-		Graph.EntryNode.StopGraph(GraphContext);
+		GraphContext.RunStamp++;
+		GraphContext.IsStopping = true;
+		ExceptionDispatchInfo? failure = null;
+
+		// The stop walks the graph afresh: a disabling still under way has already marked its node as passed, and the
+		// stop would otherwise go no further than it, leaving that node and what lies below it never ended.
+		GraphContext.InternalNodeActivationStatus.Clear();
+
+		try
+		{
+			Graph.EntryNode.StopGraph(GraphContext);
+		}
+		catch (Exception exception)
+		{
+			failure = ExceptionDispatchInfo.Capture(exception);
+		}
+
+		// A node the walk did not reach - started from outside the graph's connections, or passed over when a teardown
+		// threw - is ended here instead.
+		foreach (Node node in GraphContext.ActiveStateNodes.ToArray())
+		{
+			try
+			{
+				node.OnSubgraphDisabledMessageReceived(GraphContext);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		GraphContext.IsStopping = false;
 		GraphContext.Processor = null;
 		GraphContext.ActiveStateNodes.Clear();
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();
-		OnGraphCompleted?.Invoke();
+
+		try
+		{
+			OnGraphCompleted?.Invoke();
+		}
+		catch (Exception exception)
+		{
+			failure ??= ExceptionDispatchInfo.Capture(exception);
+		}
+
+		if (_startAfterStop)
+		{
+			try
+			{
+				StartGraph(_startAfterStopOverrides);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		failure?.Throw();
 	}
 
 	/// <summary>
@@ -171,6 +256,7 @@ public class GraphProcessor
 		}
 
 		GraphContext.HasStarted = false;
+		GraphContext.RunStamp++;
 		GraphContext.Processor = null;
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();

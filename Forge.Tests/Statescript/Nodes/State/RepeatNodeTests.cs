@@ -309,6 +309,35 @@ public class RepeatNodeTests
 
 	[Fact]
 	[Trait("Graph", "Repeat")]
+	public void Repeat_stops_iterating_when_an_iteration_starts_the_graph_over()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("count", 10);
+		graph.VariableDefinitions.DefineVariable("interval", 1.0);
+
+		RepeatNode repeat = CreateRepeat(graph);
+		repeat.BindInput(RepeatNode.IntervalInput, "interval");
+		TrackingActionNode onIteration = ConnectTracker(graph, repeat, RepeatNode.OnIterationPort);
+
+		// The activation's iteration is the first; the update's first one starts the graph over.
+		var stop = new StopsGraphActionNode(stopOnExecution: 2);
+		graph.AddNode(stop);
+		graph.AddConnection(new Connection(
+			onIteration.OutputPorts[ActionNode.OutputPort],
+			stop.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		stop.Processor = processor;
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+		processor.UpdateGraph(3.0);
+
+		onIteration.ExecutionCount.Should().Be(3, "the rest of the update belonged to the old run, not the new one");
+		processor.GraphContext.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Repeat")]
 	public void Repeat_stops_iterating_when_an_iteration_aborts_it()
 	{
 		var graph = new Graph();
