@@ -48,7 +48,8 @@ internal static class CueApplicationUtilities
 		StringKey normalizedMagnitudeInputName,
 		StringKey sourceInputName,
 		StringKey customParametersInputName,
-		ICollection<AppliedCue>? appliedCues = null)
+		ICollection<AppliedCue>? appliedCues = null,
+		StateNodeContext? nodeContext = null)
 	{
 		FireCues(
 			graphContext,
@@ -59,7 +60,8 @@ internal static class CueApplicationUtilities
 			sourceInputName,
 			customParametersInputName,
 			CueOperation.Apply,
-			appliedCues);
+			appliedCues,
+			nodeContext);
 	}
 
 	public static void UpdateCues(
@@ -101,7 +103,8 @@ internal static class CueApplicationUtilities
 		StringKey sourceInputName,
 		StringKey customParametersInputName,
 		CueOperation operation,
-		ICollection<AppliedCue>? appliedCues)
+		ICollection<AppliedCue>? appliedCues,
+		StateNodeContext? nodeContext = null)
 	{
 		if (!ResolveCueTags(graphContext, cueTagInputName, out IReadOnlyList<Tag> cueTags)
 			|| !ResolveTargets(graphContext, targetInputName, out IReadOnlyList<IForgeEntity> targets))
@@ -122,10 +125,15 @@ internal static class CueApplicationUtilities
 		{
 			IForgeEntity target = targets[targetIndex];
 
-			// A handler can end the graph - cancelling the ability it runs for - and the rest are then not fired for
-			// a graph that is gone.
-			for (int tagIndex = 0; tagIndex < cueTags.Count && graphContext.RunStamp == run; tagIndex++)
+			for (int tagIndex = 0; tagIndex < cueTags.Count; tagIndex++)
 			{
+				// A handler can end the graph - cancelling the ability it runs for - or the state node firing its cue,
+				// and the rest are then not fired for a graph or a node that is gone.
+				if (graphContext.RunStamp != run || nodeContext?.Active == false)
+				{
+					return;
+				}
+
 				Tag cueTag = cueTags[tagIndex];
 
 				switch (operation)

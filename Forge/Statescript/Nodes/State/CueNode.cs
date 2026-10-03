@@ -85,7 +85,8 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 			InputProperties[NormalizedMagnitudeInput].BoundName,
 			InputProperties[SourceInput].BoundName,
 			InputProperties[CustomParametersInput].BoundName,
-			nodeContext.AppliedCues);
+			nodeContext.AppliedCues,
+			nodeContext);
 
 		// A handler can end this node or the graph as its cue applies, and the deactivation that removes what the node
 		// holds has then already run, before it held that cue.

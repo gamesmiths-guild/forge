@@ -727,6 +727,27 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
 	}
 
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void The_effects_after_one_that_ends_the_node_as_it_applies_go_unapplied()
+	{
+		TestEntity target = CreateTestEntity();
+		var stopper = new StopsGraphComponent();
+		EffectData later = CreateFlatEffectData("Later", "TestAttributeSet.Attribute2", 10, DurationType.Instant);
+		GraphProcessor processor =
+			CreateProcessor(target, CreateStoppingEffect(DurationType.Infinite, stopper), later);
+		EffectNode node = GetEffectNode(processor);
+
+		// Applying the first effect aborts the node, as a listener wired to its abort would.
+		stopper.Applied = () =>
+			node.InputPorts[StateNode<EffectNodeContext>.AbortPort].ReceiveMessage(processor.GraphContext);
+
+		processor.StartGraph();
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
+	}
+
 	// Adds 10 to Attribute1, and calls back as it applies.
 	private static EffectData CreateStoppingEffect(DurationType durationType, StopsGraphComponent stopper)
 	{

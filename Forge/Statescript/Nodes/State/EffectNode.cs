@@ -85,7 +85,8 @@ public class EffectNode(bool restartOnRetrigger = false) : StateNode<EffectNodeC
 			InputProperties[EffectInput].BoundName,
 			InputProperties[TargetInput].BoundName,
 			nodeContext.ActiveEffectHandles,
-			InputProperties[ContextDataInput].BoundName);
+			InputProperties[ContextDataInput].BoundName,
+			nodeContext);
 
 		// An effect can end this node or the graph as it applies, and the deactivation that removes what the node
 		// holds has then already run, before it held the effect.

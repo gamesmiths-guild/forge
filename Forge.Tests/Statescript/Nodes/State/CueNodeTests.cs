@@ -236,6 +236,23 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		secondHandler.ApplyCount.Should().Be(0, "nothing is applied for a graph that is gone");
 	}
 
+	[Fact]
+	[Trait("Graph", "CueNode")]
+	public void The_cues_after_one_that_ends_the_node_as_it_applies_go_unapplied()
+	{
+		(GraphProcessor processor, RecordingCueHandler firstHandler, RecordingCueHandler secondHandler) =
+			BuildTwoCueGraph();
+		Node node = processor.Graph.Nodes.Single(x => x is CueNode);
+
+		// The first cue's handler aborts the node as it applies, as a listener wired to its abort would.
+		firstHandler.Applied = () =>
+			node.InputPorts[StateNode<CueNodeContext>.AbortPort].ReceiveMessage(processor.GraphContext);
+		processor.StartGraph();
+
+		firstHandler.RemoveCount.Should().Be(1, "the cue the node did not hold yet is removed once it does");
+		secondHandler.ApplyCount.Should().Be(0, "nothing is applied for a node that has ended");
+	}
+
 	private (GraphProcessor Processor, RecordingCueHandler FirstHandler, RecordingCueHandler SecondHandler)
 		BuildTwoCueGraph()
 	{

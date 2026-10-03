@@ -13,7 +13,8 @@ internal static class EffectApplicationUtilities
 		StringKey effectInputName,
 		StringKey entityInputName,
 		ICollection<ActiveEffectHandle>? activeHandles = null,
-		StringKey contextDataInputName = default)
+		StringKey contextDataInputName = default,
+		StateNodeContext? nodeContext = null)
 	{
 		if (!TryResolveEffects(graphContext, effectInputName, out IReadOnlyList<Effect> effects)
 			|| !TryResolveEntities(graphContext, entityInputName, out IReadOnlyList<IForgeEntity> entities))
@@ -29,10 +30,15 @@ internal static class EffectApplicationUtilities
 		{
 			IForgeEntity entity = entities[entityIndex];
 
-			// An effect can end the graph as it applies - cancelling the ability it runs for - and the rest are then
-			// not applied for a graph that is gone.
-			for (int effectIndex = 0; effectIndex < effects.Count && graphContext.RunStamp == run; effectIndex++)
+			for (int effectIndex = 0; effectIndex < effects.Count; effectIndex++)
 			{
+				// An effect can end the graph as it applies - cancelling the ability it runs for - or the state node
+				// applying it, and the rest are then not applied for a graph or a node that is gone.
+				if (graphContext.RunStamp != run || nodeContext?.Active == false)
+				{
+					return;
+				}
+
 				// applicationContext is null when no context-data input is bound; ApplyEffectInternal handles both
 				// cases.
 				ActiveEffectHandle? handle =
