@@ -300,7 +300,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 
 		// The first activation's teardown activates the ability again before the rest of that teardown runs.
 		bool activatedAgain = false;
-		first.Deactivated = graphContext => activatedAgain = activatedAgain || handle.TryActivate(out _);
+		first.Deactivated = _ => activatedAgain = activatedAgain || handle.TryActivate(out var _);
 		object? laterInTeardown = null;
 		second.Deactivated = graphContext => laterInTeardown ??= graphContext.ActivationContext;
 
@@ -324,7 +324,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 
 		// The first activation's teardown activates the ability again, and the rest of it ends that second activation.
 		bool activatedAgain = false;
-		first.Deactivated = graphContext => activatedAgain = activatedAgain || handle.TryActivate(out _);
+		first.Deactivated = _ => activatedAgain = activatedAgain || handle.TryActivate(out var _);
 		bool canceledAgain = false;
 		second.Deactivated = _ =>
 		{
