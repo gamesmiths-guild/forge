@@ -578,6 +578,15 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 				OnActivated(graphContext);
 			}
 		}
+		catch
+		{
+			// An activation that throws is over all the same: the node emits and ends as usual from then on, and what
+			// the activation deferred goes with it rather than being left for the next one.
+			nodeContext.Activating = false;
+			nodeContext.DeferredEmitMessageData.Clear();
+			nodeContext.DeferredDeactivationEventPortIds = null;
+			throw;
+		}
 		finally
 		{
 			nodeContext.RunningFrames--;

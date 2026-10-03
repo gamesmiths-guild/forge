@@ -807,6 +807,44 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void A_node_whose_activation_threw_drops_what_it_deferred_and_works_as_usual()
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var node = new FailsToActivateOnceNode();
+		var onReport = new TrackingActionNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(node);
+		graph.AddNode(onReport);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[FailsToActivateOnceNode.OnReportPort],
+			onReport.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		// The first activation defers a report and its own ending, then throws.
+		processor.GraphContext
+			.Invoking(x => node.InputPorts[FailsToActivateOnceNode.InputPort].ReceiveMessage(x))
+			.Should().Throw<NotSupportedException>();
+
+		node.Report(processor.GraphContext);
+		onReport.ExecutionCount.Should().Be(1, "the node emits as usual once the failed activation is over");
+
+		node.End(processor.GraphContext);
+		IsActive(processor, node).Should().BeFalse("the node ends itself as usual");
+
+		node.InputPorts[FailsToActivateOnceNode.InputPort].ReceiveMessage(processor.GraphContext);
+
+		onReport.ExecutionCount.Should().Be(1, "what the failed activation deferred went with it");
+		IsActive(processor, node).Should().BeTrue("the ending the failed activation asked for went with it");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void A_deactivation_whose_graph_starts_over_leaves_the_new_run_running()
 	{
 		var graph = new Graph();
@@ -1479,6 +1517,48 @@ public class StateNodeActivationTests
 				_threw = true;
 				throw new NotSupportedException("The node failed.");
 			}
+		}
+	}
+
+	// Asks to report and to end from its first activation, which then throws, as a node with a bug in it might, and
+	// reports or ends when told to afterwards.
+	private sealed class FailsToActivateOnceNode : StateNode<StateNodeContext>
+	{
+		public const byte OnReportPort = 4;
+
+		private bool _failed;
+
+		public void Report(GraphContext graphContext)
+		{
+			EmitMessage(graphContext, OnReportPort);
+		}
+
+		public void End(GraphContext graphContext)
+		{
+			DeactivateNodeAndEmitMessage(graphContext);
+		}
+
+		protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
+		{
+			base.DefinePorts(inputPorts, outputPorts);
+			outputPorts.Add(CreatePort<EventPort>(OnReportPort, "OnReport"));
+		}
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+			if (_failed)
+			{
+				return;
+			}
+
+			_failed = true;
+			EmitMessage(graphContext, OnReportPort);
+			DeactivateNodeAndEmitMessage(graphContext);
+			throw new NotSupportedException("The activation failed.");
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
 		}
 	}
 
