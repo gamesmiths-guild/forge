@@ -52,11 +52,24 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 	/// Starts the graph processor, wiring up the <see cref="GraphProcessor.OnGraphCompleted"/> callback to
 	/// automatically end the ability instance when the graph finishes.
 	/// </summary>
+	/// <remarks>
+	/// An activation started while the processor is still stopping - from the teardown of the activation before it,
+	/// when the ability shares one behavior between activations - waits for the stop to complete before it takes the
+	/// processor over, context and callback included.
+	/// </remarks>
 	/// <param name="context">The ability behavior context for the current activation.</param>
 	/// <param name="variableOverrides">An optional callback to overwrite graph variable values with runtime data before
 	/// the graph's entry node fires.</param>
 	protected void StartGraph(AbilityBehaviorContext context, Action<Variables>? variableOverrides = null)
 	{
+		// Handed over now, the context and callback would serve the rest of the last activation's teardown, and its
+		// completion would end this activation.
+		if (Processor.GraphContext.IsStopping)
+		{
+			Processor.StartAfterStop(() => StartGraph(context, variableOverrides));
+			return;
+		}
+
 		Processor.GraphContext.SharedVariables = context.Owner.SharedVariables;
 		Processor.GraphContext.ActivationContext = context;
 		Processor.OnGraphCompleted = context.InstanceHandle.End;
@@ -70,6 +83,9 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 	protected void StopGraph()
 	{
 		Processor.OnGraphCompleted = null;
+
+		// An activation that ends while the start it asked for still waits on a stop never gets its graph.
+		Processor.DropStartAfterStop();
 
 		if (Processor.GraphContext.HasStarted)
 		{

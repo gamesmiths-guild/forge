@@ -22,9 +22,7 @@ public class GraphProcessor
 
 	private bool _updating;
 
-	private bool _startAfterStop;
-
-	private Action<Variables>? _startAfterStopOverrides;
+	private Action? _startAfterStop;
 
 	/// <summary>
 	/// Gets the graph that this processor is responsible for executing.
@@ -74,13 +72,11 @@ public class GraphProcessor
 		// of the stop.
 		if (GraphContext.IsStopping)
 		{
-			_startAfterStop = true;
-			_startAfterStopOverrides = variableOverrides;
+			_startAfterStop = () => StartGraph(variableOverrides);
 			return;
 		}
 
-		_startAfterStop = false;
-		_startAfterStopOverrides = null;
+		_startAfterStop = null;
 		GraphContext.Processor = this;
 		GraphContext.HasStarted = true;
 		GraphContext.RunStamp++;
@@ -227,11 +223,14 @@ public class GraphProcessor
 			failure ??= ExceptionDispatchInfo.Capture(exception);
 		}
 
-		if (_startAfterStop)
+		Action? startAfterStop = _startAfterStop;
+		_startAfterStop = null;
+
+		if (startAfterStop is not null)
 		{
 			try
 			{
-				StartGraph(_startAfterStopOverrides);
+				startAfterStop();
 			}
 			catch (Exception exception)
 			{
@@ -261,6 +260,18 @@ public class GraphProcessor
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();
 		OnGraphCompleted?.Invoke();
+	}
+
+	// Holds back a whole start for a caller that sets the graph up before starting it, so that setup waits for the
+	// stop too, as StartGraph's own variable overrides do.
+	internal void StartAfterStop(Action start)
+	{
+		_startAfterStop = start;
+	}
+
+	internal void DropStartAfterStop()
+	{
+		_startAfterStop = null;
 	}
 
 	// Snapshots the active nodes before either update walks them, because a node updated part way through can

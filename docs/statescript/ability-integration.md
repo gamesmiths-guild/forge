@@ -43,6 +43,8 @@ When the ability activates:
 4. `GraphProcessor.OnGraphCompleted` is wired to `context.InstanceHandle.End()`.
 5. `GraphProcessor.StartGraph()` is called, beginning execution.
 
+An ability that shares one behavior between activations can be activated again while its graph is still stopping, from the teardown of the activation before. Steps 2–5 then wait until that stop has completed, so the rest of the teardown still runs as the earlier activation, and they are dropped if the new activation ends first.
+
 When the ability is canceled:
 
 1. `OnEnded(context)` is called by the Abilities system.

@@ -289,6 +289,60 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 	}
 
 	[Fact]
+	[Trait("GraphBehavior", "Lifecycle")]
+	public void Ability_activated_again_as_its_graph_stops_takes_the_graph_once_the_stop_completes()
+	{
+		(GraphAbilityBehavior behavior, AbilityHandle handle, DeactivationCallbackNode first,
+			DeactivationCallbackNode second) = GrantTeardownAbility();
+
+		handle.TryActivate(out _).Should().BeTrue();
+		object? firstContext = behavior.Processor.GraphContext.ActivationContext;
+
+		// The first activation's teardown activates the ability again before the rest of that teardown runs.
+		bool activatedAgain = false;
+		first.Deactivated = graphContext => activatedAgain = activatedAgain || handle.TryActivate(out _);
+		object? laterInTeardown = null;
+		second.Deactivated = graphContext => laterInTeardown ??= graphContext.ActivationContext;
+
+		handle.Cancel();
+
+		activatedAgain.Should().BeTrue();
+		laterInTeardown.Should().BeSameAs(firstContext, "the rest of the teardown belongs to the first activation");
+		handle.IsActive.Should().BeTrue("the second activation is not ended by the first one's completion");
+		behavior.Processor.GraphContext.ActivationContext.Should().NotBeSameAs(firstContext);
+		behavior.Processor.GraphContext.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("GraphBehavior", "Lifecycle")]
+	public void Ability_activated_again_and_ended_as_its_graph_stops_starts_no_graph()
+	{
+		(GraphAbilityBehavior behavior, AbilityHandle handle, DeactivationCallbackNode first,
+			DeactivationCallbackNode second) = GrantTeardownAbility();
+
+		handle.TryActivate(out _).Should().BeTrue();
+
+		// The first activation's teardown activates the ability again, and the rest of it ends that second activation.
+		bool activatedAgain = false;
+		first.Deactivated = graphContext => activatedAgain = activatedAgain || handle.TryActivate(out _);
+		bool canceledAgain = false;
+		second.Deactivated = _ =>
+		{
+			if (activatedAgain && !canceledAgain)
+			{
+				canceledAgain = true;
+				handle.Cancel();
+			}
+		};
+
+		handle.Cancel();
+
+		canceledAgain.Should().BeTrue();
+		handle.IsActive.Should().BeFalse();
+		behavior.Processor.GraphContext.IsActive.Should().BeFalse("the second activation ended before its graph ran");
+	}
+
+	[Fact]
 	[Trait("GraphBehavior", "ActivationContext")]
 	public void Standalone_graph_has_null_activation_context()
 	{
@@ -368,5 +422,45 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 			behaviorFactory: behaviorFactory);
 	}
 
+	// An ability with no cost or cooldown that shares one behavior between its activations, as the documented setup
+	// does, over two state nodes that end one after the other when the graph stops.
+	private (GraphAbilityBehavior Behavior, AbilityHandle Handle, DeactivationCallbackNode First,
+		DeactivationCallbackNode Second) GrantTeardownAbility()
+	{
+		var graph = new Graph();
+		var first = new DeactivationCallbackNode();
+		var second = new DeactivationCallbackNode();
+		graph.AddNode(first);
+		graph.AddNode(second);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			first.InputPorts[DeactivationCallbackNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			second.InputPorts[DeactivationCallbackNode.InputPort]));
+
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var behavior = new GraphAbilityBehavior(graph);
+		AbilityHandle? handle = Grant(entity, new AbilityData("Recast", behaviorFactory: () => behavior));
+		handle.Should().NotBeNull();
+
+		return (behavior, handle!, first, second);
+	}
+
 	private sealed record DamageData(int Amount, double Multiplier);
+
+	// Runs a callback as it is deactivated, as a node whose cleanup sets something off would.
+	private sealed class DeactivationCallbackNode : StateNode<StateNodeContext>
+	{
+		public Action<GraphContext>? Deactivated { get; set; }
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+			Deactivated?.Invoke(graphContext);
+		}
+	}
 }
