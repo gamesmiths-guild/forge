@@ -167,8 +167,8 @@ public class GraphProcessor
 	/// </summary>
 	/// <remarks>
 	/// A node that throws as it is ended keeps neither the others from ending nor the stop from completing:
-	/// <see cref="OnGraphCompleted"/> runs and a start asked for during the stop follows as usual, and the first
-	/// exception is rethrown after.
+	/// <see cref="OnGraphCompleted"/> runs and a start asked for during the stop follows as usual, even when one of
+	/// them throws as well, and the first exception is rethrown after.
 	/// </remarks>
 	public void StopGraph()
 	{
@@ -217,11 +217,26 @@ public class GraphProcessor
 		GraphContext.ActiveStateNodes.Clear();
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();
-		OnGraphCompleted?.Invoke();
+
+		try
+		{
+			OnGraphCompleted?.Invoke();
+		}
+		catch (Exception exception)
+		{
+			failure ??= ExceptionDispatchInfo.Capture(exception);
+		}
 
 		if (_startAfterStop)
 		{
-			StartGraph(_startAfterStopOverrides);
+			try
+			{
+				StartGraph(_startAfterStopOverrides);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 
 		failure?.Throw();

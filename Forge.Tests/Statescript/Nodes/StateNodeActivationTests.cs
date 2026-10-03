@@ -719,6 +719,51 @@ public class StateNodeActivationTests
 
 	[Theory]
 	[Trait("Graph", "Activation")]
+	[InlineData("completion")]
+	[InlineData("restart")]
+	public void A_stop_reports_its_first_failure_and_still_starts_what_was_asked_for(string laterFailure)
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("run", 1);
+		var thrower = new ThrowsOnDeactivateOnceNode();
+		var starter = new StartsGraphOnDeactivateNode(variables => variables.SetVar("run", 2));
+		var restartThrower = new ThrowsOnExecutionNode(throwOnExecution: laterFailure == "restart" ? 2 : 0);
+		graph.AddNode(thrower);
+		graph.AddNode(starter);
+		graph.AddNode(restartThrower);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			thrower.InputPorts[ThrowsOnDeactivateOnceNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			starter.InputPorts[StartsGraphOnDeactivateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			restartThrower.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		bool completionThrew = laterFailure != "completion";
+		processor.OnGraphCompleted = () =>
+		{
+			if (!completionThrew)
+			{
+				completionThrew = true;
+				throw new NotSupportedException("The completion handler failed.");
+			}
+		};
+
+		starter.Processor = processor;
+		processor.StartGraph();
+
+		// The teardown fails first, and the completion handler or the run started after it fails later.
+		processor.Invoking(x => x.StopGraph()).Should().Throw<InvalidOperationException>();
+
+		processor.GraphContext.GraphVariables.TryGetVar("run", out int run).Should().BeTrue();
+		run.Should().Be(2, "the start asked for during the stop followed it");
+	}
+
+	[Theory]
+	[Trait("Graph", "Activation")]
 	[InlineData("activate")]
 	[InlineData("update")]
 	[InlineData("fixed")]
