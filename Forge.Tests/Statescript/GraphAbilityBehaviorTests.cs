@@ -394,6 +394,53 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 	}
 
 	[Fact]
+	[Trait("GraphBehavior", "Lifecycle")]
+	public void Ability_activated_again_as_its_own_code_ends_it_is_canceled_when_its_waiting_start_throws()
+	{
+		var graph = new Graph();
+		var node = new ActivationCallbackNode();
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActivationCallbackNode.InputPort]));
+
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var behavior = new GraphAbilityBehavior(graph);
+		AbilityHandle? handle = Grant(entity, new AbilityData("Recast", behaviorFactory: () => behavior));
+		handle.Should().NotBeNull();
+
+		// The first activation's own code ends it, and the ability is activated again as soon as it has ended, once.
+		bool activatedAgain = false;
+		entity.Abilities.OnAbilityEnded += _ =>
+		{
+			if (!activatedAgain)
+			{
+				activatedAgain = true;
+				handle!.TryActivate(out AbilityActivationFailures _);
+			}
+		};
+
+		// The second activation's graph fails as it starts, once the first activation's code has returned.
+		bool ended = false;
+		node.Activated = _ =>
+		{
+			if (ended)
+			{
+				throw new NotSupportedException("The second activation failed.");
+			}
+
+			ended = true;
+			handle!.Cancel();
+		};
+
+		handle!.TryActivate(out _);
+
+		activatedAgain.Should().BeTrue();
+		handle.IsActive.Should().BeFalse("an activation whose start throws is canceled, as at once it would be");
+		behavior.Processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
 	[Trait("GraphBehavior", "ActivationContext")]
 	public void Standalone_graph_has_null_activation_context()
 	{

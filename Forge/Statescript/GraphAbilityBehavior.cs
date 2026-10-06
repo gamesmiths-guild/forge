@@ -55,7 +55,8 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 	/// <remarks>
 	/// An activation started while the processor is still stopping, or while node code of the activation before it is
 	/// still running - when the ability shares one behavior between activations - waits for both to finish before it
-	/// takes the processor over, context and callback included.
+	/// takes the processor over, context and callback included. If that start then throws, the activation is canceled,
+	/// as one whose start throws at once is.
 	/// </remarks>
 	/// <param name="context">The ability behavior context for the current activation.</param>
 	/// <param name="variableOverrides">An optional callback to overwrite graph variable values with runtime data before
@@ -66,7 +67,7 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 		// and its completion would end this activation.
 		if (Processor.GraphContext.StartMustWait)
 		{
-			Processor.GraphContext.PendingStart = () => StartGraph(context, variableOverrides);
+			Processor.GraphContext.PendingStart = () => StartAfterWaiting(context, variableOverrides);
 			return;
 		}
 
@@ -90,6 +91,21 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 		if (Processor.GraphContext.HasStarted)
 		{
 			Processor.StopGraph();
+		}
+	}
+
+	// OnStarted has returned by the time a start that waited runs, so the abilities system can no longer cancel the
+	// activation when it throws, as it does for a start that throws at once. It is canceled here instead.
+	private void StartAfterWaiting(AbilityBehaviorContext context, Action<Variables>? variableOverrides)
+	{
+		try
+		{
+			StartGraph(context, variableOverrides);
+		}
+		catch
+		{
+			context.InstanceHandle.AbilityInstance?.Cancel();
+			throw;
 		}
 	}
 }
