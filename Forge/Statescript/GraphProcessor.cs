@@ -166,6 +166,14 @@ public class GraphProcessor
 	/// </remarks>
 	public void StopGraph()
 	{
+		// A start still waiting for node code to return is ended by a later stop, as it would have been had it run
+		// first, even one that finds the graph already over. A stop asked for while the graph is still stopping is part
+		// of that stop, which a start asked for during it follows.
+		if (!GraphContext.IsStopping)
+		{
+			GraphContext.PendingStart = null;
+		}
+
 		if (GraphContext.Processor != this || !GraphContext.HasStarted)
 		{
 			return;
@@ -178,9 +186,6 @@ public class GraphProcessor
 		GraphContext.RunStamp++;
 		GraphContext.IsStopping = true;
 		ExceptionDispatchInfo? failure = null;
-
-		// A start still waiting for node code to return is ended by the stop, as it would have been had it run first.
-		GraphContext.PendingStart = null;
 
 		// The stop walks the graph afresh: a disabling still under way has already marked its node as passed, and the
 		// stop would otherwise go no further than it, leaving that node and what lies below it never ended.

@@ -346,6 +346,74 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void A_graph_start_waiting_for_node_code_is_dropped_by_a_stop_after_the_graph_completed()
+	{
+		var graph = new Graph();
+		GraphProcessor? processor = null;
+		CallbackStateNode? node = null;
+		bool done = false;
+
+		// Started over from the update of its only node, which then ends, once, before the update returns.
+		node = new CallbackStateNode(() =>
+		{
+			if (!done)
+			{
+				done = true;
+				processor!.StartGraph();
+				node!.InputPorts[CallbackStateNode.AbortPort].ReceiveMessage(processor.GraphContext);
+			}
+		});
+
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[CallbackStateNode.InputPort]));
+
+		processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		// The graph completes as the update returns, and its completion stops it.
+		processor.OnGraphCompleted = processor.StopGraph;
+		processor.UpdateGraph(1.0);
+
+		processor.GraphContext.IsActive.Should().BeFalse("the stop came after the start that was waiting");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_start_asked_for_during_a_stop_follows_it_though_the_teardown_reaches_an_exit_after()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("run", 1);
+		var starter = new StartsGraphOnDeactivateNode(variables => variables.SetVar("run", 2));
+		var exiting = new TrackingStateNode();
+		var exit = new ExitNode();
+		graph.AddNode(starter);
+		graph.AddNode(exiting);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			starter.InputPorts[StartsGraphOnDeactivateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			exiting.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			exiting.OutputPorts[TrackingStateNode.OnDeactivatePort],
+			exit.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		starter.Processor = processor;
+		processor.StartGraph();
+
+		// The stop's teardown asks for a start, then reaches an Exit, which is part of the same stop.
+		processor.StopGraph();
+
+		processor.GraphContext.GraphVariables.TryGetVar("run", out int run).Should().BeTrue();
+		run.Should().Be(2, "the start asked for during the stop followed it");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void A_node_ended_and_started_again_by_one_port_emits_none_after_it()
 	{
 		var graph = new Graph();
