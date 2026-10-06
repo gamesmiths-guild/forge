@@ -1038,6 +1038,43 @@ public class StateNodeActivationTests
 		context.WasAborted.Should().BeTrue();
 	}
 
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_node_that_ends_itself_past_a_throw_still_reports_how_it_ended()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+		var keepAlive = new TrackingStateNode();
+		TimerNode timer = CreateTimerNode("duration");
+		var thrower = new ThrowsOnExecutionNode();
+		var onTimerEnd = new TrackingActionNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(timer);
+		graph.AddNode(thrower);
+		graph.AddNode(onTimerEnd);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnDeactivatePort],
+			thrower.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnTimerEndPort],
+			onTimerEnd.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		// The timer runs out, and what its OnDeactivate reaches fails as it ends.
+		processor.Invoking(x => x.UpdateGraph(1.0)).Should().Throw<NotSupportedException>();
+
+		IsActive(processor, timer).Should().BeFalse();
+		onTimerEnd.ExecutionCount.Should().Be(1, "the timer has still run out, and what waits on that goes on");
+	}
+
 	[Theory]
 	[Trait("Graph", "Activation")]
 	[InlineData("sibling")]

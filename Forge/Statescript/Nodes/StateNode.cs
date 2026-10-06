@@ -408,6 +408,8 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// <para>Use this method because it guarantees that the messages are fired in the right order.</para>
 	/// <para>OutputPort[OnDeactivatePort] (OnDeactivate) will always be called upon node deactivation and should not be
 	/// used here.</para>
+	/// <para>The messages are emitted even when the deactivation throws, since the node has still ended, and the
+	/// exception propagates once they have been.</para>
 	/// </remarks>
 	/// <param name="graphContext">The graph's context.</param>
 	/// <param name="eventPortIds">ID of ports you want to Emit a message to.</param>
@@ -422,13 +424,13 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		}
 
 		ulong run = graphContext.RunStamp;
-		ExceptionDispatchInfo? failure = null;
 		graphContext.FinalizationDeferralCount++;
+
+		// A node whose cleanup throws has still ended, and still reports how, so what waits on that report goes on.
+		ExceptionDispatchInfo? failure = Deactivate(graphContext);
 
 		try
 		{
-			DeactivateNode(graphContext);
-
 			// A port whose message ends the graph ends the ones after it too.
 			for (int i = 0; i < eventPortIds.Length && graphContext.RunStamp == run; i++)
 			{
@@ -443,7 +445,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		}
 		catch (Exception exception)
 		{
-			failure = ExceptionDispatchInfo.Capture(exception);
+			failure ??= ExceptionDispatchInfo.Capture(exception);
 		}
 
 		// A run that ended along the way took its count with it, and the next one keeps its own. One still going
@@ -658,9 +660,9 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		OnActivate(graphContext);
 	}
 
-	// A deactivation that throws anywhere still disables the node's whole subgraph, so nothing is left running under it,
-	// and lets the node finish deactivating rather than leave it part way through and ignoring every start. What threw
-	// first is handed back.
+	// A deactivation that throws anywhere still disables the node's whole subgraph, so nothing is left running under
+	// it, and lets the node finish deactivating rather than leave it part way through and ignoring every start. What
+	// threw first is handed back.
 	private ExceptionDispatchInfo? Deactivate(GraphContext graphContext)
 	{
 		ulong run = graphContext.RunStamp;
