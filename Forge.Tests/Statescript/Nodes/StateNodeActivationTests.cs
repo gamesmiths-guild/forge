@@ -259,6 +259,93 @@ public class StateNodeActivationTests
 
 	[Fact]
 	[Trait("Graph", "Activation")]
+	public void A_graph_whose_only_node_is_ended_and_started_again_from_its_update_keeps_running()
+	{
+		var graph = new Graph();
+		var node = new StartsAgainOnUpdateNode();
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[StartsAgainOnUpdateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		int completions = 0;
+		processor.OnGraphCompleted = () => completions++;
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		completions.Should().Be(0, "the node was started again before the update it ended in returned");
+		IsActive(processor, node).Should().BeTrue();
+	}
+
+	[Theory]
+	[Trait("Graph", "Activation")]
+	[InlineData("abort")]
+	[InlineData("parent")]
+	public void A_start_waiting_for_the_code_it_came_from_is_dropped_by_an_ending_after_it(string endedBy)
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var parent = new TrackingStateNode();
+		var node = new StartsAgainOnUpdateNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(parent);
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			parent.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			parent.OutputPorts[TrackingStateNode.SubgraphPort],
+			node.InputPorts[StartsAgainOnUpdateNode.InputPort]));
+
+		// Started again from its own update, the node is then aborted, or its parent ends, before the update returns.
+		Node ended = endedBy == "abort" ? node : parent;
+		node.AfterStartingAgain = graphContext =>
+			ended.InputPorts[TrackingStateNode.AbortPort].ReceiveMessage(graphContext);
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		IsActive(processor, node).Should().BeFalse("what ended the node came after the start that was waiting");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_graph_start_waiting_for_node_code_is_dropped_by_a_stop_after_it()
+	{
+		var graph = new Graph();
+		GraphProcessor? processor = null;
+		bool done = false;
+
+		// Started over from a node's update and stopped, once, before the update returns.
+		var node = new CallbackStateNode(() =>
+		{
+			if (!done)
+			{
+				done = true;
+				processor!.StartGraph();
+				processor.StopGraph();
+			}
+		});
+
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[CallbackStateNode.InputPort]));
+
+		processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		processor.GraphContext.IsActive.Should().BeFalse("the stop came after the start that was waiting");
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
 	public void A_node_ended_and_started_again_by_one_port_emits_none_after_it()
 	{
 		var graph = new Graph();
@@ -1405,13 +1492,15 @@ public class StateNodeActivationTests
 		}
 	}
 
-	// Is aborted and started again from its own update, once, as an event the update sets off might, and reports the
-	// update after that only if the activation it ran for is still going.
+	// Is aborted and started again from its own update, once, as an event the update sets off might, then has whatever
+	// it is told done, and reports the update after that only if the activation it ran for is still going.
 	private sealed class StartsAgainOnUpdateNode : StateNode<StateNodeContext>
 	{
 		public const byte OnUpdatedPort = 4;
 
 		private bool _startedAgain;
+
+		public Action<GraphContext>? AfterStartingAgain { get; set; }
 
 		protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
 		{
@@ -1448,6 +1537,7 @@ public class StateNodeActivationTests
 			StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 			InputPorts[AbortPort].ReceiveMessage(graphContext);
 			InputPorts[InputPort].ReceiveMessage(graphContext);
+			AfterStartingAgain?.Invoke(graphContext);
 
 			if (nodeContext.Active)
 			{

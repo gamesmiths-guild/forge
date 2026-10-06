@@ -300,7 +300,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 
 		// The first activation's teardown activates the ability again before the rest of that teardown runs.
 		bool activatedAgain = false;
-		first.Deactivated = _ => activatedAgain = activatedAgain || handle.TryActivate(out var _);
+		first.Deactivated = _ => activatedAgain = activatedAgain || handle.TryActivate(out AbilityActivationFailures _);
 		object? laterInTeardown = null;
 		second.Deactivated = graphContext => laterInTeardown ??= graphContext.ActivationContext;
 
@@ -324,7 +324,7 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 
 		// The first activation's teardown activates the ability again, and the rest of it ends that second activation.
 		bool activatedAgain = false;
-		first.Deactivated = _ => activatedAgain = activatedAgain || handle.TryActivate(out var _);
+		first.Deactivated = _ => activatedAgain = activatedAgain || handle.TryActivate(out AbilityActivationFailures _);
 		bool canceledAgain = false;
 		second.Deactivated = _ =>
 		{
@@ -340,6 +340,57 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		canceledAgain.Should().BeTrue();
 		handle.IsActive.Should().BeFalse();
 		behavior.Processor.GraphContext.IsActive.Should().BeFalse("the second activation ended before its graph ran");
+	}
+
+	[Fact]
+	[Trait("GraphBehavior", "Lifecycle")]
+	public void Ability_activated_again_as_its_own_code_ends_it_takes_the_graph_once_that_code_returns()
+	{
+		var graph = new Graph();
+		var node = new ActivationCallbackNode();
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[ActivationCallbackNode.InputPort]));
+
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var behavior = new GraphAbilityBehavior(graph);
+		AbilityHandle? handle = Grant(entity, new AbilityData("Recast", behaviorFactory: () => behavior));
+		handle.Should().NotBeNull();
+
+		// The first activation's own code ends it, once, as an effect it applies might, and the ability is activated
+		// again as soon as it has ended.
+		bool activatedAgain = false;
+		entity.Abilities.OnAbilityEnded += _ =>
+		{
+			if (!activatedAgain)
+			{
+				activatedAgain = true;
+				handle!.TryActivate(out AbilityActivationFailures _);
+			}
+		};
+
+		bool ended = false;
+		object? firstContext = null;
+		object? afterEnding = null;
+		node.Activated = graphContext =>
+		{
+			if (!ended)
+			{
+				ended = true;
+				firstContext = graphContext.ActivationContext;
+				handle!.Cancel();
+				afterEnding = graphContext.ActivationContext;
+			}
+		};
+
+		handle!.TryActivate(out _).Should().BeTrue();
+
+		activatedAgain.Should().BeTrue();
+		afterEnding.Should().BeSameAs(firstContext, "the rest of that code belongs to the first activation");
+		handle.IsActive.Should().BeTrue();
+		behavior.Processor.GraphContext.ActivationContext.Should().NotBeSameAs(firstContext);
+		behavior.Processor.GraphContext.IsActive.Should().BeTrue();
 	}
 
 	[Fact]
@@ -448,6 +499,21 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 	}
 
 	private sealed record DamageData(int Amount, double Multiplier);
+
+	// Runs a callback as it is activated, as a node whose start sets something off would.
+	private sealed class ActivationCallbackNode : StateNode<StateNodeContext>
+	{
+		public Action<GraphContext>? Activated { get; set; }
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+			Activated?.Invoke(graphContext);
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+		}
+	}
 
 	// Runs a callback as it is deactivated, as a node whose cleanup sets something off would.
 	private sealed class DeactivationCallbackNode : StateNode<StateNodeContext>

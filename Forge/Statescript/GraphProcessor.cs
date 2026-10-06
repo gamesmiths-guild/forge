@@ -22,8 +22,6 @@ public class GraphProcessor
 
 	private bool _updating;
 
-	private Action? _startAfterStop;
-
 	/// <summary>
 	/// Gets the graph that this processor is responsible for executing.
 	/// </summary>
@@ -60,23 +58,23 @@ public class GraphProcessor
 	/// graph's entry node to begin processing.
 	/// </summary>
 	/// <remarks>
-	/// Called while the graph is stopping - from a node's teardown inside <see cref="StopGraph"/> - the graph starts
-	/// once the stop has completed and <see cref="OnGraphCompleted"/> has run, unless it was started again by then.
+	/// Called while the graph is stopping - from a node's teardown inside <see cref="StopGraph"/> - or while a node's
+	/// code is still running - a cue handler that ends the ability the graph runs for and starts it again - the graph
+	/// starts once the stop has completed, <see cref="OnGraphCompleted"/> has run and that code has returned, unless it
+	/// was started again or stopped by then.
 	/// </remarks>
 	/// <param name="variableOverrides">An optional callback invoked after variables are initialized from definitions
 	/// but before the graph's entry node begins processing. Use this to overwrite specific variable values with
 	/// runtime data (e.g., activation context from an ability).</param>
 	public void StartGraph(Action<Variables>? variableOverrides = null)
 	{
-		// A start asked for during a stop waits for it to complete: started now, the run would be torn down by the rest
-		// of the stop.
-		if (GraphContext.IsStopping)
+		if (GraphContext.StartMustWait)
 		{
-			_startAfterStop = () => StartGraph(variableOverrides);
+			GraphContext.PendingStart = () => StartGraph(variableOverrides);
 			return;
 		}
 
-		_startAfterStop = null;
+		GraphContext.PendingStart = null;
 		GraphContext.Processor = this;
 		GraphContext.HasStarted = true;
 		GraphContext.RunStamp++;
@@ -181,6 +179,9 @@ public class GraphProcessor
 		GraphContext.IsStopping = true;
 		ExceptionDispatchInfo? failure = null;
 
+		// A start still waiting for node code to return is ended by the stop, as it would have been had it run first.
+		GraphContext.PendingStart = null;
+
 		// The stop walks the graph afresh: a disabling still under way has already marked its node as passed, and the
 		// stop would otherwise go no further than it, leaving that node and what lies below it never ended.
 		GraphContext.InternalNodeActivationStatus.Clear();
@@ -223,19 +224,13 @@ public class GraphProcessor
 			failure ??= ExceptionDispatchInfo.Capture(exception);
 		}
 
-		Action? startAfterStop = _startAfterStop;
-		_startAfterStop = null;
-
-		if (startAfterStop is not null)
+		try
 		{
-			try
-			{
-				startAfterStop();
-			}
-			catch (Exception exception)
-			{
-				failure ??= ExceptionDispatchInfo.Capture(exception);
-			}
+			GraphContext.RunPendingStart();
+		}
+		catch (Exception exception)
+		{
+			failure ??= ExceptionDispatchInfo.Capture(exception);
 		}
 
 		failure?.Throw();
@@ -260,18 +255,6 @@ public class GraphProcessor
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();
 		OnGraphCompleted?.Invoke();
-	}
-
-	// Holds back a whole start for a caller that sets the graph up before starting it, so that setup waits for the
-	// stop too, as StartGraph's own variable overrides do.
-	internal void StartAfterStop(Action start)
-	{
-		_startAfterStop = start;
-	}
-
-	internal void DropStartAfterStop()
-	{
-		_startAfterStop = null;
 	}
 
 	// Snapshots the active nodes before either update walks them, because a node updated part way through can

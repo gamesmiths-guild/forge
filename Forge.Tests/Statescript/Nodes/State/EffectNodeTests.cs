@@ -8,6 +8,7 @@ using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
+using Gamesmiths.Forge.Effects.Stacking;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.State;
@@ -746,6 +747,56 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [1, 1, 0, 0]);
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Graph", "EffectNode")]
+	public void A_graph_started_over_as_a_stacking_effect_applies_keeps_the_effect_of_its_new_run()
+	{
+		TestEntity target = CreateTestEntity();
+		var stopper = new StopsGraphComponent();
+		var effect = new EffectData(
+			"Stacking Effect",
+			new DurationData(DurationType.Infinite),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10))),
+			],
+			new StackingData(
+				new ScalableInt(2),
+				new ScalableInt(1),
+				StackPolicy.AggregateByTarget,
+				StackLevelPolicy.SegregateLevels,
+				StackMagnitudePolicy.Sum,
+				StackOverflowPolicy.AllowApplication,
+				StackExpirationPolicy.ClearEntireStack,
+				StackOwnerDenialPolicy.AlwaysAllow,
+				StackOwnerOverridePolicy.Override,
+				StackOwnerOverrideStackCountPolicy.IncreaseStacks),
+			effectComponents: [stopper]);
+		GraphProcessor processor = CreateProcessor(target, effect);
+
+		// The first application ends the ability the graph runs for, once, and the graph is started over from there.
+		// Applied while the stopped run still held its own, the new run's application would stack onto it and be
+		// removed with it.
+		bool stopped = false;
+		stopper.Applied = () =>
+		{
+			if (!stopped)
+			{
+				stopped = true;
+				processor.StopGraph();
+			}
+		};
+
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
+		processor.GraphContext.IsActive.Should().BeTrue("the new run still holds its effect");
 	}
 
 	// Adds 10 to Attribute1, and calls back as it applies.

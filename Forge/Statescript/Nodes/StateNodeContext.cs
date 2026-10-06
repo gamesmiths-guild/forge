@@ -27,6 +27,8 @@ public class StateNodeContext : INodeContext
 
 	internal int RunningFrames { get; set; }
 
+	internal bool StartHeld { get; set; }
+
 	internal ulong ActivationStamp { get; set; }
 
 	internal int[]? DeferredDeactivationEventPortIds { get; set; }

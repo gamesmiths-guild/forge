@@ -127,39 +127,38 @@ public class TagListenerNode : StateNode<TagListenerNodeContext>
 
 		TagListenerNodeContext nodeContext = graphContext.GetNodeContext<TagListenerNodeContext>(NodeID);
 
-		// Snapshot the watched tags to allow presence updates while iterating. A report can end this node or the graph,
-		// which clears what it watches, so each tag checks the node is still listening.
-		foreach (Tag watchedTag in nodeContext.LastPresence.Keys.ToArray())
+		// Counted as running for this activation, so a listener aborted and started again from a report starts once the
+		// rest of the change has been gone through.
+		EnterFrame(graphContext, nodeContext);
+
+		try
 		{
-			if (!nodeContext.Active)
+			// Snapshot the watched tags to allow presence updates while iterating. A report can end this node or the
+			// graph, which clears what it watches, so each tag checks the node is still listening.
+			foreach (Tag watchedTag in nodeContext.LastPresence.Keys.ToArray())
 			{
-				return;
-			}
+				if (!nodeContext.Active)
+				{
+					return;
+				}
 
-			bool isPresent = allTags.HasTag(watchedTag);
-			bool wasPresent = nodeContext.LastPresence[watchedTag];
+				bool isPresent = allTags.HasTag(watchedTag);
+				bool wasPresent = nodeContext.LastPresence[watchedTag];
 
-			if (isPresent == wasPresent)
-			{
-				continue;
-			}
+				if (isPresent == wasPresent)
+				{
+					continue;
+				}
 
-			nodeContext.LastPresence[watchedTag] = isPresent;
+				nodeContext.LastPresence[watchedTag] = isPresent;
 
-			WriteTagOutput(graphContext, watchedTag);
-
-			// Counted as running for this activation, so a listener aborted and started again from the report gets a
-			// context of its own rather than this one.
-			nodeContext.RunningFrames++;
-
-			try
-			{
+				WriteTagOutput(graphContext, watchedTag);
 				OutputPorts[isPresent ? OnTagAddedPort : OnTagRemovedPort].EmitMessage(graphContext);
 			}
-			finally
-			{
-				nodeContext.RunningFrames--;
-			}
+		}
+		finally
+		{
+			ExitFrame(graphContext, nodeContext);
 		}
 	}
 

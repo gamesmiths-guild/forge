@@ -89,6 +89,13 @@ public sealed class GraphContext
 
 	internal bool IsStopping { get; set; }
 
+	// The state node code running in this context - an activation, an update, an emission, a cleanup - counted across
+	// runs, since a run that has ended can still have code on its way back.
+	internal int RunningFrames { get; set; }
+
+	// A start that waits for the graph to finish stopping and for the node code still running to return.
+	internal Action? PendingStart { get; set; }
+
 	// Counts every start and end of a run, so a message still being delivered can tell that the graph it set out in
 	// has since stopped or started over.
 	internal ulong RunStamp { get; set; }
@@ -96,6 +103,10 @@ public sealed class GraphContext
 	internal int FinalizationDeferralCount { get; set; }
 
 	internal int NodeContextCount => _nodeContexts.Count;
+
+	// Started while the graph stops, a run would be torn down by the rest of the stop, and started while node code is
+	// still running, it would have what that code has left to do - removing the cue it was applying - land on it.
+	internal bool StartMustWait => IsStopping || RunningFrames > 0;
 
 	/// <summary>
 	/// Attempts to retrieve the <see cref="ActivationContext"/> as a specific type. This is the recommended way for
@@ -428,15 +439,9 @@ public sealed class GraphContext
 			return (T)context;
 		}
 
-		return CreateNodeContext<T>(nodeID);
-	}
-
-	internal T CreateNodeContext<T>(Guid nodeID)
-		where T : INodeContext, new()
-	{
-		var context = new T();
-		_nodeContexts[nodeID] = context;
-		return context;
+		var newContext = new T();
+		_nodeContexts[nodeID] = newContext;
+		return newContext;
 	}
 
 	internal void PushElement(in ElementFrame frame)
@@ -460,12 +465,23 @@ public sealed class GraphContext
 	}
 
 	// A run is over once no state node is left active, but not while a message is still on its way to a connection that
-	// can start one.
+	// can start one, or while node code that can start one again is still running.
 	internal void FinalizeIfIdle()
 	{
-		if (HasStarted && FinalizationDeferralCount == 0 && ActiveStateNodes.Count == 0)
+		if (HasStarted && FinalizationDeferralCount == 0 && RunningFrames == 0 && ActiveStateNodes.Count == 0)
 		{
 			Processor?.FinalizeGraph();
 		}
+	}
+
+	internal void RunPendingStart()
+	{
+		if (StartMustWait || PendingStart is not Action start)
+		{
+			return;
+		}
+
+		PendingStart = null;
+		start();
 	}
 }

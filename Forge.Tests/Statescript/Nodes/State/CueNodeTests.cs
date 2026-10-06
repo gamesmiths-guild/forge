@@ -253,6 +253,60 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		secondHandler.ApplyCount.Should().Be(0, "nothing is applied for a node that has ended");
 	}
 
+	[Fact]
+	[Trait("Graph", "CueNode")]
+	public void A_cue_node_ended_and_started_again_as_its_cue_applies_keeps_the_cues_of_its_new_activation()
+	{
+		(GraphProcessor processor, RecordingCueHandler firstHandler, RecordingCueHandler secondHandler) =
+			BuildTwoCueGraph();
+		Node node = processor.Graph.Nodes.Single(x => x is CueNode);
+
+		// The first cue's handler aborts the node and starts it again as it applies, once, as a listener wired to both
+		// would.
+		bool startedAgain = false;
+		firstHandler.Applied = () =>
+		{
+			if (!startedAgain)
+			{
+				startedAgain = true;
+				node.InputPorts[StateNode<CueNodeContext>.AbortPort].ReceiveMessage(processor.GraphContext);
+				node.InputPorts[StateNode<CueNodeContext>.InputPort].ReceiveMessage(processor.GraphContext);
+			}
+		};
+
+		processor.StartGraph();
+
+		firstHandler.IsApplied.Should().BeTrue("the ended activation removed its cue before the new one applied it");
+		secondHandler.IsApplied.Should().BeTrue();
+		secondHandler.ApplyCount.Should().Be(1, "only the new activation got as far as the second cue");
+	}
+
+	[Fact]
+	[Trait("Graph", "CueNode")]
+	public void A_graph_started_over_as_a_cue_applies_keeps_the_cue_of_its_new_run()
+	{
+		(GraphProcessor processor, RecordingCueHandler handler) = BuildSingleCueGraph();
+
+		// The handler ends the ability the graph runs for as its cue applies, once, and the graph is started over from
+		// there.
+		bool stopped = false;
+		handler.Applied = () =>
+		{
+			if (!stopped)
+			{
+				stopped = true;
+				processor.StopGraph();
+			}
+		};
+
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+
+		handler.ApplyCount.Should().Be(2);
+		handler.RemoveCount.Should().Be(1);
+		handler.IsApplied.Should().BeTrue("the stopped run removed its cue before the new run applied it");
+	}
+
 	private (GraphProcessor Processor, RecordingCueHandler FirstHandler, RecordingCueHandler SecondHandler)
 		BuildTwoCueGraph()
 	{

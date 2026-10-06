@@ -53,8 +53,8 @@ internal static class NodeBindings
 	}
 
 	/// <summary>
-	/// Starts the graph over from inside the call that completed it, the first time it completes, so whatever that call
-	/// still had to do runs after the new run has begun.
+	/// Starts the graph over from inside the call that completed it, the first time it completes. Made while node code
+	/// is still running, the start waits for that code to return.
 	/// </summary>
 	/// <param name="processor">The processor to start over.</param>
 	/// <param name="variableOverrides">Values the new run starts with, so it can take a different path.</param>

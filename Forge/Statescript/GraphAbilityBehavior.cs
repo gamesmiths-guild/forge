@@ -53,20 +53,20 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 	/// automatically end the ability instance when the graph finishes.
 	/// </summary>
 	/// <remarks>
-	/// An activation started while the processor is still stopping - from the teardown of the activation before it,
-	/// when the ability shares one behavior between activations - waits for the stop to complete before it takes the
-	/// processor over, context and callback included.
+	/// An activation started while the processor is still stopping, or while node code of the activation before it is
+	/// still running - when the ability shares one behavior between activations - waits for both to finish before it
+	/// takes the processor over, context and callback included.
 	/// </remarks>
 	/// <param name="context">The ability behavior context for the current activation.</param>
 	/// <param name="variableOverrides">An optional callback to overwrite graph variable values with runtime data before
 	/// the graph's entry node fires.</param>
 	protected void StartGraph(AbilityBehaviorContext context, Action<Variables>? variableOverrides = null)
 	{
-		// Handed over now, the context and callback would serve the rest of the last activation's teardown, and its
-		// completion would end this activation.
-		if (Processor.GraphContext.IsStopping)
+		// Handed over now, the context and callback would serve the rest of the last activation's teardown and code,
+		// and its completion would end this activation.
+		if (Processor.GraphContext.StartMustWait)
 		{
-			Processor.StartAfterStop(() => StartGraph(context, variableOverrides));
+			Processor.GraphContext.PendingStart = () => StartGraph(context, variableOverrides);
 			return;
 		}
 
@@ -84,8 +84,8 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 	{
 		Processor.OnGraphCompleted = null;
 
-		// An activation that ends while the start it asked for still waits on a stop never gets its graph.
-		Processor.DropStartAfterStop();
+		// An activation that ends while the start it asked for still waits never gets its graph.
+		Processor.GraphContext.PendingStart = null;
 
 		if (Processor.GraphContext.HasStarted)
 		{
