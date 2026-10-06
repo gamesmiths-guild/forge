@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
+
 namespace Gamesmiths.Forge.Statescript.Ports;
 
 /// <summary>
@@ -80,6 +82,7 @@ public class OutputPort : Port
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
 		ulong run = graphContext.RunStamp;
+		ExceptionDispatchInfo? failure = null;
 
 		// The run cannot finish part way through a message, since a connection it has yet to reach can start a node
 		// that keeps it going. A connection that ends the graph - an Exit, an ability ended on the way - ends the
@@ -95,16 +98,22 @@ public class OutputPort : Port
 
 			OnEmitMessage?.Invoke(PortID);
 		}
-		finally
+		catch (Exception exception)
 		{
-			// A run that ended along the way took its count with it, and the next one keeps its own. One still going
-			// completes once nothing is left running, even if a delivery threw.
-			if (graphContext.RunStamp == run)
-			{
-				graphContext.FinalizationDeferralCount--;
-				graphContext.FinalizeIfIdle();
-			}
+			failure = ExceptionDispatchInfo.Capture(exception);
 		}
+
+		// A run that ended along the way took its count with it, and the next one keeps its own. One still going
+		// completes once nothing is left running, even if a delivery threw, whose exception then propagates rather than
+		// the completion's.
+		if (graphContext.RunStamp == run)
+		{
+			graphContext.FinalizationDeferralCount--;
+			ExceptionDispatchInfo? completion = graphContext.FinalizeIfIdle();
+			failure ??= completion;
+		}
+
+		failure?.Throw();
 	}
 
 	internal void InternalEmitDisableSubgraphMessage(GraphContext graphContext)

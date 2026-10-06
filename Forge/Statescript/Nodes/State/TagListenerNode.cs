@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript.Ports;
 using Gamesmiths.Forge.Tags;
@@ -130,6 +131,7 @@ public class TagListenerNode : StateNode<TagListenerNodeContext>
 		// Counted as running for this activation, so a listener aborted and started again from a report starts once the
 		// rest of the change has been gone through.
 		EnterFrame(graphContext, nodeContext);
+		ExceptionDispatchInfo? failure = null;
 
 		try
 		{
@@ -139,7 +141,7 @@ public class TagListenerNode : StateNode<TagListenerNodeContext>
 			{
 				if (!nodeContext.Active)
 				{
-					return;
+					break;
 				}
 
 				bool isPresent = allTags.HasTag(watchedTag);
@@ -156,10 +158,13 @@ public class TagListenerNode : StateNode<TagListenerNodeContext>
 				OutputPorts[isPresent ? OnTagAddedPort : OnTagRemovedPort].EmitMessage(graphContext);
 			}
 		}
-		finally
+		catch (Exception exception)
 		{
-			ExitFrame(graphContext, nodeContext);
+			failure = ExceptionDispatchInfo.Capture(exception);
 		}
+
+		ExceptionDispatchInfo? exit = ExitFrame(graphContext, nodeContext);
+		(failure ?? exit)?.Throw();
 	}
 
 	private void WriteTagOutput(GraphContext graphContext, Tag tag)

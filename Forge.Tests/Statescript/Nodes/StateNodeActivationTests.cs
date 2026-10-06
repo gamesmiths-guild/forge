@@ -864,10 +864,17 @@ public class StateNodeActivationTests
 
 		var processor = new GraphProcessor(graph);
 		int completions = 0;
-		processor.OnGraphCompleted = () => completions++;
 		processor.StartGraph();
 
-		processor.Invoking(x => EndLastNode(x, node, relay, endedBy)).Should().Throw<InvalidOperationException>();
+		// The completion handler fails as well, after the node's cleanup did.
+		processor.OnGraphCompleted = () =>
+		{
+			completions++;
+			throw new NotSupportedException("The completion handler failed.");
+		};
+
+		processor.Invoking(x => EndLastNode(x, node, relay, endedBy))
+			.Should().Throw<InvalidOperationException>("the node's cleanup failed first");
 
 		completions.Should().Be(1, "the node that threw has still ended, and nothing else is running");
 	}
@@ -1029,6 +1036,81 @@ public class StateNodeActivationTests
 		StateNodeContext context = processor.GraphContext.GetNodeContext<StateNodeContext>(node.NodeID);
 		context.Active.Should().BeFalse("the abort ends the node even though its handler threw");
 		context.WasAborted.Should().BeTrue();
+	}
+
+	[Theory]
+	[Trait("Graph", "Activation")]
+	[InlineData("parent")]
+	[InlineData("abort")]
+	public void A_deactivation_whose_handler_and_cleanup_both_throw_reports_the_handler_failure(string endedBy)
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var parent = new TrackingStateNode();
+		var node = new ThrowsOnDeactivateOnceNode();
+		var thrower = new ThrowsOnExecutionNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(parent);
+		graph.AddNode(node);
+		graph.AddNode(thrower);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			parent.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			parent.OutputPorts[TrackingStateNode.SubgraphPort],
+			node.InputPorts[ThrowsOnDeactivateOnceNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[ThrowsOnDeactivateOnceNode.OnDeactivatePort],
+			thrower.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		// The node ends with its parent or on its own; what its OnDeactivate reaches fails, and then its cleanup does.
+		Node ended = endedBy == "parent" ? parent : node;
+		processor.GraphContext
+			.Invoking(x => ended.InputPorts[TrackingStateNode.AbortPort].ReceiveMessage(x))
+			.Should().Throw<NotSupportedException>("the handler failed first");
+
+		IsActive(processor, node).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Activation")]
+	public void A_graph_start_waiting_for_node_code_follows_a_completion_that_threw()
+	{
+		var graph = new Graph();
+		GraphProcessor? processor = null;
+		CallbackStateNode? node = null;
+		bool done = false;
+
+		// Started over from the update of its only node, which then ends, once, before the update returns.
+		node = new CallbackStateNode(() =>
+		{
+			if (!done)
+			{
+				done = true;
+				processor!.StartGraph();
+				node!.InputPorts[CallbackStateNode.AbortPort].ReceiveMessage(processor.GraphContext);
+			}
+		});
+
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[CallbackStateNode.InputPort]));
+
+		processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		// The graph completes as the update returns, and its completion handler fails.
+		processor.OnGraphCompleted = () => throw new NotSupportedException("The completion handler failed.");
+		processor.Invoking(x => x.UpdateGraph(1.0)).Should().Throw<NotSupportedException>();
+
+		processor.GraphContext.IsActive.Should().BeTrue("the start that was waiting still followed");
 	}
 
 	[Fact]

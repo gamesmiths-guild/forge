@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript.Ports;
 
@@ -88,15 +89,19 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		if (nodeContext is not null)
 		{
 			EnterFrame(graphContext, nodeContext);
+			ExceptionDispatchInfo? failure = null;
 
 			try
 			{
 				OnUpdate(deltaTime, graphContext);
 			}
-			finally
+			catch (Exception exception)
 			{
-				ExitFrame(graphContext, nodeContext);
+				failure = ExceptionDispatchInfo.Capture(exception);
 			}
+
+			ExceptionDispatchInfo? exit = ExitFrame(graphContext, nodeContext);
+			(failure ?? exit)?.Throw();
 		}
 	}
 
@@ -113,15 +118,19 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		if (nodeContext is not null)
 		{
 			EnterFrame(graphContext, nodeContext);
+			ExceptionDispatchInfo? failure = null;
 
 			try
 			{
 				OnFixedUpdate(deltaTime, graphContext);
 			}
-			finally
+			catch (Exception exception)
 			{
-				ExitFrame(graphContext, nodeContext);
+				failure = ExceptionDispatchInfo.Capture(exception);
 			}
+
+			ExceptionDispatchInfo? exit = ExitFrame(graphContext, nodeContext);
+			(failure ?? exit)?.Throw();
 		}
 	}
 
@@ -338,27 +347,22 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 
 			nodeContext.WasAborted = true;
 			EnterFrame(graphContext, nodeContext);
+			ExceptionDispatchInfo? failure = null;
 
 			try
 			{
-				try
-				{
-					OutputPorts[OnAbortPort].EmitMessage(graphContext);
-				}
-				finally
-				{
-					// OnAbort can end this node or the graph first. A handler that throws still lets the abort end the
-					// node rather than leave it running as aborted, and a start sent to it from OnAbort waits for that.
-					if (nodeContext.Active)
-					{
-						DeactivateNode(graphContext);
-					}
-				}
+				OutputPorts[OnAbortPort].EmitMessage(graphContext);
 			}
-			finally
+			catch (Exception exception)
 			{
-				ExitFrame(graphContext, nodeContext);
+				failure = ExceptionDispatchInfo.Capture(exception);
 			}
+
+			// OnAbort can end this node or the graph first. A handler that throws still lets the abort end the node
+			// rather than leave it running as aborted, and a start sent to it from OnAbort waits for that.
+			ExceptionDispatchInfo? deactivation = nodeContext.Active ? Deactivate(graphContext) : null;
+			ExceptionDispatchInfo? exit = ExitFrame(graphContext, nodeContext);
+			(failure ?? deactivation ?? exit)?.Throw();
 		}
 	}
 
@@ -375,6 +379,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		}
 
 		EnterFrame(graphContext, nodeContext);
+		ExceptionDispatchInfo? failure = null;
 
 		try
 		{
@@ -385,10 +390,13 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 				OutputPorts[portIds[i]].EmitMessage(graphContext);
 			}
 		}
-		finally
+		catch (Exception exception)
 		{
-			ExitFrame(graphContext, nodeContext);
+			failure = ExceptionDispatchInfo.Capture(exception);
 		}
+
+		ExceptionDispatchInfo? exit = ExitFrame(graphContext, nodeContext);
+		(failure ?? exit)?.Throw();
 	}
 
 	/// <summary>
@@ -414,6 +422,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		}
 
 		ulong run = graphContext.RunStamp;
+		ExceptionDispatchInfo? failure = null;
 		graphContext.FinalizationDeferralCount++;
 
 		try
@@ -432,16 +441,22 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 				OutputPorts[eventPortIds[i]].EmitMessage(graphContext);
 			}
 		}
-		finally
+		catch (Exception exception)
 		{
-			// A run that ended along the way took its count with it, and the next one keeps its own. One still going
-			// completes once nothing is left running, even if an emission threw.
-			if (graphContext.RunStamp == run)
-			{
-				graphContext.FinalizationDeferralCount--;
-				graphContext.FinalizeIfIdle();
-			}
+			failure = ExceptionDispatchInfo.Capture(exception);
 		}
+
+		// A run that ended along the way took its count with it, and the next one keeps its own. One still going
+		// completes once nothing is left running, even if an emission threw, whose exception then propagates rather
+		// than the completion's.
+		if (graphContext.RunStamp == run)
+		{
+			graphContext.FinalizationDeferralCount--;
+			ExceptionDispatchInfo? completion = graphContext.FinalizeIfIdle();
+			failure ??= completion;
+		}
+
+		failure?.Throw();
 	}
 
 	/// <summary>
@@ -450,25 +465,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// <param name="graphContext">The graph's context.</param>
 	protected void DeactivateNode(GraphContext graphContext)
 	{
-		ulong run = graphContext.RunStamp;
-
-		// A subgraph that throws as it is disabled still lets the node finish deactivating, rather than leave it part
-		// way through and ignoring every start.
-		try
-		{
-			BeforeDisable(graphContext);
-
-			// OnDeactivate can end the graph, which deactivates everything this would have, and a graph started over
-			// from there has nodes of its own.
-			for (int i = 0; i < SubgraphPorts.Length && graphContext.RunStamp == run; i++)
-			{
-				SubgraphPorts[i].EmitDisableSubgraphMessage(graphContext);
-			}
-		}
-		finally
-		{
-			AfterDisable(graphContext);
-		}
+		Deactivate(graphContext)?.Throw();
 	}
 
 	/// <inheritdoc/>
@@ -522,16 +519,20 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		// A cleanup that throws has still ended the node: it can be started again rather than ignore every start for
 		// the rest of the run, and a graph it was the last one running in completes.
 		EnterFrame(graphContext, nodeContext);
+		ExceptionDispatchInfo? failure = null;
 
 		try
 		{
 			OnDeactivate(graphContext);
 		}
-		finally
+		catch (Exception exception)
 		{
-			nodeContext.Deactivating = false;
-			ExitFrame(graphContext, nodeContext);
+			failure = ExceptionDispatchInfo.Capture(exception);
 		}
+
+		nodeContext.Deactivating = false;
+		ExceptionDispatchInfo? exit = ExitFrame(graphContext, nodeContext);
+		(failure ?? exit)?.Throw();
 	}
 
 	// Counts the code running for an activation on its node and on the graph, so that a start of either waits for that
@@ -542,10 +543,13 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		graphContext.RunningFrames++;
 	}
 
-	private protected void ExitFrame(GraphContext graphContext, StateNodeContext nodeContext)
+	// Everything that waited for the code to return runs, even when some of it throws, and the first failure is handed
+	// back for the caller to rethrow unless its own code failed first, so what threw first is what propagates.
+	private protected ExceptionDispatchInfo? ExitFrame(GraphContext graphContext, StateNodeContext nodeContext)
 	{
 		nodeContext.RunningFrames--;
 		graphContext.RunningFrames--;
+		ExceptionDispatchInfo? restart = null;
 
 		// The start that waited for this activation's code follows once it has returned, unless the node's context went
 		// with its run in the meantime.
@@ -556,14 +560,23 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 			if (graphContext.HasNodeContext(NodeID)
 				&& graphContext.GetNodeContext<StateNodeContext>(NodeID) == nodeContext)
 			{
-				InputPorts[InputPort].ReceiveMessage(graphContext);
+				try
+				{
+					InputPorts[InputPort].ReceiveMessage(graphContext);
+				}
+				catch (Exception exception)
+				{
+					restart = ExceptionDispatchInfo.Capture(exception);
+				}
 			}
 		}
 
 		// A run whose nodes all ended while code was still running completes once it has returned, and a start of the
 		// graph that waited for that code follows.
-		graphContext.FinalizeIfIdle();
-		graphContext.RunPendingStart();
+		ExceptionDispatchInfo? completion = graphContext.FinalizeIfIdle();
+		ExceptionDispatchInfo? start = graphContext.RunPendingStart();
+
+		return restart ?? completion ?? start;
 	}
 
 	// A node that starts during a pass, restarted or ended and started again by one updated before it, would otherwise
@@ -584,6 +597,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	private void RunActivation(GraphContext graphContext, StateNodeContext nodeContext, bool restarting)
 	{
 		EnterFrame(graphContext, nodeContext);
+		ExceptionDispatchInfo? failure = null;
 
 		try
 		{
@@ -622,19 +636,18 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 				OnActivated(graphContext);
 			}
 		}
-		catch
+		catch (Exception exception)
 		{
 			// An activation that throws is over all the same: the node emits and ends as usual from then on, and what
 			// the activation deferred goes with it rather than being left for the next one.
 			nodeContext.Activating = false;
 			nodeContext.DeferredEmitMessageData.Clear();
 			nodeContext.DeferredDeactivationEventPortIds = null;
-			throw;
+			failure = ExceptionDispatchInfo.Capture(exception);
 		}
-		finally
-		{
-			ExitFrame(graphContext, nodeContext);
-		}
+
+		ExceptionDispatchInfo? exit = ExitFrame(graphContext, nodeContext);
+		(failure ?? exit)?.Throw();
 	}
 
 	private void ActivateNode(GraphContext graphContext)
@@ -643,6 +656,41 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		nodeContext.Active = true;
 		graphContext.ActiveStateNodes.Add(this);
 		OnActivate(graphContext);
+	}
+
+	// A subgraph that throws as it is disabled still lets the node finish deactivating, rather than leave it part way
+	// through and ignoring every start. What threw first is handed back.
+	private ExceptionDispatchInfo? Deactivate(GraphContext graphContext)
+	{
+		ulong run = graphContext.RunStamp;
+		ExceptionDispatchInfo? failure = null;
+
+		try
+		{
+			BeforeDisable(graphContext);
+
+			// OnDeactivate can end the graph, which deactivates everything this would have, and a graph started over
+			// from there has nodes of its own.
+			for (int i = 0; i < SubgraphPorts.Length && graphContext.RunStamp == run; i++)
+			{
+				SubgraphPorts[i].EmitDisableSubgraphMessage(graphContext);
+			}
+		}
+		catch (Exception exception)
+		{
+			failure = ExceptionDispatchInfo.Capture(exception);
+		}
+
+		try
+		{
+			AfterDisable(graphContext);
+		}
+		catch (Exception exception)
+		{
+			failure ??= ExceptionDispatchInfo.Capture(exception);
+		}
+
+		return failure;
 	}
 
 	// What was deferred belongs to the activation, so a node aborted or a graph stopped along the way drops the rest: a

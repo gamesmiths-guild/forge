@@ -229,16 +229,8 @@ public class GraphProcessor
 			failure ??= ExceptionDispatchInfo.Capture(exception);
 		}
 
-		try
-		{
-			GraphContext.RunPendingStart();
-		}
-		catch (Exception exception)
-		{
-			failure ??= ExceptionDispatchInfo.Capture(exception);
-		}
-
-		failure?.Throw();
+		ExceptionDispatchInfo? startFailure = GraphContext.RunPendingStart();
+		(failure ?? startFailure)?.Throw();
 	}
 
 	/// <summary>

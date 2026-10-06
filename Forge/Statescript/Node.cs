@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript.Ports;
 
@@ -166,8 +167,10 @@ public abstract class Node
 		}
 
 		ulong run = graphContext.RunStamp;
+		ExceptionDispatchInfo? failure = null;
 
-		// A disabling that throws further down still lets this node finish its own instead of leaving it half done.
+		// A disabling that throws further down still lets this node finish its own instead of leaving it half done, and
+		// it is what threw first that propagates.
 		try
 		{
 			BeforeDisable(graphContext);
@@ -179,10 +182,21 @@ public abstract class Node
 				OutputPorts[i].InternalEmitDisableSubgraphMessage(graphContext);
 			}
 		}
-		finally
+		catch (Exception exception)
+		{
+			failure = ExceptionDispatchInfo.Capture(exception);
+		}
+
+		try
 		{
 			AfterDisable(graphContext);
 		}
+		catch (Exception exception)
+		{
+			failure ??= ExceptionDispatchInfo.Capture(exception);
+		}
+
+		failure?.Throw();
 	}
 
 	/// <summary>

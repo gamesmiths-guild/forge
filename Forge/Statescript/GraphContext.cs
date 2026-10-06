@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Statescript;
@@ -465,23 +466,43 @@ public sealed class GraphContext
 	}
 
 	// A run is over once no state node is left active, but not while a message is still on its way to a connection that
-	// can start one, or while node code that can start one again is still running.
-	internal void FinalizeIfIdle()
+	// can start one, or while node code that can start one again is still running. This and the start below run outside
+	// code, and hand back what it threw for the caller to rethrow once it has finished up, unless it failed first.
+	internal ExceptionDispatchInfo? FinalizeIfIdle()
 	{
-		if (HasStarted && FinalizationDeferralCount == 0 && RunningFrames == 0 && ActiveStateNodes.Count == 0)
+		if (!HasStarted || FinalizationDeferralCount != 0 || RunningFrames != 0 || ActiveStateNodes.Count != 0)
+		{
+			return null;
+		}
+
+		try
 		{
 			Processor?.FinalizeGraph();
+			return null;
+		}
+		catch (Exception exception)
+		{
+			return ExceptionDispatchInfo.Capture(exception);
 		}
 	}
 
-	internal void RunPendingStart()
+	internal ExceptionDispatchInfo? RunPendingStart()
 	{
 		if (StartMustWait || PendingStart is not Action start)
 		{
-			return;
+			return null;
 		}
 
 		PendingStart = null;
-		start();
+
+		try
+		{
+			start();
+			return null;
+		}
+		catch (Exception exception)
+		{
+			return ExceptionDispatchInfo.Capture(exception);
+		}
 	}
 }

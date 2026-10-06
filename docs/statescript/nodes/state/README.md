@@ -27,7 +27,7 @@ State nodes **persist over time**. They activate when receiving a message, remai
 4. When internal logic completes → `OnDeactivate` emits, Subgraph ports send disable signals.
 5. If **Abort** receives a message while the node is active → `OnAbort` emits, then node deactivates normally, even if something reached from `OnAbort` throws. A node that is not running — never started, ended, or still deactivating — ignores it.
 
-**Deferred actions:** If activation logic triggers immediate deactivation (e.g., a timer with duration 0), the deactivation is **deferred** until activation completes. This guarantees that OnActivate and Subgraph ports fire before any deactivation processing begins. An activation that throws drops whatever it deferred, and the node stays active and emits and ends as usual from then on.
+**Deferred actions:** If activation logic triggers immediate deactivation (e.g., a timer with duration 0), the deactivation is **deferred** until activation completes. This guarantees that OnActivate and Subgraph ports fire before any deactivation processing begins. An activation that throws drops whatever it deferred, and the node stays active and emits and ends as usual from then on. When more than one step of a node's lifecycle throws — its cleanup, then the graph's completion — the rest still runs and the first exception is the one that propagates.
 
 ## Retriggers
 
