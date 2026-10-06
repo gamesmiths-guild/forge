@@ -86,7 +86,7 @@ Once the signal is sent, it cascades through the subgraph:
 2. **Action and condition nodes** that previously executed receive the signal and propagate it further through their output ports, but take no other action (they have no persistent state to clean up).
 3. **Already-inactive state nodes** are safely skipped. The signal only affects nodes that are currently active.
 
-This cascade ensures complete cleanup regardless of nesting depth.
+This cascade ensures complete cleanup regardless of nesting depth. A node whose teardown throws along the way still keeps the signal going to the rest, so nothing is left running under what was disabled, and the first exception propagates once the cascade is done.
 
 ### The Entry Node's Subgraph Port
 

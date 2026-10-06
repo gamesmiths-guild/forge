@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
+
 namespace Gamesmiths.Forge.Statescript.Ports;
 
 /// <summary>
@@ -23,11 +25,22 @@ public class SubgraphPort : OutputPort
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
 		ulong run = graphContext.RunStamp;
+		ExceptionDispatchInfo? failure = null;
 
-		// A connection whose disabling ends the graph ends the rest of them too.
+		// A connection whose disabling ends the graph ends the rest of them too. One whose disabling throws still lets
+		// the rest be disabled, so none is left running under what ended, and what threw first propagates after.
 		for (int i = 0; i < ports.Length && graphContext.RunStamp == run; i++)
 		{
-			ports[i].ReceiveDisableSubgraphMessage(graphContext);
+			try
+			{
+				ports[i].ReceiveDisableSubgraphMessage(graphContext);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
+
+		failure?.Throw();
 	}
 }

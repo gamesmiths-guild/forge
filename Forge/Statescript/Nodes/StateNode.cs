@@ -658,8 +658,9 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		OnActivate(graphContext);
 	}
 
-	// A subgraph that throws as it is disabled still lets the node finish deactivating, rather than leave it part way
-	// through and ignoring every start. What threw first is handed back.
+	// A deactivation that throws anywhere still disables the node's whole subgraph, so nothing is left running under it,
+	// and lets the node finish deactivating rather than leave it part way through and ignoring every start. What threw
+	// first is handed back.
 	private ExceptionDispatchInfo? Deactivate(GraphContext graphContext)
 	{
 		ulong run = graphContext.RunStamp;
@@ -668,17 +669,24 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		try
 		{
 			BeforeDisable(graphContext);
-
-			// OnDeactivate can end the graph, which deactivates everything this would have, and a graph started over
-			// from there has nodes of its own.
-			for (int i = 0; i < SubgraphPorts.Length && graphContext.RunStamp == run; i++)
-			{
-				SubgraphPorts[i].EmitDisableSubgraphMessage(graphContext);
-			}
 		}
 		catch (Exception exception)
 		{
 			failure = ExceptionDispatchInfo.Capture(exception);
+		}
+
+		// OnDeactivate can end the graph, which deactivates everything this would have, and a graph started over from
+		// there has nodes of its own.
+		for (int i = 0; i < SubgraphPorts.Length && graphContext.RunStamp == run; i++)
+		{
+			try
+			{
+				SubgraphPorts[i].EmitDisableSubgraphMessage(graphContext);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 
 		try

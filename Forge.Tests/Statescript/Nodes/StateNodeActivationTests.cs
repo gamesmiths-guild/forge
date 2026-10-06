@@ -1040,6 +1040,59 @@ public class StateNodeActivationTests
 
 	[Theory]
 	[Trait("Graph", "Activation")]
+	[InlineData("sibling")]
+	[InlineData("handler")]
+	public void A_node_ended_past_a_throw_leaves_nothing_running_under_it(string throwsFrom)
+	{
+		var graph = new Graph();
+		var keepAlive = new TrackingStateNode();
+		var parent = new TrackingStateNode();
+		var child = new TrackingStateNode();
+		graph.AddNode(keepAlive);
+		graph.AddNode(parent);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			parent.InputPorts[TrackingStateNode.InputPort]));
+
+		// Either a child before the other one fails as it cleans up, or what the parent's own OnDeactivate reaches does.
+		if (throwsFrom == "sibling")
+		{
+			var sibling = new ThrowsOnDeactivateOnceNode();
+			graph.AddNode(sibling);
+			graph.AddConnection(new Connection(
+				parent.OutputPorts[TrackingStateNode.SubgraphPort],
+				sibling.InputPorts[ThrowsOnDeactivateOnceNode.InputPort]));
+		}
+		else
+		{
+			var thrower = new ThrowsOnExecutionNode();
+			graph.AddNode(thrower);
+			graph.AddConnection(new Connection(
+				parent.OutputPorts[TrackingStateNode.OnDeactivatePort],
+				thrower.InputPorts[ActionNode.InputPort]));
+		}
+
+		graph.AddNode(child);
+		graph.AddConnection(new Connection(
+			parent.OutputPorts[TrackingStateNode.SubgraphPort],
+			child.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+
+		processor.GraphContext
+			.Invoking(x => parent.InputPorts[TrackingStateNode.AbortPort].ReceiveMessage(x))
+			.Should().Throw<Exception>();
+
+		IsActive(processor, parent).Should().BeFalse();
+		IsActive(processor, child).Should().BeFalse("nothing is left running under a node that has ended");
+	}
+
+	[Theory]
+	[Trait("Graph", "Activation")]
 	[InlineData("parent")]
 	[InlineData("abort")]
 	public void A_deactivation_whose_handler_and_cleanup_both_throw_reports_the_handler_failure(string endedBy)

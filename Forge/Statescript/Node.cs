@@ -169,22 +169,29 @@ public abstract class Node
 		ulong run = graphContext.RunStamp;
 		ExceptionDispatchInfo? failure = null;
 
-		// A disabling that throws further down still lets this node finish its own instead of leaving it half done, and
-		// it is what threw first that propagates.
+		// A disabling that throws anywhere still disables everything below this node, so nothing is left running under
+		// it, and lets this node finish its own instead of leaving it half done. What threw first propagates after.
 		try
 		{
 			BeforeDisable(graphContext);
-
-			// A state node's OnDeactivate can end the graph, and the rest of this disabling belongs to the run that
-			// ended: a graph started over from there has nodes of its own.
-			for (int i = 0; i < OutputPorts.Length && graphContext.RunStamp == run; i++)
-			{
-				OutputPorts[i].InternalEmitDisableSubgraphMessage(graphContext);
-			}
 		}
 		catch (Exception exception)
 		{
 			failure = ExceptionDispatchInfo.Capture(exception);
+		}
+
+		// A state node's OnDeactivate can end the graph, and the rest of this disabling belongs to the run that ended:
+		// a graph started over from there has nodes of its own.
+		for (int i = 0; i < OutputPorts.Length && graphContext.RunStamp == run; i++)
+		{
+			try
+			{
+				OutputPorts[i].InternalEmitDisableSubgraphMessage(graphContext);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 
 		try
