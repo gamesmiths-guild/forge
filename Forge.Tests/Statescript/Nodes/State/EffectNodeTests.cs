@@ -751,6 +751,25 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 	[Fact]
 	[Trait("Graph", "EffectNode")]
+	public void An_effect_whose_removal_throws_leaves_the_rest_removed()
+	{
+		TestEntity target = CreateTestEntity();
+		var counter = new ActiveEffectCounterComponent();
+		EffectData later = CreateFlatEffectData("Later", "TestAttributeSet.Attribute2", 10, DurationType.Infinite);
+		GraphProcessor processor =
+			CreateProcessor(target, CreateTrackingEffectData("Failing", counter), later);
+		processor.StartGraph();
+
+		// The first effect fails as it is removed.
+		counter.Removed = () => throw new NotSupportedException("The removal failed.");
+
+		processor.Invoking(x => x.StopGraph()).Should().Throw<NotSupportedException>();
+
+		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [2, 2, 0, 0]);
+	}
+
+	[Fact]
+	[Trait("Graph", "EffectNode")]
 	public void A_graph_started_over_as_a_stacking_effect_applies_keeps_the_effect_of_its_new_run()
 	{
 		TestEntity target = CreateTestEntity();

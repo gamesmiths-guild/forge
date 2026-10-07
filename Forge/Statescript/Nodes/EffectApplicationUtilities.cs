@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Tags;
@@ -97,8 +98,12 @@ internal static class EffectApplicationUtilities
 		}
 	}
 
+	// A removal that throws still lets the rest be removed, rather than leave them applied with nothing left tracking
+	// them. What threw first propagates after.
 	public static void RemoveEffects(IList<ActiveEffectHandle> activeHandles)
 	{
+		ExceptionDispatchInfo? failure = null;
+
 		for (int i = 0; i < activeHandles.Count; i++)
 		{
 			ActiveEffectHandle handle = activeHandles[i];
@@ -108,10 +113,18 @@ internal static class EffectApplicationUtilities
 				continue;
 			}
 
-			handle.ActiveEffect.EffectEvaluatedData.Target.EffectsManager.RemoveEffect(handle);
+			try
+			{
+				handle.ActiveEffect.EffectEvaluatedData.Target.EffectsManager.RemoveEffect(handle);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 
 		activeHandles.Clear();
+		failure?.Throw();
 	}
 
 	public static bool RetainActiveEffects(IList<ActiveEffectHandle> activeHandles)

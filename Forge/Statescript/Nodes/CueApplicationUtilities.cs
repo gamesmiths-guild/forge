@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Tags;
@@ -85,13 +86,27 @@ internal static class CueApplicationUtilities
 			appliedCues: null);
 	}
 
+	// A handler that throws as its cue is removed still lets the rest be removed, rather than leave them applied with
+	// nothing left tracking them. What threw first propagates after.
 	public static void RemoveCues(IReadOnlyList<AppliedCue> appliedCues, bool interrupted)
 	{
+		ExceptionDispatchInfo? failure = null;
+
 		for (int i = 0; i < appliedCues.Count; i++)
 		{
 			AppliedCue applied = appliedCues[i];
-			applied.Target.CuesManager.RemoveCue(applied.Tag, applied.Target, interrupted);
+
+			try
+			{
+				applied.Target.CuesManager.RemoveCue(applied.Tag, applied.Target, interrupted);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
+
+		failure?.Throw();
 	}
 
 	private static void FireCues(

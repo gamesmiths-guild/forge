@@ -255,6 +255,22 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 	[Fact]
 	[Trait("Graph", "CueNode")]
+	public void A_cue_whose_removal_throws_leaves_the_rest_removed()
+	{
+		(GraphProcessor processor, RecordingCueHandler firstHandler, RecordingCueHandler secondHandler) =
+			BuildTwoCueGraph();
+		processor.StartGraph();
+
+		// The first cue's handler fails as it is removed.
+		firstHandler.Removed = () => throw new NotSupportedException("The handler failed.");
+
+		processor.Invoking(x => x.StopGraph()).Should().Throw<NotSupportedException>();
+
+		secondHandler.IsApplied.Should().BeFalse("every cue the node applied is still removed");
+	}
+
+	[Fact]
+	[Trait("Graph", "CueNode")]
 	public void A_cue_node_ended_and_started_again_as_its_cue_applies_keeps_the_cues_of_its_new_activation()
 	{
 		(GraphProcessor processor, RecordingCueHandler firstHandler, RecordingCueHandler secondHandler) =
