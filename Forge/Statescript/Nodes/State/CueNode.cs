@@ -92,7 +92,7 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 		// holds has then already run, before it held that cue.
 		if (!nodeContext.Active)
 		{
-			CueApplicationUtilities.RemoveCues(nodeContext.AppliedCues, nodeContext.WasAborted);
+			RemoveAppliedCues(nodeContext, nodeContext.WasAborted);
 		}
 	}
 
@@ -102,8 +102,7 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 		CueNodeContext nodeContext = graphContext.GetNodeContext<CueNodeContext>(NodeID);
 
 		// Natural shutdown (subgraph end / graph stop) is not an interruption; an Abort-port deactivation is.
-		CueApplicationUtilities.RemoveCues(nodeContext.AppliedCues, nodeContext.WasAborted);
-		nodeContext.AppliedCues.Clear();
+		RemoveAppliedCues(nodeContext, nodeContext.WasAborted);
 	}
 
 	/// <inheritdoc/>
@@ -111,11 +110,7 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 	{
 		CueNodeContext nodeContext = graphContext.GetNodeContext<CueNodeContext>(NodeID);
 
-		// A handler's removal can end this node or the graph - it can cancel the ability the graph runs for - and the
-		// deactivation that follows must find nothing left to remove a second time.
-		AppliedCue[] applied = [.. nodeContext.AppliedCues];
-		nodeContext.AppliedCues.Clear();
-		CueApplicationUtilities.RemoveCues(applied, interrupted: true);
+		RemoveAppliedCues(nodeContext, interrupted: true);
 
 		if (!nodeContext.Active)
 		{
@@ -123,5 +118,15 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 		}
 
 		OnActivate(graphContext);
+	}
+
+	// The node stops tracking its cues before removing them: a handler's removal can end this node or the graph - it
+	// can cancel the ability the graph runs for - and what follows must find nothing left to remove a second time, nor
+	// keep targets it no longer holds, even when a handler throws.
+	private static void RemoveAppliedCues(CueNodeContext nodeContext, bool interrupted)
+	{
+		AppliedCue[] applied = [.. nodeContext.AppliedCues];
+		nodeContext.AppliedCues.Clear();
+		CueApplicationUtilities.RemoveCues(applied, interrupted);
 	}
 }
