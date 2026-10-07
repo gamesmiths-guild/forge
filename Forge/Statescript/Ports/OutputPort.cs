@@ -136,7 +136,15 @@ public class OutputPort : Port
 			}
 		}
 
-		OnEmitDisableSubgraphMessage?.Invoke(PortID);
+		try
+		{
+			OnEmitDisableSubgraphMessage?.Invoke(PortID);
+		}
+		catch (Exception exception)
+		{
+			failure ??= ExceptionDispatchInfo.Capture(exception);
+		}
+
 		failure?.Throw();
 	}
 }
