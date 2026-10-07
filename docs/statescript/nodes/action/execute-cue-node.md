@@ -40,9 +40,9 @@ This node has no output variables, cues are addressed entirely by tag.
 
 1. The node resolves the **Cue Tags** input as a single `Tag` or an array of tags.
 2. It resolves the **Target** input as a single `IForgeEntity` or an array of entities.
-3. It fires every cue tag on every target, forming a full `cueTag[] x target[]` matrix. Each cue is executed through that target's `IForgeEntity.CuesManager`.
+3. It fires every cue tag on every target, forming a full `cueTag[] x target[]` matrix. Each cue is executed through that target's `IForgeEntity.CuesManager`. A handler that ends the graph — cancelling the ability the graph runs for — leaves the rest unfired.
 4. The optional **Magnitude**, **Normalized Magnitude**, **Source**, and **Custom Parameters** inputs are resolved once and shared across the matrix. When all are unbound, the cues are executed with `null` parameters; otherwise a `CueParameters` is built from the resolved values (unbound fields default to `0` / `0` / `null` / `null`).
-5. The output port emits after all cues are fired.
+5. The output port emits after all cues are fired, unless one of them ended the graph.
 
 ## Usage
 

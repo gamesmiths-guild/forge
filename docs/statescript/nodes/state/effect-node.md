@@ -54,7 +54,7 @@ new EffectNode(restartOnRetrigger = false)
 ## Behavior
 
 1. On activation, the node resolves the effect input and the target input.
-2. It applies every resolved effect to every resolved target, forming a full `effect[] x target[]` cross-product.
+2. It applies every resolved effect to every resolved target, forming a full `effect[] x target[]` cross-product. An effect that ends the node or the graph as it applies — cancelling the ability the graph runs for — leaves the rest unapplied and has what the node applied removed again.
 3. Level and ownership are baked into each resolved `Effect`; configure them on the resolver that produces the effect (typically [EffectFromDataResolver](../../resolvers/effect-from-data-resolver.md)) rather than on the node.
 4. If the **Context Data** input is bound, it is resolved once and passed as the `EffectApplicationContext` for every application, so custom calculators and executions can read it through `EffectEvaluatedData.TryGetContextData<TData>`. When unbound, effects are applied without context data. See [EffectContextDataResolver](../../resolvers/effect-context-data-resolver.md).
 5. Any non-instant applications that return an `ActiveEffectHandle` are stored in `EffectNodeContext`. If the **Active Effect** output is bound, the produced handle(s) are also written to that variable on activation (scalar variable receives the single handle, or `null` when instant; array variable receives the compact list of produced handles).

@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
+
 namespace Gamesmiths.Forge.Statescript.Ports;
 
 /// <summary>
@@ -79,24 +81,70 @@ public class OutputPort : Port
 	internal void EmitMessage(GraphContext graphContext)
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
+		ulong run = graphContext.RunStamp;
+		ExceptionDispatchInfo? failure = null;
 
-		for (int i = 0; i < ports.Length; i++)
+		// The run cannot finish part way through a message, since a connection it has yet to reach can start a node
+		// that keeps it going. A connection that ends the graph - an Exit, an ability ended on the way - ends the
+		// delivery with it, rather than reaching the rest in a graph that has been torn down or started over.
+		graphContext.FinalizationDeferralCount++;
+
+		try
 		{
-			ports[i].ReceiveMessage(graphContext);
+			for (int i = 0; i < ports.Length && graphContext.RunStamp == run; i++)
+			{
+				ports[i].ReceiveMessage(graphContext);
+			}
+
+			OnEmitMessage?.Invoke(PortID);
+		}
+		catch (Exception exception)
+		{
+			failure = ExceptionDispatchInfo.Capture(exception);
 		}
 
-		OnEmitMessage?.Invoke(PortID);
+		// A run that ended along the way took its count with it, and the next one keeps its own. One still going
+		// completes once nothing is left running, even if a delivery threw, whose exception then propagates rather than
+		// the completion's.
+		if (graphContext.RunStamp == run)
+		{
+			graphContext.FinalizationDeferralCount--;
+			ExceptionDispatchInfo? completion = graphContext.FinalizeIfIdle();
+			failure ??= completion;
+		}
+
+		failure?.Throw();
 	}
 
 	internal void InternalEmitDisableSubgraphMessage(GraphContext graphContext)
 	{
 		InputPort[] ports = FinalizedConnectedPorts!;
+		ulong run = graphContext.RunStamp;
+		ExceptionDispatchInfo? failure = null;
 
-		for (int i = 0; i < ports.Length; i++)
+		// A connection whose disabling ends the graph ends the rest of them too. One whose disabling throws still lets
+		// the rest be disabled, and what threw first propagates after.
+		for (int i = 0; i < ports.Length && graphContext.RunStamp == run; i++)
 		{
-			ports[i].ReceiveDisableSubgraphMessage(graphContext);
+			try
+			{
+				ports[i].ReceiveDisableSubgraphMessage(graphContext);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 
-		OnEmitDisableSubgraphMessage?.Invoke(PortID);
+		try
+		{
+			OnEmitDisableSubgraphMessage?.Invoke(PortID);
+		}
+		catch (Exception exception)
+		{
+			failure ??= ExceptionDispatchInfo.Capture(exception);
+		}
+
+		failure?.Throw();
 	}
 }

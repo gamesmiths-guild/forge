@@ -85,7 +85,15 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 			InputProperties[NormalizedMagnitudeInput].BoundName,
 			InputProperties[SourceInput].BoundName,
 			InputProperties[CustomParametersInput].BoundName,
-			nodeContext.AppliedCues);
+			nodeContext.AppliedCues,
+			nodeContext);
+
+		// A handler can end this node or the graph as its cue applies, and the deactivation that removes what the node
+		// holds has then already run, before it held that cue.
+		if (!nodeContext.Active)
+		{
+			RemoveAppliedCues(nodeContext, nodeContext.WasAborted);
+		}
 	}
 
 	/// <inheritdoc/>
@@ -94,14 +102,31 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 		CueNodeContext nodeContext = graphContext.GetNodeContext<CueNodeContext>(NodeID);
 
 		// Natural shutdown (subgraph end / graph stop) is not an interruption; an Abort-port deactivation is.
-		CueApplicationUtilities.RemoveCues(nodeContext.AppliedCues, nodeContext.WasAborted);
+		RemoveAppliedCues(nodeContext, nodeContext.WasAborted);
 	}
 
 	/// <inheritdoc/>
 	protected override void OnRestart(GraphContext graphContext)
 	{
 		CueNodeContext nodeContext = graphContext.GetNodeContext<CueNodeContext>(NodeID);
-		CueApplicationUtilities.RemoveCues(nodeContext.AppliedCues, interrupted: true);
+
+		RemoveAppliedCues(nodeContext, interrupted: true);
+
+		if (!nodeContext.Active)
+		{
+			return;
+		}
+
 		OnActivate(graphContext);
+	}
+
+	// The node stops tracking its cues before removing them: a handler's removal can end this node or the graph - it
+	// can cancel the ability the graph runs for - and what follows must find nothing left to remove a second time, nor
+	// keep targets it no longer holds, even when a handler throws.
+	private static void RemoveAppliedCues(CueNodeContext nodeContext, bool interrupted)
+	{
+		AppliedCue[] applied = [.. nodeContext.AppliedCues];
+		nodeContext.AppliedCues.Clear();
+		CueApplicationUtilities.RemoveCues(applied, interrupted);
 	}
 }

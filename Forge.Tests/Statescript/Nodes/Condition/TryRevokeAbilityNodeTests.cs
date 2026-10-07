@@ -156,8 +156,9 @@ public class TryRevokeAbilityNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : 
 	{
 		var owner = new TestEntity(_tagsManager, _cuesManager);
 
-		// The behavior graph revokes the very ability running it, so the node tears down its own execution context
-		// mid-message. The condition must still resolve without throwing, exactly like CancelAbility does.
+		// The behavior graph revokes the very ability running it, so the node stops its own graph mid-message. The
+		// revoke must still go through without throwing, and the stopped graph goes no further, exactly like
+		// CancelAbility.
 		var behaviorGraph = new Graph();
 
 		var revokeNode = new TryRevokeAbilityNode();
@@ -185,7 +186,7 @@ public class TryRevokeAbilityNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : 
 
 		owner.Abilities.GrantedAbilities.Should().BeEmpty();
 		handle.IsValid.Should().BeFalse();
-		onTrue.ExecutionCount.Should().Be(1);
+		onTrue.ExecutionCount.Should().Be(0, "the graph stopped with the ability it revoked");
 		onFalse.ExecutionCount.Should().Be(0);
 	}
 

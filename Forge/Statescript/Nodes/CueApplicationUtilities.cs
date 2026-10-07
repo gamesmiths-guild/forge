@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Tags;
@@ -48,7 +49,8 @@ internal static class CueApplicationUtilities
 		StringKey normalizedMagnitudeInputName,
 		StringKey sourceInputName,
 		StringKey customParametersInputName,
-		ICollection<AppliedCue>? appliedCues = null)
+		ICollection<AppliedCue>? appliedCues = null,
+		StateNodeContext? nodeContext = null)
 	{
 		FireCues(
 			graphContext,
@@ -59,7 +61,8 @@ internal static class CueApplicationUtilities
 			sourceInputName,
 			customParametersInputName,
 			CueOperation.Apply,
-			appliedCues);
+			appliedCues,
+			nodeContext);
 	}
 
 	public static void UpdateCues(
@@ -83,13 +86,27 @@ internal static class CueApplicationUtilities
 			appliedCues: null);
 	}
 
+	// A handler that throws as its cue is removed still lets the rest be removed, rather than leave them applied with
+	// nothing left tracking them. What threw first propagates after.
 	public static void RemoveCues(IReadOnlyList<AppliedCue> appliedCues, bool interrupted)
 	{
+		ExceptionDispatchInfo? failure = null;
+
 		for (int i = 0; i < appliedCues.Count; i++)
 		{
 			AppliedCue applied = appliedCues[i];
-			applied.Target.CuesManager.RemoveCue(applied.Tag, applied.Target, interrupted);
+
+			try
+			{
+				applied.Target.CuesManager.RemoveCue(applied.Tag, applied.Target, interrupted);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
+
+		failure?.Throw();
 	}
 
 	private static void FireCues(
@@ -101,7 +118,8 @@ internal static class CueApplicationUtilities
 		StringKey sourceInputName,
 		StringKey customParametersInputName,
 		CueOperation operation,
-		ICollection<AppliedCue>? appliedCues)
+		ICollection<AppliedCue>? appliedCues,
+		StateNodeContext? nodeContext = null)
 	{
 		if (!ResolveCueTags(graphContext, cueTagInputName, out IReadOnlyList<Tag> cueTags)
 			|| !ResolveTargets(graphContext, targetInputName, out IReadOnlyList<IForgeEntity> targets))
@@ -116,6 +134,7 @@ internal static class CueApplicationUtilities
 			normalizedMagnitudeInputName,
 			sourceInputName,
 			customParametersInputName);
+		ulong run = graphContext.RunStamp;
 
 		for (int targetIndex = 0; targetIndex < targets.Count; targetIndex++)
 		{
@@ -123,6 +142,13 @@ internal static class CueApplicationUtilities
 
 			for (int tagIndex = 0; tagIndex < cueTags.Count; tagIndex++)
 			{
+				// A handler can end the graph - cancelling the ability it runs for - or the state node firing its cue,
+				// and the rest are then not fired for a graph or a node that is gone.
+				if (graphContext.RunStamp != run || nodeContext?.Active == false)
+				{
+					return;
+				}
+
 				Tag cueTag = cueTags[tagIndex];
 
 				switch (operation)

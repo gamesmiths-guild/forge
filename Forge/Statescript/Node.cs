@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript.Ports;
 
@@ -165,14 +166,44 @@ public abstract class Node
 			graphContext.InternalNodeActivationStatus[NodeID] = false;
 		}
 
-		BeforeDisable(graphContext);
+		ulong run = graphContext.RunStamp;
+		ExceptionDispatchInfo? failure = null;
 
-		foreach (OutputPort outputPort in OutputPorts)
+		// A disabling that throws anywhere still disables everything below this node, so nothing is left running under
+		// it, and lets this node finish its own instead of leaving it half done. What threw first propagates after.
+		try
 		{
-			outputPort.InternalEmitDisableSubgraphMessage(graphContext);
+			BeforeDisable(graphContext);
+		}
+		catch (Exception exception)
+		{
+			failure = ExceptionDispatchInfo.Capture(exception);
 		}
 
-		AfterDisable(graphContext);
+		// A state node's OnDeactivate can end the graph, and the rest of this disabling belongs to the run that ended:
+		// a graph started over from there has nodes of its own.
+		for (int i = 0; i < OutputPorts.Length && graphContext.RunStamp == run; i++)
+		{
+			try
+			{
+				OutputPorts[i].InternalEmitDisableSubgraphMessage(graphContext);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		try
+		{
+			AfterDisable(graphContext);
+		}
+		catch (Exception exception)
+		{
+			failure ??= ExceptionDispatchInfo.Capture(exception);
+		}
+
+		failure?.Throw();
 	}
 
 	/// <summary>
@@ -280,9 +311,12 @@ public abstract class Node
 	/// <param name="portIds">The IDs of the output ports to emit the message from.</param>
 	protected virtual void EmitMessage(GraphContext graphContext, params int[] portIds)
 	{
-		foreach (int portId in portIds)
+		ulong run = graphContext.RunStamp;
+
+		// A port whose message ends the graph ends the ones after it too.
+		for (int i = 0; i < portIds.Length && graphContext.RunStamp == run; i++)
 		{
-			OutputPorts[portId].EmitMessage(graphContext);
+			OutputPorts[portIds[i]].EmitMessage(graphContext);
 		}
 	}
 

@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Tags;
@@ -13,7 +14,8 @@ internal static class EffectApplicationUtilities
 		StringKey effectInputName,
 		StringKey entityInputName,
 		ICollection<ActiveEffectHandle>? activeHandles = null,
-		StringKey contextDataInputName = default)
+		StringKey contextDataInputName = default,
+		StateNodeContext? nodeContext = null)
 	{
 		if (!TryResolveEffects(graphContext, effectInputName, out IReadOnlyList<Effect> effects)
 			|| !TryResolveEntities(graphContext, entityInputName, out IReadOnlyList<IForgeEntity> entities))
@@ -23,6 +25,7 @@ internal static class EffectApplicationUtilities
 
 		// Resolved once per node execution and shared across the whole effect x target cross-product.
 		EffectApplicationContext? applicationContext = ResolveContextData(graphContext, contextDataInputName);
+		ulong run = graphContext.RunStamp;
 
 		for (int entityIndex = 0; entityIndex < entities.Count; entityIndex++)
 		{
@@ -30,6 +33,13 @@ internal static class EffectApplicationUtilities
 
 			for (int effectIndex = 0; effectIndex < effects.Count; effectIndex++)
 			{
+				// An effect can end the graph as it applies - cancelling the ability it runs for - or the state node
+				// applying it, and the rest are then not applied for a graph or a node that is gone.
+				if (graphContext.RunStamp != run || nodeContext?.Active == false)
+				{
+					return;
+				}
+
 				// applicationContext is null when no context-data input is bound; ApplyEffectInternal handles both
 				// cases.
 				ActiveEffectHandle? handle =
@@ -88,8 +98,12 @@ internal static class EffectApplicationUtilities
 		}
 	}
 
+	// A removal that throws still lets the rest be removed, rather than leave them applied with nothing left tracking
+	// them. What threw first propagates after.
 	public static void RemoveEffects(IList<ActiveEffectHandle> activeHandles)
 	{
+		ExceptionDispatchInfo? failure = null;
+
 		for (int i = 0; i < activeHandles.Count; i++)
 		{
 			ActiveEffectHandle handle = activeHandles[i];
@@ -99,10 +113,18 @@ internal static class EffectApplicationUtilities
 				continue;
 			}
 
-			handle.ActiveEffect.EffectEvaluatedData.Target.EffectsManager.RemoveEffect(handle);
+			try
+			{
+				handle.ActiveEffect.EffectEvaluatedData.Target.EffectsManager.RemoveEffect(handle);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 
 		activeHandles.Clear();
+		failure?.Throw();
 	}
 
 	public static bool RetainActiveEffects(IList<ActiveEffectHandle> activeHandles)

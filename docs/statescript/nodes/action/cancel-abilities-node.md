@@ -19,7 +19,7 @@ Cancels active abilities on an entity, selected by the ability tags they carry. 
 
 | Index | Name | Type | Description |
 |-------|------|------|-------------|
-| 0 | Output | Event | Emits after the cancel. |
+| 0 | Output | Event | Emits after the cancel, unless it canceled the ability running this graph. |
 
 ## Parameters
 

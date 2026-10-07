@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Statescript.Ports;
 
 namespace Gamesmiths.Forge.Statescript.Nodes;
@@ -47,7 +48,29 @@ public abstract class ActionNode : Node
 	/// <inheritdoc/>
 	protected override void HandleMessage(InputPort receiverPort, GraphContext graphContext)
 	{
-		Execute(graphContext);
-		OutputPorts[OutputPort].EmitMessage(graphContext);
+		ulong run = graphContext.RunStamp;
+		ExceptionDispatchInfo? failure = null;
+
+		// Counted as running, so a graph the action ends and starts over waits for it to return rather than have what
+		// it does next land on the new run.
+		graphContext.RunningFrames++;
+
+		try
+		{
+			Execute(graphContext);
+		}
+		catch (Exception exception)
+		{
+			failure = ExceptionDispatchInfo.Capture(exception);
+		}
+
+		ExceptionDispatchInfo? leave = graphContext.LeaveFrame();
+		(failure ?? leave)?.Throw();
+
+		// An action can end the graph - cancelling the ability it runs for - and then leads nowhere.
+		if (graphContext.RunStamp == run)
+		{
+			OutputPorts[OutputPort].EmitMessage(graphContext);
+		}
 	}
 }

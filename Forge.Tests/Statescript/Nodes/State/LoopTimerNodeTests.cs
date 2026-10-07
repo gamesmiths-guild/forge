@@ -111,6 +111,34 @@ public class LoopTimerNodeTests
 
 	[Fact]
 	[Trait("Graph", "LoopTimer")]
+	public void Loop_timer_stops_iterating_when_an_interval_handler_starts_the_graph_over()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("interval", 1.0);
+
+		LoopTimerNode loopTimer = CreateLoopTimer(graph, bindLoopCount: false);
+		(TrackingActionNode onInterval, _) = ConnectTrackers(graph, loopTimer);
+
+		var stop = new StopsGraphActionNode();
+		graph.AddNode(stop);
+		graph.AddConnection(new Connection(
+			onInterval.OutputPorts[ActionNode.OutputPort],
+			stop.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		stop.Processor = processor;
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+
+		// Three intervals elapse at once, but the first one starts the graph over: the rest belonged to the old run.
+		processor.UpdateGraph(3.5);
+
+		onInterval.ExecutionCount.Should().Be(1);
+		processor.GraphContext.IsActive.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "LoopTimer")]
 	public void A_retriggered_loop_timer_keeps_its_cadence_by_default()
 	{
 		var graph = new Graph();

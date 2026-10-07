@@ -63,7 +63,7 @@ Handles come from the **Ability** output of a [GrantAbilityPermanentlyNode](../a
 
 **False** means the entity had nothing to revoke — no such grant, or none of the kind this node removes. That is precisely what a respec-and-refund flow needs to know, and **a resolver cannot answer it**: [GetAbilityHandleResolver](../../resolvers/get-ability-handle-resolver.md) tells you the ability is granted, not whether it holds a *permanent* grant as opposed to one an item's effect is providing. Branching on this node's result is the only way to distinguish them.
 
-A graph may revoke the ability driving it. The node tears down its own execution context mid-message and the condition still resolves, exactly like [CancelAbilityNode](../action/cancel-ability-node.md).
+A graph may revoke the ability driving it. The revoke goes through, but it stops the graph along with the ability, so neither port emits, exactly like a [CancelAbilityNode](../action/cancel-ability-node.md) canceling it.
 
 > **`AllGrants` orphans the grant, it does not disable what was granting it.** The effect application that was providing the ability keeps its now-invalid handle, so **that application** goes inert with respect to it: its later removal and inhibition requests become no-ops, and it will not restore the ability if it is un-inhibited later. Applying the effect again does grant it afresh, so re-equipping the item that provides it brings the ability back. To suppress an ability reversibly *without* orphaning its grants, inhibit instead with a [BlockAbilityTagsEffectComponent](../../../effects/components/block-ability-tags-effect-component.md).
 

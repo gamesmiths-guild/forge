@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript.Ports;
 using Gamesmiths.Forge.Tags;
@@ -127,27 +128,43 @@ public class TagListenerNode : StateNode<TagListenerNodeContext>
 
 		TagListenerNodeContext nodeContext = graphContext.GetNodeContext<TagListenerNodeContext>(NodeID);
 
-		if (!nodeContext.Active)
-		{
-			return;
-		}
+		// Counted as running for this activation, so a listener aborted and started again from a report starts once the
+		// rest of the change has been gone through.
+		EnterFrame(graphContext, nodeContext);
+		ExceptionDispatchInfo? failure = null;
 
-		// Snapshot the watched tags to allow presence updates while iterating.
-		foreach (Tag watchedTag in nodeContext.LastPresence.Keys.ToArray())
+		try
 		{
-			bool isPresent = allTags.HasTag(watchedTag);
-			bool wasPresent = nodeContext.LastPresence[watchedTag];
-
-			if (isPresent == wasPresent)
+			// Snapshot the watched tags to allow presence updates while iterating. A report can end this node or the
+			// graph, which clears what it watches, so each tag checks the node is still listening.
+			foreach (Tag watchedTag in nodeContext.LastPresence.Keys.ToArray())
 			{
-				continue;
+				if (!nodeContext.Active)
+				{
+					break;
+				}
+
+				bool isPresent = allTags.HasTag(watchedTag);
+				bool wasPresent = nodeContext.LastPresence[watchedTag];
+
+				if (isPresent == wasPresent)
+				{
+					continue;
+				}
+
+				nodeContext.LastPresence[watchedTag] = isPresent;
+
+				WriteTagOutput(graphContext, watchedTag);
+				OutputPorts[isPresent ? OnTagAddedPort : OnTagRemovedPort].EmitMessage(graphContext);
 			}
-
-			nodeContext.LastPresence[watchedTag] = isPresent;
-
-			WriteTagOutput(graphContext, watchedTag);
-			OutputPorts[isPresent ? OnTagAddedPort : OnTagRemovedPort].EmitMessage(graphContext);
 		}
+		catch (Exception exception)
+		{
+			failure = ExceptionDispatchInfo.Capture(exception);
+		}
+
+		ExceptionDispatchInfo? exit = ExitFrame(graphContext, nodeContext);
+		(failure ?? exit)?.Throw();
 	}
 
 	private void WriteTagOutput(GraphContext graphContext, Tag tag)

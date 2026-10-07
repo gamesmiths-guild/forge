@@ -195,4 +195,83 @@ public class ConditionMonitorNodeTests
 
 		becameTrue.ExecutionCount.Should().Be(1);
 	}
+
+	[Fact]
+	[Trait("Graph", "ConditionMonitor")]
+	public void Condition_monitor_routes_nothing_when_disabling_the_old_subgraph_stops_the_graph()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("condition", false);
+
+		var monitor = new ConditionMonitorNode();
+		monitor.BindInput(ConditionMonitorNode.ConditionInput, "condition");
+
+		// The false subgraph's node exits as it is disabled, before the true subgraph starts.
+		var falseChild = new TrackingStateNode();
+		var trueChild = new TrackingStateNode();
+		var exit = new ExitNode();
+		graph.AddNode(monitor);
+		graph.AddNode(falseChild);
+		graph.AddNode(trueChild);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			monitor.InputPorts[StateNode<ConditionMonitorNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			monitor.OutputPorts[ConditionMonitorNode.FalseSubgraphPort],
+			falseChild.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			falseChild.OutputPorts[TrackingStateNode.OnDeactivatePort],
+			exit.InputPorts[ExitNode.InputPort]));
+		graph.AddConnection(new Connection(
+			monitor.OutputPorts[ConditionMonitorNode.TrueSubgraphPort],
+			trueChild.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.GraphContext.GraphVariables.SetVar("condition", true);
+
+		processor.Invoking(x => x.UpdateGraph(0.1)).Should().NotThrow();
+
+		trueChild.ActivateCount.Should().Be(0, "the graph stopped before the true subgraph started");
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "ConditionMonitor")]
+	public void Condition_monitor_starts_no_subgraph_once_reporting_the_change_aborts_it()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("condition", false);
+
+		var monitor = new ConditionMonitorNode();
+		monitor.BindInput(ConditionMonitorNode.ConditionInput, "condition");
+
+		// Becoming true is reported before the true subgraph starts, and the report aborts the monitor, while another
+		// node keeps the graph running.
+		var trueChild = new TrackingStateNode();
+		var keepAlive = new TrackingStateNode();
+		graph.AddNode(monitor);
+		graph.AddNode(trueChild);
+		graph.AddNode(keepAlive);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			monitor.InputPorts[StateNode<ConditionMonitorNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			keepAlive.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			monitor.OutputPorts[ConditionMonitorNode.OnBecameTruePort],
+			monitor.InputPorts[StateNode<ConditionMonitorNodeContext>.AbortPort]));
+		graph.AddConnection(new Connection(
+			monitor.OutputPorts[ConditionMonitorNode.TrueSubgraphPort],
+			trueChild.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.GraphContext.GraphVariables.SetVar("condition", true);
+		processor.UpdateGraph(0.1);
+
+		trueChild.ActivateCount.Should().Be(0, "a subgraph started under an aborted node would have nothing to end it");
+	}
 }

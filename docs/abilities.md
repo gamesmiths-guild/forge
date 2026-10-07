@@ -1060,13 +1060,13 @@ Abilities can be driven by Statescript graphs instead of handwritten `IAbilityBe
 var graph = new Graph();
 // ... build graph with nodes and connections ...
 
-var behavior = new GraphAbilityBehavior(graph);
-
 var abilityData = new AbilityData(
     "Fireball",
     instancingPolicy: AbilityInstancingPolicy.PerExecution,
-    behaviorFactory: () => behavior);
+    behaviorFactory: () => new GraphAbilityBehavior(graph));
 ```
+
+A `GraphAbilityBehavior` runs one graph at a time, so an ability whose instances can overlap, such as a `PerExecution` one, creates a behavior per activation and shares only the `Graph`. A `PerEntity` ability can share one behavior between its activations.
 
 ### GraphAbilityBehavior&lt;TData&gt;
 

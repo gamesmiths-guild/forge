@@ -5,6 +5,7 @@ using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
+using Gamesmiths.Forge.Statescript.Nodes.Condition;
 using Gamesmiths.Forge.Statescript.Nodes.State;
 using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tests.Helpers;
@@ -712,6 +713,296 @@ public class GraphProcessorTests
 
 	[Fact]
 	[Trait("Graph", "Lifecycle")]
+	public void A_branch_that_finishes_at_once_does_not_complete_the_graph_before_the_next_one_starts()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("count", 1);
+		graph.VariableDefinitions.DefineVariable("condition", true);
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		// A single iteration with no interval runs and finishes during its own activation.
+		var finishesAtOnce = new RepeatNode();
+		finishesAtOnce.BindInput(RepeatNode.CountInput, "count");
+		finishesAtOnce.BindInput(RepeatNode.ConditionInput, "condition");
+		TimerNode timer = CreateTimerNode("duration");
+
+		graph.AddNode(finishesAtOnce);
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			finishesAtOnce.InputPorts[RepeatNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		bool completed = false;
+		processor.OnGraphCompleted = () => completed = true;
+		processor.StartGraph();
+
+		completed.Should().BeFalse("the timer the same message starts keeps the graph running");
+		processor.GraphContext.IsActive.Should().BeTrue();
+
+		processor.UpdateGraph(1.0);
+		completed.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void A_message_that_ends_the_last_node_and_starts_another_keeps_the_graph_running()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("interval", 1.0);
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		var loopTimer = new LoopTimerNode();
+		loopTimer.BindInput(LoopTimerNode.IntervalInput, "interval");
+		TimerNode timer = CreateTimerNode("duration");
+
+		graph.AddNode(loopTimer);
+		graph.AddNode(timer);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			loopTimer.InputPorts[LoopTimerNode.InputPort]));
+
+		// The first interval stops the loop, the only node running, and starts the timer.
+		graph.AddConnection(new Connection(
+			loopTimer.OutputPorts[LoopTimerNode.OnIntervalPort],
+			loopTimer.InputPorts[LoopTimerNode.AbortPort]));
+		graph.AddConnection(new Connection(
+			loopTimer.OutputPorts[LoopTimerNode.OnIntervalPort],
+			timer.InputPorts[TimerNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		bool completed = false;
+		processor.OnGraphCompleted = () => completed = true;
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		completed.Should().BeFalse("the timer the same message starts keeps the graph running");
+		processor.GraphContext.IsActive.Should().BeTrue();
+
+		processor.UpdateGraph(1.0);
+		completed.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void A_graph_restarted_from_the_message_that_stopped_it_completes_on_its_own_terms()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+		graph.VariableDefinitions.DefineVariable("isFirstRun", true);
+
+		// The timer's end starts a second timer that keeps the graph running, and on the first run also exits.
+		TimerNode timer = CreateTimerNode("duration");
+		TimerNode followUp = CreateTimerNode("duration");
+		ExpressionNode isFirstRun = CreateExpressionNode("isFirstRun");
+		var exit = new ExitNode();
+
+		graph.AddNode(timer);
+		graph.AddNode(followUp);
+		graph.AddNode(isFirstRun);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnTimerEndPort],
+			followUp.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnTimerEndPort],
+			isFirstRun.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			isFirstRun.OutputPorts[ConditionNode.TruePort],
+			exit.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		int completions = 0;
+
+		// Stopping starts the graph again from inside the message that stopped it, as ending an ability can activate
+		// it again. What the stopped run was still counting must not carry into the new one.
+		processor.OnGraphCompleted = () =>
+		{
+			if (++completions == 1)
+			{
+				processor.StartGraph(variables => variables.SetVar("isFirstRun", false));
+			}
+		};
+
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+		processor.UpdateGraph(1.0);
+
+		completions.Should().Be(1, "the second run's timer started a node that keeps it running");
+		processor.GraphContext.IsActive.Should().BeTrue();
+
+		processor.UpdateGraph(1.0);
+
+		completions.Should().Be(2, "the second run completes once its last node ends");
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void An_update_that_starts_the_graph_over_counts_nothing_toward_the_new_run()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		// Either timer exits as it runs out, and whichever is updated first starts the graph over.
+		TimerNode first = CreateTimerNode("duration");
+		TimerNode second = CreateTimerNode("duration");
+		var exit = new ExitNode();
+		graph.AddNode(first);
+		graph.AddNode(second);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			first.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			second.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			first.OutputPorts[TimerNode.OnTimerEndPort],
+			exit.InputPorts[ExitNode.InputPort]));
+		graph.AddConnection(new Connection(
+			second.OutputPorts[TimerNode.OnTimerEndPort],
+			exit.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		processor.GraphContext.IsActive.Should().BeTrue("the update that ended the first run reaches none of the next");
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void An_action_that_stops_the_graph_reaches_nothing_after_it()
+	{
+		var graph = new Graph();
+		var stop = new StopsGraphActionNode();
+		var after = new TrackingStateNode();
+		graph.AddNode(stop);
+		graph.AddNode(after);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			stop.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			stop.OutputPorts[ActionNode.OutputPort],
+			after.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		stop.Processor = processor;
+		processor.StartGraph();
+
+		after.ActivateCount.Should().Be(0, "a node reached after the graph stopped would run in a graph that is gone");
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void A_condition_whose_test_stops_the_graph_reaches_neither_branch()
+	{
+		var graph = new Graph();
+		var condition = new StopsGraphConditionNode();
+		var after = new TrackingStateNode();
+		graph.AddNode(condition);
+		graph.AddNode(after);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			condition.InputPorts[ConditionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			condition.OutputPorts[ConditionNode.TruePort],
+			after.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		condition.Processor = processor;
+		processor.StartGraph();
+
+		after.ActivateCount.Should().Be(0, "a node reached after the graph stopped would run in a graph that is gone");
+		processor.GraphContext.IsActive.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void A_stop_that_interrupts_a_subgraph_being_disabled_still_ends_it()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		// The timer's subgraph node exits as it is disabled, before its own subgraph is.
+		TimerNode timer = CreateTimerNode("duration");
+		var node = new TrackingStateNode();
+		var child = new TrackingStateNode();
+		var exit = new ExitNode();
+		graph.AddNode(timer);
+		graph.AddNode(node);
+		graph.AddNode(child);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.SubgraphPort],
+			node.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[TrackingStateNode.OnDeactivatePort],
+			exit.InputPorts[ExitNode.InputPort]));
+		graph.AddConnection(new Connection(
+			node.OutputPorts[TrackingStateNode.SubgraphPort],
+			child.InputPorts[TrackingStateNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		node.DeactivateCount.Should().Be(1, "the stop finishes ending the node it found being disabled");
+		child.DeactivateCount.Should().Be(1, "the stop reaches the subgraph that disabling had yet to");
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
+	public void A_stop_reached_from_a_node_started_by_one_being_disabled_ends_that_node()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+
+		// The timer's subgraph node starts another as it is disabled, and that one stops the graph as it activates.
+		TimerNode timer = CreateTimerNode("duration");
+		var disabled = new TrackingStateNode();
+		var started = new TrackingStateNode();
+		var stop = new StopsGraphActionNode();
+		graph.AddNode(timer);
+		graph.AddNode(disabled);
+		graph.AddNode(started);
+		graph.AddNode(stop);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[TimerNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.SubgraphPort],
+			disabled.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			disabled.OutputPorts[TrackingStateNode.OnDeactivatePort],
+			started.InputPorts[TrackingStateNode.InputPort]));
+		graph.AddConnection(new Connection(
+			started.OutputPorts[TrackingStateNode.OnActivatePort],
+			stop.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		stop.Processor = processor;
+		processor.StartGraph();
+		processor.UpdateGraph(1.0);
+
+		started.ActivateCount.Should().Be(1);
+		started.DeactivateCount.Should().Be(1, "the stop ends a node it can only reach through one being disabled");
+	}
+
+	[Fact]
+	[Trait("Graph", "Lifecycle")]
 	public void Update_graph_does_nothing_after_completion()
 	{
 		var graph = new Graph();
@@ -1125,5 +1416,17 @@ public class GraphProcessorTests
 
 		node.ExecutionCount.Should().Be(1);
 		node.Found.Should().BeFalse();
+	}
+
+	// Stops the graph from its test, as committing or revoking the ability the graph runs for can.
+	private sealed class StopsGraphConditionNode : ConditionNode
+	{
+		public GraphProcessor? Processor { get; set; }
+
+		protected override bool Test(GraphContext graphContext)
+		{
+			Processor!.StopGraph();
+			return true;
+		}
 	}
 }

@@ -86,11 +86,11 @@ Once the signal is sent, it cascades through the subgraph:
 2. **Action and condition nodes** that previously executed receive the signal and propagate it further through their output ports, but take no other action (they have no persistent state to clean up).
 3. **Already-inactive state nodes** are safely skipped. The signal only affects nodes that are currently active.
 
-This cascade ensures complete cleanup regardless of nesting depth.
+This cascade ensures complete cleanup regardless of nesting depth. A node whose teardown throws along the way still keeps the signal going to the rest, so nothing is left running under what was disabled, and the first exception propagates once the cascade is done.
 
 ### The Entry Node's Subgraph Port
 
-The Entry node's output port is a **Subgraph port**. This means the entire graph is itself a subgraph of the entry point. When `GraphProcessor.StopGraph()` is called, a disable-subgraph signal propagates from the Entry node, cleaning up every active state node in the graph.
+The Entry node's output port is a **Subgraph port**. This means the entire graph is itself a subgraph of the entry point. When `GraphProcessor.StopGraph()` is called, a disable-subgraph signal propagates from the Entry node, cleaning up every active state node in the graph. No state node starts while the stop is under way: a message that would start or restart one is ignored, so nothing is left running once it completes. A node that throws as it is ended keeps neither the rest from ending nor the stop from completing: the first exception is rethrown once it has.
 
 ## Retriggering a Parent
 

@@ -116,7 +116,7 @@ public class LoopTimerNode(bool restartOnRetrigger = false) : StateNode<LoopTime
 
 			// An interval handler can abort this node or stop the graph entirely, which invalidates the node context
 			// this loop is accumulating into.
-			if (!IsNodeActive(graphContext))
+			if (!nodeContext.Active)
 			{
 				return;
 			}

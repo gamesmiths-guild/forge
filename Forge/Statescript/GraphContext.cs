@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Statescript;
@@ -87,9 +88,26 @@ public sealed class GraphContext
 
 	internal bool HasStarted { get; set; }
 
+	internal bool IsStopping { get; set; }
+
+	// The state node code running in this context - an activation, an update, an emission, a cleanup - counted across
+	// runs, since a run that has ended can still have code on its way back.
+	internal int RunningFrames { get; set; }
+
+	// A start that waits for the graph to finish stopping and for the node code still running to return.
+	internal Action? PendingStart { get; set; }
+
+	// Counts every start and end of a run, so a message still being delivered can tell that the graph it set out in
+	// has since stopped or started over.
+	internal ulong RunStamp { get; set; }
+
 	internal int FinalizationDeferralCount { get; set; }
 
 	internal int NodeContextCount => _nodeContexts.Count;
+
+	// Started while the graph stops, a run would be torn down by the rest of the stop, and started while node code is
+	// still running, it would have what that code has left to do - removing the cue it was applying - land on it.
+	internal bool StartMustWait => IsStopping || RunningFrames > 0;
 
 	/// <summary>
 	/// Attempts to retrieve the <see cref="ActivationContext"/> as a specific type. This is the recommended way for
@@ -445,5 +463,56 @@ public sealed class GraphContext
 	internal void RemoveAllNodeContext()
 	{
 		_nodeContexts.Clear();
+	}
+
+	// A run is over once no state node is left active, but not while a message is still on its way to a connection that
+	// can start one, or while node code that can start one again is still running. This and the start below run outside
+	// code, and hand back what it threw for the caller to rethrow once it has finished up, unless it failed first.
+	internal ExceptionDispatchInfo? FinalizeIfIdle()
+	{
+		if (!HasStarted || FinalizationDeferralCount != 0 || RunningFrames != 0 || ActiveStateNodes.Count != 0)
+		{
+			return null;
+		}
+
+		try
+		{
+			Processor?.FinalizeGraph();
+			return null;
+		}
+		catch (Exception exception)
+		{
+			return ExceptionDispatchInfo.Capture(exception);
+		}
+	}
+
+	// Leaves a frame of node code: a run whose nodes all ended while it was running completes once it has returned,
+	// and a start that waited for it follows. The first failure is handed back, as above.
+	internal ExceptionDispatchInfo? LeaveFrame()
+	{
+		RunningFrames--;
+		ExceptionDispatchInfo? completion = FinalizeIfIdle();
+		ExceptionDispatchInfo? start = RunPendingStart();
+		return completion ?? start;
+	}
+
+	internal ExceptionDispatchInfo? RunPendingStart()
+	{
+		if (StartMustWait || PendingStart is not Action start)
+		{
+			return null;
+		}
+
+		PendingStart = null;
+
+		try
+		{
+			start();
+			return null;
+		}
+		catch (Exception exception)
+		{
+			return ExceptionDispatchInfo.Capture(exception);
+		}
 	}
 }

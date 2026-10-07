@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Statescript.Ports;
 
 namespace Gamesmiths.Forge.Statescript.Nodes;
@@ -55,7 +56,32 @@ public abstract class ConditionNode : Node
 	/// <inheritdoc/>
 	protected sealed override void HandleMessage(InputPort receiverPort, GraphContext graphContext)
 	{
-		if (Test(graphContext))
+		ulong run = graphContext.RunStamp;
+		ExceptionDispatchInfo? failure = null;
+		bool result = false;
+
+		// Counted as running, as an action is.
+		graphContext.RunningFrames++;
+
+		try
+		{
+			result = Test(graphContext);
+		}
+		catch (Exception exception)
+		{
+			failure = ExceptionDispatchInfo.Capture(exception);
+		}
+
+		ExceptionDispatchInfo? leave = graphContext.LeaveFrame();
+		(failure ?? leave)?.Throw();
+
+		// A test can end the graph - committing or revoking the ability it runs for - and then leads nowhere.
+		if (graphContext.RunStamp != run)
+		{
+			return;
+		}
+
+		if (result)
 		{
 			OutputPorts[TruePort].EmitMessage(graphContext);
 		}

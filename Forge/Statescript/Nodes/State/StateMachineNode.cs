@@ -110,6 +110,12 @@ public class StateMachineNode(int stateCount = 2) : StateNode<StateMachineNodeCo
 		{
 			var previousSubgraphPort = (SubgraphPort)OutputPorts[FirstStatePort + previousState.Value];
 			previousSubgraphPort.EmitDisableSubgraphMessage(graphContext);
+
+			// Leaving the old state can end this node or the graph, and then there is no state to enter.
+			if (!nodeContext.Active)
+			{
+				return;
+			}
 		}
 
 		WriteCurrentStateOutput(graphContext, state);
