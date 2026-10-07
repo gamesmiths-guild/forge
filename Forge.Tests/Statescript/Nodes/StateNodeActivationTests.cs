@@ -1197,6 +1197,34 @@ public class StateNodeActivationTests
 		IsActive(processor, node).Should().BeFalse();
 	}
 
+	[Theory]
+	[Trait("Graph", "Activation")]
+	[InlineData(false)]
+	[InlineData(true)]
+	public void A_graph_started_over_from_an_action_waits_for_the_action_to_return(bool condition)
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("value", 1);
+		var action = new StopsThenWritesOnceNode();
+		var test = new StopsThenWritesOnceConditionNode();
+		Node node = condition ? test : action;
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[0]));
+
+		var processor = new GraphProcessor(graph);
+		action.Processor = processor;
+		test.Action.Processor = processor;
+
+		// The action ends the graph, which is started over from its completion, and then writes a variable.
+		RestartOnFirstCompletion(processor);
+		processor.StartGraph();
+
+		processor.GraphContext.GraphVariables.TryGetVar("value", out int value).Should().BeTrue();
+		value.Should().Be(1, "what the action wrote after ending the graph belongs to the run it ended");
+	}
+
 	[Fact]
 	[Trait("Graph", "Activation")]
 	public void A_graph_start_waiting_for_node_code_follows_a_completion_that_threw()
@@ -2091,6 +2119,44 @@ public class StateNodeActivationTests
 				target.InputPorts[StateNode<StateNodeContext>.AbortPort].ReceiveMessage(graphContext);
 				target.InputPorts[StateNode<StateNodeContext>.InputPort].ReceiveMessage(graphContext);
 			}
+		}
+	}
+
+	// Ends the graph and then writes a variable, once, as a custom action that cancels the ability it runs for and
+	// carries on might.
+	private sealed class StopsThenWritesOnceNode : ActionNode
+	{
+		private bool _done;
+
+		public GraphProcessor? Processor { get; set; }
+
+		public void StopThenWrite(GraphContext graphContext)
+		{
+			if (_done)
+			{
+				return;
+			}
+
+			_done = true;
+			Processor!.StopGraph();
+			graphContext.GraphVariables.SetVar("value", 2);
+		}
+
+		protected override void Execute(GraphContext graphContext)
+		{
+			StopThenWrite(graphContext);
+		}
+	}
+
+	// The same from a condition's test.
+	private sealed class StopsThenWritesOnceConditionNode : ConditionNode
+	{
+		public StopsThenWritesOnceNode Action { get; } = new();
+
+		protected override bool Test(GraphContext graphContext)
+		{
+			Action.StopThenWrite(graphContext);
+			return true;
 		}
 	}
 

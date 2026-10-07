@@ -486,6 +486,16 @@ public sealed class GraphContext
 		}
 	}
 
+	// Leaves a frame of node code: a run whose nodes all ended while it was running completes once it has returned,
+	// and a start that waited for it follows. The first failure is handed back, as above.
+	internal ExceptionDispatchInfo? LeaveFrame()
+	{
+		RunningFrames--;
+		ExceptionDispatchInfo? completion = FinalizeIfIdle();
+		ExceptionDispatchInfo? start = RunPendingStart();
+		return completion ?? start;
+	}
+
 	internal ExceptionDispatchInfo? RunPendingStart()
 	{
 		if (StartMustWait || PendingStart is not Action start)

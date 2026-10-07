@@ -551,7 +551,6 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	private protected ExceptionDispatchInfo? ExitFrame(GraphContext graphContext, StateNodeContext nodeContext)
 	{
 		nodeContext.RunningFrames--;
-		graphContext.RunningFrames--;
 		ExceptionDispatchInfo? restart = null;
 
 		// The start that waited for this activation's code follows once it has returned, unless the node's context went
@@ -574,12 +573,8 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 			}
 		}
 
-		// A run whose nodes all ended while code was still running completes once it has returned, and a start of the
-		// graph that waited for that code follows.
-		ExceptionDispatchInfo? completion = graphContext.FinalizeIfIdle();
-		ExceptionDispatchInfo? start = graphContext.RunPendingStart();
-
-		return restart ?? completion ?? start;
+		ExceptionDispatchInfo? leave = graphContext.LeaveFrame();
+		return restart ?? leave;
 	}
 
 	// A node that starts during a pass, restarted or ended and started again by one updated before it, would otherwise
