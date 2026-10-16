@@ -27,6 +27,12 @@ jobs:
       - name: Test
         run: dotnet test --no-build --verbosity normal --results-directory TestResults --logger "trx;LogFileName=test-results.trx"
 
+      - name: NativeAOT smoke test
+        run: |
+          sudo apt-get install -y clang zlib1g-dev
+          dotnet publish Forge.AotTests --configuration Release --runtime linux-x64
+          ./Forge.AotTests/bin/Release/net8.0/linux-x64/publish/Gamesmiths.Forge.AotTests
+
       - name: Test report
         if: ${{ !cancelled() }}
         uses: dorny/test-reporter@v3.0.0
