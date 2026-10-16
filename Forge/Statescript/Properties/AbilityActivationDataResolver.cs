@@ -16,9 +16,13 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// </remarks>
 public class AbilityActivationDataResolver : IPropertyResolver
 {
-	private readonly Type _activationContextType;
+	private readonly MemberInfo _member;
 
-	private readonly Func<object, Variant128> _resolveActivationData;
+	private readonly ConstructorInfo _variantConstructor;
+
+	// Compiled from the context's own type on first resolve: an AOT build has that type, but not necessarily one built
+	// with MakeGenericType.
+	private Func<object, Variant128>? _resolveActivationData;
 
 	/// <summary>
 	/// Gets the activation-data type expected in the current ability context.
@@ -45,33 +49,29 @@ public class AbilityActivationDataResolver : IPropertyResolver
 
 		ActivationDataType = activationDataType;
 		MemberName = ValidateMemberName(memberName);
-		_activationContextType = CreateActivationContextType(activationDataType);
-		_resolveActivationData = CreateResolveDelegate(activationDataType, MemberName, out Type valueType);
-		ValueType = valueType;
+		_member = FindMember(activationDataType, MemberName);
+		ValueType = GetMemberType(_member);
+		_variantConstructor = GetVariantConstructor(ValueType);
 	}
 
 	/// <inheritdoc/>
 	public Variant128 Resolve(GraphContext graphContext)
 	{
-		object? activationContext = graphContext.ActivationContext;
-		if (activationContext is null || !_activationContextType.IsInstanceOfType(activationContext))
+		if (graphContext.ActivationContext is not AbilityBehaviorContext activationContext
+			|| activationContext.DataType != ActivationDataType)
 		{
 			return default;
 		}
 
+		_resolveActivationData ??= CreateResolveDelegate(activationContext.GetType(), _member, _variantConstructor);
 		return _resolveActivationData(activationContext);
 	}
 
 	private static Func<object, Variant128> CreateResolveDelegate(
-		Type activationDataType,
-		string memberName,
-		out Type valueType)
+		Type activationContextType,
+		MemberInfo member,
+		ConstructorInfo constructor)
 	{
-		MemberInfo member = FindMember(activationDataType, memberName);
-		valueType = GetMemberType(member);
-		ConstructorInfo constructor = GetVariantConstructor(valueType);
-		Type activationContextType = CreateActivationContextType(activationDataType);
-
 		ParameterExpression activationContextParameter = Expression.Parameter(typeof(object), "activationContext");
 		UnaryExpression typedContext = Expression.Convert(activationContextParameter, activationContextType);
 		MemberExpression dataAccess = Expression.Property(typedContext, nameof(AbilityBehaviorContext<int>.Data));
@@ -85,11 +85,6 @@ public class AbilityActivationDataResolver : IPropertyResolver
 
 		NewExpression variantCreation = Expression.New(constructor, memberAccess);
 		return Expression.Lambda<Func<object, Variant128>>(variantCreation, activationContextParameter).Compile();
-	}
-
-	private static Type CreateActivationContextType(Type activationDataType)
-	{
-		return typeof(AbilityBehaviorContext<>).MakeGenericType(activationDataType);
 	}
 
 	private static void EnsureActivationDataType(Type activationDataType)

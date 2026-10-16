@@ -14,6 +14,9 @@ public sealed class AbilityBehaviorContext<TData> : AbilityBehaviorContext
 	/// </summary>
 	public TData Data { get; }
 
+	/// <inheritdoc/>
+	public override Type DataType => typeof(TData);
+
 	internal AbilityBehaviorContext(
 		Ability ability,
 		AbilityInstance instance,
