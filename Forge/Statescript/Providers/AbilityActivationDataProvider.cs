@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript.Properties;
@@ -22,7 +23,10 @@ namespace Gamesmiths.Forge.Statescript.Providers;
 /// node. Member names must match the public fields or properties of <typeparamref name="TData"/>, since the reading
 /// side resolves them there by name.</para>
 /// </remarks>
-public abstract class AbilityActivationDataProvider<TData> : IAbilityActivationDataProvider
+public abstract class AbilityActivationDataProvider<
+	[DynamicallyAccessedMembers(
+		DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicFields)] TData>
+	: IAbilityActivationDataProvider
 {
 	/// <summary>
 	/// Builds the activation data for the current graph execution. Read whatever graph state the data is derived from
@@ -38,6 +42,8 @@ public abstract class AbilityActivationDataProvider<TData> : IAbilityActivationD
 	public virtual IReadOnlyList<AbilityActivationDataMember> Members => [];
 
 	/// <inheritdoc/>
+	[DynamicallyAccessedMembers(
+		DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicFields)]
 	public Type DataType => typeof(TData);
 
 	/// <inheritdoc/>

@@ -6,6 +6,7 @@ using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Statescript;
+using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.AotTests;
@@ -23,6 +24,8 @@ internal static class Program
 			RaiseTypedEvent(tagsManager, eventTag, new ClassPayload(1)) == new ClassPayload(1));
 		Check("Typed event trigger with a struct payload", () =>
 			RaiseTypedEvent(tagsManager, eventTag, new StructPayload(2)) == new StructPayload(2));
+		Check("Activation-data resolver reads a struct payload member", () =>
+			ResolveActivationData(tagsManager, eventTag, new StructPayload(3)) == 3);
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -44,13 +47,26 @@ internal static class Program
 
 	private static TPayload? RaiseTypedEvent<TPayload>(TagsManager tagsManager, Tag eventTag, TPayload payload)
 	{
+		return RaiseTypedEvent(tagsManager, eventTag, payload, static (_, _) => { });
+	}
+
+	private static TPayload? RaiseTypedEvent<TPayload>(
+		TagsManager tagsManager,
+		Tag eventTag,
+		TPayload payload,
+		Action<AbilityBehaviorContext, TPayload> onStarted)
+	{
 		var entity = new SmokeEntity(tagsManager);
 		TPayload? received = default;
 
 		var abilityData = new AbilityData(
 			"Typed trigger",
 			abilityTriggerData: AbilityTriggerData.ForEvent<TPayload>(eventTag),
-			behaviorFactory: () => new PayloadBehavior<TPayload>(x => received = x));
+			behaviorFactory: () => new PayloadBehavior<TPayload>((context, data) =>
+			{
+				received = data;
+				onStarted(context, data);
+			}));
 
 		entity.Abilities.GrantAbilityPermanently(abilityData, 1, LevelComparison.None, null);
 		entity.Events.Raise(new EventData<TPayload>
@@ -62,15 +78,30 @@ internal static class Program
 		return received;
 	}
 
+	private static int ResolveActivationData(TagsManager tagsManager, Tag eventTag, StructPayload payload)
+	{
+		var resolver = new AbilityActivationDataResolver(typeof(StructPayload), nameof(StructPayload.Value));
+		int resolved = 0;
+
+		RaiseTypedEvent(
+			tagsManager,
+			eventTag,
+			payload,
+			(context, _) => resolved = resolver.Resolve(new GraphContext { ActivationContext = context }).AsInt());
+
+		return resolved;
+	}
+
 	private sealed record ClassPayload(int Value);
 
 	private readonly record struct StructPayload(int Value);
 
-	private sealed class PayloadBehavior<TPayload>(Action<TPayload> onStarted) : IAbilityBehavior<TPayload>
+	private sealed class PayloadBehavior<TPayload>(Action<AbilityBehaviorContext, TPayload> onStarted)
+		: IAbilityBehavior<TPayload>
 	{
 		public void OnStarted(AbilityBehaviorContext context, TPayload data)
 		{
-			onStarted(data);
+			onStarted(context, data);
 			context.InstanceHandle.End();
 		}
 

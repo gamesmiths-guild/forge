@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
 using Gamesmiths.Forge.Abilities;
@@ -43,7 +44,11 @@ public class AbilityActivationDataResolver : IPropertyResolver, IActivationDataV
 	/// <param name="activationDataType">The runtime activation-data type carried by
 	/// <see cref="AbilityBehaviorContext{TData}"/>.</param>
 	/// <param name="memberName">The public field or property name to read from the activation data.</param>
-	public AbilityActivationDataResolver(Type activationDataType, string memberName)
+	public AbilityActivationDataResolver(
+		[DynamicallyAccessedMembers(
+			DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicFields)]
+		Type activationDataType,
+		string memberName)
 	{
 		EnsureActivationDataType(activationDataType);
 
@@ -105,7 +110,11 @@ public class AbilityActivationDataResolver : IPropertyResolver, IActivationDataV
 #endif
 	}
 
-	private static MemberInfo FindMember(Type activationDataType, string memberName)
+	private static MemberInfo FindMember(
+		[DynamicallyAccessedMembers(
+			DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicFields)]
+		Type activationDataType,
+		string memberName)
 	{
 		memberName = ValidateMemberName(memberName);
 

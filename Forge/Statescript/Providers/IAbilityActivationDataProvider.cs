@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Statescript.Properties;
@@ -41,6 +42,8 @@ public interface IAbilityActivationDataProvider
 	/// <see cref="IAbilityBehavior{TData}.OnStarted"/>. Also selects the <see cref="GraphAbilityBehavior{TData}"/> a
 	/// graph-driven ability is built with.
 	/// </summary>
+	[DynamicallyAccessedMembers(
+		DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicFields)]
 	Type DataType { get; }
 
 	/// <summary>
