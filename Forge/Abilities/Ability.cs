@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Reflection;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
@@ -133,9 +132,12 @@ internal sealed class Ability
 					owner.Tags.OnTagsChanged += _tagChangedHandler;
 					break;
 				case AbilityTriggerSource.Event:
-					if (triggerData.PayloadType is not null)
+					if (triggerData.SubscribeTypedEvent is not null)
 					{
-						_eventSubscriptionToken = SubscribeTypedEvent(triggerData);
+						_eventSubscriptionToken = triggerData.SubscribeTypedEvent(
+							this,
+							triggerData.TriggerTag,
+							triggerData.Priority);
 					}
 					else
 					{
@@ -181,6 +183,14 @@ internal sealed class Ability
 
 		Owner.Abilities.NotifyAbilityActivationFailed(Handle, failureFlags);
 		return false;
+	}
+
+	internal EventSubscriptionToken SubscribeTypedEvent<TPayload>(Tag tag, int priority)
+	{
+		return Owner.Events.Subscribe<TPayload>(
+			tag,
+			x => TryActivateAbility(x.Target, out _, x.Payload, x.EventMagnitude),
+			priority: priority);
 	}
 
 	internal bool TryCommitAbility()
@@ -599,28 +609,6 @@ internal sealed class Ability
 	private static bool HasBlockedTags(TagContainer? blocked, TagContainer? present)
 	{
 		return blocked is not null && (present?.HasAny(blocked) == true);
-	}
-
-	private EventSubscriptionToken SubscribeTypedEvent(AbilityTriggerData triggerData)
-	{
-#pragma warning disable IDE0370 // Remove unnecessary suppression
-#pragma warning disable S3011 // Reflection should not be used to increase accessibility of classes, methods, or fields
-		// Do not attempt this in production environments without adult supervision.
-		MethodInfo method = typeof(Ability)
-			.GetMethod(nameof(SubscribeTypedEventCore), BindingFlags.NonPublic | BindingFlags.Instance)!
-			.MakeGenericMethod(triggerData.PayloadType!);
-#pragma warning restore S3011 // Reflection should not be used to increase accessibility of classes, methods, or fields
-
-		return (EventSubscriptionToken)method.Invoke(this, [triggerData.TriggerTag, triggerData.Priority])!;
-#pragma warning restore IDE0370 // Remove unnecessary suppression
-	}
-
-	private EventSubscriptionToken SubscribeTypedEventCore<TPayload>(Tag tag, int priority)
-	{
-		return Owner.Events.Subscribe<TPayload>(
-			tag,
-			x => TryActivateAbility(x.Target, out _, x.Payload, x.EventMagnitude),
-			priority: priority);
 	}
 
 	private ActiveEffect? FindRunningCooldown(int index)
