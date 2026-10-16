@@ -64,4 +64,9 @@ public class AbilityBehaviorContext
 		Source = ability.SourceEntity;
 		Magnitude = magnitude;
 	}
+
+	internal virtual TResult AcceptData<TResult>(IActivationDataVisitor<TResult> visitor)
+	{
+		return default!;
+	}
 }

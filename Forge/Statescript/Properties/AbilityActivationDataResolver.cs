@@ -14,15 +14,15 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// activation-data type. It supports reading public instance fields and public readable properties whose types are
 /// supported by <see cref="Variant128"/>.
 /// </remarks>
-public class AbilityActivationDataResolver : IPropertyResolver
+public class AbilityActivationDataResolver : IPropertyResolver, IActivationDataVisitor<Variant128>
 {
 	private readonly MemberInfo _member;
 
 	private readonly ConstructorInfo _variantConstructor;
 
-	// Compiled from the context's own type on first resolve: an AOT build has that type, but not necessarily one built
-	// with MakeGenericType.
-	private Func<object, Variant128>? _resolveActivationData;
+	// A Func<TData, Variant128>, compiled on first resolve. The context hands the data over with TData known at compile
+	// time, so AOT builds need neither MakeGenericType nor a reflected Data getter, which trimming may remove.
+	private Delegate? _readActivationData;
 
 	/// <summary>
 	/// Gets the activation-data type expected in the current ability context.
@@ -63,28 +63,34 @@ public class AbilityActivationDataResolver : IPropertyResolver
 			return default;
 		}
 
-		_resolveActivationData ??= CreateResolveDelegate(activationContext.GetType(), _member, _variantConstructor);
-		return _resolveActivationData(activationContext);
+		return activationContext.AcceptData(this);
 	}
 
-	private static Func<object, Variant128> CreateResolveDelegate(
-		Type activationContextType,
-		MemberInfo member,
-		ConstructorInfo constructor)
+	/// <inheritdoc/>
+	Variant128 IActivationDataVisitor<Variant128>.Visit<TData>(TData data)
 	{
-		ParameterExpression activationContextParameter = Expression.Parameter(typeof(object), "activationContext");
-		UnaryExpression typedContext = Expression.Convert(activationContextParameter, activationContextType);
-		MemberExpression dataAccess = Expression.Property(typedContext, nameof(AbilityBehaviorContext<int>.Data));
+		if (_readActivationData is not Func<TData, Variant128> read)
+		{
+			read = CreateReader<TData>(_member, _variantConstructor);
+			_readActivationData = read;
+		}
+
+		return read(data);
+	}
+
+	private static Func<TData, Variant128> CreateReader<TData>(MemberInfo member, ConstructorInfo constructor)
+	{
+		ParameterExpression dataParameter = Expression.Parameter(typeof(TData), "data");
 		Expression memberAccess = member switch
 		{
-			PropertyInfo property => Expression.Property(dataAccess, property),
-			FieldInfo field => Expression.Field(dataAccess, field),
+			PropertyInfo property => Expression.Property(dataParameter, property),
+			FieldInfo field => Expression.Field(dataParameter, field),
 			_ => throw new InvalidOperationException(
 				$"Unsupported activation-data member kind '{member.MemberType}' for '{member.Name}'."),
 		};
 
 		NewExpression variantCreation = Expression.New(constructor, memberAccess);
-		return Expression.Lambda<Func<object, Variant128>>(variantCreation, activationContextParameter).Compile();
+		return Expression.Lambda<Func<TData, Variant128>>(variantCreation, dataParameter).Compile();
 	}
 
 	private static void EnsureActivationDataType(Type activationDataType)
