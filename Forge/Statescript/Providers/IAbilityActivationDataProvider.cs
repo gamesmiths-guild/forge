@@ -44,6 +44,23 @@ public interface IAbilityActivationDataProvider
 	Type DataType { get; }
 
 	/// <summary>
+	/// Creates the <see cref="GraphAbilityBehavior{TData}"/> for <see cref="DataType"/> that drives
+	/// <paramref name="graph"/>.
+	/// </summary>
+	/// <param name="graph">The graph the behavior executes.</param>
+	/// <returns>The typed graph behavior.</returns>
+	GraphAbilityBehavior CreateGraphBehavior(Graph graph);
+
+	/// <summary>
+	/// Creates event trigger data whose payload type is <see cref="DataType"/>, as
+	/// <see cref="AbilityTriggerData.ForEvent{TPayload}(Tag, int)"/> does.
+	/// </summary>
+	/// <param name="triggerTag">The tag that triggers the ability.</param>
+	/// <param name="priority">The priority of the event subscription.</param>
+	/// <returns>The typed event trigger data.</returns>
+	AbilityTriggerData CreateEventTrigger(Tag triggerTag, int priority);
+
+	/// <summary>
 	/// Builds the activation data from the current graph state and activates the ability behind
 	/// <paramref name="handle"/> with it.
 	/// </summary>

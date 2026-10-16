@@ -41,6 +41,18 @@ public abstract class AbilityActivationDataProvider<TData> : IAbilityActivationD
 	public Type DataType => typeof(TData);
 
 	/// <inheritdoc/>
+	GraphAbilityBehavior IAbilityActivationDataProvider.CreateGraphBehavior(Graph graph)
+	{
+		return new GraphAbilityBehavior<TData>(graph);
+	}
+
+	/// <inheritdoc/>
+	AbilityTriggerData IAbilityActivationDataProvider.CreateEventTrigger(Tag triggerTag, int priority)
+	{
+		return AbilityTriggerData.ForEvent<TData>(triggerTag, priority);
+	}
+
+	/// <inheritdoc/>
 	bool IAbilityActivationDataProvider.Activate(
 		AbilityHandle handle,
 		IForgeEntity? target,
