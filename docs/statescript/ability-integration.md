@@ -177,6 +177,7 @@ Through `AbilityBehaviorContext`, nodes have access to:
 | **AbilityHandle** | `AbilityHandle` | Handle for committing cost/cooldown. |
 | **InstanceHandle** | `AbilityInstanceHandle` | Handle for ending the ability instance. |
 | **Magnitude** | `float` | Numeric value from the activation attempt. |
+| **DataType** | `Type?` | The type of the activation data, or `null` when the ability was activated without data. |
 
 ### Property Resolvers and Activation Context
 

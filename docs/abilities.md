@@ -756,6 +756,7 @@ public class FireballBehavior : IAbilityBehavior
 - **AbilityHandle**: Handle to the ability for committing cost/cooldown.
 - **InstanceHandle**: Handle to this specific instance for ending it.
 - **Magnitude**: A numeric value associated with the activation attempt.
+- **DataType**: The type of the activation data, or null when the ability was activated without data.
 
 ### Behavior Context \<TData\>
 
