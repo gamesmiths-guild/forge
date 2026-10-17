@@ -163,8 +163,13 @@ public sealed class EventManager
 		EventSubscriptionToken token,
 		out Subscription[] remaining)
 	{
-		int index = Array.FindIndex(subscriptions, x => x.Token == token);
-		if (index < 0)
+		int index = 0;
+		while (index < subscriptions.Length && subscriptions[index].Token != token)
+		{
+			index++;
+		}
+
+		if (index == subscriptions.Length)
 		{
 			remaining = subscriptions;
 			return false;
