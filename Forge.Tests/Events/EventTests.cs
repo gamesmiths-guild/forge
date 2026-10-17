@@ -584,10 +584,147 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 
 		events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
 
-		// Note: The actual order depends on the Sort stability
-		// If unstable, order might not be preserved
-		invocationOrder.Should().HaveCount(3);
-		invocationOrder.Should().Contain([1, 2, 3]);
+		invocationOrder.Should().Equal(1, 2, 3);
+	}
+
+	[Fact]
+	[Trait("EdgeCase", null)]
+	public void Handler_unsubscribing_itself_does_not_skip_the_next_handler()
+	{
+		var events = new EventManager();
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		EventSubscriptionToken? first = null;
+		bool secondFired = false;
+
+		first = events.Subscribe(eventTag, _ => events.Unsubscribe(first!.Value), priority: 1);
+		events.Subscribe(eventTag, _ => secondFired = true);
+
+		events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
+
+		secondFired.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("EdgeCase", null)]
+	public void Typed_handler_unsubscribing_itself_does_not_skip_the_next_handler()
+	{
+		var events = new EventManager();
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		EventSubscriptionToken? first = null;
+		bool secondFired = false;
+
+		first = events.Subscribe<int>(eventTag, _ => events.Unsubscribe(first!.Value), priority: 1);
+		events.Subscribe<int>(eventTag, _ => secondFired = true);
+
+		events.Raise(new EventData<int> { EventTags = eventTag.GetSingleTagContainer()! });
+
+		secondFired.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("EdgeCase", null)]
+	public void Handler_unsubscribed_during_a_raise_is_not_invoked()
+	{
+		var events = new EventManager();
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		EventSubscriptionToken? second = null;
+		bool secondFired = false;
+
+		events.Subscribe(eventTag, _ => events.Unsubscribe(second!.Value), priority: 1);
+		second = events.Subscribe(eventTag, _ => secondFired = true);
+
+		events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
+
+		secondFired.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("EdgeCase", null)]
+	public void Handler_subscribed_during_a_raise_runs_from_the_next_raise()
+	{
+		var events = new EventManager();
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		int lateCalls = 0;
+		int raiseCalls = 0;
+
+		events.Subscribe(eventTag, _ =>
+		{
+			if (raiseCalls++ == 0)
+			{
+				events.Subscribe(eventTag, _ => lateCalls++, priority: 1);
+			}
+		});
+
+		events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
+		lateCalls.Should().Be(0);
+
+		events.Raise(new EventData { EventTags = eventTag.GetSingleTagContainer()! });
+		lateCalls.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("EdgeCase", null)]
+	public void Catch_all_handler_subscribed_by_a_typed_handler_runs_from_the_next_raise()
+	{
+		var events = new EventManager();
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		int lateCalls = 0;
+		int raiseCalls = 0;
+
+		events.Subscribe<int>(eventTag, _ =>
+		{
+			if (raiseCalls++ == 0)
+			{
+				events.Subscribe(eventTag, _ => lateCalls++);
+			}
+		});
+
+		events.Raise(new EventData<int> { EventTags = eventTag.GetSingleTagContainer()! });
+		lateCalls.Should().Be(0);
+
+		events.Raise(new EventData<int> { EventTags = eventTag.GetSingleTagContainer()! });
+		lateCalls.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("EdgeCase", null)]
+	public void Typed_handler_subscribed_during_a_typed_raise_runs_from_the_next_raise()
+	{
+		var events = new EventManager();
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		int lateCalls = 0;
+		int raiseCalls = 0;
+
+		events.Subscribe<int>(eventTag, _ =>
+		{
+			if (raiseCalls++ == 0)
+			{
+				events.Subscribe<int>(eventTag, _ => lateCalls++, priority: -1);
+			}
+		});
+
+		events.Raise(new EventData<int> { EventTags = eventTag.GetSingleTagContainer()! });
+		lateCalls.Should().Be(0);
+
+		events.Raise(new EventData<int> { EventTags = eventTag.GetSingleTagContainer()! });
+		lateCalls.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("EdgeCase", null)]
+	public void Catch_all_handler_unsubscribed_by_a_typed_handler_is_not_invoked()
+	{
+		var events = new EventManager();
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		EventSubscriptionToken? catchAll = null;
+		bool catchAllFired = false;
+
+		catchAll = events.Subscribe(eventTag, _ => catchAllFired = true);
+		events.Subscribe<int>(eventTag, _ => events.Unsubscribe(catchAll!.Value));
+
+		events.Raise(new EventData<int> { EventTags = eventTag.GetSingleTagContainer()! });
+
+		catchAllFired.Should().BeFalse();
 	}
 
 	private readonly record struct TestValuePayload(float X, float Y, float Z);
