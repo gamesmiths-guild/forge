@@ -101,6 +101,33 @@ public class AbilityActivationDataResolverTests(TagsAndCuesFixture tagsAndCuesFi
 			.And.ParamName.Should().Be("memberName");
 	}
 
+	[Theory]
+	[Trait("Resolver", "ActivationData")]
+	[InlineData(nameof(UnreadableData.WriteOnly))]
+	[InlineData(nameof(UnreadableData.PrivateGetter))]
+	public void Activation_data_resolver_throws_for_member_without_public_getter(string memberName)
+	{
+#pragma warning disable CA1806 // Constructor invocation is the assertion target
+		Action act = () => new AbilityActivationDataResolver(typeof(UnreadableData), memberName);
+#pragma warning restore CA1806 // Constructor invocation is the assertion target
+
+		act.Should().Throw<ArgumentException>()
+			.WithMessage("*to be readable*")
+			.And.ParamName.Should().Be("memberName");
+	}
+
+	[Fact]
+	[Trait("Resolver", "ActivationData")]
+	public void Activation_data_resolver_throws_for_indexer()
+	{
+#pragma warning disable CA1806 // Constructor invocation is the assertion target
+		Action act = () => new AbilityActivationDataResolver(typeof(IndexedData), "Item");
+#pragma warning restore CA1806 // Constructor invocation is the assertion target
+
+		act.Should().Throw<ArgumentException>()
+			.WithMessage("*could not find*'Item'*");
+	}
+
 	private readonly record struct DamageData(int Amount, double Multiplier);
 
 	private sealed class ChargeData
@@ -113,5 +140,24 @@ public class AbilityActivationDataResolverTests(TagsAndCuesFixture tagsAndCuesFi
 	private sealed class UnsupportedData
 	{
 		public string Name { get; init; } = string.Empty;
+	}
+
+	private sealed class UnreadableData
+	{
+#pragma warning disable S2376 // Write-only property is required to test unreadable members
+		public int WriteOnly
+		{
+			set => PrivateGetter = value;
+		}
+#pragma warning restore S2376 // Write-only property is required to test unreadable members
+
+		public int PrivateGetter { private get; set; }
+	}
+
+	private sealed class IndexedData
+	{
+#pragma warning disable S1144 // Indexer is only reached through reflection
+		public int this[int index] => index;
+#pragma warning restore S1144 // Indexer is only reached through reflection
 	}
 }

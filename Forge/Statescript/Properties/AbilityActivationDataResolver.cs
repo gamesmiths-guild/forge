@@ -114,14 +114,12 @@ public class AbilityActivationDataResolver
 		Type activationDataType,
 		string memberName)
 	{
-		memberName = ValidateMemberName(memberName);
-
 		PropertyInfo? property = activationDataType.GetProperty(
 			memberName,
 			BindingFlags.Instance | BindingFlags.Public);
-		if (property is not null)
+		if (property?.GetIndexParameters().Length == 0)
 		{
-			if (!property.CanRead)
+			if (property.GetMethod?.IsPublic != true)
 			{
 				throw new ArgumentException(
 					$"AbilityActivationDataResolver requires member '{memberName}' on '{activationDataType}' to be " +
