@@ -29,6 +29,6 @@ public sealed class AbilityBehaviorContext<TData> : AbilityBehaviorContext
 
 	internal override TResult AcceptData<TResult>(IActivationDataVisitor<TResult> visitor)
 	{
-		return visitor.Visit(Data);
+		return visitor.Visit(this);
 	}
 }

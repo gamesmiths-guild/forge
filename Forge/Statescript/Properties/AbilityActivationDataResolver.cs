@@ -15,15 +15,16 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// activation-data type. It supports reading public instance fields and public readable properties whose types are
 /// supported by <see cref="Variant128"/>.
 /// </remarks>
-public class AbilityActivationDataResolver : IPropertyResolver, IActivationDataVisitor<Variant128>
+public class AbilityActivationDataResolver
+	: IPropertyResolver, IActivationDataVisitor<Func<AbilityBehaviorContext, Variant128>>
 {
 	private readonly MemberInfo _member;
 
 	private readonly ConstructorInfo _variantConstructor;
 
-	// A Func<TData, Variant128>, compiled on first resolve. The context hands the data over with TData known at compile
-	// time, so AOT builds need neither MakeGenericType nor a reflected Data getter, which trimming may remove.
-	private Delegate? _readActivationData;
+	// Built on first resolve through the context, which knows TData at compile time, so AOT builds need neither
+	// MakeGenericType nor a reflected Data getter, which trimming may remove.
+	private Func<AbilityBehaviorContext, Variant128>? _resolveActivationData;
 
 	/// <summary>
 	/// Gets the activation-data type expected in the current ability context.
@@ -68,19 +69,16 @@ public class AbilityActivationDataResolver : IPropertyResolver, IActivationDataV
 			return default;
 		}
 
-		return activationContext.AcceptData(this);
+		_resolveActivationData ??= activationContext.AcceptData(this);
+		return _resolveActivationData(activationContext);
 	}
 
 	/// <inheritdoc/>
-	Variant128 IActivationDataVisitor<Variant128>.Visit<TData>(TData data)
+	Func<AbilityBehaviorContext, Variant128> IActivationDataVisitor<Func<AbilityBehaviorContext, Variant128>>
+		.Visit<TData>(AbilityBehaviorContext<TData> context)
 	{
-		if (_readActivationData is not Func<TData, Variant128> read)
-		{
-			read = CreateReader<TData>(_member, _variantConstructor);
-			_readActivationData = read;
-		}
-
-		return read(data);
+		Func<TData, Variant128> read = CreateReader<TData>(_member, _variantConstructor);
+		return activationContext => read(((AbilityBehaviorContext<TData>)activationContext).Data);
 	}
 
 	private static Func<TData, Variant128> CreateReader<TData>(MemberInfo member, ConstructorInfo constructor)
