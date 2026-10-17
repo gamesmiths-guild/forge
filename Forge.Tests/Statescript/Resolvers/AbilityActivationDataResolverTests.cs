@@ -97,7 +97,8 @@ public class AbilityActivationDataResolverTests(TagsAndCuesFixture tagsAndCuesFi
 #pragma warning restore CA1806 // Constructor invocation is the assertion target
 
 		act.Should().Throw<ArgumentException>()
-			.WithMessage("*does not support member type*");
+			.WithMessage("*does not support member type*")
+			.And.ParamName.Should().Be("memberName");
 	}
 
 	private readonly record struct DamageData(int Amount, double Multiplier);

@@ -57,7 +57,7 @@ public class AbilityActivationDataResolver
 		MemberName = ValidateMemberName(memberName);
 		_member = FindMember(activationDataType, MemberName);
 		ValueType = GetMemberType(_member);
-		_variantConstructor = GetVariantConstructor(ValueType);
+		_variantConstructor = GetVariantConstructor(ValueType, MemberName);
 	}
 
 	/// <inheritdoc/>
@@ -155,7 +155,7 @@ public class AbilityActivationDataResolver
 		};
 	}
 
-	private static ConstructorInfo GetVariantConstructor(Type valueType)
+	private static ConstructorInfo GetVariantConstructor(Type valueType, string memberName)
 	{
 		ConstructorInfo? constructor = typeof(Variant128).GetConstructor([valueType]);
 		if (constructor is not null)
@@ -164,9 +164,9 @@ public class AbilityActivationDataResolver
 		}
 
 		throw new ArgumentException(
-			$"AbilityActivationDataResolver does not support member type '{valueType}'. " +
+			$"AbilityActivationDataResolver does not support member type '{valueType}' of '{memberName}'. " +
 			"Use a graph-variable data binder or a custom resolver for unsupported types.",
-			nameof(valueType));
+			nameof(memberName));
 	}
 
 	private static string ValidateMemberName(string memberName)
