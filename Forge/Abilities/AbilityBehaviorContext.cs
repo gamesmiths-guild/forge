@@ -50,6 +50,12 @@ public class AbilityBehaviorContext
 	/// </summary>
 	public float Magnitude { get; }
 
+	/// <summary>
+	/// Gets the type of the activation data carried by <see cref="AbilityBehaviorContext{TData}"/>, or
+	/// <see langword="null"/> when the ability was activated without data.
+	/// </summary>
+	public virtual Type? DataType => null;
+
 	internal AbilityBehaviorContext(Ability ability, AbilityInstance instance, float magnitude)
 	{
 		AbilityHandle = ability.Handle;
@@ -57,5 +63,10 @@ public class AbilityBehaviorContext
 		Owner = ability.Owner;
 		Source = ability.SourceEntity;
 		Magnitude = magnitude;
+	}
+
+	internal virtual TResult AcceptData<TResult>(IActivationDataVisitor<TResult> visitor)
+	{
+		return default!;
 	}
 }

@@ -19,7 +19,7 @@ new AbilityActivatorResolver(provider)
 
 ## Defining a provider
 
-Derive from `AbilityActivationDataProvider<TData>` and override `CreateData`. The base class calls the generic activation API matching the node with the concrete `TData`, so the data reaches the ability without being boxed.
+Derive from `AbilityActivationDataProvider<TData>` and override `CreateData`. The base class calls the generic activation API matching the node with the concrete `TData`, so the data reaches the ability without being boxed. It also builds the matching `GraphAbilityBehavior<TData>` (`CreateGraphBehavior`) and typed event trigger (`CreateEventTrigger`), so an integration holding only the provider never needs reflection to close those types, which NativeAOT builds can't do for value types.
 
 ```csharp
 public sealed record ThrowData(float Force, bool IsCharged);

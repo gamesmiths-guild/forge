@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Abilities;
@@ -15,18 +16,18 @@ public readonly record struct AbilityTriggerData
 
 	internal int Priority { get; }
 
-	internal Type? PayloadType { get; }
+	internal Func<Ability, Tag, int, EventSubscriptionToken>? SubscribeTypedEvent { get; }
 
 	private AbilityTriggerData(
 		AbilityTriggerSource triggerSource,
 		Tag triggerTag,
 		int priority,
-		Type? payloadType = null)
+		Func<Ability, Tag, int, EventSubscriptionToken>? subscribeTypedEvent = null)
 	{
 		TriggerSource = triggerSource;
 		TriggerTag = triggerTag;
 		Priority = priority;
-		PayloadType = payloadType;
+		SubscribeTypedEvent = subscribeTypedEvent;
 	}
 
 	/// <summary>
@@ -42,7 +43,13 @@ public readonly record struct AbilityTriggerData
 	/// <returns>Configured trigger data for typed event handling.</returns>
 	public static AbilityTriggerData ForEvent<TPayload>(Tag triggerTag, int priority = 0)
 	{
-		return new AbilityTriggerData(AbilityTriggerSource.Event, triggerTag, priority, typeof(TPayload));
+		// Captured here, where TPayload is still known at compile time, so AOT builds get the typed subscription.
+		return new AbilityTriggerData(
+			AbilityTriggerSource.Event,
+			triggerTag,
+			priority,
+			static (ability, tag, subscriptionPriority) =>
+				ability.SubscribeTypedEvent<TPayload>(tag, subscriptionPriority));
 	}
 
 	/// <summary>

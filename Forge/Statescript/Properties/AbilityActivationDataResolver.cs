@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
 using Gamesmiths.Forge.Abilities;
@@ -14,11 +15,16 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// activation-data type. It supports reading public instance fields and public readable properties whose types are
 /// supported by <see cref="Variant128"/>.
 /// </remarks>
-public class AbilityActivationDataResolver : IPropertyResolver
+public class AbilityActivationDataResolver
+	: IPropertyResolver, IActivationDataVisitor<Func<AbilityBehaviorContext, Variant128>>
 {
-	private readonly Type _activationContextType;
+	private readonly MemberInfo _member;
 
-	private readonly Func<object, Variant128> _resolveActivationData;
+	private readonly ConstructorInfo _variantConstructor;
+
+	// Built on first resolve through the context, which knows TData at compile time, so AOT builds need neither
+	// MakeGenericType nor a reflected Data getter, which trimming may remove.
+	private Func<AbilityBehaviorContext, Variant128>? _resolveActivationData;
 
 	/// <summary>
 	/// Gets the activation-data type expected in the current ability context.
@@ -39,57 +45,55 @@ public class AbilityActivationDataResolver : IPropertyResolver
 	/// <param name="activationDataType">The runtime activation-data type carried by
 	/// <see cref="AbilityBehaviorContext{TData}"/>.</param>
 	/// <param name="memberName">The public field or property name to read from the activation data.</param>
-	public AbilityActivationDataResolver(Type activationDataType, string memberName)
+	public AbilityActivationDataResolver(
+		[DynamicallyAccessedMembers(
+			DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicFields)]
+		Type activationDataType,
+		string memberName)
 	{
 		EnsureActivationDataType(activationDataType);
 
 		ActivationDataType = activationDataType;
 		MemberName = ValidateMemberName(memberName);
-		_activationContextType = CreateActivationContextType(activationDataType);
-		_resolveActivationData = CreateResolveDelegate(activationDataType, MemberName, out Type valueType);
-		ValueType = valueType;
+		_member = FindMember(activationDataType, MemberName);
+		ValueType = GetMemberType(_member);
+		_variantConstructor = GetVariantConstructor(ValueType);
 	}
 
 	/// <inheritdoc/>
 	public Variant128 Resolve(GraphContext graphContext)
 	{
-		object? activationContext = graphContext.ActivationContext;
-		if (activationContext is null || !_activationContextType.IsInstanceOfType(activationContext))
+		if (graphContext.ActivationContext is not AbilityBehaviorContext activationContext
+			|| activationContext.DataType != ActivationDataType)
 		{
 			return default;
 		}
 
+		_resolveActivationData ??= activationContext.AcceptData(this);
 		return _resolveActivationData(activationContext);
 	}
 
-	private static Func<object, Variant128> CreateResolveDelegate(
-		Type activationDataType,
-		string memberName,
-		out Type valueType)
+	/// <inheritdoc/>
+	Func<AbilityBehaviorContext, Variant128> IActivationDataVisitor<Func<AbilityBehaviorContext, Variant128>>
+		.Visit<TData>(AbilityBehaviorContext<TData> context)
 	{
-		MemberInfo member = FindMember(activationDataType, memberName);
-		valueType = GetMemberType(member);
-		ConstructorInfo constructor = GetVariantConstructor(valueType);
-		Type activationContextType = CreateActivationContextType(activationDataType);
+		Func<TData, Variant128> read = CreateReader<TData>(_member, _variantConstructor);
+		return activationContext => read(((AbilityBehaviorContext<TData>)activationContext).Data);
+	}
 
-		ParameterExpression activationContextParameter = Expression.Parameter(typeof(object), "activationContext");
-		UnaryExpression typedContext = Expression.Convert(activationContextParameter, activationContextType);
-		MemberExpression dataAccess = Expression.Property(typedContext, nameof(AbilityBehaviorContext<int>.Data));
+	private static Func<TData, Variant128> CreateReader<TData>(MemberInfo member, ConstructorInfo constructor)
+	{
+		ParameterExpression dataParameter = Expression.Parameter(typeof(TData), "data");
 		Expression memberAccess = member switch
 		{
-			PropertyInfo property => Expression.Property(dataAccess, property),
-			FieldInfo field => Expression.Field(dataAccess, field),
+			PropertyInfo property => Expression.Property(dataParameter, property),
+			FieldInfo field => Expression.Field(dataParameter, field),
 			_ => throw new InvalidOperationException(
 				$"Unsupported activation-data member kind '{member.MemberType}' for '{member.Name}'."),
 		};
 
 		NewExpression variantCreation = Expression.New(constructor, memberAccess);
-		return Expression.Lambda<Func<object, Variant128>>(variantCreation, activationContextParameter).Compile();
-	}
-
-	private static Type CreateActivationContextType(Type activationDataType)
-	{
-		return typeof(AbilityBehaviorContext<>).MakeGenericType(activationDataType);
+		return Expression.Lambda<Func<TData, Variant128>>(variantCreation, dataParameter).Compile();
 	}
 
 	private static void EnsureActivationDataType(Type activationDataType)
@@ -104,7 +108,11 @@ public class AbilityActivationDataResolver : IPropertyResolver
 #endif
 	}
 
-	private static MemberInfo FindMember(Type activationDataType, string memberName)
+	private static MemberInfo FindMember(
+		[DynamicallyAccessedMembers(
+			DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicFields)]
+		Type activationDataType,
+		string memberName)
 	{
 		memberName = ValidateMemberName(memberName);
 

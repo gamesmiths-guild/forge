@@ -14,6 +14,9 @@ public sealed class AbilityBehaviorContext<TData> : AbilityBehaviorContext
 	/// </summary>
 	public TData Data { get; }
 
+	/// <inheritdoc/>
+	public override Type DataType => typeof(TData);
+
 	internal AbilityBehaviorContext(
 		Ability ability,
 		AbilityInstance instance,
@@ -22,5 +25,10 @@ public sealed class AbilityBehaviorContext<TData> : AbilityBehaviorContext
 		: base(ability, instance, magnitude)
 	{
 		Data = data;
+	}
+
+	internal override TResult AcceptData<TResult>(IActivationDataVisitor<TResult> visitor)
+	{
+		return visitor.Visit(this);
 	}
 }

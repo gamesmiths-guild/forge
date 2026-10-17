@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    NativeAOT smoke test. The unit tests run under the JIT, which compiles any generic instantiation on demand, so they
+    cannot catch code that NativeAOT has no native code for. Publish this project with -r <rid> and run the result: it
+    exits with a non-zero code when a check fails.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Forge\Forge.csproj" />
+  </ItemGroup>
+
+</Project>
