@@ -29,7 +29,7 @@ public sealed class EventManager
 	/// <param name="data">The event data to raise.</param>
 	public void Raise(in EventData data)
 	{
-		InvokeNonGenericHandlers(data);
+		InvokeNonGenericHandlers(_nonGeneric, data);
 	}
 
 	/// <summary>
@@ -39,6 +39,9 @@ public sealed class EventManager
 	/// <param name="data">The event data to raise.</param>
 	public void Raise<TPayload>(in EventData<TPayload> data)
 	{
+		// Taken before the typed handlers run, so a catch-all one of them subscribes waits for the next raise.
+		Subscription[] nonGeneric = _nonGeneric;
+
 		if (_genericByType.TryGetValue(typeof(TPayload), out Subscription[]? typedSubscriptions))
 		{
 			for (int i = 0; i < typedSubscriptions.Length; i++)
@@ -55,9 +58,9 @@ public sealed class EventManager
 
 		// Non-generic subscriptions are catch-all: a generic raise also reaches them with the payload boxed. Only build
 		// the boxed event when such subscribers exist, so typed-only buses pay no boxing cost.
-		if (_nonGeneric.Length > 0)
+		if (nonGeneric.Length > 0)
 		{
-			InvokeNonGenericHandlers(new EventData
+			InvokeNonGenericHandlers(nonGeneric, new EventData
 			{
 				EventTags = data.EventTags,
 				Source = data.Source,
@@ -176,9 +179,8 @@ public sealed class EventManager
 		return true;
 	}
 
-	private void InvokeNonGenericHandlers(in EventData data)
+	private static void InvokeNonGenericHandlers(Subscription[] subscriptions, in EventData data)
 	{
-		Subscription[] subscriptions = _nonGeneric;
 		for (int i = 0; i < subscriptions.Length; i++)
 		{
 			Subscription sub = subscriptions[i];

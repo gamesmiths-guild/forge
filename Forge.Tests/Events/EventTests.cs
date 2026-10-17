@@ -662,5 +662,29 @@ public class EventTests(TagsAndCuesFixture tagsAndCueFixture) : IClassFixture<Ta
 		lateCalls.Should().Be(1);
 	}
 
+	[Fact]
+	[Trait("EdgeCase", null)]
+	public void Catch_all_handler_subscribed_by_a_typed_handler_runs_from_the_next_raise()
+	{
+		var events = new EventManager();
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+		int lateCalls = 0;
+		int raiseCalls = 0;
+
+		events.Subscribe<int>(eventTag, _ =>
+		{
+			if (raiseCalls++ == 0)
+			{
+				events.Subscribe(eventTag, _ => lateCalls++);
+			}
+		});
+
+		events.Raise(new EventData<int> { EventTags = eventTag.GetSingleTagContainer()! });
+		lateCalls.Should().Be(0);
+
+		events.Raise(new EventData<int> { EventTags = eventTag.GetSingleTagContainer()! });
+		lateCalls.Should().Be(1);
+	}
+
 	private readonly record struct TestValuePayload(float X, float Y, float Z);
 }
