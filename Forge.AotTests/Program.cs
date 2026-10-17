@@ -97,8 +97,9 @@ internal static class Program
 		return resolved;
 	}
 
-	// Builds everything through IAbilityActivationDataProvider, the way a host such as forge-godot does. ProviderPayload
-	// is named nowhere else, so its members survive trimming only through the provider's annotation.
+	// Builds everything through IAbilityActivationDataProvider, the way a host such as forge-godot does. Nothing else
+	// hands ProviderPayload to the resolver as a Type, so its members survive trimming only through the provider's
+	// annotation.
 	private static int ResolveThroughProvider(TagsManager tagsManager, Tag eventTag, ProviderPayload payload)
 	{
 		const string valueProperty = "activationValue";

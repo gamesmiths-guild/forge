@@ -9,9 +9,12 @@ using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Modifiers;
+using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.State;
+using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Statescript.Providers;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
@@ -200,6 +203,51 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 
 		readDamage.LastReadValue.Should().Be(50);
 		readMultiplier.LastReadValue.Should().Be(2.5);
+	}
+
+	[Fact]
+	[Trait("GraphBehavior", "TypedData")]
+	public void Provider_creates_graph_behavior_typed_by_its_data()
+	{
+		IAbilityActivationDataProvider provider = new DamageDataProvider();
+
+		provider.CreateGraphBehavior(new Graph()).Should().BeOfType<GraphAbilityBehavior<DamageData>>();
+	}
+
+	[Fact]
+	[Trait("GraphBehavior", "TypedData")]
+	public void Provider_event_trigger_runs_its_graph_with_the_event_payload()
+	{
+		IAbilityActivationDataProvider provider = new DamageDataProvider();
+		var eventTag = Tag.RequestTag(_tagsManager, "simple.tag");
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineProperty(
+			"amount",
+			new AbilityActivationDataResolver(provider.DataType, nameof(DamageData.Amount)));
+
+		var readAmount = new ReadPropertyNode<int>();
+		readAmount.BindInput(ReadPropertyNode<int>.ValueInput, "amount");
+		graph.AddNode(readAmount);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			readAmount.InputPorts[ActionNode.InputPort]));
+
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		GraphAbilityBehavior behavior = provider.CreateGraphBehavior(graph);
+		var abilityData = new AbilityData(
+			"ProviderTriggered",
+			abilityTriggerData: provider.CreateEventTrigger(eventTag, 0),
+			behaviorFactory: () => behavior);
+		Grant(entity, abilityData).Should().NotBeNull();
+
+		entity.Events.Raise(new EventData<DamageData>
+		{
+			EventTags = eventTag.GetSingleTagContainer()!,
+			Payload = new DamageData(42, 1.5),
+		});
+
+		readAmount.LastReadValue.Should().Be(42);
 	}
 
 	[Fact]
@@ -546,6 +594,14 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 	}
 
 	private sealed record DamageData(int Amount, double Multiplier);
+
+	private sealed class DamageDataProvider : AbilityActivationDataProvider<DamageData>
+	{
+		public override DamageData CreateData(GraphContext graphContext, AbilityActivationDataInputs inputs)
+		{
+			return new DamageData(0, 0);
+		}
+	}
 
 	// Runs a callback as it is activated, as a node whose start sets something off would.
 	private sealed class ActivationCallbackNode : StateNode<StateNodeContext>
