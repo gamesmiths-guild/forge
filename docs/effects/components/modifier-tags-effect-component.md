@@ -47,7 +47,7 @@ var burningEffectData = new EffectData(
         )
     ),
     new[] {
-        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
+        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.FlatBonus, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
     },
     periodicData: new PeriodicData(
         Period: new ScalableFloat(2.0f),

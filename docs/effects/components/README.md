@@ -299,27 +299,29 @@ public class DamageThresholdComponent : IEffectComponent
 {
     private readonly float _threshold;
     private readonly Effect _thresholdEffect;
+    private readonly Tag _damageTakenTag;
     private float _accumulatedDamage;
     private EventSubscriptionToken? _damageEventToken;
 
-    public DamageThresholdComponent(float threshold, Effect thresholdEffect)
+    // damageTakenTag is the event to count, e.g. Tag.RequestTag(tagsManager, "events.combat.damage_taken")
+    public DamageThresholdComponent(float threshold, Effect thresholdEffect, Tag damageTakenTag)
     {
         _threshold = threshold;
         _thresholdEffect = thresholdEffect;
+        _damageTakenTag = damageTakenTag;
     }
 
     // Guarantees each effect application has its own unique instance and state
     public IEffectComponent CreateInstance()
     {
-        return new DamageThresholdComponent(_threshold, _thresholdEffect);
+        return new DamageThresholdComponent(_threshold, _thresholdEffect, _damageTakenTag);
     }
 
     public bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
     {
         _accumulatedDamage = 0f;
-        // Subscribe to an "events.combat.damage_taken" event using Forge's Events system
-        var damageTakenTag = Tag.RequestTag(target.TagsManager, "events.combat.damage_taken");
-        _damageEventToken = target.Events.Subscribe(damageTakenTag, data =>
+        // Count damage through Forge's Events system
+        _damageEventToken = target.Events.Subscribe(_damageTakenTag, data =>
         {
             _accumulatedDamage += data.EventMagnitude;
             if (_accumulatedDamage >= _threshold)

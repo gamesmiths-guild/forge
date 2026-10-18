@@ -104,6 +104,7 @@ var behavior = new GraphAbilityBehavior(graph);
 For typed activation data:
 
 ```csharp
+// DashData is your own activation data type, e.g. public record struct DashData(float Distance, float Speed);
 graph.VariableDefinitions.DefineProperty("Distance",
     new AbilityActivationDataResolver(typeof(DashData), nameof(DashData.Distance)));
 

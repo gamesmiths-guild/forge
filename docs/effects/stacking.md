@@ -231,7 +231,7 @@ var poisonEffectData = new EffectData(
             MagnitudeCalculationType.ScalableFloat,
             scalableFloatMagnitude: new ScalableFloat(10.0f))),
     new[] {
-        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
+        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.FlatBonus, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
     },
     new StackingData(
         StackLimit: new ScalableInt(5),
@@ -258,7 +258,7 @@ var hierarchicalBuffEffect = new EffectData(
             MagnitudeCalculationType.ScalableFloat,
             scalableFloatMagnitude: new ScalableFloat(30.0f))),
     new[] {
-        new Modifier("CombatAttributeSet.AttackPower", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+        new Modifier("CombatAttributeSet.AttackPower", ModifierOperation.FlatBonus, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
     },
     new StackingData(
         StackLimit: new ScalableInt(3),
@@ -293,7 +293,7 @@ var bleedingEffectData = new EffectData(
             MagnitudeCalculationType.ScalableFloat,
             scalableFloatMagnitude: new ScalableFloat(8.0f))),
     new[] {
-        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-3)))
+        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.FlatBonus, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-3)))
     },
     new StackingData(
         StackLimit: new ScalableInt(3),

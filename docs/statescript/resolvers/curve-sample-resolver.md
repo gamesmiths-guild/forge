@@ -25,7 +25,7 @@ new CurveSampleResolver(curve, time)
 ```csharp
 // Sample a falloff curve at a normalized distance
 graph.VariableDefinitions.DefineProperty("falloff",
-    new CurveSampleResolver(falloffCurve, new VariableResolver("normalizedDistance")));
+    new CurveSampleResolver(falloffCurve, new VariableResolver("normalizedDistance", typeof(float))));
 ```
 
 ## Composition
@@ -35,7 +35,7 @@ graph.VariableDefinitions.DefineProperty("falloff",
 graph.VariableDefinitions.DefineProperty("scaledMagnitude",
     new MultiplyResolver(
         new AbilityMagnitudeResolver(),
-        new CurveSampleResolver(falloffCurve, new VariableResolver("normalizedDistance"))));
+        new CurveSampleResolver(falloffCurve, new VariableResolver("normalizedDistance", typeof(float)))));
 ```
 
 ## See Also

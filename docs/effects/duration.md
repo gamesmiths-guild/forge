@@ -145,7 +145,7 @@ When working with durations, several constraints apply to ensure effects behave 
        "Invalid Effect",
        new DurationData(DurationType.Instant),
        [/*...*/],
-       periodicData: new PeriodicData(new ScalableFloat(1.0f)) // Error
+       periodicData: new PeriodicData(new ScalableFloat(1.0f), true, PeriodInhibitionRemovedPolicy.NeverReset) // Error
    );
    ```
 
@@ -178,7 +178,7 @@ When working with durations, several constraints apply to ensure effects behave 
        "Invalid Effect",
        new DurationData(DurationType.Instant),
        [/*...*/],
-       effectComponents: new[] { new ModifierTagsEffectComponent(new TagContainer()) } // Error
+       effectComponents: new[] { new ModifierTagsEffectComponent(new TagContainer(tagsManager)) } // Error
    );
    ```
 
@@ -231,7 +231,7 @@ When working with durations, several constraints apply to ensure effects behave 
 
 1. **DurationMagnitude Scope**: `DurationMagnitude` is only valid when `DurationType` is `HasDuration`.
    ```csharp
-   // INVALID - Can't provide duration magniteude for non-HasDuration effects
+   // INVALID - Can't provide duration magnitude for non-HasDuration effects
    new DurationData(
        DurationType.Infinite,
        new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10.0f)) // Invalid

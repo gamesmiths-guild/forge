@@ -128,7 +128,7 @@ entity.Events.Raise(new EventData<HitPayload>
     Source = attacker,
     Target = victim,
     EventMagnitude = 25f,
-    Payload = new HitPayload(25, critical: true)
+    Payload = new HitPayload(25, Critical: true)
 });
 ```
 
