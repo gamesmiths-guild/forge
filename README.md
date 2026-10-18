@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/gamesmiths-guild/forge/actions/workflows/validate-project.yml/badge.svg)](https://github.com/gamesmiths-guild/forge/actions/workflows/validate-project.yml)
 [![NuGet](https://img.shields.io/nuget/v/Gamesmiths.Forge.svg)](https://www.nuget.org/packages/Gamesmiths.Forge)
-[![License](https://img.shields.io/github/license/gamesmiths-guild/forge)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **A gameplay framework for C#, bringing Unreal’s Gameplay Ability System concepts to any engine.** Attributes, effects, abilities, gameplay tags, events, cues and visual ability scripting, with no engine dependency.
 

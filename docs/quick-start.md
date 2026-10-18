@@ -10,15 +10,15 @@ Using Godot? [Forge for Godot](https://github.com/gamesmiths-guild/forge-godot) 
 
 ```mermaid
 flowchart LR
+    Heal["Heal ability"] -->|costs 25| Mana
+    Heal -->|adds cooldown.heal for 2 s| Hero
+    Heal -->|applies +30| Health
     subgraph Hero["Hero (IForgeEntity)"]
         Health
         Mana
     end
-    Burning["Burning effect<br/>-5 Health every 0.5 s"] -->|modifies| Health
+    Burning["Burning effect<br/>-5 Health every 0.5 s"] --> Health
     Burning -.->|cue.burn| Handler["Cue handler<br/>prints each tick"]
-    Heal["Heal ability"] -->|costs 25| Mana
-    Heal -->|applies +30| Health
-    Heal -->|adds cooldown.heal for 2 s| Hero
 ```
 
 ## 1. Install
