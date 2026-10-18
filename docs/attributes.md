@@ -2,7 +2,7 @@
 
 The Attributes system in Forge provides a robust framework for managing numeric properties of game entities. Attributes represent any quantifiable characteristic like health, strength, movement speed, or any other property that can be represented numerically.
 
-For a practical guide on using attributes, see the [Quick Start Guide](quick-start.md).
+For a first walkthrough, see the [Quick Start](quick-start.md).
 
 ## Core Concepts
 
@@ -187,12 +187,25 @@ Channels provide powerful, layered attribute calculation with clearly defined or
 2. Channels are processed in sequence, where the output of one channel becomes the input of the next:
 
 ```
-Channel 1:  (BaseValue + FlatMod1) * PercentMod1  →  Result1
-Channel 2:  (Result1 + FlatMod2) * PercentMod2    →  Result2
-Channel 3:  (Result2 + FlatMod3) * PercentMod3    →  FinalValue
+Channel 0:  (BaseValue + FlatMod0) * PercentMod0  →  Result0
+Channel 1:  (Result0 + FlatMod1) * PercentMod1    →  Result1
+Channel 2:  (Result1 + FlatMod2) * PercentMod2    →  FinalValue
 ```
 
 3. The result is clamped between `Min` and `Max` to produce `CurrentValue`; anything outside those bounds is reported through `Overflow`.
+
+```mermaid
+flowchart LR
+    Base["BaseValue"] --> C0
+    subgraph C0["Channel 0"]
+        direction TB
+        O0{"Override?"} -->|no| F0["+ flat modifiers"] --> P0["× percent modifiers"]
+    end
+    C0 --> C1["Channel 1<br/>same steps"] --> CN["…"] --> Clamp["Clamp to Min…Max"] --> Current["CurrentValue"]
+    O0 -->|yes| R0["override value"]
+    R0 --> C1
+    Clamp -.->|excess| Overflow["Overflow"]
+```
 
 ### Channel Configuration
 

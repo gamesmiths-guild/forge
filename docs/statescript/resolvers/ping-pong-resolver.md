@@ -26,7 +26,7 @@ new PingPongResolver(value, length)
 // Oscillate a value between 0 and 1 from an increasing time input
 graph.VariableDefinitions.DefineProperty("pulse",
     new PingPongResolver(
-        new VariableResolver("elapsed"),
+        new VariableResolver("elapsed", typeof(float)),
         new VariantResolver(new Variant128(1f), typeof(float))));
 ```
 
@@ -39,7 +39,7 @@ graph.VariableDefinitions.DefineProperty("glowIntensity",
         new VariantResolver(new Variant128(0.5f), typeof(float)),
         new VariantResolver(new Variant128(1.5f), typeof(float)),
         new PingPongResolver(
-            new VariableResolver("elapsed"),
+            new VariableResolver("elapsed", typeof(float)),
             new VariantResolver(new Variant128(1f), typeof(float)))));
 ```
 

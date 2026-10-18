@@ -137,7 +137,7 @@ new AdditionalEffectsEffectComponent(
     onCompletePrematurely: [new ConditionalEffect(exhaustionData)]);
 ```
 
-Paired with [AttributeAccumulatorEffectComponent](attribute-accumulator-effect-component.md), a completion effect aimed at `Source` becomes a damage-over-time that pays its caster back for what it dealt — the accumulator supplies the number and `copyDataFromOriginalEffect` carries it across. The [quick start](../../quick-start.md#advanced-composing-components) walks that scenario through end to end.
+Paired with [AttributeAccumulatorEffectComponent](attribute-accumulator-effect-component.md), a completion effect aimed at `Source` becomes a damage-over-time that pays its caster back for what it dealt — the accumulator supplies the number and `copyDataFromOriginalEffect` carries it across. The [Extending Effects](../../guides/extending-effects.md#composing-components) guide walks that scenario through end to end.
 
 ## Key Points
 

@@ -2,7 +2,7 @@
 
 Periodic Effects in Forge enables [effects](README.md) to execute repeatedly at specified intervals. This is essential for implementing damage-over-time, healing-over-time, resource regeneration, and other recurring gameplay mechanics.
 
-For a practical guide on using periodic effects, see the [Quick Start Guide](../quick-start.md).
+For worked examples, see the [Effect Recipes](../guides/effect-recipes.md) guide.
 
 ## Core Components
 
@@ -73,7 +73,7 @@ var poisonEffectData = new EffectData(
         )
     ),
     new[] {
-        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
+        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.FlatBonus, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))
     },
     periodicData: new PeriodicData(
         Period: new ScalableFloat(2.0f),                           // Execute every 2 seconds
@@ -99,7 +99,7 @@ var healingEffectData = new EffectData(
         )
     ),
     new[] {
-        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
+        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.FlatBonus, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)))
     },
     periodicData: new PeriodicData(
         // Period decreases as level increases (faster ticks at higher levels)
@@ -155,7 +155,7 @@ Periodic effects have specific constraints and interactions with other systems:
        "Invalid Effect",
        new DurationData(DurationType.Instant), // Error with periodic data
        [/*...*/],
-       periodicData: new PeriodicData(new ScalableFloat(1.0f))
+       periodicData: new PeriodicData(new ScalableFloat(1.0f), true, PeriodInhibitionRemovedPolicy.NeverReset)
    );
    ```
 
@@ -171,7 +171,7 @@ Periodic effects have specific constraints and interactions with other systems:
                new ScalableFloat(10.0f))
        ),
        [/*...*/],
-       periodicData: new PeriodicData(new ScalableFloat(1.0f))
+       periodicData: new PeriodicData(new ScalableFloat(1.0f), true, PeriodInhibitionRemovedPolicy.NeverReset)
    );
 
    // VALID - Infinite periodic effect
@@ -179,7 +179,7 @@ Periodic effects have specific constraints and interactions with other systems:
        "Valid Effect",
        new DurationData(DurationType.Infinite),
        [/*...*/],
-       periodicData: new PeriodicData(new ScalableFloat(1.0f))
+       periodicData: new PeriodicData(new ScalableFloat(1.0f), true, PeriodInhibitionRemovedPolicy.NeverReset)
    );
    ```
 
@@ -235,7 +235,7 @@ var burningEffectData = new EffectData(
             new ScalableFloat(5.0f))
     ),
     new[] {
-        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-8)))
+        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.FlatBonus, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-8)))
     },
     periodicData: new PeriodicData(
         Period: new ScalableFloat(1.0f),
@@ -258,7 +258,7 @@ var regenerationEffectData = new EffectData(
             new ScalableFloat(10.0f))
     ),
     new[] {
-        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(15)))
+        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.FlatBonus, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(15)))
     },
     periodicData: new PeriodicData(
         Period: new ScalableFloat(2.0f),
@@ -276,7 +276,7 @@ var manaRegenEffectData = new EffectData(
     "Mana Aura",
     new DurationData(DurationType.Infinite),
     new[] {
-        new Modifier("ResourceAttributeSet.CurrentMana", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(5)))
+        new Modifier("ResourceAttributeSet.CurrentMana", ModifierOperation.FlatBonus, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(5)))
     },
     periodicData: new PeriodicData(
         Period: new ScalableFloat(3.0f),
@@ -299,7 +299,7 @@ var bleedingEffectData = new EffectData(
             new ScalableFloat(6.0f))
     ),
     new[] {
-        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.Add, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-3)))
+        new Modifier("CombatAttributeSet.CurrentHealth", ModifierOperation.FlatBonus, new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-3)))
     },
     new StackingData(
         StackLimit: new ScalableInt(3),

@@ -80,21 +80,14 @@ public class EntityHealthPercentResolver : IPropertyResolver
             return default;
         }
 
-        if (!context.Owner.Attributes.ContainsAttribute(_healthAttribute)
-            || !context.Owner.Attributes.ContainsAttribute(_maxHealthAttribute))
+        if (!context.Owner.Attributes.TryGetAttribute(_healthAttribute, out EntityAttribute? health)
+            || !context.Owner.Attributes.TryGetAttribute(_maxHealthAttribute, out EntityAttribute? maxHealth)
+            || maxHealth.CurrentValue == 0)
         {
             return default;
         }
 
-        int health = context.Owner.Attributes[_healthAttribute].CurrentValue;
-        int maxHealth = context.Owner.Attributes[_maxHealthAttribute].CurrentValue;
-
-        if (maxHealth == 0)
-        {
-            return default;
-        }
-
-        return new Variant128((float)health / maxHealth);
+        return new Variant128((float)health.CurrentValue / maxHealth.CurrentValue);
     }
 }
 ```
@@ -162,13 +155,13 @@ public Variant128 Resolve(GraphContext graphContext)
     }
 
     // Return a default when the expected data isn't present
-    if (!context.Owner.Attributes.ContainsAttribute(_attributeKey))
+    if (!context.Owner.Attributes.TryGetAttribute(_attributeKey, out EntityAttribute? attribute))
     {
         return default;
     }
 
     // Happy path
-    return new Variant128(context.Owner.Attributes[_attributeKey].CurrentValue);
+    return new Variant128(attribute.CurrentValue);
 }
 ```
 

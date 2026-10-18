@@ -2,7 +2,7 @@
 
 The Effects system in Forge provides a powerful framework for implementing gameplay mechanics such as damage, healing, buffs, debuffs, and other status effects. It offers a data-driven approach to modifying [attributes](../attributes.md) and applying status changes to game entities.
 
-For a practical guide on creating and applying effects, see the [Quick Start Guide](../quick-start.md).
+For a first walkthrough, see the [Quick Start](../quick-start.md); for more examples, the [Effect Recipes](../guides/effect-recipes.md) guide.
 
 ## Core Concepts
 
@@ -402,6 +402,18 @@ Effects have two distinct phases:
 - Instant effects execute immediately upon application.
 - [Periodic effects](periodic.md) execute on intervals defined by their `PeriodicData`.
 - Duration effects don't "execute" in this sense, they apply temporary modifiers instead.
+
+```mermaid
+flowchart TD
+    Apply["ApplyEffect(effect)"] --> Req{"Requirements and<br/>immunities pass?"}
+    Req -->|no| Denied["Not applied"]
+    Req -->|yes| Kind{"Duration type"}
+    Kind -->|Instant| Exec["Execute once:<br/>change base values"] --> Null["Returns null"]
+    Kind -->|"HasDuration or Infinite"| Active["ActiveEffect<br/>returns a handle"]
+    Active -->|periodic| Tick["Execute every period"]
+    Active -->|not periodic| Mods["Hold temporary modifiers<br/>and tags"]
+    Active --> Removed["Expires or is removed:<br/>modifiers and tags go with it"]
+```
 
 ```csharp
 // Apply an instant effect (applies and executes immediately)

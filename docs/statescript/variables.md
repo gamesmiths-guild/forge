@@ -177,25 +177,19 @@ bool valid = graph.VariableDefinitions.ValidatePropertyType("duration", typeof(d
 
 ## Data Flow Summary
 
-```
-+----------------------------------------------------------+
-|                    GraphContext                          |
-|                                                          |
-|  +-------------+  +-------------+  +----------------+    |
-|  | Graph Vars  |  | Shared Vars |  | Activation Ctx |    |
-|  | (per-graph) |  | (per-entity)|  | (ability data) |    |
-|  +------+------+  +------+------+  +-------+--------+    |
-|         |                |                 |             |
-|         +--------+-------+-----------------+             |
-|                  |                                       |
-|          +-------v-------+                               |
-|          |   Resolvers   |  Attribute, Tag, Comparison,  |
-|          |               |  Variable, Magnitude,         |
-|          |               |  Variant                      |
-|          +-------+-------+                               |
-|                  |                                       |
-|          +-------v-------+                               |
-|          |  Node Inputs  |                               |
-|          +---------------+                               |
-+----------------------------------------------------------+
+```mermaid
+flowchart TB
+    subgraph Context["GraphContext"]
+        Graph["Graph variables<br/>per graph run"]
+        Shared["Shared variables<br/>per entity"]
+        Activation["Activation data<br/>and context"]
+    end
+    Entity["Owner entity<br/>attributes and tags"]
+    Graph --> Resolvers
+    Shared --> Resolvers
+    Activation --> Resolvers
+    Entity --> Resolvers
+    Resolvers["Resolvers<br/>Attribute, TagQuery, Comparison,<br/>Variable, AbilityMagnitude, Variant…"] --> Inputs["Node inputs"]
+    Inputs --> Node["Node runs"]
+    Node -->|writes| Outputs["Output variables<br/>into graph or shared variables"]
 ```

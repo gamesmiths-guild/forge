@@ -1,154 +1,86 @@
-# Forge Gameplay System Documentation
+# Forge Documentation
 
-Forge is a C# gameplay framework designed for building rich, modular game mechanics with a focus on flexibility, performance, and developer experience.
+Forge is an engine-agnostic gameplay framework in C#, inspired by Unreal Engine's Gameplay Ability System. These pages explain how its systems work and how to use them from code.
 
-## Core Concepts
+**New here?** Read the [Quick Start](quick-start.md) first. It builds a working hero with Health, a burning effect and a heal ability in about ten minutes, and everything after it builds on those ideas.
 
-Forge's architecture is built around several interconnected systems that work together to provide a complete gameplay foundation:
+## How the pieces fit
 
-### Entity System
+Everything that takes part in gameplay is an **entity**: any object of yours that implements `IForgeEntity`. Each entity owns one of each manager below, and two managers are shared by the whole game.
 
-At the center of Forge is the entity system, represented by `IForgeEntity`. Each game entity can have:
+```mermaid
+flowchart TB
+    subgraph Game["Shared by the game"]
+        TagsManager["TagsManager<br/>every gameplay tag"]
+        CuesManager["CuesManager<br/>routes cues to handlers"]
+    end
+    subgraph Entity["Your entity (IForgeEntity)"]
+        Attributes["EntityAttributes<br/>attribute sets: Health, Mana…"]
+        Tags["EntityTags<br/>base + modifier tags"]
+        Effects["EffectsManager<br/>active effects"]
+        Abilities["EntityAbilities<br/>granted abilities"]
+        Events["EventManager<br/>gameplay events"]
+        Shared["SharedVariables<br/>data for Statescript graphs"]
+    end
+    Effects -->|modify| Attributes
+    Effects -->|add and remove| Tags
+    Effects -->|grant| Abilities
+    Abilities -->|apply costs, cooldowns and effects| Effects
+    Events -->|trigger| Abilities
+    Tags -->|trigger, require, block| Abilities
+    Effects -.->|raise cues| CuesManager
+    TagsManager -.-> Tags
+```
 
-- **Attributes**: Numeric values that define an entity's capabilities and state.
-- **Tags**: Labels that identify entity characteristics and enable queries.
-- **Effects**: Gameplay effects that can modify attributes and behaviors.
-- **Abilities**: Granted and activated gameplay abilities with instancing, costs, cooldowns, and tag requirements.
-- **Events**: Gameplay events dispatched and listened to for triggers and reactions.
+The one rule that holds it together: **attributes and tags change through effects**. A sword hit, a poison, a level-up bonus, an ability's mana cost and its cooldown are all effects. Because of that, every change can be stacked, timed, made immune to, reacted to and shown to the player in the same way.
 
-Entities serve as containers for these components, allowing for modular construction of game objects.
+## Systems
 
-### Attribute System
+| System | What it does | Start with |
+| --- | --- | --- |
+| [Attributes](attributes.md) | Integer stats with a minimum, a maximum and layered modifiers, grouped in attribute sets. | [Attribute values are integers](attributes.md#attribute-values-are-integers) |
+| [Effects](effects/README.md) | The only way to change attributes and tags: instant, timed or infinite, optionally periodic and stacking. | [Modifiers](effects/modifiers.md), [Duration](effects/duration.md) |
+| [Tags](tags.md) | Hierarchical labels (`status.burning`) used for matching, requirements, immunity and routing. | |
+| [Abilities](abilities.md) | Things an entity can do: granted, activated, with costs, cooldowns, tag rules and instancing. | [Observing abilities](abilities.md#observing-abilities) |
+| [Events](events.md) | Tag-routed gameplay messages, optionally strongly typed, that can trigger abilities. | |
+| [Cues](cues.md) | Presentation hooks: effects raise cues, your handlers turn them into particles and sound. | |
+| [Statescript](statescript/README.md) | Ability behavior as a graph of nodes, built in code or in an engine's visual editor. | [Subgraphs](statescript/subgraphs.md) |
 
-[Attributes](attributes.md) manage numeric values and their modifications:
+Going deeper into effects: [Stacking](effects/stacking.md), [Periodic effects](effects/periodic.md), [Components](effects/components/README.md) and [Custom calculators and executions](effects/calculators.md).
 
-- **Base Values**: The starting point for attribute calculations.
-- **Modifiers**: Adjustments that affect attribute values through flat, percentage, or override operations.
-- **Channels**: Multiple processing layers that allow for complex calculation pipelines.
-- **Attribute Sets**: Collections of related attributes for logical organization.
+Going deeper into Statescript: the [node library](statescript/nodes/README.md), [resolvers](statescript/resolvers/README.md), [variables and data](statescript/variables.md), [ability integration](statescript/ability-integration.md) and [custom resolvers](statescript/custom-resolvers.md).
 
-Attributes can have minimum and maximum limits and support automatic recalculation when dependencies change.
+## Guides
 
-All attribute values are **integers**, a deliberate choice in service of determinism; see [Attribute Values Are Integers](attributes.md#attribute-values-are-integers) for the reasoning and for the scaled-integer convention used to represent fractional stats.
+Task-focused walkthroughs, with code that runs in the test suite: [effect recipes](guides/effect-recipes.md), [extending effects](guides/extending-effects.md), [cues and events](guides/cues-and-events.md), [ability recipes](guides/ability-recipes.md) and [Statescript in code](guides/statescript-in-code.md). See the [guides index](guides/README.md).
 
-### Tag System
+## Design principles
 
-[Tags](tags.md) in Forge are lightweight identifiers that mark entities with specific characteristics:
-
-- **Tag Container**: Holds and manages an entity's tags.
-- **Tag Queries**: Allow for efficient entity selection based on tag combinations.
-- **Tag Requirements**: Define conditions for effect application.
-
-Tags are central to many Forge systems, enabling contextual application of effects and conditional logic.
-
-### Effect System
-
-[Effects](effects/README.md) are the primary way to implement gameplay mechanics in Forge:
-
-- **Modifiers**: Changes to attribute values.
-- **Tags**: Added or removed during effect application.
-- **Executions**: Custom logic that runs when effects are applied or removed.
-- **Duration**: Controls how long effects remain active.
-
-Effects can be instant or persistent, with various duration types including infinite, timed, and conditional.
-
-### Ability System
-
-[Abilities](abilities.md) manage creation and use of gameplay abilities:
-
-- **Granting**: Add abilities to entities, including level scaling and ownership.
-- **Activation**: Start ability instances with checks for inhibition and requirements.
-- **Costs and Cooldowns**: Apply cost effects and cooldown effects via the effects system.
-- **Instancing Policies**: Control per-entity or per-execution instances, retrigger behavior, and cancellation.
-- **Tag Rules**: Use tags to require, block, cancel, or inhibit abilities.
-
-### Event System
-
-[Events](events.md) deliver gameplay event data for triggers and reactions:
-
-- **Event Data**: Structured payloads carrying source, target, and parameters.
-- **Tagging**: Event tags for filtering and matching listeners.
-- **Dispatching**: Raise events through entity event managers.
-- **Listeners and Triggers**: Drive ability activation and other game logic from event hooks.
-
-### Cue System
-
-[Cues](cues.md) bridge gameplay systems with visual and audio feedback:
-
-- **Cue Events**: Triggered by gameplay events like effect application.
-- **Cue Parameters**: Dynamic data that informs how feedback should be presented.
-- **Cue Handlers**: Logic for converting gameplay events into sensory output.
-
-This system keeps gameplay logic separate from presentation concerns.
-
-### Statescript System
-
-[Statescript](statescript/README.md) is a state-based scripting system for defining ability behaviors:
-
-- **Node Graph**: Graphs composed of Entry, Exit, Action, Condition, and State nodes define execution flow.
-- **Hybrid Execution**: Combines declarative state management with imperative message propagation.
-- **Subgraphs**: State nodes own downstream subgraphs, providing automatic lifetime management and cleanup.
-- **Variables**: Mutable graph variables and entity-level shared variables connect graph logic to runtime data.
-- **Property Resolvers**: Data-driven inputs from attributes, tags, comparisons, and activation context.
-- **Ability Integration**: Graphs plug directly into the Abilities system as `IAbilityBehavior` implementations.
-
-## Architecture Overview
-
-Forge's architecture follows these key principles:
-
-1. **Composition over Inheritance**: Systems are designed to be attached to entities rather than inherited.
-2. **Data-Driven Design**: Most gameplay elements are defined as data that can be authored and modified.
-3. **Modularity**: Systems can be used independently or together based on project needs.
-4. **Performance-Aware**: Optimized for both runtime performance and memory usage.
-5. **Deterministic**: Systems prioritize predictable behavior for networking and replay support.
-
-The framework avoids deep inheritance hierarchies, preferring flexible composition patterns that allow for greater code reuse and clearer architecture.
+1. **Composition over inheritance.** Systems attach to your objects through `IForgeEntity`; your class hierarchy stays yours.
+2. **Data-driven.** Effects and abilities are definitions (`EffectData`, `AbilityData`) that can be authored as data and shared.
+3. **Modular.** Use attributes and effects alone, or add abilities, events, cues and Statescript as you need them.
+4. **Time is an argument.** Forge never reads a clock; your loop passes the delta, so real-time, turn-based and simulated games work alike.
+5. **Deterministic.** Integer attributes and explicit time keep results predictable, with networking and replays in mind.
 
 ## Validation and Debugging
 
-Forge includes a runtime validation system (`Validation` class) that helps catch misconfigurations and logic errors during development, editor, and testing workflows.
+Forge includes a runtime validation system (the `Validation` class) that catches misconfigurations and logic errors during development, in editors and in tests.
 
-- By default, validation is **disabled**.
-- Enable it by setting `Validation.Enabled = true;` in your editor, test, or debug environment.
-- When enabled, failed validations will throw a `ValidationException` with an explanatory message.
-- For optimal performance, leave validation disabled in production or deployment environments.
-
-**Usage Example:**
+- Validation is **disabled** by default.
+- Enable it with `Validation.Enabled = true;` in your editor, test or debug environment.
+- A failed validation throws a `ValidationException` with an explanatory message.
+- Leave it disabled in shipped builds for performance.
 
 ```csharp
 Validation.Enabled = true; // Enable validation (e.g., in editor)
 Validation.Assert(someCondition, "Message if failed.");
 ```
 
-## Documentation Structure
+The NuGet package ships with [Source Link](https://learn.microsoft.com/en-us/dotnet/standard/library-guidance/sourcelink) and symbols, so you can step into Forge's source while debugging.
 
-For more detailed information about specific systems, refer to these documentation files:
+## Using Forge in an engine
 
-### Core Systems
+Forge has no engine dependency. Integrations wrap it in the engine's own idioms:
 
-- [Attributes](attributes.md): Details on attribute definition, evaluation, and channels.
-- [Effects](effects/README.md): Creating and applying effects to entities.
-- [Tags](tags.md): Using the tag system for entity identification.
-- [Abilities](abilities.md): Ability granting, activation, instancing, costs, cooldowns, and tag requirements.
-- [Events](events.md): Event data, tagging, and trigger hooks.
-- [Cues](cues.md): Connecting gameplay events to visual and audio feedback.
-- [Statescript](statescript/README.md): Visual state-based scripting for ability behaviors.
-
-### Effect Features
-
-- [Modifiers](effects/modifiers.md): How modifiers affect attribute calculations.
-- [Duration](effects/duration.md): Controlling how long effects remain active.
-- [Stacking](effects/stacking.md): Configuring how multiple instances of effects combine.
-- [Periodic](effects/periodic.md): Creating effects that execute repeatedly over time.
-- [Components](effects/components/README.md): Extending effects with custom behaviors.
-- [Custom Calculators](effects/calculators.md): Creating custom calculations for effects.
-
-### Getting Started
-
-- [Quick Start](quick-start.md): Get up and running with Forge quickly.
-
-## Getting Started
-
-To start using Forge in your project, see the [Quick Start Guide](quick-start.md) for basic setup and examples of common gameplay mechanics.
-
-For installation options and an architecture overview, see the main [README](../README.md).
+- **Godot:** [Forge for Godot](https://github.com/gamesmiths-guild/forge-godot) adds nodes, Inspector resources, a tags editor and a visual Statescript graph editor.
+- **Anything else:** implement `IForgeEntity` on your objects and call `EffectsManager.UpdateEffects` and `Abilities.UpdateAbilities` from your loop, as the [Quick Start](quick-start.md#5-drive-time) shows.

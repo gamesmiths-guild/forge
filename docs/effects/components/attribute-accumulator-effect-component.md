@@ -97,7 +97,7 @@ var siphonData = new EffectData(
     ]);
 ```
 
-Reading the total back is somebody else's job — usually [AdditionalEffectsEffectComponent](additional-effects-effect-component.md) with `copyDataFromOriginalEffect`, which carries the tag to whatever it applies. The [quick start](../../quick-start.md#advanced-composing-components) builds that pairing end to end: a curse that heals its caster for the damage it dealt.
+Reading the total back is somebody else's job — usually [AdditionalEffectsEffectComponent](additional-effects-effect-component.md) with `copyDataFromOriginalEffect`, which carries the tag to whatever it applies. The [Extending Effects](../../guides/extending-effects.md#composing-components) guide builds that pairing end to end: a curse that heals its caster for the damage it dealt.
 
 ## Key Points
 

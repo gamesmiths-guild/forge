@@ -2,7 +2,7 @@
 
 Effect Modifiers in Forge provide a flexible way to modify entity [attributes](../attributes.md) through [effects](README.md). Modifiers define how an effect changes attribute values, with support for different operation types and magnitude calculations.
 
-For a practical guide on using modifiers, see the [Quick Start Guide](../quick-start.md).
+For worked examples, see the [Effect Recipes](../guides/effect-recipes.md) guide.
 
 ## Core Concepts
 
@@ -472,9 +472,9 @@ Modifiers can be applied to different "channels" of an attribute, allowing for m
 Each attribute has multiple calculation channels that are processed in sequence. The attribute value flows through each channel, with the result of each channel becoming the input to the next:
 
 ```
-Channel 1:  (BaseValue + FlatMod1) * PercentMod1  →  Result1
-Channel 2:  (Result1 + FlatMod2) * PercentMod2    →  Result2
-Channel 3:  (Result2 + FlatMod3) * PercentMod3    →  FinalValue
+Channel 0:  (BaseValue + FlatMod0) * PercentMod0  →  Result0
+Channel 1:  (Result0 + FlatMod1) * PercentMod1    →  Result1
+Channel 2:  (Result1 + FlatMod2) * PercentMod2    →  FinalValue
 ```
 
 ### When to Use Channels

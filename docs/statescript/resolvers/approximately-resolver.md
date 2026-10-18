@@ -27,7 +27,7 @@ new ApproximatelyResolver(a, b, tolerance = 1e-6)
 // True when a normalized charge is (approximately) full
 graph.VariableDefinitions.DefineProperty("chargeFull",
     new ApproximatelyResolver(
-        new VariableResolver("chargeRatio"),
+        new VariableResolver("chargeRatio", typeof(double)),
         new VariantResolver(new Variant128(1.0), typeof(double))));
 ```
 
@@ -38,7 +38,7 @@ graph.VariableDefinitions.DefineProperty("chargeFull",
 var expression = new ExpressionNode();
 graph.VariableDefinitions.DefineProperty("atRest",
     new ApproximatelyResolver(
-        new VariableResolver("velocity"),
+        new VariableResolver("velocity", typeof(double)),
         new VariantResolver(new Variant128(0.0), typeof(double)),
         tolerance: 0.01));
 expression.BindInput(ExpressionNode.ConditionInput, "atRest");

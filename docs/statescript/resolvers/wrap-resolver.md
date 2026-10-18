@@ -27,7 +27,7 @@ new WrapResolver(value, min, max)
 // Wrap an accumulating angle into [0, 2π)
 graph.VariableDefinitions.DefineProperty("wrappedAngle",
     new WrapResolver(
-        new VariableResolver("rawAngle"),
+        new VariableResolver("rawAngle", typeof(float)),
         new VariantResolver(new Variant128(0f), typeof(float)),
         new VariantResolver(new Variant128(MathF.Tau), typeof(float))));
 ```
@@ -38,7 +38,7 @@ graph.VariableDefinitions.DefineProperty("wrappedAngle",
 // Wrap a cycling index, then use it to select from an array
 graph.VariableDefinitions.DefineProperty("cycledIndex",
     new WrapResolver(
-        new VariableResolver("tick"),
+        new VariableResolver("tick", typeof(float)),
         new VariantResolver(new Variant128(0f), typeof(float)),
         new VariantResolver(new Variant128(4f), typeof(float))));
 ```

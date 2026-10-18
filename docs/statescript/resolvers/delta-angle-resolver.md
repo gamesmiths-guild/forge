@@ -26,8 +26,8 @@ new DeltaAngleResolver(current, target)
 // Shortest turn from the current facing to the desired facing
 graph.VariableDefinitions.DefineProperty("turnDelta",
     new DeltaAngleResolver(
-        new VariableResolver("currentYaw"),
-        new VariableResolver("desiredYaw")));
+        new VariableResolver("currentYaw", typeof(float)),
+        new VariableResolver("desiredYaw", typeof(float))));
 ```
 
 ## Composition
@@ -38,8 +38,8 @@ graph.VariableDefinitions.DefineProperty("aligned",
     new ComparisonResolver(
         new AbsResolver(
             new DeltaAngleResolver(
-                new VariableResolver("currentYaw"),
-                new VariableResolver("desiredYaw"))),
+                new VariableResolver("currentYaw", typeof(float)),
+                new VariableResolver("desiredYaw", typeof(float)))),
         ComparisonOperation.LessThan,
         new VariantResolver(new Variant128(0.1f), typeof(float))));
 ```

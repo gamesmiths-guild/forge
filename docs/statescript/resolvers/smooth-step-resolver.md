@@ -29,7 +29,7 @@ graph.VariableDefinitions.DefineProperty("chargeBlend",
     new SmoothStepResolver(
         new VariantResolver(new Variant128(0.2f), typeof(float)),
         new VariantResolver(new Variant128(0.8f), typeof(float)),
-        new VariableResolver("chargeRatio")));
+        new VariableResolver("chargeRatio", typeof(float))));
 ```
 
 ## Composition
@@ -43,7 +43,7 @@ graph.VariableDefinitions.DefineProperty("easedScale",
         new SmoothStepResolver(
             new VariantResolver(new Variant128(0f), typeof(float)),
             new VariantResolver(new Variant128(1f), typeof(float)),
-            new VariableResolver("chargeRatio"))));
+            new VariableResolver("chargeRatio", typeof(float)))));
 ```
 
 ## See Also

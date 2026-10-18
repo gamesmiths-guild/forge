@@ -2,7 +2,7 @@
 
 Effect Duration in Forge controls how long [effects](README.md) remain active on target entities. It provides three distinct duration types that determine an effect's lifecycle and behavior.
 
-For a practical guide on using durations, see the [Quick Start Guide](../quick-start.md).
+For worked examples, see the [Effect Recipes](../guides/effect-recipes.md) guide.
 
 ## Core Components
 
@@ -145,7 +145,7 @@ When working with durations, several constraints apply to ensure effects behave 
        "Invalid Effect",
        new DurationData(DurationType.Instant),
        [/*...*/],
-       periodicData: new PeriodicData(new ScalableFloat(1.0f)) // Error
+       periodicData: new PeriodicData(new ScalableFloat(1.0f), true, PeriodInhibitionRemovedPolicy.NeverReset) // Error
    );
    ```
 
@@ -178,7 +178,7 @@ When working with durations, several constraints apply to ensure effects behave 
        "Invalid Effect",
        new DurationData(DurationType.Instant),
        [/*...*/],
-       effectComponents: new[] { new ModifierTagsEffectComponent(new TagContainer()) } // Error
+       effectComponents: new[] { new ModifierTagsEffectComponent(new TagContainer(tagsManager)) } // Error
    );
    ```
 
@@ -231,7 +231,7 @@ When working with durations, several constraints apply to ensure effects behave 
 
 1. **DurationMagnitude Scope**: `DurationMagnitude` is only valid when `DurationType` is `HasDuration`.
    ```csharp
-   // INVALID - Can't provide duration magniteude for non-HasDuration effects
+   // INVALID - Can't provide duration magnitude for non-HasDuration effects
    new DurationData(
        DurationType.Infinite,
        new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10.0f)) // Invalid

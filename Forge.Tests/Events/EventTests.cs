@@ -5,7 +5,7 @@ using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
-using static Gamesmiths.Forge.Tests.Samples.QuickStartTests;
+using static Gamesmiths.Forge.Tests.Samples.GuidesTests;
 
 namespace Gamesmiths.Forge.Tests.Events;
 
