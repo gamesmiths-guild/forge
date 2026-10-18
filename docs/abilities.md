@@ -12,6 +12,16 @@ The Abilities system in Forge provides a framework for defining, granting, activ
 - **Interruption**: Abilities can be canceled or interrupted, with configurable behavior.
 - **Behaviors**: Custom logic is implemented through the `IAbilityBehavior` interface.
 
+```mermaid
+flowchart TD
+    Grant["Granted<br/>by an effect or permanently"] --> Try["TryActivate<br/>manually, by an event or by a tag"]
+    Try --> Checks{"Inhibited? On cooldown?<br/>Can't afford the cost?<br/>Tag requirements or blocks?"}
+    Checks -->|any fails| Fail["Returns false with<br/>AbilityActivationFailures"]
+    Checks -->|all pass| Started["New instance:<br/>behavior.OnStarted"]
+    Started --> Commit["Behavior commits cost and cooldown<br/>(TryCommitAbility), whenever it chooses"]
+    Commit --> Ended["InstanceHandle.End() or a cancel:<br/>behavior.OnEnded"]
+```
+
 ## Ability Data
 
 `AbilityData` defines the configuration for an ability:

@@ -403,6 +403,18 @@ Effects have two distinct phases:
 - [Periodic effects](periodic.md) execute on intervals defined by their `PeriodicData`.
 - Duration effects don't "execute" in this sense, they apply temporary modifiers instead.
 
+```mermaid
+flowchart TD
+    Apply["ApplyEffect(effect)"] --> Req{"Requirements and<br/>immunities pass?"}
+    Req -->|no| Denied["Not applied"]
+    Req -->|yes| Kind{"Duration type"}
+    Kind -->|Instant| Exec["Execute once:<br/>change base values"] --> Null["Returns null"]
+    Kind -->|"HasDuration or Infinite"| Active["ActiveEffect<br/>returns a handle"]
+    Active -->|periodic| Tick["Execute every period"]
+    Active -->|not periodic| Mods["Hold temporary modifiers<br/>and tags"]
+    Active --> Removed["Expires or is removed:<br/>modifiers and tags go with it"]
+```
+
 ```csharp
 // Apply an instant effect (applies and executes immediately)
 var instantHandle = target.EffectsManager.ApplyEffect(instantEffect);

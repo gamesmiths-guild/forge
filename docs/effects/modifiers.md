@@ -472,9 +472,9 @@ Modifiers can be applied to different "channels" of an attribute, allowing for m
 Each attribute has multiple calculation channels that are processed in sequence. The attribute value flows through each channel, with the result of each channel becoming the input to the next:
 
 ```
-Channel 1:  (BaseValue + FlatMod1) * PercentMod1  →  Result1
-Channel 2:  (Result1 + FlatMod2) * PercentMod2    →  Result2
-Channel 3:  (Result2 + FlatMod3) * PercentMod3    →  FinalValue
+Channel 0:  (BaseValue + FlatMod0) * PercentMod0  →  Result0
+Channel 1:  (Result0 + FlatMod1) * PercentMod1    →  Result1
+Channel 2:  (Result1 + FlatMod2) * PercentMod2    →  FinalValue
 ```
 
 ### When to Use Channels

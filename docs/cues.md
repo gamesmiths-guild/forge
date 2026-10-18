@@ -192,6 +192,23 @@ Each method is called at a specific point in a cue's lifecycle:
 - **OnRemove**: Called when a persistent cue is removed (due to expiration or manual removal).
 - **OnUpdate**: Called when a persistent cue's parameters change (e.g., due to effect level changes).
 
+How an effect's life maps onto those calls:
+
+```mermaid
+sequenceDiagram
+    participant E as Effect
+    participant H as Your cue handler
+    Note over E,H: Instant effect
+    E->>H: OnExecute
+    Note over E,H: Timed or infinite effect
+    E->>H: OnApply
+    loop Each period (periodic effects only)
+        E->>H: OnExecute
+    end
+    E->>H: OnUpdate (level or stack changes)
+    E->>H: OnRemove (expired, removed or interrupted)
+```
+
 ### Implementing Cue Handlers
 
 Cue handlers implement the `ICueHandler` interface to respond to cue events:
