@@ -4,110 +4,87 @@
 [![NuGet](https://img.shields.io/nuget/v/Gamesmiths.Forge.svg)](https://www.nuget.org/packages/Gamesmiths.Forge)
 [![License](https://img.shields.io/github/license/gamesmiths-guild/forge)](LICENSE)
 
-An Unreal GAS-like gameplay framework for developing games in C#.
+**A gameplay framework for C#, bringing Unreal’s Gameplay Ability System concepts to any engine.** Attributes, effects, abilities, gameplay tags, events, cues and visual ability scripting, with no engine dependency.
 
-Forge is an engine-agnostic, data-driven gameplay framework for building robust game systems in C#. Inspired by Unreal Engine's Gameplay Ability System (GAS), it provides a centralized and controlled approach to managing attributes, effects, tags, abilities, events, and cues in your games.
+Every game rebuilds the same machinery: Health that can't go below zero, a poison that ticks, a buff that stacks to three, a fireball with a mana cost and a cooldown, a shield that blocks one kind of damage. Forge gives you that machinery once, as data and small interfaces, so it works the same in Unity, Godot, a custom engine, a server or a unit test.
 
-The framework eliminates the need to rebuild status systems for every game project by offering a flexible architecture that works seamlessly with Unity, Godot, and other C#-compatible engines. With Forge, all attribute changes are handled through effects, ensuring organized and maintainable code even in complex gameplay scenarios.
+```csharp
+// A burn: -5 Health every half second, until removed.
+var burning = new EffectData(
+    "Burning",
+    new DurationData(DurationType.Infinite),
+    [new Modifier("HeroAttributes.Health", ModifierOperation.FlatBonus,
+        new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-5)))],
+    periodicData: new PeriodicData(new ScalableFloat(0.5f), true, PeriodInhibitionRemovedPolicy.ResetPeriod));
 
-**Keywords:** gameplay framework, C#, engine-agnostic, data-driven, attributes, gameplay effects, abilities, gameplay tags
+hero.EffectsManager.ApplyEffect(new Effect(burning, new EffectOwnership(hero, hero)));
 
-## Quick Start
+// Your game loop drives time; Forge never reads a clock.
+hero.EffectsManager.UpdateEffects(deltaTime);
+```
 
-New to Forge? Check out the [Quick Start Guide](docs/quick-start.md) to build your first Forge-powered entity in minutes.
+## How it fits together
 
-## Architecture Overview
+```mermaid
+flowchart LR
+    Effects["Effects<br/>instant · timed · periodic · stacking"] -->|modify| Attributes["Attributes<br/>Health, Mana…"]
+    Effects -->|add / remove| Tags["Tags<br/>status.burning"]
+    Abilities["Abilities<br/>costs · cooldowns · triggers"] -->|apply| Effects
+    Tags -->|require · block · trigger| Abilities
+    Events["Events"] -->|trigger| Abilities
+    Effects -.->|cues| Presentation["Your particles,<br/>sounds and UI"]
+    Abilities -.->|run| Statescript["Statescript graphs<br/>timers · listeners<br/>effects · events · cues"]
+```
 
-Forge is built around core systems that work together to provide comprehensive gameplay functionality:
+Attributes and tags only change through effects. That one rule is what lets every change be timed, stacked, blocked by an immunity, reacted to and shown to the player in the same way.
 
-### Core Systems
+## Systems
 
-- **[Attributes](docs/attributes.md)**: Centralized attribute management with min/max values, channels, and controlled modifications.
-- **[Effects](docs/effects/README.md)**: Data-driven system for applying temporary or permanent changes to entities.
-- **[Tags](docs/tags.md)**: Hierarchical tagging system for entity classification and effect targeting.
-- **[Abilities](docs/abilities.md)**: Creation, granting, activation, cooldowns, costs, and instancing rules for gameplay abilities.
-- **[Events](docs/events.md)**: Gameplay event handling and propagation used for ability triggers and game logic reactions.
-- **[Cues](docs/cues.md)**: Visual and audio feedback system that bridges gameplay with presentation.
-- **[Statescript](docs/statescript/README.md)**: State-based scripting system for defining ability behaviors through node graphs.
+- **[Attributes](docs/attributes.md)**: integer stats with min/max, layered modifiers and calculation channels, grouped in attribute sets.
+- **[Effects](docs/effects/README.md)**: instant, timed and infinite effects, with [modifiers](docs/effects/modifiers.md), [periodic execution](docs/effects/periodic.md), [stacking](docs/effects/stacking.md), [components](docs/effects/components/README.md) and [custom calculators](docs/effects/calculators.md).
+- **[Tags](docs/tags.md)**: hierarchical gameplay tags with queries, requirements and immunity.
+- **[Abilities](docs/abilities.md)**: granting, activation, costs, cooldowns, tag rules, triggers and instancing.
+- **[Events](docs/events.md)**: tag-routed gameplay events, optionally strongly typed, that can trigger abilities.
+- **[Cues](docs/cues.md)**: presentation hooks that keep visuals and audio out of gameplay code.
+- **[Statescript](docs/statescript/README.md)**: ability behavior as a graph of nodes and resolvers, built in code or in an engine's visual editor.
 
-### Entity Integration
-
-Every game object that uses Forge implements the `IForgeEntity` interface, providing:
-
-- `EntityAttributes` - Manages all attributes and attribute sets.
-- `EntityTags` - Handles base and modifier tags with automatic inheritance.
-- `EffectsManager` - Controls effect application, stacking, and lifecycle.
-- `EntityAbilities` - Grants and activates abilities, handles cooldowns/costs, and manages instancing.
-- `EventManager` - Dispatches and listens to gameplay events for triggers and reactions.
-- `SharedVariables` - Entity-level variable bag for cross-ability communication through Statescript graphs.
-
-### Advanced Features
-
-Forge supports a variety of gameplay mechanics through specialized subsystems:
-
-- **[Effect Duration](docs/effects/duration.md)**: Control how long effects remain active.
-- **[Effect Stacking](docs/effects/stacking.md)**: Configure how multiple instances of effects combine.
-- **[Periodic Effects](docs/effects/periodic.md)**: Create effects that execute repeatedly on a schedule.
-- **[Modifiers](docs/effects/modifiers.md)**: Define how effects change attribute values.
-- **[Effect Components](docs/effects/components/README.md)**: Extend effects with custom behaviors.
-- **[Custom Calculators](docs/effects/calculators.md)**: Flexible logic execution within the effects pipeline.
-
-## Project Status
-
-⚠️ **Work in Progress** - This project is currently under active development and not ready for production use.
-
-### Current Features ✅
-
-- **Tags System**: Complete hierarchical tag system with inheritance.
-- **Attributes System**: Full attribute management with modifiers and overrides.
-- **Effects System**: Comprehensive effect application with stacking support.
-- **Cues System**: Visual feedback system for effect application/removal.
-- **Custom Calculators**: Flexible logic execution for effects.
-- **Abilities System**: Ability granting, activation, instancing, costs, cooldowns, and tag-based requirements.
-- **Events System**: Gameplay event handling, tagging, and trigger support.
-- **Statescript**: State-based scripting system for defining ability behaviors through node graphs.
-- **Built-in Content**: A complete library of effect components, Statescript nodes, and resolvers.
-
-### Planned Features 🚧
-
-- **Multiplayer Support**: Network replication and prediction for all systems.
-
-## Installation
-
-### Requirements
-
-Forge targets:
-
-- .NET Standard 2.1 (for broad compatibility)
-- .NET 8 (for modern features)
-
-Install via NuGet, reference the Forge project directly, or download the precompiled `.dll` from the Releases page.
-
-### NuGet (Recommended)
-
-Install the package via .NET CLI:
+## Get started
 
 ```shell
 dotnet add package Gamesmiths.Forge
 ```
 
-Or search for `Gamesmiths.Forge` in the NuGet Package Manager UI in Visual Studio.
+Then follow the **[Quick Start](docs/quick-start.md)**: a hero with Health and Mana, a burning effect, a cue and a heal ability with a cost and a cooldown, in about ten minutes. Its code runs in this repository's test suite.
 
-### Manual Installation
+After that: the [guides](docs/guides/README.md) for recipes and the [documentation overview](docs/README.md) for how each system works.
 
-If you need to build from source or make local changes:
+### Using an engine
 
-1. Clone this repository.
-2. Reference the Forge project in your solution.
-3. Follow the [Quick Start Guide](docs/quick-start.md).
+Forge runs anywhere .NET Standard 2.1 or .NET 8 runs. Implement `IForgeEntity` on your game objects and call two update methods from your loop.
 
-## Documentation
+Using **Godot**? [Forge for Godot](https://github.com/gamesmiths-guild/forge-godot) adds nodes, Inspector resources, a tags editor and a visual Statescript editor, plus playable samples.
 
-For comprehensive documentation, explore the [docs](docs) directory, starting with the [documentation overview](docs/README.md).
+## Installation
+
+Forge targets **.NET Standard 2.1**, for broad engine compatibility, and **.NET 8**.
+
+- **NuGet (recommended):** `dotnet add package Gamesmiths.Forge`, or search for `Gamesmiths.Forge` in your IDE's package manager.
+- **Precompiled:** download the `.dll` from the [Releases](https://github.com/gamesmiths-guild/forge/releases) page.
+- **From source:** clone this repository and reference `Forge/Forge.csproj` from your solution.
+
+The package ships with [Source Link](https://learn.microsoft.com/en-us/dotnet/standard/library-guidance/sourcelink) and symbols, so you can step into Forge's code while debugging.
+
+## Project status
+
+⚠️ **Work in progress.** Forge is under active development and its API may still change between releases.
+
+**Available:** attributes, effects (with stacking, periodic execution, components, custom calculators and executions), tags, abilities, events, cues, Statescript with its node and resolver library, and runtime validation.
+
+**Planned:** multiplayer, with network replication and prediction for all systems.
 
 ## Contributing
 
-This project is not currently accepting contributions as it's still in early development. However, if you're interested in contributing or have suggestions, feel free to reach out via GitHub issues or discussions.
+This project is not currently accepting contributions as it's still in early development. If you have suggestions or questions, feel free to reach out through GitHub issues or discussions.
 
 ## License
 

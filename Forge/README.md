@@ -1,33 +1,26 @@
 # Forge Gameplay System
 
-An Unreal GAS-like gameplay framework for developing games in C#.
+A gameplay framework for C# built around the concepts of Unreal's Gameplay Ability System: attributes, effects, abilities, gameplay tags, events, cues and visual ability scripting, with no engine dependency.
 
-Forge is an engine-agnostic, data-driven gameplay framework for building robust game systems in C#. Inspired by Unreal Engine's Gameplay Ability System (GAS), it provides a centralized and controlled approach to managing attributes, effects, tags, abilities, events, and cues in your games.
-
-The framework eliminates the need to rebuild status systems for every game project by offering a flexible architecture that works seamlessly with Unity, Godot, and other C#-compatible engines. With Forge, all attribute changes are handled through effects, ensuring organized and maintainable code even in complex gameplay scenarios.
+Every game rebuilds the same machinery: Health that can't go below zero, a poison that ticks, a buff that stacks, a fireball with a mana cost and a cooldown. Forge gives you that machinery once, as data and small interfaces, so it works the same in Unity, Godot, a custom engine, a server or a unit test. Attributes and tags only change through effects, so every change can be timed, stacked, blocked, reacted to and shown to the player in the same way.
 
 ## Features
 
-- **Attributes**: Centralized attribute management with min/max values, channels, and controlled modifications.
-- **Effects**: Data-driven system for applying temporary or permanent changes to entities.
-- **Tags**: Hierarchical tagging system for entity classification and effect targeting.
-- **Abilities**: Creation, granting, activation, cooldowns, costs, and instancing rules for gameplay abilities.
-- **Events**: Gameplay event handling and propagation used for ability triggers and game logic reactions.
-- **Cues**: Visual and audio feedback system that bridges gameplay with presentation.
-- **Statescript**: State-based scripting system for defining ability behaviors through node graphs.
+- **Attributes**: integer stats with min/max, layered modifiers and calculation channels.
+- **Effects**: instant, timed and infinite effects with periodic execution, stacking, components and custom calculators.
+- **Tags**: hierarchical gameplay tags with queries, requirements and immunity.
+- **Abilities**: granting, activation, costs, cooldowns, tag rules, triggers and instancing.
+- **Events**: tag-routed gameplay events that can trigger abilities.
+- **Cues**: presentation hooks that keep visuals and audio out of gameplay code.
+- **Statescript**: ability behavior as a graph of nodes, built in code or in an engine's visual editor.
 
-## Installation
+## Getting started
 
-Forge supports:
+Follow the [Quick Start](https://github.com/gamesmiths-guild/forge/blob/main/docs/quick-start.md): a hero with Health and Mana, a burning effect and a heal ability with a cost and a cooldown, in about ten minutes. The full [documentation](https://github.com/gamesmiths-guild/forge/tree/main/docs) covers every system.
 
-- **.NET Standard 2.1** (broad compatibility)
-- **.NET 8** (modern features)
+Using Godot? [Forge for Godot](https://github.com/gamesmiths-guild/forge-godot) adds nodes, Inspector resources and a visual Statescript editor.
 
-Install via NuGet, reference the Forge project directly, or download the precompiled `.dll` from the Releases page.
-
-## Documentation
-
-Comprehensive documentation is available in the [docs](https://github.com/gamesmiths-guild/forge/tree/main/docs) directory.
+Forge targets **.NET Standard 2.1** (broad compatibility) and **.NET 8**. The package ships with Source Link and symbols.
 
 ## License
 
