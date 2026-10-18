@@ -2,7 +2,7 @@
 
 Effect Duration in Forge controls how long [effects](README.md) remain active on target entities. It provides three distinct duration types that determine an effect's lifecycle and behavior.
 
-For a practical guide on using durations, see the [Quick Start Guide](../quick-start.md).
+For worked examples, see the [Effect Recipes](../guides/effect-recipes.md) guide.
 
 ## Core Components
 

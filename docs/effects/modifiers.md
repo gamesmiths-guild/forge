@@ -2,7 +2,7 @@
 
 Effect Modifiers in Forge provide a flexible way to modify entity [attributes](../attributes.md) through [effects](README.md). Modifiers define how an effect changes attribute values, with support for different operation types and magnitude calculations.
 
-For a practical guide on using modifiers, see the [Quick Start Guide](../quick-start.md).
+For worked examples, see the [Effect Recipes](../guides/effect-recipes.md) guide.
 
 ## Core Concepts
 

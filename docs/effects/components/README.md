@@ -2,7 +2,7 @@
 
 Effect Components in Forge allows developers to extend effect functionality through a modular, composable approach. Components can add custom behaviors, validation logic, and react to different events in an effect's lifecycle.
 
-For a practical guide on using components, see the [Quick Start Guide](../../quick-start.md). For how components fit into effects as a whole, see the [Effects overview](../README.md).
+For worked examples, see [Extending Effects](../../guides/extending-effects.md). For how components fit into effects as a whole, see the [Effects overview](../README.md).
 
 ---
 

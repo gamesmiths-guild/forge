@@ -2,7 +2,7 @@
 
 Periodic Effects in Forge enables [effects](README.md) to execute repeatedly at specified intervals. This is essential for implementing damage-over-time, healing-over-time, resource regeneration, and other recurring gameplay mechanics.
 
-For a practical guide on using periodic effects, see the [Quick Start Guide](../quick-start.md).
+For worked examples, see the [Effect Recipes](../guides/effect-recipes.md) guide.
 
 ## Core Components
 

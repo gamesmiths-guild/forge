@@ -2,7 +2,7 @@
 
 The Tags system in Forge provides a hierarchical mechanism for metadata, allowing efficient categorization and queries of game entities and systems. It's a foundational component that many other Forge systems build upon.
 
-For a practical guide on using tags, see the [Quick Start Guide](quick-start.md).
+For a first walkthrough, see the [Quick Start](quick-start.md); for tags added and checked by effects, the [Effect Recipes](guides/effect-recipes.md) guide.
 
 ## Core Components
 

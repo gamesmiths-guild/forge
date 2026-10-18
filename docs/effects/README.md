@@ -2,7 +2,7 @@
 
 The Effects system in Forge provides a powerful framework for implementing gameplay mechanics such as damage, healing, buffs, debuffs, and other status effects. It offers a data-driven approach to modifying [attributes](../attributes.md) and applying status changes to game entities.
 
-For a practical guide on creating and applying effects, see the [Quick Start Guide](../quick-start.md).
+For a first walkthrough, see the [Quick Start](../quick-start.md); for more examples, the [Effect Recipes](../guides/effect-recipes.md) guide.
 
 ## Core Concepts
 

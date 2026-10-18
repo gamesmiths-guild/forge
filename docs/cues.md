@@ -2,7 +2,7 @@
 
 The Cues system in Forge provides a mechanism for triggering visual, audio, and other feedback in response to gameplay events. Cues create a clean separation between game logic and presentation, enabling consistent feedback across your game.
 
-For a practical guide on using cues, see the [Quick Start Guide](quick-start.md).
+For a first walkthrough, see the [Quick Start](quick-start.md); for more examples, the [Cues and Events](guides/cues-and-events.md) guide.
 
 ## Core Concepts
 

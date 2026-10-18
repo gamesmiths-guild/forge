@@ -2,7 +2,7 @@
 
 The Attributes system in Forge provides a robust framework for managing numeric properties of game entities. Attributes represent any quantifiable characteristic like health, strength, movement speed, or any other property that can be represented numerically.
 
-For a practical guide on using attributes, see the [Quick Start Guide](quick-start.md).
+For a first walkthrough, see the [Quick Start](quick-start.md).
 
 ## Core Concepts
 
