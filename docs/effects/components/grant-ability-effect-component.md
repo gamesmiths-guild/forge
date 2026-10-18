@@ -52,7 +52,6 @@ var grantConfig = new GrantAbilityConfig(
     LevelOverridePolicy: LevelComparison.Higher // Update level if higher than existing grant
 );
 
-// Keep a reference to the component if you need to access the granted ability handles later
 var grantComponent = new GrantAbilityEffectComponent([grantConfig]);
 
 var grantEffect = new EffectData(
@@ -62,10 +61,11 @@ var grantEffect = new EffectData(
 );
 
 // Apply the effect
-entity.EffectsManager.ApplyEffect(new Effect(grantEffect, ownership));
+ActiveEffectHandle? grantHandle = entity.EffectsManager.ApplyEffect(new Effect(grantEffect, ownership));
 
-// Access the handle directly from the component instance
-AbilityHandle fireballHandle = grantComponent.GrantedAbilities[0];
+// The handles live on this application's component instance, not on grantComponent: the definition's component is a
+// template, and each application gets its own copy through CreateInstance()
+AbilityHandle fireballHandle = grantHandle!.GetComponent<GrantAbilityEffectComponent>()!.GrantedAbilities[0];
 ```
 
 ## Key Points

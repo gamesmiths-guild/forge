@@ -96,7 +96,7 @@ var grantEffect = new EffectData(
 entity.EffectsManager.ApplyEffect(new Effect(grantEffect, ownership, level: 5));
 ```
 
-**Tip:** By holding a reference to the `GrantAbilityEffectComponent` used in your `EffectData`, you can access the `grantComponent.GrantedAbilities` list. This provides a direct reference to the `AbilityHandle`s created by the effect, which can be more reliable than searching via `TryGetAbility` if you need to manipulate that specific instance immediately.
+**Tip:** The `ActiveEffectHandle` returned by `ApplyEffect` gives you the effect's own `GrantAbilityEffectComponent` instance through `GetComponent<GrantAbilityEffectComponent>()`, and its `GrantedAbilities` list. The component you put in `EffectData` is only a template that each application copies, so its list stays empty. This provides a direct reference to the `AbilityHandle`s created by the effect, which can be more reliable than searching via `TryGetAbility` if you need to manipulate that specific instance immediately.
 
 Abilities granted by **instant effects** become permanent, while abilities granted by **duration or infinite effects** are temporary and tied to the effect's lifecycle.
 

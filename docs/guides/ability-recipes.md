@@ -97,9 +97,10 @@ var grantFireballEffect = new EffectData(
 var grantEffectHandle = player.EffectsManager.ApplyEffect(
     new Effect(grantFireballEffect, new EffectOwnership(player, player)));
 
-// You can access the granted ability handle directly from the component
-// This list contains handles for all abilities granted by this specific effect component instance
-AbilityHandle grantedHandle = grantAbilityComponent.GrantedAbilities[0];
+// The granted handles live on the component instance of this application, not on grantAbilityComponent:
+// the definition's component is a template, and each application gets its own copy through CreateInstance()
+AbilityHandle grantedHandle =
+    grantEffectHandle!.GetComponent<GrantAbilityEffectComponent>()!.GrantedAbilities[0];
 
 // The ability is now granted. To remove it, remove the effect (e.g., when the wand is unequipped):
 // player.EffectsManager.RemoveEffect(grantEffectHandle);
