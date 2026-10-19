@@ -27,6 +27,8 @@ public class TestEntity : IForgeEntity
 
 	public Variables SharedVariables { get; } = new Variables();
 
+	public DeterministicRandom? Random { get; set; }
+
 	public TestEntity(TagsManager tagsManager, CuesManager cuesManager)
 	{
 		PlayerAttributeSet = new TestAttributeSet();

@@ -32,6 +32,16 @@ public abstract class Node
 	public Guid NodeID { get; set; }
 
 	/// <summary>
+	/// Gets the node's position in its graph: 0 for the entry node, then 1, 2, 3... in the order the nodes were added.
+	/// Assigned when the graph starts.
+	/// </summary>
+	/// <remarks>
+	/// Updates walk active state nodes in this order. It depends only on how the graph was built, so every machine that
+	/// builds the same graph walks it the same way, whatever order its nodes happened to activate in.
+	/// </remarks>
+	public int Index { get; internal set; }
+
+	/// <summary>
 	/// Gets the input ports of this node.
 	/// </summary>
 	public InputPort[] InputPorts { get; }

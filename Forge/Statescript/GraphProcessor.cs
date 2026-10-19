@@ -18,6 +18,8 @@ namespace Gamesmiths.Forge.Statescript;
 /// </remarks>
 public class GraphProcessor
 {
+	private static readonly Comparison<Node> _byIndex = static (x, y) => x.Index.CompareTo(y.Index);
+
 	private readonly List<Node> _updateBuffer = [];
 
 	private bool _updating;
@@ -202,7 +204,10 @@ public class GraphProcessor
 
 		// A node the walk did not reach - started from outside the graph's connections, or passed over when a teardown
 		// threw - is ended here instead.
-		foreach (Node node in GraphContext.ActiveStateNodes.ToArray())
+		Node[] unreached = [.. GraphContext.ActiveStateNodes];
+		Array.Sort(unreached, _byIndex);
+
+		foreach (Node node in unreached)
 		{
 			try
 			{
@@ -283,8 +288,11 @@ public class GraphProcessor
 
 		GraphContext.UpdateStamp++;
 
+		// In node order rather than set order: the set's order follows the history of activations, which another
+		// machine simulating the same graph need not share.
 		_updateBuffer.Clear();
 		_updateBuffer.AddRange(GraphContext.ActiveStateNodes);
+		_updateBuffer.Sort(_byIndex);
 
 		return true;
 	}

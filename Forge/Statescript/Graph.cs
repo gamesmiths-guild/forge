@@ -85,10 +85,12 @@ public class Graph
 
 	internal void FinalizeConnections()
 	{
+		EntryNode.Index = 0;
 		FinalizeNodePorts(EntryNode);
 
 		for (int i = 0; i < Nodes.Count; i++)
 		{
+			Nodes[i].Index = i + 1;
 			FinalizeNodePorts(Nodes[i]);
 		}
 	}

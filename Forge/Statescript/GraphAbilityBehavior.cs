@@ -73,6 +73,7 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 
 		Processor.GraphContext.SharedVariables = context.Owner.SharedVariables;
 		Processor.GraphContext.ActivationContext = context;
+		Processor.GraphContext.Random = context.Owner.Random;
 		Processor.OnGraphCompleted = context.InstanceHandle.End;
 		Processor.StartGraph(variableOverrides);
 	}

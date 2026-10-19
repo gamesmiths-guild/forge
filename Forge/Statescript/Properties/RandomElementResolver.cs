@@ -11,7 +11,8 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// Empty arrays resolve to a default <see cref="Variant128"/> (zero).
 /// </remarks>
 /// <param name="source">The resolver providing the source array.</param>
-/// <param name="randomProvider">The random provider used to pick the element.</param>
+/// <param name="randomProvider">The random provider used to pick the element when the graph has no
+/// <see cref="GraphContext.Random"/>.</param>
 public class RandomElementResolver(IArrayPropertyResolver source, IRandom randomProvider) : IPropertyResolver
 {
 	private readonly IArrayPropertyResolver _source = source;
@@ -32,6 +33,6 @@ public class RandomElementResolver(IArrayPropertyResolver source, IRandom random
 			return default;
 		}
 
-		return values[_randomProvider.NextInt(0, values.Length)];
+		return values[(graphContext.Random ?? _randomProvider).NextInt(0, values.Length)];
 	}
 }

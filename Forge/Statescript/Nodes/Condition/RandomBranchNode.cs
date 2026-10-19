@@ -10,10 +10,12 @@ namespace Gamesmiths.Forge.Statescript.Nodes.Condition;
 /// <remarks>
 /// <para>The chance input must resolve to a <see langword="double"/> from 0 to 1. Unresolvable chances route to False.
 /// </para>
-/// <para>When no random provider is given, a non-deterministic <see cref="SystemRandom"/> is used. Inject a seeded
-/// <see cref="IRandom"/> for deterministic behavior.</para>
+/// <para>The roll comes from <see cref="GraphContext.Random"/> when the graph has one, which an ability graph gets from
+/// its owner. Otherwise it comes from the given provider, or from a non-deterministic <see cref="SystemRandom"/> when
+/// none was given.</para>
 /// </remarks>
-/// <param name="randomProvider">The random provider used to roll the branch.</param>
+/// <param name="randomProvider">The random provider used when the graph has no <see cref="GraphContext.Random"/>.
+/// </param>
 public class RandomBranchNode(IRandom? randomProvider = null) : ConditionNode
 {
 	/// <summary>
@@ -40,6 +42,6 @@ public class RandomBranchNode(IRandom? randomProvider = null) : ConditionNode
 			return false;
 		}
 
-		return _randomProvider.NextDouble() < chance;
+		return (graphContext.Random ?? _randomProvider).NextDouble() < chance;
 	}
 }

@@ -12,7 +12,7 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// <see langword="short"/>, <see langword="ushort"/>) are promoted to <see langword="int"/>. Other numeric, vector,
 /// and quaternion types are not supported.
 /// </summary>
-/// <param name="random">The random provider to use for generating values.</param>
+/// <param name="random">The random provider used when the graph has no <see cref="GraphContext.Random"/>.</param>
 /// <param name="min">The resolver for the inclusive minimum bound.</param>
 /// <param name="max">The resolver for the maximum bound.</param>
 /// <param name="maxInclusive">Whether the maximum bound is inclusive. Defaults to <see langword="false"/>.</param>
@@ -33,6 +33,7 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 	/// <inheritdoc/>
 	public Variant128 Resolve(GraphContext graphContext)
 	{
+		IRandom generator = graphContext.Random ?? _random;
 		Variant128 minValue = _min.Resolve(graphContext);
 		Variant128 maxValue = _max.Resolve(graphContext);
 		Type resultType = ValueType;
@@ -44,8 +45,8 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 
 			return new Variant128(
 				_maxInclusive
-					? _random.NextIntInclusive(minInt, maxInt)
-					: _random.NextInt(minInt, maxInt));
+					? generator.NextIntInclusive(minInt, maxInt)
+					: generator.NextInt(minInt, maxInt));
 		}
 
 		if (resultType == typeof(float))
@@ -58,7 +59,7 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 				return new Variant128(minFloat);
 			}
 
-			float randomValue = _maxInclusive ? _random.NextSingleInclusive() : _random.NextSingle();
+			float randomValue = _maxInclusive ? generator.NextSingleInclusive() : generator.NextSingle();
 			float result = minFloat + (randomValue * (maxFloat - minFloat));
 
 			if (_maxInclusive)
@@ -79,7 +80,7 @@ public class RandomResolver(IRandom random, IPropertyResolver min, IPropertyReso
 				return new Variant128(minDouble);
 			}
 
-			double randomValue = _maxInclusive ? _random.NextDoubleInclusive() : _random.NextDouble();
+			double randomValue = _maxInclusive ? generator.NextDoubleInclusive() : generator.NextDouble();
 			double result = minDouble + (randomValue * (maxDouble - minDouble));
 
 			if (_maxInclusive)
