@@ -60,7 +60,7 @@ Task-focused walkthroughs, with code that runs in the test suite: [effect recipe
 2. **Data-driven.** Effects and abilities are definitions (`EffectData`, `AbilityData`) that can be authored as data and shared.
 3. **Modular.** Use attributes and effects alone, or add abilities, events, cues and Statescript as you need them.
 4. **Time is an argument.** Forge never reads a clock; your loop passes the delta, so real-time, turn-based and simulated games work alike.
-5. **Deterministic.** Integer attributes and explicit time keep results predictable, with networking and replays in mind.
+5. **Deterministic.** Integer attributes, explicit time, a seeded per-tick random and fixed update orders keep results predictable, with networking and replays in mind. See [Simulation Tick](simulation.md).
 
 ## Validation and Debugging
 
@@ -83,4 +83,4 @@ The NuGet package ships with [Source Link](https://learn.microsoft.com/en-us/dot
 Forge has no engine dependency. Integrations wrap it in the engine's own idioms:
 
 - **Godot:** [Forge for Godot](https://github.com/gamesmiths-guild/forge-godot) adds nodes, Inspector resources, a tags editor and a visual Statescript graph editor.
-- **Anything else:** implement `IForgeEntity` on your objects and call `EffectsManager.UpdateEffects` and `Abilities.UpdateAbilities` from your loop, as the [Quick Start](quick-start.md#5-drive-time) shows.
+- **Anything else:** implement `IForgeEntity` on your objects and call `EffectsManager.UpdateEffects` and `Abilities.UpdateAbilities` from your loop, as the [Quick Start](quick-start.md#5-drive-time) shows. With a fixed step, drive each entity through `EntitySimulation.Tick` instead; see [Simulation Tick](simulation.md).

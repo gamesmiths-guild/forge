@@ -14,7 +14,7 @@ new ChanceToApplyEffectComponent(randomProvider, chance)
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| randomProvider | `IRandom` | The random source used to roll for application. Inject your game's generator so rolls stay deterministic and mockable. |
+| randomProvider | `IRandom` | The random source used to roll for application when the target has no `Random`. Inject your game's generator so rolls stay deterministic and mockable. |
 | chance | `ScalableFloat` | Probability in the range 0–1. Can scale with effect level through a curve. |
 
 ## Lifecycle Hooks
@@ -26,6 +26,8 @@ new ChanceToApplyEffectComponent(randomProvider, chance)
 ## Behavior
 
 The roll happens during validation, before any effect application logic runs. A failed roll means the effect never lands: no modifiers, no components, no cues.
+
+When the target has a `Random` (`IForgeEntity.Random`), the roll comes from it instead of the provider, so every machine that simulates the target on the same tick rolls the same result. See [Simulation Tick](../../simulation.md#deterministic-randomness).
 
 ### The IRandom Interface
 
@@ -101,7 +103,7 @@ var criticalHitEffectData = new EffectData(
 
 ## Key Points
 
-- Uses the provided random provider for chance determination, so tests can inject a deterministic source.
+- Rolls from the target's `Random` when it has one, and otherwise from the provided random provider, so tests can inject a deterministic source.
 - Chance can scale with effect level using `ScalableFloat`.
 - Validates during `CanApplyEffect`, before any effect application logic.
 

@@ -71,7 +71,7 @@ entity.Abilities.UpdateAbilities(deltaTime);           // from the frame callbac
 entity.Abilities.FixedUpdateAbilities(fixedDeltaTime); // from the fixed callback
 ```
 
-**Drive whichever rails your host has.** A turn-based game may call only `UpdateAbilities`; a host with no fixed step never calls `FixedUpdateAbilities`, and nodes on that rail simply do not run. Effects have no fixed half — `EffectsManager.UpdateEffects` counts wall-clock time, so durations and periods belong on the frame rail regardless.
+**Drive whichever rails your host has.** A host with a fixed step advances effects and the fixed rail together through `EntitySimulation.Tick`, which runs them in the order every machine agrees on; see [Simulation Tick](../simulation.md). A turn-based game may call only `UpdateAbilities` and `EffectsManager.UpdateEffects`; a host with no fixed step never calls `FixedUpdateAbilities`, and nodes on that rail simply do not run.
 
 ## Typed Activation Data
 

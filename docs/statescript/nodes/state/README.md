@@ -69,6 +69,8 @@ The hook is called **fixed** rather than **physics** because the interval is the
 
 **A host drives whichever rails it has.** Godot calls `UpdateGraph` from `_Process` and `FixedUpdateGraph` from `_PhysicsProcess`; a turn-based game may call only the first. A host with no fixed step never calls `FixedUpdateGraph`, and nodes that override `OnFixedUpdate` simply do not run — which is the honest failure, since falling back to the frame would reintroduce exactly what overriding it avoids.
 
+**Within a pass, active nodes update in graph order** (`Node.Index`: the entry node is 0, then the nodes in the order they were added), not in the order they activated. Two machines that build the same graph therefore walk it the same way. See [Simulation Tick](../../../simulation.md#deterministic-order).
+
 ## Creating Custom State Nodes
 
 Extend `StateNode<T>` where `T` is a context class inheriting from `StateNodeContext`:

@@ -13,15 +13,15 @@ new RandomInsideSphereResolver(random)
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| random | `IRandom` | The random provider to use. |
+| random | `IRandom` | The random provider used when the graph has no `GraphContext.Random`; see [Simulation Tick](../../simulation.md#deterministic-randomness). |
 
 ## Behavior
 
-- Uses the injected `IRandom` instance each time the resolver is evaluated.
+- Draws from `GraphContext.Random` when the graph has one, which an ability graph gets from its owner, and otherwise from the injected `IRandom`, each time the resolver is evaluated.
 - Returns a `Vector3` whose magnitude is less than or equal to `1`, with the unit-sphere boundary included by default.
 - Samples the axial and radial terms inclusively where appropriate, but keeps the seam angle exclusive so `0` and `2π` do not represent the same direction twice.
 - Does not read any values from `GraphContext`.
-- Produces a different sample on each resolve unless the supplied `IRandom` implementation is deterministic or seeded.
+- Produces a different sample on each resolve unless the random it draws from is deterministic or seeded.
 
 ## Usage
 
