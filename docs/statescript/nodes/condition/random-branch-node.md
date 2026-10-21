@@ -28,7 +28,7 @@ new RandomBranchNode(randomProvider = null)
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| randomProvider | `IRandom?` | The random provider used to roll the branch. When `null`, a non-deterministic `SystemRandom` is used; inject a seeded `IRandom` for deterministic behavior. |
+| randomProvider | `IRandom?` | The random provider used when the graph has no `GraphContext.Random`. When `null`, a non-deterministic `SystemRandom` is used. An ability graph rolls from its owner's deterministic random instead; see [Simulation Tick](../../../simulation.md#deterministic-randomness). |
 
 ## Parameters
 

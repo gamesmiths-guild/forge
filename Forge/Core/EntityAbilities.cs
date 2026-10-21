@@ -18,6 +18,10 @@ public class EntityAbilities(IForgeEntity owner)
 	private readonly Dictionary<Ability, List<IAbilityGrantSource>> _grantSources = [];
 	private readonly HashSet<AbilityHandle> _grantedAbilities = [];
 
+	// The same handles, in the order they were granted. Walks and lookups follow this order rather than the set's,
+	// whose order also depends on which slots earlier removals freed.
+	private readonly List<AbilityHandle> _grantOrder = [];
+
 	// Reused by both update rails so the per-frame walk allocates nothing. Sharing one list is what makes the walk
 	// non-re-entrant, which BufferGrantedAbilities enforces rather than leaves to trust.
 	private readonly List<AbilityHandle> _updateBuffer = [];
@@ -88,17 +92,16 @@ public class EntityAbilities(IForgeEntity owner)
 	public IForgeEntity Owner { get; } = owner;
 
 	/// <summary>
-	/// Gets the set of abilities currently granted to the entity.
+	/// Gets the abilities currently granted to the entity, in the order they were granted.
 	/// </summary>
 	/// <remarks>
-	/// Read-only: the manager keeps this set in step with the grant sources behind each ability, so grant and removal
-	/// go through <see cref="GrantAbilityPermanently"/>, <c>TryGrantAbilityAndActivateOnce</c>,
-	/// <see cref="RevokeAbility"/>, <see cref="ClearAbility"/> and the effect components rather than through this set.
-	/// The collection is live, so copy it first when the loop body can grant or clear abilities. Granting is the case
-	/// that throws: adding invalidates any open enumerator, while removing from a <see cref="HashSet{T}"/> no longer
-	/// does. Both are worth copying for, since a loop that skips whatever a removal moved is wrong just as quietly.
+	/// Read-only: the manager keeps this collection in step with the grant sources behind each ability, so grant and
+	/// removal go through <see cref="GrantAbilityPermanently"/>, <c>TryGrantAbilityAndActivateOnce</c>,
+	/// <see cref="RevokeAbility"/>, <see cref="ClearAbility"/> and the effect components rather than through this
+	/// collection. It is live, so copy it first when the loop body can grant or clear abilities: either invalidates any
+	/// open enumerator.
 	/// </remarks>
-	public IReadOnlyCollection<AbilityHandle> GrantedAbilities => _grantedAbilities;
+	public IReadOnlyCollection<AbilityHandle> GrantedAbilities => _grantOrder;
 
 	/// <summary>
 	/// Gets the tags that block abilities from being used.
@@ -413,6 +416,7 @@ public class EntityAbilities(IForgeEntity owner)
 
 		var newAbility = new Ability(Owner, abilityData, abilityLevel, sourceEntity);
 		_grantedAbilities.Add(newAbility.Handle);
+		_grantOrder.Add(newAbility.Handle);
 		_grantSources[newAbility] = [new PermanentGrantSource()];
 
 		OnAbilityGranted?.Invoke(newAbility.Handle);
@@ -479,16 +483,17 @@ public class EntityAbilities(IForgeEntity owner)
 	/// </remarks>
 	public void ClearAllAbilities()
 	{
-		// Copied because clearing an ability removes its handle from the backing set.
-		foreach (AbilityHandle abilityHandle in _grantedAbilities.ToArray())
+		// Copied because clearing an ability removes its handle from the backing list.
+		foreach (AbilityHandle abilityHandle in _grantOrder.ToArray())
 		{
 			ClearAbility(abilityHandle);
 		}
 	}
 
 	/// <summary>
-	/// Updates all active ability behaviors. Call this once per frame alongside
-	/// <see cref="Effects.EffectsManager.UpdateEffects(double)"/>.
+	/// Updates all active ability behaviors on the frame rail. Call this once per frame. A host with a fixed step
+	/// advances effects together with the fixed rail through <see cref="EntitySimulation"/>; one without calls
+	/// <see cref="Effects.EffectsManager.UpdateEffects(double)"/> alongside this.
 	/// </summary>
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
 	public void UpdateAbilities(double deltaTime)
@@ -522,7 +527,8 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <see cref="UpdateAbilities(double)"/> in its frame callback.
 	/// </summary>
 	/// <remarks>
-	/// A game with no fixed step of its own never calls this, and the behaviors that need one stop running rather
+	/// <see cref="EntitySimulation.Advance"/> calls this right after advancing effects, which is the usual way to drive
+	/// it. A game with no fixed step of its own never calls this, and the behaviors that need one stop running rather
 	/// than running at the frame rate.
 	/// </remarks>
 	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
@@ -591,6 +597,7 @@ public class EntityAbilities(IForgeEntity owner)
 
 		var newAbility = new Ability(Owner, abilityData, abilityLevel, sourceEntity);
 		_grantedAbilities.Add(newAbility.Handle);
+		_grantOrder.Add(newAbility.Handle);
 		_grantSources[newAbility] = [grantSource];
 
 		// Set before announcing the grant, so the handle already reports its settled inhibition state and an inhibited
@@ -675,7 +682,7 @@ public class EntityAbilities(IForgeEntity owner)
 		_updating = true;
 
 		_updateBuffer.Clear();
-		_updateBuffer.AddRange(_grantedAbilities);
+		_updateBuffer.AddRange(_grantOrder);
 
 		return true;
 	}
@@ -886,6 +893,7 @@ public class EntityAbilities(IForgeEntity owner)
 
 		abilityToRemove.Handle.Free();
 		_grantedAbilities.Remove(abilityToRemove.Handle);
+		_grantOrder.Remove(abilityToRemove.Handle);
 
 		// The ability is gone for good, so its now-empty entry goes too. Leaving it behind roots the dead Ability as a
 		// dictionary key for the lifetime of the entity, and a revoke/re-grant cycle repeats that without bound.

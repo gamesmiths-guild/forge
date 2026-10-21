@@ -16,7 +16,7 @@ new ObjectRandomElementResolver<T>(source, randomProvider)     // object lane
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | source | `IArrayPropertyResolver` / `IObjectArrayResolver<T>` | The source array. |
-| randomProvider | `IRandom` | The random provider used to pick the element. |
+| randomProvider | `IRandom` | The random provider used when the graph has no `GraphContext.Random`; see [Simulation Tick](../../simulation.md#deterministic-randomness). |
 
 ## Behavior
 

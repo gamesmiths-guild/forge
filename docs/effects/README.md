@@ -120,7 +120,15 @@ entity.EffectsManager.UpdateEffects(deltaTime);
 
 The `UpdateEffects` method must be called regularly to process all active effects:
 
-- For real-time games: Call in your update loop with the frame's delta time.
+- For games on a fixed step, including networked ones: let `EntitySimulation.Tick` advance effects with the fixed step, together with the abilities' fixed rail, in the order every machine agrees on. See [Simulation Tick](../simulation.md).
+  ```csharp
+  void FixedUpdate(long tick, double fixedDeltaTime)
+  {
+      EntitySimulation.Tick(entity, tick, fixedDeltaTime);
+  }
+  ```
+
+- For real-time games without a fixed step: Call in your update loop with the frame's delta time.
   ```csharp
   void Update(float deltaTime)
   {

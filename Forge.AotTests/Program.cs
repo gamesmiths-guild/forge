@@ -31,6 +31,9 @@ internal static class Program
 			ResolveActivationData(tagsManager, eventTag, new StructPayload(3)) == 3);
 		Check("Provider-built graph behavior and trigger read a struct payload member", () =>
 			ResolveThroughProvider(tagsManager, eventTag, new ProviderPayload(4)) == 4);
+		Check("Deterministic random repeats a tick's pinned draws", RepeatsTickDraws);
+		Check("Entity simulation ticks an entity through its default random member", () =>
+			TicksThroughDefaultRandom(tagsManager));
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -81,6 +84,24 @@ internal static class Program
 		});
 
 		return received;
+	}
+
+	private static bool RepeatsTickDraws()
+	{
+		var random = new DeterministicRandom(12345UL);
+		random.BeginTick(7);
+		long first = random.NextInt64();
+		random.BeginTick(7);
+
+		return first == 5229388492309676965 && random.NextInt64() == first;
+	}
+
+	private static bool TicksThroughDefaultRandom(TagsManager tagsManager)
+	{
+		var entity = new SmokeEntity(tagsManager);
+		EntitySimulation.Tick(entity, 1, 1.0 / 64.0);
+
+		return ((IForgeEntity)entity).Random is null;
 	}
 
 	private static int ResolveActivationData(TagsManager tagsManager, Tag eventTag, StructPayload payload)

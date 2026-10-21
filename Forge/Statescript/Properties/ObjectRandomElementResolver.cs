@@ -13,7 +13,8 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// </remarks>
 /// <typeparam name="T">The element type to read.</typeparam>
 /// <param name="source">The resolver providing the source array.</param>
-/// <param name="randomProvider">The random provider used to pick the element.</param>
+/// <param name="randomProvider">The random provider used to pick the element when the graph has no
+/// <see cref="GraphContext.Random"/>.</param>
 public class ObjectRandomElementResolver<T>(IObjectArrayResolver<T> source, IRandom randomProvider)
 	: ObjectResolver<T>
 {
@@ -33,6 +34,6 @@ public class ObjectRandomElementResolver<T>(IObjectArrayResolver<T> source, IRan
 			return default;
 		}
 
-		return values[_randomProvider.NextInt(0, values.Length)];
+		return values[(graphContext.Random ?? _randomProvider).NextInt(0, values.Length)];
 	}
 }

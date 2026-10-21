@@ -3,7 +3,7 @@
 > **Type:** `Gamesmiths.Forge.Statescript.Properties.RandomResolver`
 > **Output Type:** `int`, `float`, or `double`
 
-Generates a random value within a range defined by two operands, using a provided `IRandom` implementation. This design allows users to inject any random provider — standard, seeded, blue noise, or network-synchronized — making the resolver deterministic and testable. By default, the maximum bound is exclusive, but it can be configured to be inclusive.
+Generates a random value within a range defined by two operands, using a provided `IRandom` implementation. This design allows users to inject any random provider — standard, seeded, blue noise, or network-synchronized — making the resolver deterministic and testable. When the graph has a `GraphContext.Random`, as an ability graph does through its owner, that random is used instead; see [Simulation Tick](../../simulation.md#deterministic-randomness). By default, the maximum bound is exclusive, but it can be configured to be inclusive.
 
 ## Constructor
 
@@ -13,7 +13,7 @@ new RandomResolver(random, min, max, maxInclusive)
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| random | `IRandom` | The random provider to use for generating values. |
+| random | `IRandom` | The random provider used when the graph has no `GraphContext.Random`; see [Simulation Tick](../../simulation.md#deterministic-randomness). |
 | min | `IPropertyResolver` | The resolver for the inclusive minimum bound. |
 | max | `IPropertyResolver` | The resolver for the maximum bound. |
 | maxInclusive | `bool` | Whether the maximum bound is inclusive. Defaults to `false`. |
@@ -40,7 +40,7 @@ new RandomResolver(random, min, max, maxInclusive)
 - For `float`: defaults to returning a value in `[min, max)` via `IRandom.NextSingle()`; when `maxInclusive` is `true`, returns a value in `[min, max]` via `IRandom.NextSingleInclusive()`.
 - For `double`: defaults to returning a value in `[min, max)` via `IRandom.NextDouble()`; when `maxInclusive` is `true`, returns a value in `[min, max]` via `IRandom.NextDoubleInclusive()`.
 - For `float` and `double`, if `max <= min`, the resolver returns `min` without consuming a random value.
-- The `IRandom` instance is injected at construction time, not resolved from `GraphContext`.
+- Values come from `GraphContext.Random` when the graph has one, which an ability graph gets from its owner, and otherwise from the `IRandom` injected at construction.
 - Type validation happens at construction time (fail-fast), not at runtime.
 
 ## Usage

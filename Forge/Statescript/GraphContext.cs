@@ -80,6 +80,16 @@ public sealed class GraphContext
 	/// </remarks>
 	public ulong UpdateStamp { get; internal set; }
 
+	/// <summary>
+	/// Gets or sets the random source the graph's random nodes and resolvers draw from. When <see langword="null"/>,
+	/// each falls back to the provider it was built with.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="GraphAbilityBehavior"/> sets it to the owner's <see cref="IForgeEntity.Random"/> when the graph
+	/// starts, which makes the graph's rolls repeat on every machine that simulates the owner on the same tick.
+	/// </remarks>
+	public IRandom? Random { get; set; }
+
 	internal Dictionary<Guid, bool> InternalNodeActivationStatus { get; } = [];
 
 	internal HashSet<Node> ActiveStateNodes { get; } = [];
