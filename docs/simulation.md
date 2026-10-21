@@ -20,6 +20,16 @@ Each tick runs, in order:
 2. **Effects advance by the step.** Durations count down, periodic effects execute, and expired effects end.
 3. **Abilities advance their fixed rail.** Graphs react to the effects as they stand after this tick's expirations. See [Two update rails](statescript/nodes/state/README.md#two-update-rails).
 
+### Entities that affect each other
+
+When one entity's tick can roll on another, for example by applying an effect with a `ChanceToApplyEffectComponent`, every entity's random must restart before any of them advances. Otherwise the roll draws from the target's previous tick. Pass them all in one call:
+
+```csharp
+EntitySimulation.Tick(entities, tick, fixedDeltaTime);
+```
+
+It restarts every entity's random, then advances each in list order. A host that advances each entity from its own callback does the same in two steps: `EntitySimulation.BeginTick(entity, tick)` for every entity first, then `EntitySimulation.Advance(entity, fixedDeltaTime)` for each.
+
 A game without a fixed step, such as a turn-based one, keeps calling `EffectsManager.UpdateEffects` and `Abilities.UpdateAbilities` from its own loop, as the [Quick Start](quick-start.md#5-drive-time) shows.
 
 ## Deterministic randomness

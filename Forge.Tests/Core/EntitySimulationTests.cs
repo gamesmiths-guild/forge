@@ -108,6 +108,33 @@ public class EntitySimulationTests(TagsAndCuesFixture fixture) : IClassFixture<T
 		entity.Attributes[Attribute].CurrentValue.Should().Be(1);
 	}
 
+	[Theory]
+	[Trait("Simulation", "Tick")]
+	[InlineData(1)]
+	[InlineData(300)]
+	public void A_roll_on_another_entity_draws_from_its_current_tick(int drawsOnPreviousTick)
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager) { Random = new DeterministicRandom(9UL) };
+		var source = new TestEntity(_tagsManager, _cuesManager) { Random = new DeterministicRandom(8UL) };
+		var roller = new TargetRollNode(target);
+		ActivateGraph(source, roller);
+
+		target.Random.BeginTick(1);
+
+		for (int i = 0; i < drawsOnPreviousTick; i++)
+		{
+			target.Random.NextInt64();
+		}
+
+		EntitySimulation.Tick([source, target], 2, Step);
+
+		var reference = new DeterministicRandom(9UL);
+		reference.BeginTick(2);
+		roller.Rolls.Should().Equal(
+			[reference.NextInt64()],
+			"the source advances first, but the target's random has already restarted for the tick");
+	}
+
 	private static Effect BuffFor(double seconds, TestEntity entity)
 	{
 		var effectData = new EffectData(
@@ -156,6 +183,27 @@ public class EntitySimulationTests(TagsAndCuesFixture fixture) : IClassFixture<T
 		{
 			graphContext.TryGetActivationContext(out AbilityBehaviorContext? context).Should().BeTrue();
 			SeenOnFixedUpdate.Add(context!.Owner.Attributes[_attribute].CurrentValue);
+		}
+	}
+
+	// Rolls on another entity's random, the way a chance-based effect applied to it would.
+	private sealed class TargetRollNode(IForgeEntity target) : StateNode<StateNodeContext>
+	{
+		private readonly IForgeEntity _target = target;
+
+		public List<long> Rolls { get; } = [];
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
+		{
+			Rolls.Add(_target.Random!.NextInt64());
 		}
 	}
 }

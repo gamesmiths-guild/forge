@@ -53,8 +53,8 @@ public interface IForgeEntity
 	/// none.
 	/// </summary>
 	/// <remarks>
-	/// <see cref="EntitySimulation.Tick"/> restarts it at the start of every tick, so the rolls a graph or an effect
-	/// component makes depend only on the entity's seed and the tick. Random nodes, random resolvers and
+	/// <see cref="EntitySimulation.BeginTick"/> restarts it at the start of every tick, so the rolls a graph or an
+	/// effect component makes depend only on the entity's seed and the tick. Random nodes, random resolvers and
 	/// <see cref="Effects.Components.ChanceToApplyEffectComponent"/> prefer it to the provider they were built with;
 	/// without one they fall back to that provider.
 	/// </remarks>

@@ -492,7 +492,7 @@ public class EntityAbilities(IForgeEntity owner)
 
 	/// <summary>
 	/// Updates all active ability behaviors on the frame rail. Call this once per frame. A host with a fixed step
-	/// advances effects together with the fixed rail through <see cref="EntitySimulation.Tick"/>; one without calls
+	/// advances effects together with the fixed rail through <see cref="EntitySimulation"/>; one without calls
 	/// <see cref="Effects.EffectsManager.UpdateEffects(double)"/> alongside this.
 	/// </summary>
 	/// <param name="deltaTime">The time elapsed since the last update, in seconds.</param>
@@ -527,9 +527,9 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <see cref="UpdateAbilities(double)"/> in its frame callback.
 	/// </summary>
 	/// <remarks>
-	/// <see cref="EntitySimulation.Tick"/> calls this right after advancing effects, which is the usual way to drive it. A
-	/// game with no fixed step of its own never calls this, and the behaviors that need one stop running rather than
-	/// running at the frame rate.
+	/// <see cref="EntitySimulation.Advance"/> calls this right after advancing effects, which is the usual way to drive
+	/// it. A game with no fixed step of its own never calls this, and the behaviors that need one stop running rather
+	/// than running at the frame rate.
 	/// </remarks>
 	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
 	public void FixedUpdateAbilities(double deltaTime)
