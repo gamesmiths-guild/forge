@@ -1,6 +1,7 @@
 # GrantAbilityPermanentlyNode
 
 > **Type:** Action Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.GrantAbilityPermanentlyNode`
 
 Permanently grants an ability to an entity.

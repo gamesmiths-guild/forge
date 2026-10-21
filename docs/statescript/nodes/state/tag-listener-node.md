@@ -1,6 +1,7 @@
 # TagListenerNode
 
 > **Type:** State Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.State.TagListenerNode`
 > **Context:** `TagListenerNodeContext`
 

@@ -1,6 +1,7 @@
 # EffectLevelListenerNode
 
 > **Type:** State Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.State.EffectLevelListenerNode`
 > **Context:** `EffectLevelListenerNodeContext`
 

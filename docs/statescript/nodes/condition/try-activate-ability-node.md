@@ -1,6 +1,7 @@
 # TryActivateAbilityNode
 
 > **Type:** Condition Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Condition.TryActivateAbilityNode`
 
 Tries to activate an ability through its `AbilityHandle`, routing to the **True** port when the activation succeeds.

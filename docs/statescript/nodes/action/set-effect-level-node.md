@@ -1,6 +1,7 @@
 # SetEffectLevelNode
 
 > **Type:** Action Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.SetEffectLevelNode`
 
 Levels up one or more `Effect` instances, or sets their level to a resolved value.

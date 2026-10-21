@@ -32,6 +32,20 @@ It restarts every entity's random, then advances each in list order. A host that
 
 A game without a fixed step, such as a turn-based one, keeps calling `EffectsManager.UpdateEffects` and `Abilities.UpdateAbilities` from its own loop, as the [Quick Start](quick-start.md#5-drive-time) shows.
 
+## Presentation pass
+
+Simulation decides what happens; presentation shows it. A game that shows anything ends each frame with a presentation pass, after every tick and frame update of that frame:
+
+```csharp
+// At the end of the frame, once per entity:
+entity.Abilities.PresentAbilities();
+
+// And once per frame for the cues, when dispatch is deferred:
+cuesManager.PresentCues();
+```
+
+The pass shows the net change since the previous one. An animation node that started and ended within the frame plays nothing, and one still running is started once, however many ticks it lasts. Nothing the pass runs may change gameplay, so a host with nothing to show, such as a dedicated server, skips it and still simulates the same game. See [Simulation and presentation](statescript/nodes/state/README.md#simulation-and-presentation) for the node side and [Deferred dispatch](cues.md#deferred-dispatch) for cues.
+
 ## Deterministic randomness
 
 `DeterministicRandom` is an `IRandom` whose numbers depend only on its seed and on the tick it was last started for:

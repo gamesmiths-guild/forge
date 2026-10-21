@@ -1,6 +1,7 @@
 # TryGrantAbilityAndActivateOnceNode
 
 > **Type:** Condition Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Condition.TryGrantAbilityAndActivateOnceNode`
 
 Grants an ability transiently, tries to activate it once, and routes to the **True** port when the activation succeeds. The granted ability is automatically removed when it ends, the one-shot "proc" pattern.

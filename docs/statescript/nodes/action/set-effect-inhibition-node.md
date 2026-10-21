@@ -1,6 +1,7 @@
 # SetEffectInhibitionNode
 
 > **Type:** Action Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.SetEffectInhibitionNode`
 
 Sets the inhibition state of one or more active effects through their `ActiveEffectHandle`.

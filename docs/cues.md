@@ -209,6 +209,26 @@ sequenceDiagram
     E->>H: OnRemove (expired, removed or interrupted)
 ```
 
+### Deferred dispatch
+
+By default, handlers run the moment a cue fires. Set `CuesManager.DeferDispatch` to have them wait for the presentation pass instead, and call `PresentCues` once at the end of each frame:
+
+```csharp
+cuesManager.DeferDispatch = true;
+
+// At the end of every frame, after the frame's updates:
+cuesManager.PresentCues();
+```
+
+Deferred handlers see only net change:
+
+- A cue applied and removed again before the pass is never shown. Updates sent to it in between are dropped with it.
+- A removal of a cue shown in an earlier pass reaches the handlers.
+- Everything else, executions included, reaches the handlers in the order it fired.
+- Cues that handlers fire during the pass wait for the next one.
+
+An effect applied and removed within one frame then shows no cue at all, instead of flickering for a frame. See [Simulation Tick](simulation.md#presentation-pass) for where the pass fits.
+
 ### Implementing Cue Handlers
 
 Cue handlers implement the `ICueHandler` interface to respond to cue events:

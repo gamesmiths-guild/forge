@@ -1,7 +1,10 @@
 # {NodeName}
 
 > **Type:** Condition Node
+> **Network kind:** {Simulation, Presentation or Authority}
 > **Class:** `{Namespace}.{ClassName}`
+
+> The network kind is the node's `NetworkKind`. See [Simulation and presentation](../statescript/nodes/state/README.md#simulation-and-presentation).
 
 {Brief one-paragraph description of what this condition node evaluates.}
 

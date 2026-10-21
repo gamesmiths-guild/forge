@@ -1,6 +1,7 @@
 # ConditionMonitorNode
 
 > **Type:** State Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.State.ConditionMonitorNode`
 > **Context:** `ConditionMonitorNodeContext`
 

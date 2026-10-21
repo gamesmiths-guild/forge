@@ -1,6 +1,7 @@
 # SetVariableNode
 
 > **Type:** Action Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.SetVariableNode`
 
 Reads a value from an input property and writes it to an existing graph or shared variable. This is the primary way to copy data between variables or write computed values.

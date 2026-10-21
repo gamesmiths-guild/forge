@@ -27,6 +27,8 @@ When the graph starts:
 
 Once all synchronous propagation is complete, only **state nodes** remain active. These nodes are updated each frame via `GraphProcessor.UpdateGraph(deltaTime)`, and on each fixed step via `GraphProcessor.FixedUpdateGraph(deltaTime)`. When a state node deactivates (e.g., a timer expires), it may emit messages that trigger further actions, conditions, or other state nodes.
 
+What the graph only *shows*, such as an animation or a sound, waits for the presentation pass at the end of the frame, `GraphProcessor.Present()`, which shows the net change since the last pass. See [Simulation and presentation](nodes/state/README.md#simulation-and-presentation).
+
 **The graph completes when no state nodes remain active**, checked once the message that ended the last one has reached every connection: a node it has yet to reach can start and keep the graph running. A node whose `OnDeactivate` throws has still ended, so the graph completes as usual and the exception propagates after.
 
 ### Message Propagation

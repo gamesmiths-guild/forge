@@ -73,6 +73,8 @@ entity.Abilities.FixedUpdateAbilities(fixedDeltaTime); // from the fixed callbac
 
 **Drive whichever rails your host has.** A host with a fixed step advances effects and the fixed rail together through `EntitySimulation.Tick`, which runs them in the order every machine agrees on; see [Simulation Tick](../simulation.md). A turn-based game may call only `UpdateAbilities` and `EffectsManager.UpdateEffects`; a host with no fixed step never calls `FixedUpdateAbilities`, and nodes on that rail simply do not run.
 
+**Then present.** At the end of the frame, `entity.Abilities.PresentAbilities()` runs each graph's [presentation pass](nodes/state/README.md#simulation-and-presentation), which plays, stops and restores what the graph's presentation nodes show. An instance that ended since the last pass still gets this call, so what its graph showed ends too.
+
 ## Typed Activation Data
 
 For abilities that receive strongly-typed activation data, use `GraphAbilityBehavior<TData>`.

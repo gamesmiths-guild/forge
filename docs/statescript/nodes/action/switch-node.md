@@ -1,6 +1,7 @@
 # SwitchNode
 
 > **Type:** Flow Node (custom `Node`)
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.SwitchNode`
 
 Routes an incoming message to one of several case ports based on a resolved integer selector.
