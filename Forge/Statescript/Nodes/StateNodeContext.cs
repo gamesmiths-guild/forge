@@ -31,6 +31,10 @@ public class StateNodeContext : INodeContext
 
 	internal ulong ActivationStamp { get; set; }
 
+	// Unique within the graph context across runs, so the presentation pass can tell a running activation from one
+	// that replaced it since the last pass.
+	internal ulong ActivationId { get; set; }
+
 	internal int[]? DeferredDeactivationEventPortIds { get; set; }
 
 	internal List<int> DeferredEmitMessageData { get; set; } = [];

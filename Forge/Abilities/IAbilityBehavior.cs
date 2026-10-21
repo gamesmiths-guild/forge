@@ -8,6 +8,12 @@ namespace Gamesmiths.Forge.Abilities;
 public interface IAbilityBehavior
 {
 	/// <summary>
+	/// Gets a value indicating whether the behavior still shows something it has to end in <see cref="OnPresent"/>.
+	/// A behavior that ends while this is true is presented once more, so it can settle what it showed.
+	/// </summary>
+	bool IsPresenting => false;
+
+	/// <summary>
 	/// Called when an ability instance has started.
 	/// </summary>
 	/// <param name="context">The context for the started ability instance.</param>
@@ -38,6 +44,14 @@ public interface IAbilityBehavior
 	/// </remarks>
 	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
 	void OnFixedUpdate(double deltaTime)
+	{
+	}
+
+	/// <summary>
+	/// Called at the end of each frame, through <see cref="Core.EntityAbilities.PresentAbilities"/>, to bring what the
+	/// behavior shows in line with its current state. The default implementation does nothing.
+	/// </summary>
+	void OnPresent()
 	{
 	}
 }

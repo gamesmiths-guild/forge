@@ -333,6 +333,12 @@ internal sealed class Ability
 			{
 				Console.WriteLine($"Ability behavior threw on end: {ex}");
 			}
+
+			// What it still shows - an animation, a held property - only the next presentation pass can end.
+			if (binding.Behavior.IsPresenting)
+			{
+				Owner.Abilities.RetireBehavior(binding.Behavior);
+			}
 		}
 
 		instance.Handle.Free();
@@ -386,6 +392,29 @@ internal sealed class Ability
 				if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
 				{
 					binding.Behavior.OnFixedUpdate(deltaTime);
+				}
+			}
+		}
+		finally
+		{
+			_updating = false;
+		}
+	}
+
+	internal void PresentBehaviors()
+	{
+		if (!BufferBehaviorInstances())
+		{
+			return;
+		}
+
+		try
+		{
+			for (int i = 0; i < _behaviorBuffer.Count; i++)
+			{
+				if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
+				{
+					binding.Behavior.OnPresent();
 				}
 			}
 		}
