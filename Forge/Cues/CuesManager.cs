@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
@@ -17,7 +18,30 @@ public sealed class CuesManager
 	/// </summary>
 	internal const int MaxStackCueMagnitudes = 8;
 
+	private enum PendingCueKind : byte
+	{
+		Execute = 0,
+		Apply = 1,
+		Remove = 2,
+		Update = 3,
+	}
+
 	private readonly Dictionary<Tag, HashSet<ICueHandler>> _registeredCues = [];
+
+	private readonly List<PendingCue> _pendingCues = [];
+
+	private readonly List<PendingCue> _dispatchBuffer = [];
+
+	/// <summary>
+	/// Gets or sets a value indicating whether cue handlers wait for the presentation pass, <see cref="PresentCues"/>,
+	/// instead of being called the moment a cue fires. Off by default.
+	/// </summary>
+	/// <remarks>
+	/// Deferred handlers see only net change: a cue applied and removed again before the pass is never shown, along
+	/// with any update sent to it in between. Everything else reaches them in the order it happened. A host that
+	/// presents once per frame turns this on, so a cue that comes and goes within one frame never flickers.
+	/// </remarks>
+	public bool DeferDispatch { get; set; }
 
 	/// <summary>
 	/// Registers a cue that can be triggered later.
@@ -68,6 +92,12 @@ public sealed class CuesManager
 			return;
 		}
 
+		if (DeferDispatch)
+		{
+			_pendingCues.Add(new PendingCue(PendingCueKind.Execute, cueTag, target, parameters, false));
+			return;
+		}
+
 		foreach (ICueHandler cue in cues)
 		{
 			cue.OnExecute(target, parameters);
@@ -84,6 +114,12 @@ public sealed class CuesManager
 	{
 		if (!_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
 		{
+			return;
+		}
+
+		if (DeferDispatch)
+		{
+			_pendingCues.Add(new PendingCue(PendingCueKind.Apply, cueTag, target, parameters, false));
 			return;
 		}
 
@@ -106,6 +142,16 @@ public sealed class CuesManager
 			return;
 		}
 
+		if (DeferDispatch)
+		{
+			if (!CancelPendingApply(cueTag, target))
+			{
+				_pendingCues.Add(new PendingCue(PendingCueKind.Remove, cueTag, target, null, interrupted));
+			}
+
+			return;
+		}
+
 		foreach (ICueHandler cue in cues)
 		{
 			cue.OnRemove(target, interrupted);
@@ -125,10 +171,56 @@ public sealed class CuesManager
 			return;
 		}
 
+		if (DeferDispatch)
+		{
+			_pendingCues.Add(new PendingCue(PendingCueKind.Update, cueTag, target, parameters, false));
+			return;
+		}
+
 		foreach (ICueHandler cue in cues)
 		{
 			cue.OnUpdate(target, parameters);
 		}
+	}
+
+	/// <summary>
+	/// Runs the presentation pass for deferred cues (<see cref="DeferDispatch"/>): calls the handlers of every cue
+	/// fired since the last pass, in the order they fired. Call this once at the end of each frame, after the frame's
+	/// updates.
+	/// </summary>
+	/// <remarks>
+	/// Cues fired by the handlers it calls wait for the next pass. A handler that throws keeps neither the other
+	/// handlers from running nor the rest of the cues from being dispatched, and the first exception is rethrown after.
+	/// </remarks>
+	public void PresentCues()
+	{
+		_dispatchBuffer.Clear();
+		_dispatchBuffer.AddRange(_pendingCues);
+		_pendingCues.Clear();
+
+		ExceptionDispatchInfo? failure = null;
+
+		foreach (PendingCue pending in _dispatchBuffer)
+		{
+			if (!_registeredCues.TryGetValue(pending.CueTag, out HashSet<ICueHandler>? cues))
+			{
+				continue;
+			}
+
+			foreach (ICueHandler cue in cues)
+			{
+				try
+				{
+					Dispatch(cue, pending);
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
+			}
+		}
+
+		failure?.Throw();
 	}
 
 	/// <summary>
@@ -321,6 +413,28 @@ public sealed class CuesManager
 		}
 	}
 
+	private static void Dispatch(ICueHandler cue, in PendingCue pending)
+	{
+		switch (pending.Kind)
+		{
+			case PendingCueKind.Execute:
+				cue.OnExecute(pending.Target, pending.Parameters);
+				break;
+
+			case PendingCueKind.Apply:
+				cue.OnApply(pending.Target, pending.Parameters);
+				break;
+
+			case PendingCueKind.Remove:
+				cue.OnRemove(pending.Target, pending.Interrupted);
+				break;
+
+			case PendingCueKind.Update:
+				cue.OnUpdate(pending.Target, pending.Parameters);
+				break;
+		}
+	}
+
 	private static bool ShouldTriggerCue(
 		in EffectData effectData,
 		AttributeChangeSet? changes,
@@ -441,7 +555,8 @@ public sealed class CuesManager
 			case CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel:
 				Validation.Assert(
 					cueData.MagnitudeAttribute is not null,
-					"Cues with CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel must contains a configured MagnitudeAttribute.");
+					"Cues with CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel must contains a configured " +
+					"MagnitudeAttribute.");
 
 				if (!effectEvaluatedData.Target.Attributes.ContainsAttribute(cueData.MagnitudeAttribute))
 				{
@@ -452,4 +567,49 @@ public sealed class CuesManager
 					.CalculateMagnitudeUpToChannel(cueData.FinalChannel);
 		}
 	}
+
+	// The latest persistent event pending for the cue on the target decides. An apply was never shown, so it goes, with
+	// the updates sent to it since, and the removal with it; after a removal, this removal stands.
+	private bool CancelPendingApply(Tag cueTag, IForgeEntity? target)
+	{
+		for (int i = _pendingCues.Count - 1; i >= 0; i--)
+		{
+			PendingCue pending = _pendingCues[i];
+
+			if (pending.CueTag != cueTag || pending.Target != target || pending.Kind == PendingCueKind.Execute)
+			{
+				continue;
+			}
+
+			if (pending.Kind == PendingCueKind.Remove)
+			{
+				return false;
+			}
+
+			if (pending.Kind == PendingCueKind.Apply)
+			{
+				for (int j = _pendingCues.Count - 1; j > i; j--)
+				{
+					PendingCue later = _pendingCues[j];
+
+					if (later.Kind == PendingCueKind.Update && later.CueTag == cueTag && later.Target == target)
+					{
+						_pendingCues.RemoveAt(j);
+					}
+				}
+
+				_pendingCues.RemoveAt(i);
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private readonly record struct PendingCue(
+		PendingCueKind Kind,
+		Tag CueTag,
+		IForgeEntity? Target,
+		CueParameters? Parameters,
+		bool Interrupted);
 }
