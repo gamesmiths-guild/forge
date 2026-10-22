@@ -595,6 +595,8 @@ public class EntityAbilities(IForgeEntity owner)
 			}
 		}
 
+		_retiredBuffer.Clear();
+
 		if (BufferGrantedAbilities())
 		{
 			for (int i = 0; i < _updateBuffer.Count; i++)

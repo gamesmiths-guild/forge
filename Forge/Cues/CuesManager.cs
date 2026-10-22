@@ -18,6 +18,10 @@ public sealed class CuesManager
 	/// </summary>
 	internal const int MaxStackCueMagnitudes = 8;
 
+	private const string MissingUpToChannelAttributeMessage =
+		"Cues with CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel must contains a configured " +
+		"MagnitudeAttribute.";
+
 	private enum PendingCueKind : byte
 	{
 		Execute = 0,
@@ -31,6 +35,10 @@ public sealed class CuesManager
 	private readonly List<PendingCue> _pendingCues = [];
 
 	private readonly List<PendingCue> _dispatchBuffer = [];
+
+	private readonly List<ICueHandler> _handlerBuffer = [];
+
+	private bool _presenting;
 
 	/// <summary>
 	/// Gets or sets a value indicating whether cue handlers wait for the presentation pass, <see cref="PresentCues"/>,
@@ -150,30 +158,53 @@ public sealed class CuesManager
 	/// </remarks>
 	public void PresentCues()
 	{
-		_dispatchBuffer.Clear();
+		// The buffers are reused per pass, so a nested pass would clear the walk in progress.
+		if (_presenting)
+		{
+			Validation.Fail(
+				"A cue presentation pass was re-entered while one was already running, which would corrupt the walk " +
+				"in progress. Run PresentCues from the host's end of frame, never from inside a cue handler.");
+
+			return;
+		}
+
+		_presenting = true;
 		_dispatchBuffer.AddRange(_pendingCues);
 		_pendingCues.Clear();
 
 		ExceptionDispatchInfo? failure = null;
 
-		foreach (PendingCue pending in _dispatchBuffer)
+		try
 		{
-			if (!_registeredCues.TryGetValue(pending.CueTag, out HashSet<ICueHandler>? cues))
+			foreach (PendingCue pending in _dispatchBuffer)
 			{
-				continue;
-			}
+				if (!_registeredCues.TryGetValue(pending.CueTag, out HashSet<ICueHandler>? cues))
+				{
+					continue;
+				}
 
-			foreach (ICueHandler cue in cues)
-			{
-				try
+				// Copied, so a handler that registers or unregisters one for this cue does not end the pass.
+				_handlerBuffer.AddRange(cues);
+
+				foreach (ICueHandler cue in _handlerBuffer)
 				{
-					Dispatch(cue, pending);
+					try
+					{
+						Dispatch(cue, pending);
+					}
+					catch (Exception exception)
+					{
+						failure ??= ExceptionDispatchInfo.Capture(exception);
+					}
 				}
-				catch (Exception exception)
-				{
-					failure ??= ExceptionDispatchInfo.Capture(exception);
-				}
+
+				_handlerBuffer.Clear();
 			}
+		}
+		finally
+		{
+			_dispatchBuffer.Clear();
+			_presenting = false;
 		}
 
 		failure?.Throw();
@@ -577,8 +608,7 @@ public sealed class CuesManager
 			case CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel:
 				Validation.Assert(
 					cueData.MagnitudeAttribute is not null,
-					"Cues with CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel must contains a configured " +
-					"MagnitudeAttribute.");
+					MissingUpToChannelAttributeMessage);
 
 				if (!effectEvaluatedData.Target.Attributes.ContainsAttribute(cueData.MagnitudeAttribute))
 				{
@@ -615,7 +645,10 @@ public sealed class CuesManager
 				{
 					PendingCue later = _pendingCues[j];
 
-					if (later.Kind == PendingCueKind.Update && later.IsFor(cueTag, target, application))
+					// Updates sent to the cue without an application of their own go with it too, as they did before
+					// applications were told apart.
+					if (later.Kind == PendingCueKind.Update
+						&& (later.IsFor(cueTag, target, application) || later.IsFor(cueTag, target, null)))
 					{
 						_pendingCues.RemoveAt(j);
 					}

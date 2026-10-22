@@ -308,9 +308,10 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// </summary>
 	/// <remarks>
 	/// The node may be running a new activation by then, or its graph may be gone along with the node's context, so
-	/// this gets only what <see cref="OnPresentationActivated"/> returned.
+	/// this gets only what <see cref="OnPresentationActivated"/> returned, or <see langword="null"/> when it threw.
 	/// </remarks>
-	/// <param name="presentation">What <see cref="OnPresentationActivated"/> returned.</param>
+	/// <param name="presentation">What <see cref="OnPresentationActivated"/> returned, or <see langword="null"/> when
+	/// it threw.</param>
 	protected virtual void OnPresentationDeactivated(object? presentation)
 	{
 	}

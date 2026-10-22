@@ -28,6 +28,8 @@ public class GraphProcessor
 
 	private bool _updating;
 
+	private bool _presenting;
+
 	/// <summary>
 	/// Gets the graph that this processor is responsible for executing.
 	/// </summary>
@@ -263,65 +265,85 @@ public class GraphProcessor
 	/// </remarks>
 	public void Present()
 	{
+		// The buffers are reused per pass, so a nested pass would clear the walk in progress. Refused, like a nested
+		// update.
+		if (_presenting)
+		{
+			Validation.Fail(
+				"A presentation pass was re-entered while one was already running, which would corrupt the walk in " +
+				"progress. Run Present from the host's end of frame, never from inside a presentation.");
+
+			return;
+		}
+
+		_presenting = true;
 		ExceptionDispatchInfo? failure = null;
 
-		_presentBuffer.Clear();
-		_presentBuffer.AddRange(_presented.Keys);
-		_presentBuffer.Sort(_byIndex);
-
-		foreach (Node node in _presentBuffer)
+		try
 		{
-			Presented presented = _presented[node];
+			_presentBuffer.Clear();
+			_presentBuffer.AddRange(_presented.Keys);
+			_presentBuffer.Sort(_byIndex);
 
-			if (node.TryGetActivation(GraphContext, out ulong activationId) && activationId == presented.ActivationId)
+			foreach (Node node in _presentBuffer)
 			{
-				continue;
+				Presented presented = _presented[node];
+
+				if (node.TryGetActivation(GraphContext, out ulong activationId)
+					&& activationId == presented.ActivationId)
+				{
+					continue;
+				}
+
+				_presented.Remove(node);
+
+				try
+				{
+					node.EndPresentation(presented.Presentation);
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
 			}
 
-			_presented.Remove(node);
+			_presentBuffer.Clear();
 
-			try
+			foreach (Node node in GraphContext.ActiveStateNodes)
 			{
-				node.EndPresentation(presented.Presentation);
+				if (node.NetworkKind == NodeNetworkKind.Presentation && !_presented.ContainsKey(node))
+				{
+					_presentBuffer.Add(node);
+				}
 			}
-			catch (Exception exception)
+
+			_presentBuffer.Sort(_byIndex);
+
+			foreach (Node node in _presentBuffer)
 			{
-				failure ??= ExceptionDispatchInfo.Capture(exception);
+				// A presentation started earlier in this pass can reach the graph through the engine - a signal it
+				// emits - and end this node before its turn.
+				if (!node.TryGetActivation(GraphContext, out ulong activationId))
+				{
+					continue;
+				}
+
+				// Recorded first, so one that throws part way is still ended later.
+				_presented[node] = new Presented(activationId, null);
+
+				try
+				{
+					_presented[node] = new Presented(activationId, node.StartPresentation(GraphContext));
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
 			}
 		}
-
-		_presentBuffer.Clear();
-
-		foreach (Node node in GraphContext.ActiveStateNodes)
+		finally
 		{
-			if (node.NetworkKind == NodeNetworkKind.Presentation && !_presented.ContainsKey(node))
-			{
-				_presentBuffer.Add(node);
-			}
-		}
-
-		_presentBuffer.Sort(_byIndex);
-
-		foreach (Node node in _presentBuffer)
-		{
-			// A presentation started earlier in this pass can reach the graph through the engine - a signal it emits -
-			// and end this node before its turn.
-			if (!node.TryGetActivation(GraphContext, out ulong activationId))
-			{
-				continue;
-			}
-
-			// Recorded first, so one that throws part way is still ended later.
-			_presented[node] = new Presented(activationId, null);
-
-			try
-			{
-				_presented[node] = new Presented(activationId, node.StartPresentation(GraphContext));
-			}
-			catch (Exception exception)
-			{
-				failure ??= ExceptionDispatchInfo.Capture(exception);
-			}
+			_presenting = false;
 		}
 
 		failure?.Throw();

@@ -6,6 +6,9 @@ using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
+using Gamesmiths.Forge.Statescript;
+using Gamesmiths.Forge.Statescript.Nodes;
+using Gamesmiths.Forge.Statescript.Nodes.State;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
@@ -196,6 +199,63 @@ public class CueDeferralTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 		cues.PresentCues();
 
 		log.Should().Equal(["apply 2"], "only the second effect is still active, so only its apply is shown");
+	}
+
+	[Fact]
+	[Trait("Cues", "Deferral")]
+	public void Removing_one_of_two_cue_nodes_on_a_target_cancels_only_its_own_apply()
+	{
+		var log = new List<string>();
+		CuesManager cues = CreateCues(log, out Tag cue);
+		cues.DeferDispatch = true;
+		var target = new TestEntity(_tagsManager, cues);
+
+		GraphProcessor first = StartCueGraph(cue, target, magnitude: 1);
+		StartCueGraph(cue, target, magnitude: 2);
+		first.StopGraph();
+		cues.PresentCues();
+
+		log.Should().Equal(["apply 2"], "only the second node still holds the cue");
+	}
+
+	[Fact]
+	[Trait("Cues", "Deferral")]
+	public void A_handler_that_unregisters_during_the_pass_does_not_end_it()
+	{
+		var log = new List<string>();
+		var cues = new CuesManager { DeferDispatch = true };
+		var cue = Tag.RequestTag(_tagsManager, "test.cue1");
+		LoggingCueHandler? handler = null;
+		handler = new LoggingCueHandler(log) { OnApplied = () => cues.UnregisterCue(cue, handler!) };
+		cues.RegisterCue(cue, handler);
+		cues.RegisterCue(cue, new LoggingCueHandler(log));
+
+		cues.ApplyCue(cue, null, null);
+		cues.ExecuteCue(cue, null, null);
+		cues.PresentCues();
+
+		log.Should().Equal("apply", "apply", "execute");
+	}
+
+	private static GraphProcessor StartCueGraph(Tag cue, IForgeEntity target, int magnitude)
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable("cue", cue);
+		graph.VariableDefinitions.DefineObjectVariable("target", target);
+		graph.VariableDefinitions.DefineVariable("magnitude", magnitude);
+
+		var node = new CueNode();
+		node.BindInput(CueNode.CueTagInput, "cue");
+		node.BindInput(CueNode.TargetInput, "target");
+		node.BindInput(CueNode.MagnitudeInput, "magnitude");
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[StateNode<CueNodeContext>.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		return processor;
 	}
 
 	private CuesManager CreateCues(List<string> log, out Tag cue)
