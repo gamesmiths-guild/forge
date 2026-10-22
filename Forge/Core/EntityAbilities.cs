@@ -597,26 +597,26 @@ public class EntityAbilities(IForgeEntity owner)
 
 		if (BufferGrantedAbilities())
 		{
-			try
+			for (int i = 0; i < _updateBuffer.Count; i++)
 			{
-				for (int i = 0; i < _updateBuffer.Count; i++)
-				{
-					AbilityHandle handle = _updateBuffer[i];
+				AbilityHandle handle = _updateBuffer[i];
 
-					if (_grantedAbilities.Contains(handle))
-					{
-						handle.Ability?.PresentBehaviors();
-					}
+				if (!_grantedAbilities.Contains(handle))
+				{
+					continue;
+				}
+
+				try
+				{
+					handle.Ability?.PresentBehaviors();
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
 				}
 			}
-			catch (Exception exception)
-			{
-				failure ??= ExceptionDispatchInfo.Capture(exception);
-			}
-			finally
-			{
-				_updating = false;
-			}
+
+			_updating = false;
 		}
 
 		failure?.Throw();

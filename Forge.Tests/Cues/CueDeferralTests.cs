@@ -174,6 +174,30 @@ public class CueDeferralTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 		log.Should().BeEmpty();
 	}
 
+	[Fact]
+	[Trait("Cues", "Deferral")]
+	public void Removing_one_of_two_overlapping_effects_cancels_only_its_own_apply()
+	{
+		var log = new List<string>();
+		CuesManager cues = CreateCues(log, out Tag cue);
+		cues.DeferDispatch = true;
+		var target = new TestEntity(_tagsManager, cues);
+		var cueData = new CueData(new TagContainer(_tagsManager, [cue]), 0, 10, CueMagnitudeType.EffectLevel);
+		var duration = new DurationData(
+			DurationType.HasDuration,
+			new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(10)));
+		var ownership = new EffectOwnership(target, target);
+
+		ActiveEffectHandle? first = target.EffectsManager.ApplyEffect(
+			new Effect(new EffectData("First", duration, cues: [cueData]), ownership, level: 1));
+		target.EffectsManager.ApplyEffect(
+			new Effect(new EffectData("Second", duration, cues: [cueData]), ownership, level: 2));
+		target.EffectsManager.RemoveEffect(first!);
+		cues.PresentCues();
+
+		log.Should().Equal(["apply 2"], "only the second effect is still active, so only its apply is shown");
+	}
+
 	private CuesManager CreateCues(List<string> log, out Tag cue)
 	{
 		var cues = new CuesManager();
@@ -195,7 +219,7 @@ public class CueDeferralTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 
 		public void OnApply(IForgeEntity? target, CueParameters? parameters)
 		{
-			_log.Add("apply");
+			_log.Add(parameters is CueParameters applied ? $"apply {applied.Magnitude}" : "apply");
 			OnApplied?.Invoke();
 		}
 

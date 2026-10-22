@@ -88,7 +88,7 @@ internal static class CueApplicationUtilities
 
 	// A handler that throws as its cue is removed still lets the rest be removed, rather than leave them applied with
 	// nothing left tracking them. What threw first propagates after.
-	public static void RemoveCues(IReadOnlyList<AppliedCue> appliedCues, bool interrupted)
+	public static void RemoveCues(IReadOnlyList<AppliedCue> appliedCues, bool interrupted, object? application)
 	{
 		ExceptionDispatchInfo? failure = null;
 
@@ -98,7 +98,7 @@ internal static class CueApplicationUtilities
 
 			try
 			{
-				applied.Target.CuesManager.RemoveCue(applied.Tag, applied.Target, interrupted);
+				applied.Target.CuesManager.RemoveCue(applied.Tag, applied.Target, interrupted, application);
 			}
 			catch (Exception exception)
 			{
@@ -158,7 +158,7 @@ internal static class CueApplicationUtilities
 						break;
 
 					case CueOperation.Apply:
-						target.CuesManager.ApplyCue(cueTag, target, parameters);
+						target.CuesManager.ApplyCue(cueTag, target, parameters, nodeContext);
 						appliedCues?.Add(new AppliedCue(cueTag, target));
 						break;
 

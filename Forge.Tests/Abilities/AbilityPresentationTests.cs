@@ -89,6 +89,43 @@ public class AbilityPresentationTests(TagsAndCuesFixture fixture) : IClassFixtur
 		idle.PresentCount.Should().Be(0);
 	}
 
+	[Fact]
+	[Trait("Abilities", "Presentation")]
+	public void An_instance_that_throws_does_not_keep_the_others_of_its_ability_from_being_presented()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var presented = new CountingBehavior();
+		var behaviors = new Queue<IAbilityBehavior>([new ThrowingBehavior(), presented]);
+		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(
+			new AbilityData(
+				"Twice",
+				instancingPolicy: AbilityInstancingPolicy.PerExecution,
+				behaviorFactory: behaviors.Dequeue),
+			1,
+			LevelComparison.Higher,
+			null);
+		handle.TryActivate(out _).Should().BeTrue();
+		handle.TryActivate(out _).Should().BeTrue();
+
+		entity.Abilities.Invoking(x => x.PresentAbilities()).Should().Throw<InvalidOperationException>();
+
+		presented.PresentCount.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Abilities", "Presentation")]
+	public void An_ability_that_throws_does_not_keep_later_abilities_from_being_presented()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var presented = new CountingBehavior();
+		GrantAbility(entity, "Throwing", new ThrowingBehavior()).TryActivate(out _);
+		GrantAbility(entity, "Counting", presented).TryActivate(out _);
+
+		entity.Abilities.Invoking(x => x.PresentAbilities()).Should().Throw<InvalidOperationException>();
+
+		presented.PresentCount.Should().Be(1);
+	}
+
 	private static AbilityHandle GrantGraphAbility(TestEntity entity, Node node)
 	{
 		var graph = new Graph();
@@ -161,6 +198,22 @@ public class AbilityPresentationTests(TagsAndCuesFixture fixture) : IClassFixtur
 		public void OnPresent()
 		{
 			PresentCount++;
+		}
+	}
+
+	private sealed class ThrowingBehavior : IAbilityBehavior
+	{
+		public void OnStarted(AbilityBehaviorContext context)
+		{
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
+		}
+
+		public void OnPresent()
+		{
+			throw new InvalidOperationException("Presentation failed.");
 		}
 	}
 }

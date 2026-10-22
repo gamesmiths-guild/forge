@@ -223,6 +223,7 @@ cuesManager.PresentCues();
 Deferred handlers see only net change:
 
 - A cue applied and removed again before the pass is never shown. Updates sent to it in between are dropped with it.
+- A removal cancels only its own application's apply: the same effect's, or the same Cue node activation's. Another effect showing the same cue on the same target keeps its apply and updates. Cues applied by calling `ApplyCue` directly count as one application per cue and target.
 - A removal of a cue shown in an earlier pass reaches the handlers.
 - Everything else, executions included, reaches the handlers in the order it fired.
 - Cues that handlers fire during the pass wait for the next one.

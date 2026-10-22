@@ -6,8 +6,9 @@ using Gamesmiths.Forge.Tags;
 namespace Gamesmiths.Forge.Statescript.Nodes.State;
 
 /// <summary>
-/// Applies one or more persistent cues (<see cref="Cues.CuesManager.ApplyCue"/>) on activation and removes them
-/// (<see cref="Cues.CuesManager.RemoveCue"/>) on deactivation.
+/// Applies one or more persistent cues
+/// (<see cref="Cues.CuesManager.ApplyCue(Tag, IForgeEntity, Cues.CueParameters?)"/>) on activation and removes them
+/// (<see cref="Cues.CuesManager.RemoveCue(Tag, IForgeEntity, bool)"/>) on deactivation.
 /// </summary>
 /// <remarks>
 /// <para>The cue-tag input accepts either a single <see cref="Tag"/> or an array of tags; the target input accepts a
@@ -127,6 +128,6 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 	{
 		AppliedCue[] applied = [.. nodeContext.AppliedCues];
 		nodeContext.AppliedCues.Clear();
-		CueApplicationUtilities.RemoveCues(applied, interrupted);
+		CueApplicationUtilities.RemoveCues(applied, interrupted, nodeContext);
 	}
 }

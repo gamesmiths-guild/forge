@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
@@ -401,6 +402,8 @@ internal sealed class Ability
 		}
 	}
 
+	// A behavior that throws does not keep the other instances from being presented, and the first exception is
+	// rethrown after.
 	internal void PresentBehaviors()
 	{
 		if (!BufferBehaviorInstances())
@@ -408,20 +411,25 @@ internal sealed class Ability
 			return;
 		}
 
-		try
+		ExceptionDispatchInfo? failure = null;
+
+		for (int i = 0; i < _behaviorBuffer.Count; i++)
 		{
-			for (int i = 0; i < _behaviorBuffer.Count; i++)
+			if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
 			{
-				if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
+				try
 				{
 					binding.Behavior.OnPresent();
 				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
 			}
 		}
-		finally
-		{
-			_updating = false;
-		}
+
+		_updating = false;
+		failure?.Throw();
 	}
 
 	internal bool CanActivate(IForgeEntity? abilityTarget, out AbilityActivationFailures failureFlags)
