@@ -91,6 +91,7 @@ The presentation half runs in the presentation pass, `GraphProcessor.Present`, w
 - An activation that started and ended between two passes is never presented.
 - A running activation is presented once, however many passes it lasts.
 - When the presented activation ends, restarts, or its graph stops, the next pass calls `OnPresentationDeactivated` with whatever `OnPresentationActivated` returned. The node's context may be gone by then, so that return value is all it gets.
+- A presentation that ends its own activation as it starts, such as through a signal the engine emits, is ended right away in the same pass.
 - Presentations that end go first, then new ones start, each in graph order.
 
 **Resolve inputs in `OnActivate` or `OnRestart`, not in the pass.** Keep what the presentation needs in the node context and have `OnPresentationActivated` read it from there. A resolver can draw from `GraphContext.Random`, the deterministic gameplay random, and a draw made only on peers that present puts their rolls out of step with the rest; an input can also change before the pass runs.

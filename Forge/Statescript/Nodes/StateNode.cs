@@ -306,7 +306,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 
 	/// <summary>
 	/// Ends what <see cref="OnPresentationActivated"/> started, in the first presentation pass after the presented
-	/// activation ended, restarted, or its graph stopped.
+	/// activation ended, restarted, or its graph stopped, or right after it started when starting ended it.
 	/// </summary>
 	/// <remarks>
 	/// The node may be running a new activation by then, or its graph may be gone along with the node's context, so
