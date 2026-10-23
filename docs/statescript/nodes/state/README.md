@@ -83,8 +83,8 @@ Every node has a `NetworkKind` that says what its work means to a networked game
 
 A presentation state node splits its work in two halves:
 
-- **The simulation half** is the usual `OnActivate`, `OnFixedUpdate` and `OnDeactivate`. It captures what the node needs, such as which player and at what speed, and counts anything that ends the node, such as the length of a clip, in fixed steps. The node then ends on the same step on every machine, whatever the engine is doing.
-- **The presentation half** is `OnPresentationActivated` and `OnPresentationDeactivated`. It does the engine work: playing, stopping, writing and restoring.
+- **The simulation half** is the usual `OnActivate`, `OnRestart`, `OnFixedUpdate` and `OnDeactivate`. It resolves the node's inputs and keeps what the presentation needs in the node context, such as which player and at what speed, and counts anything that ends the node, such as the length of a clip, in fixed steps. The node then ends on the same step on every machine, whatever the engine is doing.
+- **The presentation half** is `OnPresentationActivated` and `OnPresentationDeactivated`. It does the engine work from what the node context holds: playing, stopping, writing and restoring.
 
 The presentation half runs in the presentation pass, `GraphProcessor.Present`, which the host calls at the end of each frame (for ability graphs, through `EntityAbilities.PresentAbilities`). The pass shows only the net change since the last one:
 
@@ -93,10 +93,17 @@ The presentation half runs in the presentation pass, `GraphProcessor.Present`, w
 - When the presented activation ends, restarts, or its graph stops, the next pass calls `OnPresentationDeactivated` with whatever `OnPresentationActivated` returned. The node's context may be gone by then, so that return value is all it gets.
 - Presentations that end go first, then new ones start, each in graph order.
 
+**Resolve inputs in `OnActivate` or `OnRestart`, not in the pass.** Keep what the presentation needs in the node context and have `OnPresentationActivated` read it from there. A resolver can draw from `GraphContext.Random`, the deterministic gameplay random, and a draw made only on peers that present puts their rolls out of step with the rest; an input can also change before the pass runs.
+
 The presentation half must not change gameplay or the graph: no emitting, no variables, no effects. A host with nothing to show skips the pass, and must still simulate the same game.
 
 ```csharp
-public sealed class HighlightNode(IHighlighter highlighter) : StateNode<StateNodeContext>
+public sealed class HighlightNodeContext : StateNodeContext
+{
+    public IForgeEntity? Target { get; set; }
+}
+
+public sealed class HighlightNode(IHighlighter highlighter) : StateNode<HighlightNodeContext>
 {
     private readonly IHighlighter _highlighter = highlighter;
 
@@ -104,6 +111,8 @@ public sealed class HighlightNode(IHighlighter highlighter) : StateNode<StateNod
 
     protected override void OnActivate(GraphContext graphContext)
     {
+        graphContext.TryGetActivationContext(out AbilityBehaviorContext? ability);
+        graphContext.GetNodeContext<HighlightNodeContext>(NodeID).Target = ability?.Owner;
     }
 
     protected override void OnDeactivate(GraphContext graphContext)
@@ -112,10 +121,10 @@ public sealed class HighlightNode(IHighlighter highlighter) : StateNode<StateNod
 
     protected override object? OnPresentationActivated(GraphContext graphContext)
     {
-        graphContext.TryGetActivationContext(out AbilityBehaviorContext? ability);
+        IForgeEntity? target = graphContext.GetNodeContext<HighlightNodeContext>(NodeID).Target;
 
         // The highlight hands back a handle that switches it off again.
-        return _highlighter.Highlight(ability?.Owner);
+        return _highlighter.Highlight(target);
     }
 
     protected override void OnPresentationDeactivated(object? presentation)
