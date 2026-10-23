@@ -1,6 +1,7 @@
 # TryActivateAbilitiesByTagNode
 
 > **Type:** Condition Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Condition.TryActivateAbilitiesByTagNode`
 
 Tries to activate every granted ability on an entity whose ability tags match any of the given tags, routing to the **True** port when at least one activation succeeds.

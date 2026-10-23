@@ -25,6 +25,9 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 	public GraphProcessor Processor { get; } = new GraphProcessor(graph);
 
 	/// <inheritdoc/>
+	public bool IsPresenting => Processor.IsPresenting;
+
+	/// <inheritdoc/>
 	public void OnStarted(AbilityBehaviorContext context)
 	{
 		StartGraph(context);
@@ -46,6 +49,12 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 	public void OnFixedUpdate(double deltaTime)
 	{
 		Processor.FixedUpdateGraph(deltaTime);
+	}
+
+	/// <inheritdoc/>
+	public void OnPresent()
+	{
+		Processor.Present();
 	}
 
 	/// <summary>

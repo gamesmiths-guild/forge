@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
@@ -333,6 +334,12 @@ internal sealed class Ability
 			{
 				Console.WriteLine($"Ability behavior threw on end: {ex}");
 			}
+
+			// What it still shows - an animation, a held property - only the next presentation pass can end.
+			if (binding.Behavior.IsPresenting)
+			{
+				Owner.Abilities.RetireBehavior(binding.Behavior);
+			}
 		}
 
 		instance.Handle.Free();
@@ -393,6 +400,36 @@ internal sealed class Ability
 		{
 			_updating = false;
 		}
+	}
+
+	// A behavior that throws does not keep the other instances from being presented, and the first exception is
+	// rethrown after.
+	internal void PresentBehaviors()
+	{
+		if (!BufferBehaviorInstances())
+		{
+			return;
+		}
+
+		ExceptionDispatchInfo? failure = null;
+
+		for (int i = 0; i < _behaviorBuffer.Count; i++)
+		{
+			if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
+			{
+				try
+				{
+					binding.Behavior.OnPresent();
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
+			}
+		}
+
+		_updating = false;
+		failure?.Throw();
 	}
 
 	internal bool CanActivate(IForgeEntity? abilityTarget, out AbilityActivationFailures failureFlags)

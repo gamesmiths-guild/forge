@@ -1,6 +1,7 @@
 # CancelAbilityNode
 
 > **Type:** Action Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.CancelAbilityNode`
 
 Cancels the ability driving the current graph.

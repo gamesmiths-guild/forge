@@ -1,6 +1,7 @@
 # SetByCallerMagnitudeNode
 
 > **Type:** Action Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.SetByCallerMagnitudeNode`
 
 Sets a SetByCaller magnitude on one or more `Effect` instances, keyed by tag.

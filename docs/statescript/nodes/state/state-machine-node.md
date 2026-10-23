@@ -1,6 +1,7 @@
 # StateMachineNode
 
 > **Type:** State Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.State.StateMachineNode`
 > **Context:** `StateMachineNodeContext`
 

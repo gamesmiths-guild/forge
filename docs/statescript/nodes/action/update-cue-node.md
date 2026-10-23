@@ -1,6 +1,7 @@
 # UpdateCueNode
 
 > **Type:** Action Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.UpdateCueNode`
 
 Updates one or more already-active cues (`CuesManager.UpdateCue`) on one or more targets, then continues execution. Use it to push new values to cues applied by a [CueNode](../state/cue-node.md) without re-applying them.

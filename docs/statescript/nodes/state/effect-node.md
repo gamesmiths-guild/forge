@@ -1,6 +1,7 @@
 # EffectNode
 
 > **Type:** State Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.State.EffectNode`
 > **Context:** `EffectNodeContext`
 

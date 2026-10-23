@@ -1,6 +1,7 @@
 # TryRevokeAbilityNode
 
 > **Type:** Condition Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Condition.TryRevokeAbilityNode`
 
 Tries to revoke granted abilities through their `AbilityHandle`, routing to **True** when at least one revocation succeeds.

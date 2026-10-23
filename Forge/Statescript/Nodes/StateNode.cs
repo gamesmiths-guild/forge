@@ -135,6 +135,32 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	}
 
 	/// <inheritdoc/>
+	internal override bool TryGetActivation(GraphContext graphContext, out ulong activationId)
+	{
+		if (graphContext.HasNodeContext(NodeID)
+			&& graphContext.GetNodeContext<StateNodeContext>(NodeID) is { Active: true } nodeContext)
+		{
+			activationId = nodeContext.ActivationId;
+			return true;
+		}
+
+		activationId = 0;
+		return false;
+	}
+
+	/// <inheritdoc/>
+	internal override object? StartPresentation(GraphContext graphContext)
+	{
+		return OnPresentationActivated(graphContext);
+	}
+
+	/// <inheritdoc/>
+	internal override void EndPresentation(object? presentation)
+	{
+		OnPresentationDeactivated(presentation);
+	}
+
+	/// <inheritdoc/>
 	internal override IEnumerable<int> GetReachableOutputPorts(byte inputPortIndex)
 	{
 		if (inputPortIndex == InputPort)
@@ -249,6 +275,44 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// </remarks>
 	/// <param name="graphContext">The graph's context.</param>
 	protected virtual void OnRestart(GraphContext graphContext)
+	{
+	}
+
+	/// <summary>
+	/// The presentation half of a <see cref="NodeNetworkKind.Presentation"/> node: starts showing the running
+	/// activation - plays the animation, starts the sound, writes the visual property. Called from the presentation
+	/// pass (<see cref="GraphProcessor.Present"/>), which the host runs once at the end of each frame.
+	/// </summary>
+	/// <remarks>
+	/// <para>The pass presents net change only. An activation that started and ended between two passes is never
+	/// presented, and one that is still running is presented once, however many passes it lasts. A restart, or an end
+	/// followed by a new activation, is a different activation: the pass ends the old presentation through
+	/// <see cref="OnPresentationDeactivated"/> before it presents the new one.</para>
+	/// <para>The node is active when this runs, so it can read its inputs and what its simulation half captured in its
+	/// context. It must not change gameplay or the graph - emit, write variables, apply effects - because peers that
+	/// do not present, such as a dedicated server, would not do it. That belongs in <see cref="OnActivate"/>, and
+	/// anything that ends the node, like the length of what it plays, is counted in <see cref="OnFixedUpdate"/>.
+	/// </para>
+	/// </remarks>
+	/// <param name="graphContext">The graph's context.</param>
+	/// <returns>What <see cref="OnPresentationDeactivated"/> needs to end this presentation, such as the player that
+	/// was started; <see langword="null"/> when there is nothing to end.</returns>
+	protected virtual object? OnPresentationActivated(GraphContext graphContext)
+	{
+		return null;
+	}
+
+	/// <summary>
+	/// Ends what <see cref="OnPresentationActivated"/> started, in the first presentation pass after the presented
+	/// activation ended, restarted, or its graph stopped.
+	/// </summary>
+	/// <remarks>
+	/// The node may be running a new activation by then, or its graph may be gone along with the node's context, so
+	/// this gets only what <see cref="OnPresentationActivated"/> returned, or <see langword="null"/> when it threw.
+	/// </remarks>
+	/// <param name="presentation">What <see cref="OnPresentationActivated"/> returned, or <see langword="null"/> when
+	/// it threw.</param>
+	protected virtual void OnPresentationDeactivated(object? presentation)
 	{
 	}
 
@@ -601,6 +665,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		{
 			nodeContext.Activating = true;
 			nodeContext.ActivationStamp = graphContext.UpdateStamp;
+			nodeContext.ActivationId = ++graphContext.ActivationCount;
 
 			if (restarting)
 			{

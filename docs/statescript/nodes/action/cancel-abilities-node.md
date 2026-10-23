@@ -1,6 +1,7 @@
 # CancelAbilitiesNode
 
 > **Type:** Action Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.CancelAbilitiesNode`
 
 Cancels active abilities on an entity, selected by the ability tags they carry. An ability is canceled when it carries any of the **With Tags** and none of the **Without Tags**.

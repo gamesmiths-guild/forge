@@ -1,6 +1,7 @@
 # RandomBranchNode
 
 > **Type:** Condition Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Condition.RandomBranchNode`
 
 Routes to the **True** port with a resolved probability — ergonomic sugar for random branching.

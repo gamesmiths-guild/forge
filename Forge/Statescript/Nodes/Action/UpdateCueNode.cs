@@ -6,7 +6,8 @@ using Gamesmiths.Forge.Tags;
 namespace Gamesmiths.Forge.Statescript.Nodes.Action;
 
 /// <summary>
-/// Updates one or more already-active cues (<see cref="Cues.CuesManager.UpdateCue"/>) on one or more targets.
+/// Updates one or more already-active cues
+/// (<see cref="Cues.CuesManager.UpdateCue(Tag, IForgeEntity, Cues.CueParameters?)"/>) on one or more targets.
 /// </summary>
 /// <remarks>
 /// <para>The cue-tag input accepts either a single <see cref="Tag"/> or an array of tags.</para>

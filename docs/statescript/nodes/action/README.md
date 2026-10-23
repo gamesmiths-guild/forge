@@ -49,6 +49,8 @@ public class ApplyEffectActionNode : ActionNode
 }
 ```
 
+An action that only shows something, such as a one-shot sound or a burst of particles, declares `NetworkKind => NodeNetworkKind.Presentation`. It runs when it executes, and follows the same rule as a presentation state node: it never changes gameplay or the graph, so it can be skipped wherever nothing is shown. See [Simulation and presentation](../state/README.md#simulation-and-presentation).
+
 ## Built-in Action Nodes
 
 | Node | Description |

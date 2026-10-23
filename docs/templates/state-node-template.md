@@ -1,8 +1,11 @@
 # {NodeName}
 
 > **Type:** State Node
+> **Network kind:** {Simulation, Presentation or Authority}
 > **Class:** `{Namespace}.{ClassName}`
 > **Context:** `{ContextClassName}`
+
+> The network kind is the node's `NetworkKind`. See [Simulation and presentation](../statescript/nodes/state/README.md#simulation-and-presentation).
 
 {Brief one-paragraph description of what this state node does and when it deactivates.}
 
@@ -67,6 +70,7 @@ new {ClassName}({parameter} = {default}, restartOnRetrigger = false)
 2. **Update:** {What happens each frame while active.}
 3. **Deactivation:** {What triggers deactivation and what cleanup occurs.}
 4. **Retrigger:** {Ignored. For a node that overrides `OnRestart`, add what `restartOnRetrigger` makes a retrigger do instead, and what the restart releases before acquiring again.}
+5. **Presentation:** {For a presentation node only: what the presentation pass shows for a running activation and what it undoes once that activation ends. Remove this step otherwise.}
 
 ## Usage
 

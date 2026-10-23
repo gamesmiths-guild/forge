@@ -1,6 +1,7 @@
 # TryCommitAbilityNode
 
 > **Type:** Condition Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Condition.TryCommitAbilityNode`
 
 Tries to commit the cost and/or cooldown of the ability driving the current graph, routing to the **True** port when the commit succeeds.

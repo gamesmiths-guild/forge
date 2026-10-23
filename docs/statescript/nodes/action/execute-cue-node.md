@@ -1,6 +1,7 @@
 # ExecuteCueNode
 
 > **Type:** Action Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.ExecuteCueNode`
 
 Executes one or more one-shot cues (`CuesManager.ExecuteCue`) on one or more targets, then continues execution.

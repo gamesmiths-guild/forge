@@ -1,6 +1,7 @@
 # RaiseEventNode
 
 > **Type:** Action Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.RaiseEventNode`
 
 Raises an event (`EventManager.Raise`) on one or more target entities' event buses, then continues execution. Events do not persist, so the raise side is fire-and-forget; use [EventListenerNode](../state/event-listener-node.md) to react to them.

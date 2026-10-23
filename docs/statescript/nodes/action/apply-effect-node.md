@@ -1,6 +1,7 @@
 # ApplyEffectNode
 
 > **Type:** Action Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.ApplyEffectNode`
 
 Applies one or more `Effect` instances to one or more targets, then immediately continues execution.

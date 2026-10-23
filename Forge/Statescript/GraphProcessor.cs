@@ -22,7 +22,13 @@ public class GraphProcessor
 
 	private readonly List<Node> _updateBuffer = [];
 
+	private readonly Dictionary<Node, Presented> _presented = [];
+
+	private readonly List<Node> _presentBuffer = [];
+
 	private bool _updating;
+
+	private bool _presenting;
 
 	/// <summary>
 	/// Gets the graph that this processor is responsible for executing.
@@ -41,6 +47,12 @@ public class GraphProcessor
 	/// completion without polling.
 	/// </summary>
 	public Action? OnGraphCompleted { get; set; }
+
+	/// <summary>
+	/// Gets a value indicating whether something is still presented: a presentation node whose presentation
+	/// <see cref="Present"/> has not ended yet, even if the graph has stopped since.
+	/// </summary>
+	public bool IsPresenting => _presented.Count > 0;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="GraphProcessor"/> class.
@@ -239,6 +251,105 @@ public class GraphProcessor
 	}
 
 	/// <summary>
+	/// Runs the presentation pass: brings what the graph's <see cref="NodeNetworkKind.Presentation"/> state nodes show
+	/// in line with which of them are running now. Hosts call it once at the end of each frame, after the frame's
+	/// updates; a host with nothing to show, such as a dedicated server, never calls it.
+	/// </summary>
+	/// <remarks>
+	/// <para>Only the net change since the last pass is presented. Presentations whose activation has ended, restarted
+	/// or stopped with the graph end first, through <c>OnPresentationDeactivated</c>; then running activations not yet
+	/// presented start, through <c>OnPresentationActivated</c>. Each group goes in node order. An activation that
+	/// started and ended between two passes is never presented.</para>
+	/// <para>A presentation that throws keeps neither the others from running nor itself from being ended later, and
+	/// the first exception is rethrown after.</para>
+	/// </remarks>
+	public void Present()
+	{
+		// The buffers are reused per pass, so a nested pass would clear the walk in progress. Refused, like a nested
+		// update.
+		if (_presenting)
+		{
+			Validation.Fail(
+				"A presentation pass was re-entered while one was already running, which would corrupt the walk in " +
+				"progress. Run Present from the host's end of frame, never from inside a presentation.");
+
+			return;
+		}
+
+		_presenting = true;
+		ExceptionDispatchInfo? failure = null;
+
+		try
+		{
+			_presentBuffer.Clear();
+			_presentBuffer.AddRange(_presented.Keys);
+			_presentBuffer.Sort(_byIndex);
+
+			foreach (Node node in _presentBuffer)
+			{
+				Presented presented = _presented[node];
+
+				if (node.TryGetActivation(GraphContext, out ulong activationId)
+					&& activationId == presented.ActivationId)
+				{
+					continue;
+				}
+
+				_presented.Remove(node);
+
+				try
+				{
+					node.EndPresentation(presented.Presentation);
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
+			}
+
+			_presentBuffer.Clear();
+
+			foreach (Node node in GraphContext.ActiveStateNodes)
+			{
+				if (node.NetworkKind == NodeNetworkKind.Presentation && !_presented.ContainsKey(node))
+				{
+					_presentBuffer.Add(node);
+				}
+			}
+
+			_presentBuffer.Sort(_byIndex);
+
+			foreach (Node node in _presentBuffer)
+			{
+				// A presentation started earlier in this pass can reach the graph through the engine - a signal it
+				// emits - and end this node before its turn.
+				if (!node.TryGetActivation(GraphContext, out ulong activationId))
+				{
+					continue;
+				}
+
+				// Recorded first, so one that throws part way is still ended later.
+				_presented[node] = new Presented(activationId, null);
+
+				try
+				{
+					_presented[node] = new Presented(activationId, node.StartPresentation(GraphContext));
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
+			}
+		}
+		finally
+		{
+			_presenting = false;
+		}
+
+		failure?.Throw();
+	}
+
+	/// <summary>
 	/// Finalizes the graph execution after all state nodes have naturally deactivated. Unlike <see cref="StopGraph"/>,
 	/// this does not propagate disable messages through the entry node since all nodes have already deactivated through
 	/// their normal lifecycle. This method clears remaining runtime state (node contexts, activation status) so the GC
@@ -296,4 +407,6 @@ public class GraphProcessor
 
 		return true;
 	}
+
+	private readonly record struct Presented(ulong ActivationId, object? Presentation);
 }

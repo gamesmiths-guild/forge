@@ -27,6 +27,12 @@ public abstract class Node
 	public virtual string Description => $"{GetType().Name.Replace("Node", string.Empty)} node.";
 
 	/// <summary>
+	/// Gets what this node's work means to a networked game. <see cref="NodeNetworkKind.Simulation"/> unless the node
+	/// type says otherwise.
+	/// </summary>
+	public virtual NodeNetworkKind NetworkKind => NodeNetworkKind.Simulation;
+
+	/// <summary>
 	/// Gets or sets the unique identifier for this node.
 	/// </summary>
 	public Guid NodeID { get; set; }
@@ -274,6 +280,36 @@ public abstract class Node
 	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
 	/// <param name="graphContext">The graph context.</param>
 	internal virtual void FixedUpdate(double deltaTime, GraphContext graphContext)
+	{
+	}
+
+	/// <summary>
+	/// Gets the activation this node is running in the given context. The default implementation runs none.
+	/// </summary>
+	/// <param name="graphContext">The graph context.</param>
+	/// <param name="activationId">The running activation, unique within the context.</param>
+	/// <returns><see langword="true"/> if the node is active in the context.</returns>
+	internal virtual bool TryGetActivation(GraphContext graphContext, out ulong activationId)
+	{
+		activationId = 0;
+		return false;
+	}
+
+	/// <summary>
+	/// Starts presenting the node's running activation. The default implementation presents nothing.
+	/// </summary>
+	/// <param name="graphContext">The graph context.</param>
+	/// <returns>What the presentation needs to end, handed back to <see cref="EndPresentation"/>.</returns>
+	internal virtual object? StartPresentation(GraphContext graphContext)
+	{
+		return null;
+	}
+
+	/// <summary>
+	/// Ends a presentation <see cref="StartPresentation"/> started. The default implementation does nothing.
+	/// </summary>
+	/// <param name="presentation">What <see cref="StartPresentation"/> returned.</param>
+	internal virtual void EndPresentation(object? presentation)
 	{
 	}
 

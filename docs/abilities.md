@@ -801,6 +801,16 @@ public class InstantAbilityBehavior : IAbilityBehavior
 }
 ```
 
+### Presentation
+
+A behavior that shows something can leave the showing to the end of the frame. `EntityAbilities.PresentAbilities` calls `OnPresent` on every running behavior, and the host calls it once at the end of each frame:
+
+```csharp
+entity.Abilities.PresentAbilities();
+```
+
+A behavior that ends while it still shows something, such as a looping animation, sets `IsPresenting` and gets one more `OnPresent` call in the next pass, so it can stop what it showed. Behaviors that ended go first, so what they showed stops before anything new starts. Both members have default implementations that do nothing, and `GraphAbilityBehavior` implements them through its graph's [presentation pass](statescript/nodes/state/README.md#simulation-and-presentation).
+
 ### Behavior Factory
 
 The behavior factory creates a new behavior instance for **each activation**:

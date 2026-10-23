@@ -113,6 +113,9 @@ public sealed class GraphContext
 
 	internal int FinalizationDeferralCount { get; set; }
 
+	// Counts every state node activation and restart in this context, never reset, so each one gets its own id.
+	internal ulong ActivationCount { get; set; }
+
 	internal int NodeContextCount => _nodeContexts.Count;
 
 	// Started while the graph stops, a run would be torn down by the rest of the stop, and started while node code is

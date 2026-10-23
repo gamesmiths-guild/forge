@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Tags;
 
@@ -22,9 +23,14 @@ public class EntityAbilities(IForgeEntity owner)
 	// whose order also depends on which slots earlier removals freed.
 	private readonly List<AbilityHandle> _grantOrder = [];
 
-	// Reused by both update rails so the per-frame walk allocates nothing. Sharing one list is what makes the walk
-	// non-re-entrant, which BufferGrantedAbilities enforces rather than leaves to trust.
+	// Reused by both update rails and the presentation pass so the per-frame walk allocates nothing. Sharing one list
+	// is what makes the walk non-re-entrant, which BufferGrantedAbilities enforces rather than leaves to trust.
 	private readonly List<AbilityHandle> _updateBuffer = [];
+
+	// Behaviors whose instance ended while still showing something, waiting for the presentation pass to end it.
+	private readonly List<IAbilityBehavior> _retiredBehaviors = [];
+
+	private readonly List<IAbilityBehavior> _retiredBuffer = [];
 
 	private bool _updating;
 
@@ -557,6 +563,70 @@ public class EntityAbilities(IForgeEntity owner)
 		{
 			_updating = false;
 		}
+	}
+
+	/// <summary>
+	/// Runs the presentation pass for the entity's abilities: each behavior brings what it shows in line with its
+	/// current state, through <see cref="IAbilityBehavior.OnPresent"/>. Call this once at the end of each frame, after
+	/// the frame's updates. A host with nothing to show, such as a dedicated server, never calls it.
+	/// </summary>
+	/// <remarks>
+	/// Behaviors whose instance ended since the last pass while still showing something go first, so what they showed
+	/// ends before anything new starts; the running ones follow, in grant order. A behavior that throws keeps neither
+	/// the others from being presented nor an ended one from being dropped, and the first exception is rethrown after.
+	/// </remarks>
+	public void PresentAbilities()
+	{
+		ExceptionDispatchInfo? failure = null;
+
+		_retiredBuffer.Clear();
+		_retiredBuffer.AddRange(_retiredBehaviors);
+		_retiredBehaviors.Clear();
+
+		foreach (IAbilityBehavior behavior in _retiredBuffer)
+		{
+			try
+			{
+				behavior.OnPresent();
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		_retiredBuffer.Clear();
+
+		if (BufferGrantedAbilities())
+		{
+			for (int i = 0; i < _updateBuffer.Count; i++)
+			{
+				AbilityHandle handle = _updateBuffer[i];
+
+				if (!_grantedAbilities.Contains(handle))
+				{
+					continue;
+				}
+
+				try
+				{
+					handle.Ability?.PresentBehaviors();
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
+			}
+
+			_updating = false;
+		}
+
+		failure?.Throw();
+	}
+
+	internal void RetireBehavior(IAbilityBehavior behavior)
+	{
+		_retiredBehaviors.Add(behavior);
 	}
 
 	internal AbilityHandle GrantAbility(

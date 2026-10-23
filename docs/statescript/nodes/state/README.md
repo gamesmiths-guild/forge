@@ -71,6 +71,60 @@ The hook is called **fixed** rather than **physics** because the interval is the
 
 **Within a pass, active nodes update in graph order** (`Node.Index`: the entry node is 0, then the nodes in the order they were added), not in the order they activated. Two machines that build the same graph therefore walk it the same way. See [Simulation Tick](../../../simulation.md#deterministic-order).
 
+## Simulation and presentation
+
+Every node has a `NetworkKind` that says what its work means to a networked game:
+
+| Kind | Meaning | Examples |
+|---|---|---|
+| `Simulation` | Changes gameplay. The default. | Applying an effect, moving a body, writing a variable. |
+| `Presentation` | Only shows something, and never feeds back into the graph. | Playing an animation or a sound, setting a visual property. |
+| `Authority` | Something only the server may decide. | Spawning a networked entity. |
+
+A presentation state node splits its work in two halves:
+
+- **The simulation half** is the usual `OnActivate`, `OnFixedUpdate` and `OnDeactivate`. It captures what the node needs, such as which player and at what speed, and counts anything that ends the node, such as the length of a clip, in fixed steps. The node then ends on the same step on every machine, whatever the engine is doing.
+- **The presentation half** is `OnPresentationActivated` and `OnPresentationDeactivated`. It does the engine work: playing, stopping, writing and restoring.
+
+The presentation half runs in the presentation pass, `GraphProcessor.Present`, which the host calls at the end of each frame (for ability graphs, through `EntityAbilities.PresentAbilities`). The pass shows only the net change since the last one:
+
+- An activation that started and ended between two passes is never presented.
+- A running activation is presented once, however many passes it lasts.
+- When the presented activation ends, restarts, or its graph stops, the next pass calls `OnPresentationDeactivated` with whatever `OnPresentationActivated` returned. The node's context may be gone by then, so that return value is all it gets.
+- Presentations that end go first, then new ones start, each in graph order.
+
+The presentation half must not change gameplay or the graph: no emitting, no variables, no effects. A host with nothing to show skips the pass, and must still simulate the same game.
+
+```csharp
+public sealed class HighlightNode(IHighlighter highlighter) : StateNode<StateNodeContext>
+{
+    private readonly IHighlighter _highlighter = highlighter;
+
+    public override NodeNetworkKind NetworkKind => NodeNetworkKind.Presentation;
+
+    protected override void OnActivate(GraphContext graphContext)
+    {
+    }
+
+    protected override void OnDeactivate(GraphContext graphContext)
+    {
+    }
+
+    protected override object? OnPresentationActivated(GraphContext graphContext)
+    {
+        graphContext.TryGetActivationContext(out AbilityBehaviorContext? ability);
+
+        // The highlight hands back a handle that switches it off again.
+        return _highlighter.Highlight(ability?.Owner);
+    }
+
+    protected override void OnPresentationDeactivated(object? presentation)
+    {
+        (presentation as IDisposable)?.Dispose();
+    }
+}
+```
+
 ## Creating Custom State Nodes
 
 Extend `StateNode<T>` where `T` is a context class inheriting from `StateNodeContext`:

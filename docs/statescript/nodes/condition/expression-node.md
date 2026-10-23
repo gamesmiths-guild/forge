@@ -1,6 +1,7 @@
 # ExpressionNode
 
 > **Type:** Condition Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Condition.ExpressionNode`
 
 Evaluates a boolean input property to choose the output. This eliminates the need to create custom `ConditionNode` subclasses for data-driven conditions. Instead, compose an expression from [property resolvers](../../variables.md#property-resolvers) at graph construction time.

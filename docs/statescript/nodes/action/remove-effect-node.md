@@ -1,6 +1,7 @@
 # RemoveEffectNode
 
 > **Type:** Action Node
+> **Network kind:** Simulation
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.Action.RemoveEffectNode`
 
 Removes one or more active effects through their `ActiveEffectHandle`.
