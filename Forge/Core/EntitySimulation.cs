@@ -10,6 +10,9 @@ namespace Gamesmiths.Forge.Core;
 /// <list type="number">
 /// <item><description>The entity's <see cref="IForgeEntity.Random"/>, if any, restarts for the tick.</description>
 /// </item>
+/// <item><description>The input stage, for an entity with an <see cref="IForgeEntity.Input"/>: the frame submitted for
+/// the tick becomes current, and abilities bound to an input action that was pressed or released try to
+/// activate.</description></item>
 /// <item><description>Effects advance by the fixed step: durations count down, periods execute, expired effects
 /// end.</description></item>
 /// <item><description>Abilities advance their fixed-rail behaviors, so graphs react to the effects as they stand after
@@ -68,12 +71,19 @@ public static class EntitySimulation
 	}
 
 	/// <summary>
-	/// Advances the entity's effects and fixed-rail abilities by one fixed step, without restarting its random.
+	/// Runs the entity's input stage, then advances its effects and fixed-rail abilities by one fixed step, without
+	/// restarting its random.
 	/// </summary>
 	/// <param name="entity">The entity to advance.</param>
 	/// <param name="fixedDeltaTime">The length of the fixed step, in seconds.</param>
 	public static void Advance(IForgeEntity entity, double fixedDeltaTime)
 	{
+		if (entity.Input is EntityInput input)
+		{
+			input.BeginTick();
+			entity.Abilities.ActivateBoundAbilities(input);
+		}
+
 		entity.EffectsManager.UpdateEffects(fixedDeltaTime);
 		entity.Abilities.FixedUpdateAbilities(fixedDeltaTime);
 	}

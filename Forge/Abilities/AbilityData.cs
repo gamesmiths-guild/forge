@@ -107,6 +107,11 @@ public readonly record struct AbilityData
 	public Func<IAbilityBehavior>? BehaviorFactory { get; }
 
 	/// <summary>
+	/// Gets the input action the ability activates from, if any. See <see cref="AbilityInputBinding"/>.
+	/// </summary>
+	public AbilityInputBinding? InputBinding { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="AbilityData"/> structure.
 	/// </summary>
 	/// <param name="name">The name of the ability.</param>
@@ -116,25 +121,29 @@ public readonly record struct AbilityData
 	/// <param name="abilityTags">Tags associated with the ability for categorization and filtering.</param>
 	/// <param name="instancingPolicy">The instancing policy for the ability, determining how instances are created and
 	/// managed.</param>
-	/// <param name="retriggerInstancedAbility">Flag indicating whether an instanced ability can be re-triggered while it is
-	/// Still active. If on, it will stop and re-trigger the ability.</param>
-	/// <param name="abilityTriggerData">The trigger data associated with the ability, defining how and when the ability can
-	/// be executed.</param>
+	/// <param name="retriggerInstancedAbility">Flag indicating whether an instanced ability can be re-triggered while
+	/// it is still active. If on, it will stop and re-trigger the ability.</param>
+	/// <param name="abilityTriggerData">The trigger data associated with the ability, defining how and when the ability
+	/// can be executed.</param>
 	/// <param name="cancelAbilitiesWithTag">Abilities with any of these tags will be canceled when this ability is
 	/// executed.</param>
-	/// <param name="blockAbilitiesWithTag">Abilities with any of these tags will be blocked from being executed while this
-	/// ability is active.</param>
+	/// <param name="blockAbilitiesWithTag">Abilities with any of these tags will be blocked from being executed while
+	/// this ability is active.</param>
 	/// <param name="activationOwnedTags">Tags that will be applied to the owner when the ability is activated.</param>
 	/// <param name="activationRequiredTags">Tags required on the owner to activate the ability.</param>
-	/// <param name="activationBlockedTags">Tags that, if present on the owner, will block the ability from being activated.
+	/// <param name="activationBlockedTags">Tags that, if present on the owner, will block the ability from being
+	/// activated.
 	/// </param>
 	/// <param name="sourceRequiredTags">Tags required on the source to activate the ability.</param>
-	/// <param name="sourceBlockedTags">Tags that, if present on the source, will block the ability from being activated.
+	/// <param name="sourceBlockedTags">Tags that, if present on the source, will block the ability from being
+	/// activated.
 	/// </param>
 	/// <param name="targetRequiredTags">Tags required on the target to activate the ability.</param>
-	/// <param name="targetBlockedTags">Tags that, if present on the target, will block the ability from being activated.
+	/// <param name="targetBlockedTags">Tags that, if present on the target, will block the ability from being
+	/// activated.
 	/// </param>
 	/// <param name="behaviorFactory">The factory function to create custom ability behavior instances.</param>
+	/// <param name="inputBinding">The input action the ability activates from, if any.</param>
 	public AbilityData(
 		string name,
 		EffectData? costEffect = null,
@@ -152,7 +161,8 @@ public readonly record struct AbilityData
 		TagContainer? sourceBlockedTags = null,
 		TagContainer? targetRequiredTags = null,
 		TagContainer? targetBlockedTags = null,
-		Func<IAbilityBehavior>? behaviorFactory = null)
+		Func<IAbilityBehavior>? behaviorFactory = null,
+		AbilityInputBinding? inputBinding = null)
 	{
 		Name = name;
 		CostEffect = costEffect;
@@ -171,6 +181,7 @@ public readonly record struct AbilityData
 		TargetRequiredTags = targetRequiredTags;
 		TargetBlockedTags = targetBlockedTags;
 		BehaviorFactory = behaviorFactory;
+		InputBinding = inputBinding;
 
 		if (Validation.Enabled)
 		{

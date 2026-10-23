@@ -34,6 +34,8 @@ internal static class Program
 		Check("Deterministic random repeats a tick's pinned draws", RepeatsTickDraws);
 		Check("Entity simulation ticks an entity through its default random member", () =>
 			TicksThroughDefaultRandom(tagsManager));
+		Check("Input binding activates a typed ability with data built from the tick's input", () =>
+			ActivateFromInput(tagsManager) == new StructPayload(5));
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -102,6 +104,26 @@ internal static class Program
 		EntitySimulation.Tick(entity, 1, 1.0 / 64.0);
 
 		return ((IForgeEntity)entity).Random is null;
+	}
+
+	private static StructPayload ActivateFromInput(TagsManager tagsManager)
+	{
+		var input = new EntityInput(new InputActionSet(["fire"]));
+		var entity = new SmokeEntity(tagsManager) { Input = input };
+		StructPayload received = default;
+
+		var abilityData = new AbilityData(
+			"Bound",
+			behaviorFactory: () => new PayloadBehavior<StructPayload>((_, data) => received = data),
+			inputBinding: AbilityInputBinding.ForAction(
+				"fire",
+				static (_, entityInput) => new StructPayload(entityInput.IsHeld("fire") ? 5 : 0)));
+
+		entity.Abilities.GrantAbilityPermanently(abilityData, 1, LevelComparison.None, null);
+		input.Submit(new InputFrame { Held = 1, Pressed = 1 });
+		EntitySimulation.Tick(entity, 1, 1.0 / 64.0);
+
+		return received;
 	}
 
 	private static int ResolveActivationData(TagsManager tagsManager, Tag eventTag, StructPayload payload)
@@ -205,6 +227,8 @@ internal static class Program
 		public EventManager Events { get; } = new();
 
 		public Variables SharedVariables { get; } = new();
+
+		public EntityInput? Input { get; init; }
 
 		public SmokeEntity(TagsManager tagsManager)
 		{
