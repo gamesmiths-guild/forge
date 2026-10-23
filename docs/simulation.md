@@ -17,8 +17,9 @@ entity.Abilities.UpdateAbilities(deltaTime);
 Each tick runs, in order:
 
 1. **The random source restarts.** If the entity has a `Random` (see below), it restarts for this tick.
-2. **Effects advance by the step.** Durations count down, periodic effects execute, and expired effects end.
-3. **Abilities advance their fixed rail.** Graphs react to the effects as they stand after this tick's expirations. See [Two update rails](statescript/nodes/state/README.md#two-update-rails).
+2. **The input stage runs.** If the entity has an `Input`, the frame submitted for this tick becomes current, and abilities bound to an input action that was pressed or released try to activate. See [Input](input.md).
+3. **Effects advance by the step.** Durations count down, periodic effects execute, and expired effects end.
+4. **Abilities advance their fixed rail.** Graphs react to the effects as they stand after this tick's expirations. See [Two update rails](statescript/nodes/state/README.md#two-update-rails).
 
 ### Entities that affect each other
 

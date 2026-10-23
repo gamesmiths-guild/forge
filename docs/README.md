@@ -44,6 +44,7 @@ The one rule that holds it together: **attributes and tags change through effect
 | [Abilities](abilities.md) | Things an entity can do: granted, activated, with costs, cooldowns, tag rules and instancing. | [Observing abilities](abilities.md#observing-abilities) |
 | [Events](events.md) | Tag-routed gameplay messages, optionally strongly typed, that can trigger abilities. | |
 | [Cues](cues.md) | Presentation hooks: effects raise cues, your handlers turn them into particles and sound. | |
+| [Input](input.md) | One frame of a player's input per tick, and abilities that activate from input actions. | [Ability input bindings](input.md#ability-input-bindings) |
 | [Statescript](statescript/README.md) | Ability behavior as a graph of nodes, built in code or in an engine's visual editor. | [Subgraphs](statescript/subgraphs.md) |
 
 Going deeper into effects: [Stacking](effects/stacking.md), [Periodic effects](effects/periodic.md), [Components](effects/components/README.md) and [Custom calculators and executions](effects/calculators.md).

@@ -66,6 +66,7 @@ var abilityData = new AbilityData(
 - **TargetRequiredTags**: Target tags required to activate.
 - **TargetBlockedTags**: Target tags preventing activation.
 - **BehaviorFactory**: Factory creating the behavior instance.
+- **InputBinding**: An input action the ability activates from, in the tick its owner's input reports the action's press or release. See [Ability input bindings](input.md#ability-input-bindings).
 
 ## Granting Abilities
 
@@ -845,6 +846,8 @@ Abilities can be automatically activated in response to events or tag changes. U
 | `AbilityTriggerData.ForTagPresent(tag)` | `tag` is present on the entity (activates on add, cancels on remove) |
 
 `AbilityTriggerData` has no public constructor — the factory methods are the only way to build one, which is what keeps the trigger tag and trigger source consistent with each other. The `AbilityTriggerSource` enum behind them is internal to that decision; you should never need to name it.
+
+Activation from player input is not a trigger but an [input binding](input.md#ability-input-bindings), which an ability can have alongside one.
 
 ### Event Trigger
 
