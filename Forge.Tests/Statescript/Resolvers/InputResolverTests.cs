@@ -124,6 +124,12 @@ public class InputResolverTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 			.Should().Be(new Vector3(1, 0, 0));
 		Resolve(new InputAimResolver(source, InputAimValue.Direction2D), context).AsVector2()
 			.Should().Be(new Vector2(1, 0));
+
+		entity.Input.Submit(default(InputFrame).WithAim(Vector3.Zero, new Vector3(0.6f, 0, -0.8f)));
+		EntitySimulation.Tick(entity, 3, Step);
+
+		Resolve(new InputAimResolver(source, InputAimValue.Direction2D), context).AsVector2().Length()
+			.Should().BeApproximately(1, 0.0001f, "a 3D direction read in 2D is still a direction");
 		point2D.ValueType.Should().Be<Vector2>();
 		new InputAimResolver(source, InputAimValue.Direction3D).ValueType.Should().Be<Vector3>();
 	}

@@ -20,7 +20,7 @@ new InputAimResolver(inputSource, value)
 ## Behavior
 
 - The aim is the one whatever collected the input found, such as the ground under the mouse, rounded as it was collected. Every machine simulating the entity reads the same aim.
-- A 2D game's aim has a Z of zero, and `Point2D` and `Direction2D` resolve its X and Y.
+- A 2D game's aim has a Z of zero, and `Point2D` and `Direction2D` resolve its X and Y. `Direction2D` stays of length 1 when a 3D direction is read in 2D.
 - Returns zero when the entity has no input, or its input carries no aim.
 
 ## Usage

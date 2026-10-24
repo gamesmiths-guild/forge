@@ -166,6 +166,7 @@ public class InputActionNode(string actionName = "", bool deactivateOnPressed = 
 		if (nodeContext.LastPressed is not bool down)
 		{
 			nodeContext.LastPressed = held;
+			nodeContext.LastInput = input;
 			nodeContext.LastFrame = input.FrameNumber;
 
 			if (held)
@@ -178,11 +179,12 @@ public class InputActionNode(string actionName = "", bool deactivateOnPressed = 
 
 		// The edges of a frame already read, such as the one an input-bound ability activated on, happened before the
 		// node started watching.
-		if (nodeContext.LastFrame == input.FrameNumber)
+		if (nodeContext.LastInput == input && nodeContext.LastFrame == input.FrameNumber)
 		{
 			return;
 		}
 
+		nodeContext.LastInput = input;
 		nodeContext.LastFrame = input.FrameNumber;
 
 		if (down && (frame.WasReleased(action) || !held))

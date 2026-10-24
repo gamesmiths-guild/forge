@@ -46,8 +46,15 @@ public class InputAimResolver(IEntityResolver inputSource, InputAimValue value) 
 		{
 			InputAimValue.Point2D => new Variant128(new Vector2(frame.AimPoint.X, frame.AimPoint.Y)),
 			InputAimValue.Direction3D => new Variant128(frame.AimDirection),
-			InputAimValue.Direction2D => new Variant128(new Vector2(frame.AimDirection.X, frame.AimDirection.Y)),
+			InputAimValue.Direction2D => new Variant128(Flatten(frame.AimDirection)),
 			_ => new Variant128(frame.AimPoint),
 		};
+	}
+
+	// A 3D direction read in 2D keeps its length of 1, unless it points straight along Z.
+	private static Vector2 Flatten(Vector3 direction)
+	{
+		var flat = new Vector2(direction.X, direction.Y);
+		return flat.LengthSquared() > 0f ? Vector2.Normalize(flat) : Vector2.Zero;
 	}
 }

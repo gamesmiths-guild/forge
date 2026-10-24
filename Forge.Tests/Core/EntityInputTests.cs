@@ -144,6 +144,20 @@ public class EntityInputTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 		input.WasReleased("jump").Should().BeTrue("advancing alone takes the frame itself");
 	}
 
+	[Fact]
+	[Trait("Input", "Buffer")]
+	public void An_entity_begun_but_not_advanced_still_takes_each_ticks_frame()
+	{
+		TestEntity entity = CreateEntity(out EntityInput input);
+
+		input.Submit(new InputFrame { Held = 0b1, Pressed = 0b1 });
+		EntitySimulation.BeginTick(entity, 1);
+		EntitySimulation.BeginTick(entity, 2);
+
+		input.WasPressed("jump").Should().BeFalse("the press belonged to tick 1, which the entity sat out");
+		input.IsHeld("jump").Should().BeTrue();
+	}
+
 	private TestEntity CreateEntity(out EntityInput input)
 	{
 		input = new EntityInput(new InputActionSet(

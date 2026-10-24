@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Core;
+
 namespace Gamesmiths.Forge.Statescript.Nodes.State;
 
 /// <summary>
@@ -14,6 +16,8 @@ public class InputActionNodeContext : StateNodeContext
 	/// </summary>
 	public bool? LastPressed { get; set; }
 
-	// The input frame the last read came from, so a frame read on activation is not read again later in its tick.
+	// The input and frame the last read came from, so a frame read on activation is not read again later in its tick.
+	internal EntityInput? LastInput { get; set; }
+
 	internal ulong LastFrame { get; set; }
 }

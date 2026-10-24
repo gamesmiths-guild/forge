@@ -21,7 +21,8 @@ namespace Gamesmiths.Forge.Core;
 public sealed class EntityInput(InputActionSet actions)
 {
 	private InputFrame? _waiting;
-	private bool _frameTaken;
+	private long? _begunTick;
+	private bool _frameTakenForAdvance;
 
 	/// <summary>
 	/// Gets the actions and vectors this input carries.
@@ -168,24 +169,37 @@ public sealed class EntityInput(InputActionSet actions)
 		return value.LengthSquared() > 1f ? Vector2.Normalize(value) : value;
 	}
 
-	// The waiting frame becomes the tick's input; with none waiting, the last one carries on without new edges. Once per
-	// tick: whichever of EntitySimulation.BeginTick and Advance comes first takes the frame, and Advance ends the turn.
-	internal void BeginTick()
+	// Takes the tick's frame once, however often the tick is begun. An entity that is begun but not advanced, such as a
+	// paused one, still takes each tick's frame, so no old press waits for it.
+	internal void BeginTick(long tick)
 	{
-		if (_frameTaken)
+		if (_begunTick == tick)
 		{
 			return;
 		}
 
-		_frameTaken = true;
+		_begunTick = tick;
+		TakeFrame();
+		_frameTakenForAdvance = true;
+	}
+
+	// Takes the frame itself when the tick was not begun since the last advance.
+	internal void BeginInputStage()
+	{
+		if (!_frameTakenForAdvance)
+		{
+			TakeFrame();
+		}
+
+		_frameTakenForAdvance = false;
+	}
+
+	// The waiting frame becomes the tick's input; with none waiting, the last one carries on without new edges.
+	private void TakeFrame()
+	{
 		Current = _waiting ?? Current.WithoutEdges();
 		_waiting = null;
 		FrameNumber++;
-	}
-
-	internal void EndInputStage()
-	{
-		_frameTaken = false;
 	}
 
 	private int IndexOfVector(InputVector vector)

@@ -75,7 +75,7 @@ public static class EntitySimulation
 	public static void BeginTick(IForgeEntity entity, long tick)
 	{
 		entity.Random?.BeginTick(tick);
-		entity.Input?.BeginTick();
+		entity.Input?.BeginTick(tick);
 	}
 
 	/// <summary>
@@ -92,8 +92,7 @@ public static class EntitySimulation
 	{
 		if (entity.Input is EntityInput input)
 		{
-			input.BeginTick();
-			input.EndInputStage();
+			input.BeginInputStage();
 			entity.Abilities.ActivateBoundAbilities(input);
 		}
 

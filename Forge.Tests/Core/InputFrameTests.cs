@@ -37,6 +37,15 @@ public class InputFrameTests
 
 	[Fact]
 	[Trait("Input", "Frame")]
+	public void A_vector_component_that_is_not_a_number_is_stored_as_zero()
+	{
+		InputFrame frame = default(InputFrame).WithVector(0, new Vector2(float.NaN, 1f));
+
+		frame.GetVector(0).Should().Be(new Vector2(0f, 1f));
+	}
+
+	[Fact]
+	[Trait("Input", "Frame")]
 	public void Each_vector_keeps_its_own_slot()
 	{
 		InputFrame frame = default(InputFrame)

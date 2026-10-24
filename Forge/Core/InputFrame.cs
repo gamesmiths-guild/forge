@@ -94,7 +94,7 @@ public readonly record struct InputFrame
 	/// <returns>The vector, each component between -1 and 1.</returns>
 	public Vector2 GetVector(int vector)
 	{
-		int shift = vector * 16;
+		int shift = VectorShift(vector);
 
 		return new Vector2(
 			(sbyte)(PackedVectors >> shift) / VectorSteps,
@@ -109,7 +109,7 @@ public readonly record struct InputFrame
 	/// <returns>The new frame.</returns>
 	public InputFrame WithVector(int vector, Vector2 value)
 	{
-		int shift = vector * 16;
+		int shift = VectorShift(vector);
 		ulong packed = (byte)Quantize(value.X) | ((ulong)(byte)Quantize(value.Y) << 8);
 
 		return this with { PackedVectors = (PackedVectors & ~(0xFFFFUL << shift)) | (packed << shift) };
@@ -143,14 +143,24 @@ public readonly record struct InputFrame
 		return later with { Pressed = Pressed | later.Pressed, Released = Released | later.Released };
 	}
 
+	private static int VectorShift(int vector)
+	{
+		Validation.Assert(vector is >= 0 and < InputActionSet.MaxVectors, "An input vector slot is between 0 and 3.");
+
+		return vector * 16;
+	}
+
 	private static ulong Bit(int action)
 	{
+		Validation.Assert(action is >= 0 and < InputActionSet.MaxActions, "An input action slot is between 0 and 63.");
+
 		return 1UL << action;
 	}
 
 	private static sbyte Quantize(float component)
 	{
-		return (sbyte)Math.Round(Math.Clamp(component, -1f, 1f) * VectorSteps);
+		// NaN converts to an integer differently on each platform, so it is read as zero.
+		return float.IsNaN(component) ? (sbyte)0 : (sbyte)Math.Round(Math.Clamp(component, -1f, 1f) * VectorSteps);
 	}
 
 	private static Vector3 Quantize(Vector3 value, double steps)
