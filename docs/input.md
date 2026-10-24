@@ -1,6 +1,6 @@
 # Input
 
-An entity that a player controls reads its input from an `EntityInput`: one frame of input per tick, collected by the host and consumed by the [simulation tick](simulation.md). Abilities can bind to input actions and activate on their own, in the tick the action is pressed.
+An entity that a player controls reads its input from an `EntityInput`: one frame of input per tick, collected by the host and consumed by the [simulation tick](simulation.md). Abilities can bind to input actions and activate on their own, in the tick the action is pressed, and Statescript graphs can read the same frame.
 
 Input is raw and small on purpose. A frame says which buttons are down, which were pressed or released since the last tick, a few analog vectors and where the player aims, and nothing else. Every decision the input leads to is made by the simulation, the same way on every machine that runs it.
 
@@ -91,6 +91,21 @@ var dash = new AbilityData(
 - **No input, no activation.** A binding fires only for an entity whose `Input` isn't `null` and whose action set carries the action.
 
 A failed activation, such as one still on cooldown, is simply skipped. The ability's activation rules apply as they do for any other activation.
+
+## Reading input in graphs
+
+Statescript graphs read input in two ways:
+
+- **[InputActionNode](statescript/nodes/state/input-action-node.md)** waits on a button. It reports presses and releases and keeps a subgraph running while the button is held, for channels, charged shots and combo windows.
+- **[Input resolvers](statescript/resolvers/README.md#input-resolvers)** read values: whether an action is held, pressed or released, its strength, an axis, a vector, or the aim.
+
+Both read the current frame of the ability owner's input, or of another entity bound as the input source. The node reads on the fixed rail, once per tick, so it sees every edge a tick carries. An entity without an input isn't read: the node reports nothing and the resolvers resolve to default values.
+
+```csharp
+var watch = new InputActionNode("fire");
+var aim = new InputAimResolver(InputAimValue.Point3D);
+var move = new InputVectorResolver("move_left", "move_right", "move_forward", "move_back");
+```
 
 ## Where input fits in the tick
 

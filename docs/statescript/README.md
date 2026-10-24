@@ -71,6 +71,7 @@ Nodes read data through **input properties** resolved at runtime by **property r
 - **Attributes**: Entity attribute values.
 - **Tags**: Whether the entity has a specific tag.
 - **Activation context**: Data passed when the ability was activated.
+- **Input**: An entity's input in the current tick: buttons, axes, vectors and aim.
 - **Comparisons**: Boolean expressions composed from other resolvers.
 - **Constants**: Fixed values embedded in the graph.
 

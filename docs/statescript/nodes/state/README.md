@@ -60,8 +60,8 @@ A state node can be advanced on either of two independent rails, and it should o
 
 | Hook | Driven by | Delta | Use it for |
 |---|---|---|---|
-| `OnUpdate(deltaTime, graphContext)` | `GraphProcessor.UpdateGraph` | The frame's elapsed time | Timers, animations, input, anything counting wall-clock time |
-| `OnFixedUpdate(deltaTime, graphContext)` | `GraphProcessor.FixedUpdateGraph` | The fixed step's length | Moving a body, steering a character, querying the physics world, anything a networked peer must reproduce step for step |
+| `OnUpdate(deltaTime, graphContext)` | `GraphProcessor.UpdateGraph` | The frame's elapsed time | Timers, animations, polling an input device, anything counting wall-clock time |
+| `OnFixedUpdate(deltaTime, graphContext)` | `GraphProcessor.FixedUpdateGraph` | The fixed step's length | Moving a body, steering a character, querying the physics world, reading an entity's [input](../../../input.md), anything a networked peer must reproduce step for step |
 
 The two rates differ and neither substitutes for the other. The frame rate is whatever the machine manages and drifts far above or below the fixed rate, so a body driven from `OnUpdate` is pushed a different amount per second on a fast machine than on a slow one, and a query asked from there is asked several times about a world that has not changed, or not at all in the step where it did.
 
@@ -229,6 +229,7 @@ No deactivation runs before `OnRestart`: the node stays active, so one that hold
 | [EventListenerNode](event-listener-node.md) | Listens for events while active and emits OnEvent each time a matching event fires. |
 | [ForEachNode](for-each-node.md) | Walks an array, publishing each element to a variable, on the activation frame or spaced by an interval. |
 | [GrantAbilityNode](grant-ability-node.md) | Grants an ability while active, removing the grant on deactivation. |
+| [InputActionNode](input-action-node.md) | Watches a button of an entity's input, emitting OnPressed and OnReleased and routing a WhilePressed subgraph. |
 | [LoopTimerNode](loop-timer-node.md) | Emits an interval event every period while active, optionally finishing after a number of loops. |
 | [RepeatNode](repeat-node.md) | Emits an iteration event a fixed number of times, on the activation frame or spaced by an interval. |
 | [StateMachineNode](state-machine-node.md) | Keeps exactly one state subgraph active, selected by an integer input. |

@@ -84,6 +84,20 @@ These resolvers author the optional payload of the event nodes (`RaiseEventNode`
 
 ---
 
+## Input Resolvers
+
+Input resolvers read the current frame of an entity's [input](../../input.md), the frame of the tick being simulated. They read the ability owner's input unless an `IEntityResolver` selects another entity, and an entity without an input resolves to a default value. They derive from `EntityInputResolver`, whose `ResolveWithoutInput` an engine integration can override to read its own device instead; Forge for Godot's input resolvers fall back to the local device this way.
+
+| Resolver | Output Type | Description |
+|----------|-------------|-------------|
+| [InputActionResolver](input-action-resolver.md) | `bool` | Reads whether an action is held, or was pressed or released since the last tick. |
+| [InputAimResolver](input-aim-resolver.md) | `Vector3` or `Vector2` | Reads the point aimed at or the direction aimed in. |
+| [InputAxisResolver](input-axis-resolver.md) | `float` | Reads the signed strength of two opposed actions, from -1 to 1. |
+| [InputStrengthResolver](input-strength-resolver.md) | `float` | Reads how far an action is pressed, from 0 to 1. |
+| [InputVectorResolver](input-vector-resolver.md) | `Vector2` | Reads the direction four actions point in, no longer than 1. |
+
+---
+
 ## Entity Resolvers
 
 Entity resolvers are typed object-backed resolvers used by APIs such as `AttributeResolver` and `TagQueryResolver`. They do
