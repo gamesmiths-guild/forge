@@ -629,6 +629,51 @@ public class EntityAbilities(IForgeEntity owner)
 		_retiredBehaviors.Add(behavior);
 	}
 
+	// The input stage of a tick: abilities bound to an action that showed their edge try to activate, in grant order.
+	internal void ActivateBoundAbilities(EntityInput input)
+	{
+		if (!BufferGrantedAbilities())
+		{
+			return;
+		}
+
+		try
+		{
+			for (int i = 0; i < _updateBuffer.Count; i++)
+			{
+				AbilityHandle handle = _updateBuffer[i];
+
+				// Re-checked because an ability activated earlier in this walk may have removed this one.
+				if (!_grantedAbilities.Contains(handle)
+					|| handle.Ability is not Ability ability
+					|| ability.AbilityData.InputBinding is not AbilityInputBinding binding)
+				{
+					continue;
+				}
+
+				int action = input.Actions.IndexOf(binding.Action);
+
+				if (action < 0)
+				{
+					continue;
+				}
+
+				bool changed = binding.Edge == InputEdge.Pressed
+					? input.Current.WasPressed(action)
+					: input.Current.WasReleased(action);
+
+				if (changed)
+				{
+					binding.Activate(ability, input);
+				}
+			}
+		}
+		finally
+		{
+			_updating = false;
+		}
+	}
+
 	internal AbilityHandle GrantAbility(
 		AbilityData abilityData,
 		int abilityLevel,

@@ -29,6 +29,8 @@ public class TestEntity : IForgeEntity
 
 	public DeterministicRandom? Random { get; set; }
 
+	public EntityInput? Input { get; set; }
+
 	public TestEntity(TagsManager tagsManager, CuesManager cuesManager)
 	{
 		PlayerAttributeSet = new TestAttributeSet();

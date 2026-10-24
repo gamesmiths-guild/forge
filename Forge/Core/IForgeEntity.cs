@@ -59,4 +59,15 @@ public interface IForgeEntity
 	/// without one they fall back to that provider.
 	/// </remarks>
 	DeterministicRandom? Random => null;
+
+	/// <summary>
+	/// Gets the input this entity's simulation reads, or <see langword="null"/> for an entity nobody controls through
+	/// input.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="EntitySimulation.BeginTick"/> makes the frame submitted for each tick current, and
+	/// <see cref="EntitySimulation.Advance"/> activates the abilities bound to input
+	/// (<see cref="Abilities.AbilityData.InputBinding"/>) whose action changed.
+	/// </remarks>
+	EntityInput? Input => null;
 }
