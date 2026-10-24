@@ -65,8 +65,9 @@ public interface IForgeEntity
 	/// input.
 	/// </summary>
 	/// <remarks>
-	/// <see cref="EntitySimulation.Advance"/> makes the frame submitted for each tick current at its start, then
-	/// activates the abilities bound to input (<see cref="Abilities.AbilityData.InputBinding"/>) whose action changed.
+	/// <see cref="EntitySimulation.BeginTick"/> makes the frame submitted for each tick current, and
+	/// <see cref="EntitySimulation.Advance"/> activates the abilities bound to input
+	/// (<see cref="Abilities.AbilityData.InputBinding"/>) whose action changed.
 	/// </remarks>
 	EntityInput? Input => null;
 }

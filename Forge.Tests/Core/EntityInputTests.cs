@@ -125,6 +125,25 @@ public class EntityInputTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 		new InputActionSet(["a", "b"]).IndexOf("c").Should().Be(-1);
 	}
 
+	[Fact]
+	[Trait("Input", "Buffer")]
+	public void A_frame_is_taken_once_per_tick_by_begin_tick_or_by_advance()
+	{
+		TestEntity entity = CreateEntity(out EntityInput input);
+
+		input.Submit(new InputFrame { Held = 0b1, Pressed = 0b1 });
+		EntitySimulation.BeginTick(entity, 1);
+		EntitySimulation.BeginTick(entity, 1);
+		EntitySimulation.Advance(entity, Step);
+
+		input.WasPressed("jump").Should().BeTrue("beginning the tick twice must not take the frame twice");
+
+		input.Submit(new InputFrame { Released = 0b1 });
+		EntitySimulation.Advance(entity, Step);
+
+		input.WasReleased("jump").Should().BeTrue("advancing alone takes the frame itself");
+	}
+
 	private TestEntity CreateEntity(out EntityInput input)
 	{
 		input = new EntityInput(new InputActionSet(

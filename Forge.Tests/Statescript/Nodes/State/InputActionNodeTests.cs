@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
+using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Statescript;
@@ -200,6 +201,78 @@ public class InputActionNodeTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 		EntitySimulation.Tick(owner, 1, Step);
 
 		pressed.ExecutionCount.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Graph", "InputAction")]
+	public void A_node_reading_another_entitys_input_sees_this_ticks_frame_whichever_entity_advances_first()
+	{
+		TestEntity observer = CreateEntity();
+		TestEntity controlled = CreateEntity();
+
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("source", controlled);
+		var watch = new InputActionNode("jump");
+		watch.BindInput(InputActionNode.InputSourceInput, "source");
+		var pressed = new TrackingActionNode();
+
+		graph.AddNode(watch);
+		graph.AddNode(pressed);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			watch.InputPorts[StateNode<InputActionNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			watch.OutputPorts[InputActionNode.OnPressedPort],
+			pressed.InputPorts[ActionNode.InputPort]));
+
+		ResolverTestContextFactory.ExecuteAbilityGraph(graph, observer);
+		controlled.Input!.Submit(new InputFrame { Held = 0b1, Pressed = 0b1 });
+		EntitySimulation.Tick([observer, controlled], 1, Step);
+
+		pressed.ExecutionCount.Should().Be(1, "the observer advances first, but the frame became current before it");
+	}
+
+	[Fact]
+	[Trait("Graph", "InputAction")]
+	public void A_node_started_by_an_input_bound_ability_ignores_the_edges_of_the_tick_it_started_on()
+	{
+		TestEntity entity = CreateEntity();
+		var log = new List<string>();
+
+		var graph = new Graph();
+		var watch = new InputActionNode("jump");
+		var pressed = new TrackingActionNode("pressed", log);
+		var released = new TrackingActionNode("released", log);
+
+		graph.AddNode(watch);
+		graph.AddNode(pressed);
+		graph.AddNode(released);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			watch.InputPorts[StateNode<InputActionNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			watch.OutputPorts[InputActionNode.OnPressedPort],
+			pressed.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			watch.OutputPorts[InputActionNode.OnReleasedPort],
+			released.InputPorts[ActionNode.InputPort]));
+
+		var behavior = new GraphAbilityBehavior(graph);
+		entity.Abilities.GrantAbilityPermanently(
+			new AbilityData("Bound", behaviorFactory: () => behavior, inputBinding: AbilityInputBinding.ForAction("jump")),
+			1,
+			LevelComparison.Higher,
+			null);
+
+		entity.Input!.Submit(new InputFrame { Pressed = 0b1, Released = 0b1 });
+		EntitySimulation.Tick(entity, 1, Step);
+
+		log.Should().BeEmpty("the tap that started the ability happened before the node watched");
+
+		entity.Input.Submit(new InputFrame { Pressed = 0b1, Released = 0b1 });
+		EntitySimulation.Tick(entity, 2, Step);
+
+		log.Should().Equal("pressed", "released");
 	}
 
 	[Fact]

@@ -16,20 +16,20 @@ entity.Abilities.UpdateAbilities(deltaTime);
 
 Each tick runs, in order:
 
-1. **The random source restarts.** If the entity has a `Random` (see below), it restarts for this tick.
-2. **The input stage runs.** If the entity has an `Input`, the frame submitted for this tick becomes current, and abilities bound to an input action that was pressed or released try to activate. See [Input](input.md).
+1. **The tick begins.** If the entity has a `Random` (see below), it restarts for this tick. If it has an `Input`, the frame submitted for this tick becomes current.
+2. **The input stage runs.** Abilities bound to an input action that was pressed or released try to activate. See [Input](input.md).
 3. **Effects advance by the step.** Durations count down, periodic effects execute, and expired effects end.
 4. **Abilities advance their fixed rail.** Graphs react to the effects as they stand after this tick's expirations. See [Two update rails](statescript/nodes/state/README.md#two-update-rails).
 
 ### Entities that affect each other
 
-When one entity's tick can roll on another, for example by applying an effect with a `ChanceToApplyEffectComponent`, every entity's random must restart before any of them advances. Otherwise the roll draws from the target's previous tick. Pass them all in one call:
+When one entity's tick can reach another, for example by applying an effect with a `ChanceToApplyEffectComponent` or by a graph reading the other's input, every entity must begin the tick before any of them advances. Otherwise the roll draws from the target's previous tick, and the graph sees the other entity's previous input frame. Pass them all in one call:
 
 ```csharp
 EntitySimulation.Tick(entities, tick, fixedDeltaTime);
 ```
 
-It restarts every entity's random, then advances each in list order. A host that advances each entity from its own callback does the same in two steps: `EntitySimulation.BeginTick(entity, tick)` for every entity first, then `EntitySimulation.Advance(entity, fixedDeltaTime)` for each.
+It begins every entity's tick, then advances each in list order. A host that advances each entity from its own callback does the same in two steps: `EntitySimulation.BeginTick(entity, tick)` for every entity first, then `EntitySimulation.Advance(entity, fixedDeltaTime)` for each.
 
 A game without a fixed step, such as a turn-based one, keeps calling `EffectsManager.UpdateEffects` and `Abilities.UpdateAbilities` from its own loop, as the [Quick Start](quick-start.md#5-drive-time) shows.
 

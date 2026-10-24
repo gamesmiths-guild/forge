@@ -67,6 +67,27 @@ public class InputResolverTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 
 	[Fact]
 	[Trait("Resolver", "Input")]
+	public void Input_vector_resolver_shortens_a_vector_longer_than_1_and_keeps_shorter_ones()
+	{
+		TestEntity entity = CreateEntity();
+		GraphContext context = CreateContext(entity, out EntityVariableResolver source);
+		var move = new InputVectorResolver(source, "move_left", "move_right", "move_forward", "move_back");
+
+		entity.Input!.Submit(default(InputFrame).WithVector(0, new Vector2(1, 1)));
+		EntitySimulation.Tick(entity, 1, Step);
+
+		Resolve(move, context).AsVector2().Length().Should().BeApproximately(1, 0.0001f);
+
+		entity.Input.Submit(default(InputFrame).WithVector(0, new Vector2(0.5f, 0)));
+		EntitySimulation.Tick(entity, 2, Step);
+
+		Resolve(move, context).AsVector2().Should().Be(
+			entity.Input.GetVector("move_left", "move_right", "move_forward", "move_back"),
+			"a stick pushed part way keeps its magnitude");
+	}
+
+	[Fact]
+	[Trait("Resolver", "Input")]
 	public void Input_strength_axis_and_vector_resolvers_read_buttons_as_full_strength()
 	{
 		TestEntity entity = CreateEntity();

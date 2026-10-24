@@ -8,10 +8,11 @@ namespace Gamesmiths.Forge.Core;
 /// An entity's input: the frame its current tick reads, and the frame waiting for the next tick.
 /// </summary>
 /// <remarks>
-/// <para>Whatever collects input <see cref="Submit"/>s frames between ticks, and <see cref="EntitySimulation.Advance"/>
-/// makes the waiting frame <see cref="Current"/> as the tick begins. Frames submitted more than once before a tick are
-/// merged: the latest one's state stands, but every press and release either of them saw is kept. A tick that finds
-/// nothing waiting keeps the last frame's state with no new presses or releases, so held actions stay held.</para>
+/// <para>Whatever collects input <see cref="Submit"/>s frames between ticks, and
+/// <see cref="EntitySimulation.BeginTick"/> makes the waiting frame <see cref="Current"/> as the tick begins, once per
+/// tick. Frames submitted more than once before a tick are merged: the latest one's state stands, but every press and
+/// release either of them saw is kept. A tick that finds nothing waiting keeps the last frame's state with no new
+/// presses or releases, so held actions stay held.</para>
 /// <para>The readers that take names answer the way an engine's input API does, from the current frame: a strength,
 /// an axis and a vector come from the set's analog <see cref="InputActionSet.Vectors"/> when one of them covers the
 /// actions asked about, and otherwise from whether the actions are held.</para>
@@ -20,6 +21,7 @@ namespace Gamesmiths.Forge.Core;
 public sealed class EntityInput(InputActionSet actions)
 {
 	private InputFrame? _waiting;
+	private bool _frameTaken;
 
 	/// <summary>
 	/// Gets the actions and vectors this input carries.
@@ -30,6 +32,9 @@ public sealed class EntityInput(InputActionSet actions)
 	/// Gets the frame the current tick reads.
 	/// </summary>
 	public InputFrame Current { get; private set; }
+
+	// Counts the frames that became current, so a reader can tell a new tick's frame from one it has already read.
+	internal ulong FrameNumber { get; private set; }
 
 	/// <summary>
 	/// Submits the input for the next tick, merging it with any frame already waiting for that tick.
@@ -163,11 +168,24 @@ public sealed class EntityInput(InputActionSet actions)
 		return value.LengthSquared() > 1f ? Vector2.Normalize(value) : value;
 	}
 
-	// The waiting frame becomes the tick's input; with none waiting, the last one carries on without new edges.
+	// The waiting frame becomes the tick's input; with none waiting, the last one carries on without new edges. Once per
+	// tick: whichever of EntitySimulation.BeginTick and Advance comes first takes the frame, and Advance ends the turn.
 	internal void BeginTick()
 	{
+		if (_frameTaken)
+		{
+			return;
+		}
+
+		_frameTaken = true;
 		Current = _waiting ?? Current.WithoutEdges();
 		_waiting = null;
+		FrameNumber++;
+	}
+
+	internal void EndInputStage()
+	{
+		_frameTaken = false;
 	}
 
 	private int IndexOfVector(InputVector vector)

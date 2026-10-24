@@ -22,7 +22,7 @@ new InputVectorResolver(inputSource, negativeXActionName, positiveXActionName, n
 
 ## Behavior
 
-- When a vector in the input's action set is made of these four actions, the value is that vector, so a stick stays analog.
+- When a vector in the input's action set is made of these four actions, the value is that vector, so a stick stays analog. A vector longer than 1, such as a stick pushed into a corner, is shortened to length 1.
 - Otherwise the two axes are read as [InputAxisResolver](input-axis-resolver.md) reads them, and a diagonal is shortened to length 1.
 - Returns `Vector2.Zero` when the entity has no input.
 

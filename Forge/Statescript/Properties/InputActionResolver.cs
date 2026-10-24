@@ -9,8 +9,7 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// </summary>
 /// <remarks>
 /// This is the composable half of <see cref="Nodes.State.InputActionNode"/>: a bool an expression or a condition
-/// monitor
-/// can gate on, where the node is what a graph waits on.
+/// monitor can gate on, where the node is what a graph waits on.
 /// </remarks>
 /// <param name="inputSource">Resolves the entity whose input is read.</param>
 /// <param name="actionName">The input action to read.</param>

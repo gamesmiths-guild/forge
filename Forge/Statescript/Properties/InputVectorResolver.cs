@@ -51,10 +51,13 @@ public class InputVectorResolver(
 	/// <inheritdoc/>
 	protected override Variant128 ResolveInput(EntityInput input)
 	{
-		return new Variant128(input.GetVector(
+		Vector2 value = input.GetVector(
 			_negativeXActionName,
 			_positiveXActionName,
 			_negativeYActionName,
-			_positiveYActionName));
+			_positiveYActionName);
+
+		// A collected vector can be longer than 1, such as a stick pushed into a corner.
+		return new Variant128(value.LengthSquared() > 1f ? Vector2.Normalize(value) : value);
 	}
 }

@@ -13,4 +13,7 @@ public class InputActionNodeContext : StateNodeContext
 	/// button already held when the node activated from counting as a press.
 	/// </summary>
 	public bool? LastPressed { get; set; }
+
+	// The input frame the last read came from, so a frame read on activation is not read again later in its tick.
+	internal ulong LastFrame { get; set; }
 }
