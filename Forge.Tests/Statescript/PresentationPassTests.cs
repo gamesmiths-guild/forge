@@ -178,6 +178,24 @@ public class PresentationPassTests
 		log.Should().Equal("start b#1", "end nothing");
 	}
 
+	[Fact]
+	[Trait("Graph", "Presentation")]
+	public void A_presentation_that_ends_its_own_activation_as_it_starts_is_ended_right_away()
+	{
+		var log = new List<string>();
+		var node = new PresentingNode("a", log, abortOnStart: true);
+		var other = new PresentingNode("b", log);
+		GraphProcessor processor = Start([node, other], node, other);
+
+		processor.Present();
+
+		log.Should().Equal(["start a#1", "end a#1", "start b#1"], "it ends before the pass goes on");
+
+		processor.Present();
+
+		log.Should().Equal(["start a#1", "end a#1", "start b#1"], "it is ended only once");
+	}
+
 	private static GraphProcessor Start(Node[] nodes, params Node[] startedByEntry)
 	{
 		var graph = new Graph();
@@ -214,13 +232,16 @@ public class PresentationPassTests
 		string name,
 		List<string> log,
 		bool restartOnRetrigger = false,
-		bool throwOnStart = false) : StateNode<StateNodeContext>(restartOnRetrigger)
+		bool throwOnStart = false,
+		bool abortOnStart = false) : StateNode<StateNodeContext>(restartOnRetrigger)
 	{
 		private readonly string _name = name;
 
 		private readonly List<string> _log = log;
 
 		private readonly bool _throwOnStart = throwOnStart;
+
+		private readonly bool _abortOnStart = abortOnStart;
 
 		private int _starts;
 
@@ -247,6 +268,13 @@ public class PresentationPassTests
 
 			string presentation = $"{_name}#{++_starts}";
 			_log.Add($"start {presentation}");
+
+			// Stands in for a signal the engine emits as the presentation starts, reaching the graph.
+			if (_abortOnStart)
+			{
+				InputPorts[AbortPort].ReceiveMessage(graphContext);
+			}
+
 			return presentation;
 		}
 

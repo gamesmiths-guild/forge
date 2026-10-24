@@ -288,11 +288,13 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// presented, and one that is still running is presented once, however many passes it lasts. A restart, or an end
 	/// followed by a new activation, is a different activation: the pass ends the old presentation through
 	/// <see cref="OnPresentationDeactivated"/> before it presents the new one.</para>
-	/// <para>The node is active when this runs, so it can read its inputs and what its simulation half captured in its
-	/// context. It must not change gameplay or the graph - emit, write variables, apply effects - because peers that
-	/// do not present, such as a dedicated server, would not do it. That belongs in <see cref="OnActivate"/>, and
-	/// anything that ends the node, like the length of what it plays, is counted in <see cref="OnFixedUpdate"/>.
-	/// </para>
+	/// <para>The node is active when this runs, but reads only what its simulation half kept in its context. Inputs are
+	/// resolved in <see cref="OnActivate"/> or <see cref="OnRestart"/> and kept there, not here: a resolver can draw
+	/// from <see cref="GraphContext.Random"/>, the deterministic gameplay random, and a draw made only on peers that
+	/// present puts their rolls out of step with the rest; an input can also change before the pass runs. It must not
+	/// change gameplay or the graph - emit, write variables, apply effects - because peers that do not present, such as
+	/// a dedicated server, would not do it. That belongs in <see cref="OnActivate"/>, and anything that ends the node,
+	/// like the length of what it plays, is counted in <see cref="OnFixedUpdate"/>.</para>
 	/// </remarks>
 	/// <param name="graphContext">The graph's context.</param>
 	/// <returns>What <see cref="OnPresentationDeactivated"/> needs to end this presentation, such as the player that
@@ -304,7 +306,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 
 	/// <summary>
 	/// Ends what <see cref="OnPresentationActivated"/> started, in the first presentation pass after the presented
-	/// activation ended, restarted, or its graph stopped.
+	/// activation ended, restarted, or its graph stopped, or right after it started when starting ended it.
 	/// </summary>
 	/// <remarks>
 	/// The node may be running a new activation by then, or its graph may be gone along with the node's context, so

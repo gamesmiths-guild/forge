@@ -259,7 +259,8 @@ public class GraphProcessor
 	/// <para>Only the net change since the last pass is presented. Presentations whose activation has ended, restarted
 	/// or stopped with the graph end first, through <c>OnPresentationDeactivated</c>; then running activations not yet
 	/// presented start, through <c>OnPresentationActivated</c>. Each group goes in node order. An activation that
-	/// started and ended between two passes is never presented.</para>
+	/// started and ended between two passes is never presented, and a presentation that ends its own activation as it
+	/// starts is ended right away, in the same pass.</para>
 	/// <para>A presentation that throws keeps neither the others from running nor itself from being ended later, and
 	/// the first exception is rethrown after.</para>
 	/// </remarks>
@@ -334,6 +335,25 @@ public class GraphProcessor
 				try
 				{
 					_presented[node] = new Presented(activationId, node.StartPresentation(GraphContext));
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
+
+				// Starting can end the node's own activation too - a signal the engine emits as it starts - and what
+				// was started would otherwise stay shown until the next pass.
+				if (node.TryGetActivation(GraphContext, out ulong currentId) && currentId == activationId)
+				{
+					continue;
+				}
+
+				Presented presented = _presented[node];
+				_presented.Remove(node);
+
+				try
+				{
+					node.EndPresentation(presented.Presentation);
 				}
 				catch (Exception exception)
 				{
