@@ -10,5 +10,12 @@ public class CueNodeContext : StateNodeContext
 	/// <summary>
 	/// Gets the cue tag/target pairs applied by this node while it is active, removed on deactivation.
 	/// </summary>
-	public List<AppliedCue> AppliedCues { get; } = [];
+	public List<AppliedCue> AppliedCues { get; private set; } = [];
+
+	/// <inheritdoc/>
+	protected override void OnCopied()
+	{
+		base.OnCopied();
+		AppliedCues = [.. AppliedCues];
+	}
 }

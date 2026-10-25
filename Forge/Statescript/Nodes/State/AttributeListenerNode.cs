@@ -80,18 +80,7 @@ public class AttributeListenerNode(StringKey attributeKey) : StateNode<Attribute
 			return;
 		}
 
-		nodeContext.Handler = (changedAttribute, change) =>
-			OnAttributeChanged(graphContext, changedAttribute, change);
-
-		// The attribute is looked up again whenever the entity's sets change. Without this the node would keep
-		// listening to an attribute that has been detached — going quiet for good — and would never pick up the
-		// attribute it is configured for if the set carrying it arrives later.
-		nodeContext.MembershipHandler = _ => BindAttribute(nodeContext);
-
-		entity.Attributes.OnAttributeSetAdded += nodeContext.MembershipHandler;
-		entity.Attributes.OnAttributeSetRemoved += nodeContext.MembershipHandler;
-
-		BindAttribute(nodeContext);
+		Subscribe(graphContext, nodeContext, entity);
 	}
 
 	/// <inheritdoc/>
@@ -99,6 +88,33 @@ public class AttributeListenerNode(StringKey attributeKey) : StateNode<Attribute
 	{
 		AttributeListenerNodeContext nodeContext = graphContext.GetNodeContext<AttributeListenerNodeContext>(NodeID);
 
+		Unsubscribe(nodeContext);
+
+		nodeContext.SubscribedAttribute = null;
+		nodeContext.Handler = null;
+		nodeContext.MembershipHandler = null;
+		nodeContext.WatchedEntity = null;
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestoreDetach(GraphContext graphContext)
+	{
+		Unsubscribe(graphContext.GetNodeContext<AttributeListenerNodeContext>(NodeID));
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestoreAttach(GraphContext graphContext)
+	{
+		AttributeListenerNodeContext nodeContext = graphContext.GetNodeContext<AttributeListenerNodeContext>(NodeID);
+
+		if (nodeContext.WatchedEntity is not null)
+		{
+			Subscribe(graphContext, nodeContext, nodeContext.WatchedEntity);
+		}
+	}
+
+	private static void Unsubscribe(AttributeListenerNodeContext nodeContext)
+	{
 		if (nodeContext.SubscribedAttribute is not null && nodeContext.Handler is not null)
 		{
 			nodeContext.SubscribedAttribute.OnValueChanged -= nodeContext.Handler;
@@ -109,11 +125,6 @@ public class AttributeListenerNode(StringKey attributeKey) : StateNode<Attribute
 			nodeContext.WatchedEntity.Attributes.OnAttributeSetAdded -= nodeContext.MembershipHandler;
 			nodeContext.WatchedEntity.Attributes.OnAttributeSetRemoved -= nodeContext.MembershipHandler;
 		}
-
-		nodeContext.SubscribedAttribute = null;
-		nodeContext.Handler = null;
-		nodeContext.MembershipHandler = null;
-		nodeContext.WatchedEntity = null;
 	}
 
 	private static void WriteIntOutput(GraphContext graphContext, OutputVariable output, int value)
@@ -128,6 +139,22 @@ public class AttributeListenerNode(StringKey attributeKey) : StateNode<Attribute
 			: graphContext.GraphVariables;
 
 		variables?.SetVar(output.BoundName, value);
+	}
+
+	private void Subscribe(GraphContext graphContext, AttributeListenerNodeContext nodeContext, IForgeEntity entity)
+	{
+		nodeContext.Handler = (changedAttribute, change) =>
+			OnAttributeChanged(graphContext, changedAttribute, change);
+
+		// The attribute is looked up again whenever the entity's sets change. Without this the node would keep
+		// listening to an attribute that has been detached — going quiet for good — and would never pick up the
+		// attribute it is configured for if the set carrying it arrives later.
+		nodeContext.MembershipHandler = _ => BindAttribute(nodeContext);
+
+		entity.Attributes.OnAttributeSetAdded += nodeContext.MembershipHandler;
+		entity.Attributes.OnAttributeSetRemoved += nodeContext.MembershipHandler;
+
+		BindAttribute(nodeContext);
 	}
 
 	private void BindAttribute(AttributeListenerNodeContext nodeContext)

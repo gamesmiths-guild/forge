@@ -36,6 +36,7 @@ internal static class Program
 			TicksThroughDefaultRandom(tagsManager));
 		Check("Input binding activates a typed ability with data built from the tick's input", () =>
 			ActivateFromInput(tagsManager) == new StructPayload(5));
+		Check("Graph snapshot copies a node context and restores it", RestoresGraphSnapshot);
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -126,6 +127,27 @@ internal static class Program
 		return received;
 	}
 
+	private static bool RestoresGraphSnapshot()
+	{
+		var node = new CountingNode();
+		var graph = new Graph();
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[CountingNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		processor.UpdateGraph(0.1);
+		GraphSnapshot snapshot = processor.CaptureSnapshot();
+		processor.UpdateGraph(0.1);
+		processor.RestoreSnapshot(snapshot);
+		processor.UpdateGraph(0.1);
+		processor.RestoreSnapshot(snapshot);
+
+		return processor.GraphContext.GetNodeContext<CountingNodeContext>(node.NodeID).Updates.Count == 1;
+	}
+
 	private static int ResolveActivationData(TagsManager tagsManager, Tag eventTag, StructPayload payload)
 	{
 		var resolver = new AbilityActivationDataResolver(typeof(StructPayload), nameof(StructPayload.Value));
@@ -209,6 +231,33 @@ internal static class Program
 		public void OnEnded(AbilityBehaviorContext context)
 		{
 			// Nothing to clean up.
+		}
+	}
+
+	private sealed class CountingNodeContext : StateNodeContext
+	{
+		public List<double> Updates { get; private set; } = [];
+
+		protected override void OnCopied()
+		{
+			base.OnCopied();
+			Updates = [.. Updates];
+		}
+	}
+
+	private sealed class CountingNode : StateNode<CountingNodeContext>
+	{
+		protected override void OnActivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+		{
+			graphContext.GetNodeContext<CountingNodeContext>(NodeID).Updates.Add(deltaTime);
 		}
 	}
 

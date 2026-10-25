@@ -2,6 +2,7 @@
 
 using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Statescript.Nodes;
 
 namespace Gamesmiths.Forge.Statescript;
 
@@ -170,7 +171,7 @@ public class GraphProcessor
 	/// <summary>
 	/// Stops the execution of the graph. This method calls the entry node's stop method to halt the graph's processing
 	/// and then removes all node contexts from the graph context to clean up any state associated with the graph's
-	/// execution. This method is safe to call re-entrantly (e.g., from an <see cref="Nodes.ExitNode"/> triggered
+	/// execution. This method is safe to call re-entrantly (e.g., from an <see cref="ExitNode"/> triggered
 	/// during the disable cascade).
 	/// </summary>
 	/// <remarks>
@@ -370,6 +371,143 @@ public class GraphProcessor
 	}
 
 	/// <summary>
+	/// Takes a snapshot of the graph's run, to put it back later with <see cref="RestoreSnapshot"/>: which state nodes
+	/// are running, a copy of every node context and of the graph variables, and what the run was started with.
+	/// </summary>
+	/// <remarks>
+	/// <para>Node contexts are copied member by member, and each context type copies what its node changes in place
+	/// (<see cref="StateNodeContext.OnCopied"/>). What the presentation pass shows is not part of the snapshot: after a
+	/// restore, the next pass brings it in line with the restored run.</para>
+	/// <para>Take it from the host, between updates, rather than from inside a node, an update or a presentation pass,
+	/// where the run is part way through changing.</para>
+	/// </remarks>
+	/// <returns>The snapshot.</returns>
+	/// <exception cref="InvalidOperationException">Thrown while the graph is updating, presenting or stopping, or
+	/// while node code is running.</exception>
+	public GraphSnapshot CaptureSnapshot()
+	{
+		ThrowIfChanging("taken");
+
+		var nodeContexts = new List<GraphSnapshot.NodeContextCopy>(GraphContext.NodeContextCount);
+		CaptureNodeContext(Graph.EntryNode, nodeContexts);
+
+		foreach (Node node in Graph.Nodes)
+		{
+			CaptureNodeContext(node, nodeContexts);
+		}
+
+		Node[] activeNodes = [.. GraphContext.ActiveStateNodes];
+		Array.Sort(activeNodes, _byIndex);
+
+		var graphVariables = new Variables();
+		GraphContext.GraphVariables.CopyTo(graphVariables);
+
+		return new GraphSnapshot(
+			Graph,
+			GraphContext.HasStarted,
+			GraphContext.ActivationCount,
+			[.. nodeContexts],
+			activeNodes,
+			[.. GraphContext.InternalNodeActivationStatus],
+			graphVariables,
+			GraphContext.SharedVariables,
+			GraphContext.ActivationContext,
+			GraphContext.Random,
+			OnGraphCompleted);
+	}
+
+	/// <summary>
+	/// Puts the graph's run back as it was when <see cref="CaptureSnapshot"/> took <paramref name="snapshot"/>,
+	/// silently: no node activates or deactivates, nothing is emitted, and <see cref="OnGraphCompleted"/> is not
+	/// called, whether the restore starts the run again, ends it or changes it.
+	/// </summary>
+	/// <remarks>
+	/// <para>Running nodes that the restore replaces let go of what they hold outside the graph, newest activation
+	/// first, and the running nodes it brings back take hold of it again, oldest first, through <c>OnRestoreDetach</c>
+	/// and <c>OnRestoreAttach</c> on <see cref="StateNode{T}"/>. A hook that throws keeps neither the others from
+	/// running nor the restore from completing, and the first exception is rethrown after.</para>
+	/// <para>Restored activations keep their ids, and new ones are numbered on from where the snapshot was taken, so
+	/// running the same steps again starts the same activations with the same ids, and the presentation pass shows only
+	/// what changed. <see cref="GraphContext.UpdateStamp"/> counts on rather than going back.</para>
+	/// <para>The snapshot is left as it was and can be restored again. Restore it from the host, between updates, like
+	/// <see cref="CaptureSnapshot"/>.</para>
+	/// </remarks>
+	/// <param name="snapshot">A snapshot taken from a processor of the same graph.</param>
+	/// <exception cref="ArgumentException">Thrown when the snapshot was taken from a processor of another graph.
+	/// </exception>
+	/// <exception cref="InvalidOperationException">Thrown while the graph is updating, presenting or stopping, or
+	/// while node code is running.</exception>
+	public void RestoreSnapshot(GraphSnapshot snapshot)
+	{
+		if (snapshot.Graph != Graph)
+		{
+			throw new ArgumentException("The snapshot was taken from a processor of another graph.", nameof(snapshot));
+		}
+
+		ThrowIfChanging("restored");
+
+		ExceptionDispatchInfo? failure = null;
+
+		// Newest first, so what one node holds on top of what another holds is let go of in reverse.
+		foreach (Node node in RunningNodesByActivation(newestFirst: true))
+		{
+			try
+			{
+				node.DetachForRestore(GraphContext);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		GraphContext.RemoveAllNodeContext();
+
+		foreach (GraphSnapshot.NodeContextCopy nodeContext in snapshot.NodeContexts)
+		{
+			GraphContext.SetNodeContext(nodeContext.Node.NodeID, nodeContext.Context.Copy());
+		}
+
+		GraphContext.ActiveStateNodes.Clear();
+		GraphContext.ActiveStateNodes.UnionWith(snapshot.ActiveNodes);
+		GraphContext.InternalNodeActivationStatus.Clear();
+
+		foreach (KeyValuePair<Guid, bool> status in snapshot.ActivationStatus)
+		{
+			GraphContext.InternalNodeActivationStatus.Add(status.Key, status.Value);
+		}
+
+		snapshot.GraphVariables.CopyTo(GraphContext.GraphVariables);
+		GraphContext.HasStarted = snapshot.HasStarted;
+		GraphContext.Processor = snapshot.HasStarted ? this : null;
+		GraphContext.ActivationCount = snapshot.ActivationCount;
+		GraphContext.FinalizationDeferralCount = 0;
+		GraphContext.SharedVariables = snapshot.SharedVariables;
+		GraphContext.ActivationContext = snapshot.ActivationContext;
+		GraphContext.Random = snapshot.Random;
+		OnGraphCompleted = snapshot.OnGraphCompleted;
+
+		// These only count up. A value cached against the update stamp, or code that held on to the run, belongs to the
+		// run the restore replaced.
+		GraphContext.RunStamp++;
+		GraphContext.UpdateStamp++;
+
+		foreach (Node node in RunningNodesByActivation(newestFirst: false))
+		{
+			try
+			{
+				node.AttachForRestore(GraphContext);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		failure?.Throw();
+	}
+
+	/// <summary>
 	/// Finalizes the graph execution after all state nodes have naturally deactivated. Unlike <see cref="StopGraph"/>,
 	/// this does not propagate disable messages through the entry node since all nodes have already deactivated through
 	/// their normal lifecycle. This method clears remaining runtime state (node contexts, activation status) so the GC
@@ -426,6 +564,47 @@ public class GraphProcessor
 		_updateBuffer.Sort(_byIndex);
 
 		return true;
+	}
+
+	// A run part way through changing - a pass walking it, a stop tearing it down, node code on its way back - has
+	// nothing settled for a snapshot to keep or to replace.
+	private void ThrowIfChanging(string action)
+	{
+		if (_updating || _presenting || GraphContext.IsStopping || GraphContext.RunningFrames > 0)
+		{
+			throw new InvalidOperationException(
+				$"A graph snapshot cannot be {action} while the graph is updating, presenting or stopping, or while " +
+				"node code is running. Take and restore snapshots from the host, between updates.");
+		}
+	}
+
+	private void CaptureNodeContext(Node node, List<GraphSnapshot.NodeContextCopy> nodeContexts)
+	{
+		if (GraphContext.TryGetNodeContext(node.NodeID, out INodeContext? context)
+			&& context is StateNodeContext stateNodeContext)
+		{
+			nodeContexts.Add(new GraphSnapshot.NodeContextCopy(node, stateNodeContext.Copy()));
+		}
+	}
+
+	private Node[] RunningNodesByActivation(bool newestFirst)
+	{
+		Node[] nodes = [.. GraphContext.ActiveStateNodes];
+		ulong[] activationIds = new ulong[nodes.Length];
+
+		for (int i = 0; i < nodes.Length; i++)
+		{
+			nodes[i].TryGetActivation(GraphContext, out activationIds[i]);
+		}
+
+		Array.Sort(activationIds, nodes);
+
+		if (newestFirst)
+		{
+			Array.Reverse(nodes);
+		}
+
+		return nodes;
 	}
 
 	private readonly record struct Presented(ulong ActivationId, object? Presentation);

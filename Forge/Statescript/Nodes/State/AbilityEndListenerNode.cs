@@ -93,15 +93,8 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 			nodeContext.FilterData = filterData;
 		}
 
-		void Handler(AbilityEndedData endedData)
-		{
-			OnAbilityEnded(graphContext, endedData);
-		}
-
 		nodeContext.SubscribedEntity = entity;
-		nodeContext.Handler = Handler;
-
-		entity.Abilities.OnAbilityEnded += Handler;
+		Subscribe(graphContext, nodeContext, entity);
 	}
 
 	/// <inheritdoc/>
@@ -110,14 +103,37 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 		AbilityEndListenerNodeContext nodeContext =
 			graphContext.GetNodeContext<AbilityEndListenerNodeContext>(NodeID);
 
-		if (nodeContext.SubscribedEntity is not null && nodeContext.Handler is not null)
-		{
-			nodeContext.SubscribedEntity.Abilities.OnAbilityEnded -= nodeContext.Handler;
-		}
+		Unsubscribe(nodeContext);
 
 		nodeContext.SubscribedEntity = null;
 		nodeContext.FilterData = null;
 		nodeContext.Handler = null;
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestoreDetach(GraphContext graphContext)
+	{
+		Unsubscribe(graphContext.GetNodeContext<AbilityEndListenerNodeContext>(NodeID));
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestoreAttach(GraphContext graphContext)
+	{
+		AbilityEndListenerNodeContext nodeContext =
+			graphContext.GetNodeContext<AbilityEndListenerNodeContext>(NodeID);
+
+		if (nodeContext.SubscribedEntity is not null)
+		{
+			Subscribe(graphContext, nodeContext, nodeContext.SubscribedEntity);
+		}
+	}
+
+	private static void Unsubscribe(AbilityEndListenerNodeContext nodeContext)
+	{
+		if (nodeContext.SubscribedEntity is not null && nodeContext.Handler is not null)
+		{
+			nodeContext.SubscribedEntity.Abilities.OnAbilityEnded -= nodeContext.Handler;
+		}
 	}
 
 	private static void WriteBoolOutput(GraphContext graphContext, OutputVariable output, bool value)
@@ -132,6 +148,17 @@ public class AbilityEndListenerNode : StateNode<AbilityEndListenerNodeContext>
 			: graphContext.GraphVariables;
 
 		variables?.SetVar(output.BoundName, value);
+	}
+
+	private void Subscribe(GraphContext graphContext, AbilityEndListenerNodeContext nodeContext, IForgeEntity entity)
+	{
+		void Handler(AbilityEndedData endedData)
+		{
+			OnAbilityEnded(graphContext, endedData);
+		}
+
+		nodeContext.Handler = Handler;
+		entity.Abilities.OnAbilityEnded += Handler;
 	}
 
 	private void OnAbilityEnded(GraphContext graphContext, AbilityEndedData endedData)

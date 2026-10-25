@@ -12,5 +12,12 @@ public class EffectNodeContext : StateNodeContext
 	/// <summary>
 	/// Gets the active effect handles created by this node while it is active.
 	/// </summary>
-	public List<ActiveEffectHandle> ActiveEffectHandles { get; } = [];
+	public List<ActiveEffectHandle> ActiveEffectHandles { get; private set; } = [];
+
+	/// <inheritdoc/>
+	protected override void OnCopied()
+	{
+		base.OnCopied();
+		ActiveEffectHandles = [.. ActiveEffectHandles];
+	}
 }

@@ -161,6 +161,18 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	}
 
 	/// <inheritdoc/>
+	internal override void DetachForRestore(GraphContext graphContext)
+	{
+		OnRestoreDetach(graphContext);
+	}
+
+	/// <inheritdoc/>
+	internal override void AttachForRestore(GraphContext graphContext)
+	{
+		OnRestoreAttach(graphContext);
+	}
+
+	/// <inheritdoc/>
 	internal override IEnumerable<int> GetReachableOutputPorts(byte inputPortIndex)
 	{
 		if (inputPortIndex == InputPort)
@@ -315,6 +327,41 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// <param name="presentation">What <see cref="OnPresentationActivated"/> returned, or <see langword="null"/> when
 	/// it threw.</param>
 	protected virtual void OnPresentationDeactivated(object? presentation)
+	{
+	}
+
+	/// <summary>
+	/// Called when <see cref="GraphProcessor.RestoreSnapshot"/> is about to replace this node's running activation, to
+	/// let go of what it holds outside the graph: an event subscription, a property it overrides, a signal connection.
+	/// The default does nothing.
+	/// </summary>
+	/// <remarks>
+	/// <para>A restore runs no <see cref="OnDeactivate"/>. The activation isn't ending, it's being replaced by the one
+	/// the snapshot holds, which may be the same one, so undo only what <see cref="OnRestoreAttach"/> redoes. Change no
+	/// gameplay or graph state: emit nothing, write no variables, apply or remove no effects. What the node did to the
+	/// world, such as an effect it applied, comes back with whatever restores the world.</para>
+	/// <para>The node context is still the replaced activation's. Running nodes are detached newest activation first.
+	/// </para>
+	/// </remarks>
+	/// <param name="graphContext">The graph's context.</param>
+	protected virtual void OnRestoreDetach(GraphContext graphContext)
+	{
+	}
+
+	/// <summary>
+	/// Called when <see cref="GraphProcessor.RestoreSnapshot"/> has brought back a running activation of this node, to
+	/// take hold again of what it holds outside the graph. The default does nothing.
+	/// </summary>
+	/// <remarks>
+	/// <para>A restore runs no <see cref="OnActivate"/>. The activation isn't starting, it carries on from where the
+	/// snapshot was taken, so work from what the node context recorded, such as the entity it subscribed to, rather
+	/// than resolving inputs again: they may have changed since. Like <see cref="OnRestoreDetach"/>, it changes no
+	/// gameplay and emits nothing.</para>
+	/// <para>The node context is the restored copy. Running nodes are attached oldest activation first, the order they
+	/// took hold in.</para>
+	/// </remarks>
+	/// <param name="graphContext">The graph's context.</param>
+	protected virtual void OnRestoreAttach(GraphContext graphContext)
 	{
 	}
 
