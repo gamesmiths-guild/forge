@@ -500,6 +500,30 @@ public class NodeSnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 
 	[Fact]
 	[Trait("Graph", "Snapshot")]
+	public void Cue_node_restored_before_a_deferred_pass_still_cancels_its_unseen_cue()
+	{
+		var cuesManager = new CuesManager { DeferDispatch = true };
+		var handler = new RecordingCueHandler();
+		var cueTag = Tag.RequestTag(_tagsManager, "test.cue1");
+		cuesManager.RegisterCue(cueTag, handler);
+
+		var target = new TestEntity(_tagsManager, cuesManager);
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectVariable("cueTag", cueTag);
+		graph.VariableDefinitions.DefineObjectVariable<IForgeEntity>("target", target);
+		AddFromEntry(graph, CreateCueNode("cueTag", "target"));
+
+		GraphProcessor processor = Start(graph);
+		processor.RestoreSnapshot(processor.CaptureSnapshot());
+		processor.StopGraph();
+		cuesManager.PresentCues();
+
+		handler.ApplyCount.Should().Be(0);
+		handler.RemoveCount.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Graph", "Snapshot")]
 	public void Grant_ability_node_comes_back_holding_its_grant_without_granting_again()
 	{
 		var owner = new TestEntity(_tagsManager, _cuesManager);

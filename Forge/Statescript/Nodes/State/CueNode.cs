@@ -128,6 +128,6 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 	{
 		AppliedCue[] applied = [.. nodeContext.AppliedCues];
 		nodeContext.AppliedCues.Clear();
-		CueApplicationUtilities.RemoveCues(applied, interrupted, nodeContext);
+		CueApplicationUtilities.RemoveCues(applied, interrupted, nodeContext.Application);
 	}
 }

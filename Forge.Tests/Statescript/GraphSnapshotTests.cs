@@ -240,12 +240,33 @@ public class GraphSnapshotTests
 
 	[Fact]
 	[Trait("Graph", "Snapshot")]
-	public void A_snapshot_from_another_graph_is_refused()
+	public void A_snapshot_from_another_processor_is_refused()
 	{
 		(GraphProcessor processor, _) = StartTimer();
-		(GraphProcessor other, _) = StartTimer();
+		(GraphProcessor otherGraph, _) = StartTimer();
+		var sameGraph = new GraphProcessor(processor.Graph);
+		sameGraph.StartGraph();
 
-		processor.Invoking(x => x.RestoreSnapshot(other.CaptureSnapshot())).Should().Throw<ArgumentException>();
+		processor.Invoking(x => x.RestoreSnapshot(otherGraph.CaptureSnapshot())).Should().Throw<ArgumentException>();
+		processor.Invoking(x => x.RestoreSnapshot(sameGraph.CaptureSnapshot())).Should().Throw<ArgumentException>();
+	}
+
+	[Fact]
+	[Trait("Graph", "Snapshot")]
+	public void Snapshots_are_refused_while_a_message_is_being_delivered()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("count", 0);
+		var count = new IncrementCounterNode("count");
+		graph.AddNode(count);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			count.InputPorts[ActionNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		graph.EntryNode.OutputPorts[EntryNode.OutputPort].OnEmitMessage += _ => processor.CaptureSnapshot();
+
+		processor.Invoking(x => x.StartGraph()).Should().Throw<InvalidOperationException>();
 	}
 
 	[Fact]

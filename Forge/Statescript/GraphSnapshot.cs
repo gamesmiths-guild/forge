@@ -20,7 +20,7 @@ namespace Gamesmiths.Forge.Statescript;
 /// </remarks>
 public sealed class GraphSnapshot
 {
-	internal Graph Graph { get; }
+	internal GraphProcessor Processor { get; }
 
 	internal bool HasStarted { get; }
 
@@ -45,7 +45,7 @@ public sealed class GraphSnapshot
 	internal Action? OnGraphCompleted { get; }
 
 	internal GraphSnapshot(
-		Graph graph,
+		GraphProcessor processor,
 		bool hasStarted,
 		ulong activationCount,
 		NodeContextCopy[] nodeContexts,
@@ -57,7 +57,7 @@ public sealed class GraphSnapshot
 		IRandom? random,
 		Action? onGraphCompleted)
 	{
-		Graph = graph;
+		Processor = processor;
 		HasStarted = hasStarted;
 		ActivationCount = activationCount;
 		NodeContexts = nodeContexts;

@@ -383,7 +383,7 @@ public class GraphProcessor
 	/// </remarks>
 	/// <returns>The snapshot.</returns>
 	/// <exception cref="InvalidOperationException">Thrown while the graph is updating, presenting or stopping, or
-	/// while node code is running.</exception>
+	/// while node code or a message is on its way back.</exception>
 	public GraphSnapshot CaptureSnapshot()
 	{
 		ThrowIfChanging("taken");
@@ -403,7 +403,7 @@ public class GraphProcessor
 		GraphContext.GraphVariables.CopyTo(graphVariables);
 
 		return new GraphSnapshot(
-			Graph,
+			this,
 			GraphContext.HasStarted,
 			GraphContext.ActivationCount,
 			[.. nodeContexts],
@@ -431,17 +431,18 @@ public class GraphProcessor
 	/// what changed. <see cref="GraphContext.UpdateStamp"/> counts on rather than going back.</para>
 	/// <para>The snapshot is left as it was and can be restored again. Restore it from the host, between updates, like
 	/// <see cref="CaptureSnapshot"/>.</para>
+	/// <para>Only the processor that took a snapshot can restore it: activation ids, stamps and what node contexts
+	/// point at belong to that processor's run.</para>
 	/// </remarks>
-	/// <param name="snapshot">A snapshot taken from a processor of the same graph.</param>
-	/// <exception cref="ArgumentException">Thrown when the snapshot was taken from a processor of another graph.
-	/// </exception>
+	/// <param name="snapshot">A snapshot taken from this processor.</param>
+	/// <exception cref="ArgumentException">Thrown when the snapshot was taken from another processor.</exception>
 	/// <exception cref="InvalidOperationException">Thrown while the graph is updating, presenting or stopping, or
-	/// while node code is running.</exception>
+	/// while node code or a message is on its way back.</exception>
 	public void RestoreSnapshot(GraphSnapshot snapshot)
 	{
-		if (snapshot.Graph != Graph)
+		if (snapshot.Processor != this)
 		{
-			throw new ArgumentException("The snapshot was taken from a processor of another graph.", nameof(snapshot));
+			throw new ArgumentException("The snapshot was taken from another processor.", nameof(snapshot));
 		}
 
 		ThrowIfChanging("restored");
@@ -481,7 +482,6 @@ public class GraphProcessor
 		GraphContext.HasStarted = snapshot.HasStarted;
 		GraphContext.Processor = snapshot.HasStarted ? this : null;
 		GraphContext.ActivationCount = snapshot.ActivationCount;
-		GraphContext.FinalizationDeferralCount = 0;
 		GraphContext.SharedVariables = snapshot.SharedVariables;
 		GraphContext.ActivationContext = snapshot.ActivationContext;
 		GraphContext.Random = snapshot.Random;
@@ -566,15 +566,20 @@ public class GraphProcessor
 		return true;
 	}
 
-	// A run part way through changing - a pass walking it, a stop tearing it down, node code on its way back - has
-	// nothing settled for a snapshot to keep or to replace.
+	// A run part way through changing - a pass walking it, a stop tearing it down, node code or a message on its way
+	// back - has nothing settled for a snapshot to keep or to replace.
 	private void ThrowIfChanging(string action)
 	{
-		if (_updating || _presenting || GraphContext.IsStopping || GraphContext.RunningFrames > 0)
+		if (_updating
+			|| _presenting
+			|| GraphContext.IsStopping
+			|| GraphContext.RunningFrames > 0
+			|| GraphContext.FinalizationDeferralCount > 0)
 		{
 			throw new InvalidOperationException(
 				$"A graph snapshot cannot be {action} while the graph is updating, presenting or stopping, or while " +
-				"node code is running. Take and restore snapshots from the host, between updates.");
+				"node code or a message is on its way back. Take and restore snapshots from the host, between " +
+				"updates.");
 		}
 	}
 
