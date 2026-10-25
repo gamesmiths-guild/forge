@@ -1,6 +1,6 @@
 # Simulation Tick
 
-A game that runs on a fixed step advances each entity once per step with `EntitySimulation.Tick`. One call runs the entity's effects and fixed-rail abilities in a fixed order and restarts its random source. Every machine that runs the same entity with the same tick numbers and the same step then gets the same result, which networking and replays depend on.
+A game that runs on a fixed step advances each entity once per step with `EntitySimulation.Tick`. One call runs the entity's input, movement, effects and fixed-rail abilities in a fixed order and restarts its random source. Every machine that runs the same entity with the same tick numbers and the same step then gets the same result, which networking and replays depend on.
 
 ## Advancing an entity
 
@@ -18,8 +18,9 @@ Each tick runs, in order:
 
 1. **The tick begins.** If the entity has a `Random` (see below), it restarts for this tick. If it has an `Input`, the frame submitted for this tick becomes current.
 2. **The input stage runs.** Abilities bound to an input action that was pressed or released try to activate. See [Input](input.md).
-3. **Effects advance by the step.** Durations count down, periodic effects execute, and expired effects end.
-4. **Abilities advance their fixed rail.** Graphs react to the effects as they stand after this tick's expirations. See [Two update rails](statescript/nodes/state/README.md#two-update-rails).
+3. **The movement stage runs.** If the entity has a `Mover`, it moves the body by the step. See [Movement](#movement).
+4. **Effects advance by the step.** Durations count down, periodic effects execute, and expired effects end.
+5. **Abilities advance their fixed rail.** Graphs react to the effects as they stand after this tick's expirations. See [Two update rails](statescript/nodes/state/README.md#two-update-rails).
 
 ### Entities that affect each other
 
@@ -32,6 +33,45 @@ EntitySimulation.Tick(entities, tick, fixedDeltaTime);
 It begins every entity's tick, then advances each in list order. A host that advances each entity from its own callback does the same in two steps: `EntitySimulation.BeginTick(entity, tick)` for every entity first, then `EntitySimulation.Advance(entity, fixedDeltaTime)` for each.
 
 A game without a fixed step, such as a turn-based one, keeps calling `EffectsManager.UpdateEffects` and `Abilities.UpdateAbilities` from its own loop, as the [Quick Start](quick-start.md#5-drive-time) shows.
+
+## Movement
+
+An entity whose body the simulation moves provides an `IEntityMover` through `IForgeEntity.Mover`. It's a default member that returns `null`, so existing entities are unaffected. The interface is the mover contract:
+
+| Member | Does |
+|---|---|
+| `Move(fixedDeltaTime)` | Moves the body by one step. The movement stage calls it once per tick. |
+| `CaptureState()` | Returns the body's `BodyState`: its position, rotation and velocity, and whether it stands on the ground. |
+| `RestoreState(state)` | Puts the body back in a state `CaptureState` returned. |
+
+The mover reads what drives it, such as the entity's input, attributes and tags, inside `Move`. The movement stage runs after the input stage and before effects advance:
+
+- **An ability the tick's input activated** has already applied its tags, so a dash that blocks walking blocks it from its first tick.
+- **An effect that ends this tick** still applies to this tick's step. An effect lasting a number of ticks shapes exactly that many steps.
+- **Graphs advance after the mover**, so a graph that moves the body itself, such as a dash, moves it after the mover's step.
+
+`CaptureState` and `RestoreState` let the body go back to an earlier tick and simulate it again: restoring a captured state and moving with the same input gives the same result. A 2D body uses the X and Y components and turns about the Z axis.
+
+```csharp
+// A body without an engine behind it, walking on the ground plane.
+public class PointMover(IForgeEntity entity) : IEntityMover
+{
+    private BodyState _body = new(Vector3.Zero, Quaternion.Identity, Vector3.Zero, Grounded: true);
+
+    public void Move(double fixedDeltaTime)
+    {
+        Vector2 move = entity.Input?.GetVector("move_left", "move_right", "move_forward", "move_back")
+            ?? Vector2.Zero;
+        var velocity = new Vector3(move.X, 0, move.Y) * entity.Attributes["Movement.Speed"].CurrentValue;
+
+        _body = _body with { Position = _body.Position + (velocity * (float)fixedDeltaTime), Velocity = velocity };
+    }
+
+    public BodyState CaptureState() => _body;
+
+    public void RestoreState(in BodyState state) => _body = state;
+}
+```
 
 ## Presentation pass
 
