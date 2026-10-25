@@ -37,6 +37,7 @@ Standard state ports, plus:
 2. On each end, if a filter is bound only ends whose ability shares that `AbilityData` are reported (matched per event by data, independent of the grant's source entity and of whether the ability was granted before or after this node activated). Matching ends write **Ability** and **Was Canceled**, then emit `OnAbilityEnded`.
 3. When the grant is removed on end (e.g. `AbilityDeactivationPolicy.RemoveOnEnd`), the removal happens before listeners run, so the emitted **Ability** handle may already be freed. The end is still reported (the filter matches by data, not through the handle), but the handle is primarily useful for identity/logging in that case.
 4. Unsubscribes on deactivation.
+5. A [restore](README.md#writing-rollback-safe-nodes) unsubscribes the activation it replaces and subscribes the one it brings back, to the entity and filter it recorded.
 
 ## Usage
 

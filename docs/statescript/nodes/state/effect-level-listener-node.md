@@ -34,6 +34,7 @@ Standard state ports, plus:
 1. On activation, subscribes to `Effect.OnLevelChanged` for the resolved effect.
 2. On each change, writes **New Level** and emits `OnLevelChanged`.
 3. Unsubscribes on deactivation.
+4. A [restore](README.md#writing-rollback-safe-nodes) unsubscribes the activation it replaces and subscribes the one it brings back, to the effect it recorded.
 
 ## Usage
 

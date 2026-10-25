@@ -109,6 +109,7 @@ setSharedVar.BindOutput(SetVariableNode.TargetOutput, "comboCounter", VariableSc
 | **Lifetime** | Created when graph starts, destroyed when graph ends | Persists for entity lifetime |
 | **Visibility** | Only the current graph instance | All graph instances on the same entity |
 | **Definition** | `GraphVariableDefinitions.DefineVariable` | `entity.SharedVariables.DefineVariable` |
+| **Snapshots** | Part of a [graph snapshot](README.md#snapshots) | Copied with `Variables.CopyTo` by whatever snapshots the entity |
 
 ## Property Resolvers
 

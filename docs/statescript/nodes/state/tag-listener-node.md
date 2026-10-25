@@ -36,6 +36,7 @@ Standard state ports, plus:
 1. On activation, records the current presence of each watched tag and subscribes to the entity's tag-change event.
 2. On each change, for every watched tag whose presence flipped, writes the **Tag** output and emits `OnTagAdded` or `OnTagRemoved`. Presence checks use the entity's full tag view (base + modifier) with hierarchical matching.
 3. Unsubscribes on deactivation.
+4. A [restore](README.md#writing-rollback-safe-nodes) unsubscribes the activation it replaces and subscribes the one it brings back, to the entity it recorded, with the presence it recorded.
 
 > For a polling alternative that does not require event support, pair a [ConditionMonitorNode](condition-monitor-node.md) with a [TagQueryResolver](../../resolvers/tag-query-resolver.md).
 
