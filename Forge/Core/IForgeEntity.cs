@@ -70,4 +70,14 @@ public interface IForgeEntity
 	/// (<see cref="Abilities.AbilityData.InputBinding"/>) whose action changed.
 	/// </remarks>
 	EntityInput? Input => null;
+
+	/// <summary>
+	/// Gets the mover that moves this entity's body each tick, or <see langword="null"/> for an entity the simulation
+	/// doesn't move.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="EntitySimulation.Advance"/> calls <see cref="IEntityMover.Move"/> in the movement stage, after the
+	/// input stage and before effects and abilities advance.
+	/// </remarks>
+	IEntityMover? Mover => null;
 }

@@ -31,6 +31,8 @@ public class TestEntity : IForgeEntity
 
 	public EntityInput? Input { get; set; }
 
+	public IEntityMover? Mover { get; set; }
+
 	public TestEntity(TagsManager tagsManager, CuesManager cuesManager)
 	{
 		PlayerAttributeSet = new TestAttributeSet();

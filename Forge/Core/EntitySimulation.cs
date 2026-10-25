@@ -13,6 +13,8 @@ namespace Gamesmiths.Forge.Core;
 /// <item><description>The input stage, for an entity with an <see cref="IForgeEntity.Input"/>: the frame submitted for
 /// the tick becomes current, and abilities bound to an input action that was pressed or released try to
 /// activate.</description></item>
+/// <item><description>The movement stage, for an entity with an <see cref="IForgeEntity.Mover"/>: the mover moves the
+/// body by the fixed step, seeing the abilities the input stage just activated.</description></item>
 /// <item><description>Effects advance by the fixed step: durations count down, periods execute, expired effects
 /// end.</description></item>
 /// <item><description>Abilities advance their fixed-rail behaviors, so graphs react to the effects as they stand after
@@ -79,8 +81,8 @@ public static class EntitySimulation
 	}
 
 	/// <summary>
-	/// Runs the entity's input stage, then advances its effects and fixed-rail abilities by one fixed step, without
-	/// restarting its random.
+	/// Runs the entity's input and movement stages, then advances its effects and fixed-rail abilities by one fixed
+	/// step, without restarting its random.
 	/// </summary>
 	/// <remarks>
 	/// The input stage makes the submitted frame current unless <see cref="BeginTick"/> already did for this tick, then
@@ -96,6 +98,7 @@ public static class EntitySimulation
 			entity.Abilities.ActivateBoundAbilities(input);
 		}
 
+		entity.Mover?.Move(fixedDeltaTime);
 		entity.EffectsManager.UpdateEffects(fixedDeltaTime);
 		entity.Abilities.FixedUpdateAbilities(fixedDeltaTime);
 	}

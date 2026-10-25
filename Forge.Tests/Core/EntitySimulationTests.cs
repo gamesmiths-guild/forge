@@ -67,6 +67,35 @@ public class EntitySimulationTests(TagsAndCuesFixture fixture) : IClassFixture<T
 
 	[Fact]
 	[Trait("Simulation", "Tick")]
+	public void The_mover_moves_after_the_input_stage_and_before_effects_and_graphs()
+	{
+		var input = new EntityInput(new InputActionSet(["dash"]));
+		var entity = new TestEntity(_tagsManager, _cuesManager) { Input = input };
+		AbilityHandle dash = entity.Abilities.GrantAbilityPermanently(
+			new AbilityData(
+				"Dash",
+				behaviorFactory: () => new LastingBehavior(),
+				inputBinding: AbilityInputBinding.ForAction("dash")),
+			1,
+			LevelComparison.Higher,
+			null);
+		var mover = new ProbeMover(entity, dash);
+		entity.Mover = mover;
+		var probe = new AttributeProbeNode(Attribute);
+		ActivateGraph(entity, probe);
+		entity.EffectsManager.ApplyEffect(BuffFor(seconds: Step, entity));
+
+		input.Submit(new InputFrame { Held = 0b1, Pressed = 0b1 });
+		EntitySimulation.Tick(entity, 1, Step);
+
+		mover.Moves.Should().Equal(
+			[(Step, true, 11)],
+			"the body moves by the step once, after the press activated the dash and before the buff expired");
+		probe.SeenOnFixedUpdate.Should().Equal([1], "graphs advance after the buff expired");
+	}
+
+	[Fact]
+	[Trait("Simulation", "Tick")]
 	public void Ticks_leave_the_frame_rail_alone()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
@@ -183,6 +212,40 @@ public class EntitySimulationTests(TagsAndCuesFixture fixture) : IClassFixture<T
 		{
 			graphContext.TryGetActivationContext(out AbilityBehaviorContext? context).Should().BeTrue();
 			SeenOnFixedUpdate.Add(context!.Owner.Attributes[_attribute].CurrentValue);
+		}
+	}
+
+	private sealed class LastingBehavior : IAbilityBehavior
+	{
+		public void OnStarted(AbilityBehaviorContext context)
+		{
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
+		}
+	}
+
+	// Records each move's step, and what the input stage and the effects had done by then.
+	private sealed class ProbeMover(IForgeEntity entity, AbilityHandle dash) : IEntityMover
+	{
+		private readonly IForgeEntity _entity = entity;
+		private readonly AbilityHandle _dash = dash;
+
+		public List<(double Step, bool DashActive, int Attribute)> Moves { get; } = [];
+
+		public void Move(double fixedDeltaTime)
+		{
+			Moves.Add((fixedDeltaTime, _dash.IsActive, _entity.Attributes[Attribute].CurrentValue));
+		}
+
+		public BodyState CaptureState()
+		{
+			return default;
+		}
+
+		public void RestoreState(in BodyState state)
+		{
 		}
 	}
 
