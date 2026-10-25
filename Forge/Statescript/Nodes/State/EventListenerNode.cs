@@ -95,6 +95,7 @@ public class EventListenerNode(bool deactivateOnEvent = false) : StateNode<Event
 		EventListenerNodeContext nodeContext = graphContext.GetNodeContext<EventListenerNodeContext>(NodeID);
 		nodeContext.Tokens.Clear();
 		nodeContext.SubscribedManager = null;
+		nodeContext.SubscribedTags = [];
 		nodeContext.PayloadWriter = null;
 
 		EventManager? manager = ResolveListenManager(graphContext);
@@ -104,32 +105,9 @@ public class EventListenerNode(bool deactivateOnEvent = false) : StateNode<Event
 		}
 
 		nodeContext.SubscribedManager = manager;
-		EventPayloadWriter? payloadWriter = ResolvePayloadWriter(graphContext);
-		nodeContext.PayloadWriter = payloadWriter;
-
-		List<Tag> tags = ResolveEventTags(graphContext);
-		for (int i = 0; i < tags.Count; i++)
-		{
-			Tag tag = tags[i];
-
-			// With a payload provider, subscribe through its typed (non-boxing) path; otherwise subscribe
-			// non-generically (a catch-all that also receives generic raises with the payload boxed).
-			EventSubscriptionToken token;
-			if (payloadWriter is not null)
-			{
-				token = payloadWriter.Subscribe(
-					manager,
-					tag,
-					graphContext,
-					(source, target, magnitude) => OnTypedEventReceived(graphContext, source, target, magnitude));
-			}
-			else
-			{
-				token = manager.Subscribe(tag, data => OnEventReceived(data, graphContext));
-			}
-
-			nodeContext.Tokens.Add(token);
-		}
+		nodeContext.SubscribedTags = ResolveEventTags(graphContext);
+		nodeContext.PayloadWriter = ResolvePayloadWriter(graphContext);
+		Subscribe(graphContext, nodeContext, manager);
 	}
 
 	/// <inheritdoc/>
@@ -137,17 +115,44 @@ public class EventListenerNode(bool deactivateOnEvent = false) : StateNode<Event
 	{
 		EventListenerNodeContext nodeContext = graphContext.GetNodeContext<EventListenerNodeContext>(NodeID);
 
-		if (nodeContext.SubscribedManager is not null)
-		{
-			for (int i = 0; i < nodeContext.Tokens.Count; i++)
-			{
-				nodeContext.SubscribedManager.Unsubscribe(nodeContext.Tokens[i]);
-			}
-		}
+		Unsubscribe(nodeContext);
 
 		nodeContext.Tokens.Clear();
 		nodeContext.SubscribedManager = null;
+		nodeContext.SubscribedTags = [];
 		nodeContext.PayloadWriter = null;
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestoreDetach(GraphContext graphContext)
+	{
+		Unsubscribe(graphContext.GetNodeContext<EventListenerNodeContext>(NodeID));
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestoreAttach(GraphContext graphContext)
+	{
+		EventListenerNodeContext nodeContext = graphContext.GetNodeContext<EventListenerNodeContext>(NodeID);
+
+		if (nodeContext.SubscribedManager is not null)
+		{
+			// The restored tokens were released along with the activation they came from.
+			nodeContext.Tokens.Clear();
+			Subscribe(graphContext, nodeContext, nodeContext.SubscribedManager);
+		}
+	}
+
+	private static void Unsubscribe(EventListenerNodeContext nodeContext)
+	{
+		if (nodeContext.SubscribedManager is null)
+		{
+			return;
+		}
+
+		for (int i = 0; i < nodeContext.Tokens.Count; i++)
+		{
+			nodeContext.SubscribedManager.Unsubscribe(nodeContext.Tokens[i]);
+		}
 	}
 
 	private static void WriteEntityOutput(GraphContext graphContext, OutputVariable output, IForgeEntity? value)
@@ -224,6 +229,34 @@ public class EventListenerNode(bool deactivateOnEvent = false) : StateNode<Event
 		}
 
 		OutputPorts[OnEventPort].EmitMessage(graphContext);
+	}
+
+	private void Subscribe(GraphContext graphContext, EventListenerNodeContext nodeContext, EventManager manager)
+	{
+		EventPayloadWriter? payloadWriter = nodeContext.PayloadWriter;
+
+		for (int i = 0; i < nodeContext.SubscribedTags.Count; i++)
+		{
+			Tag tag = nodeContext.SubscribedTags[i];
+
+			// With a payload provider, subscribe through its typed (non-boxing) path; otherwise subscribe
+			// non-generically (a catch-all that also receives generic raises with the payload boxed).
+			EventSubscriptionToken token;
+			if (payloadWriter is not null)
+			{
+				token = payloadWriter.Subscribe(
+					manager,
+					tag,
+					graphContext,
+					(source, target, magnitude) => OnTypedEventReceived(graphContext, source, target, magnitude));
+			}
+			else
+			{
+				token = manager.Subscribe(tag, data => OnEventReceived(data, graphContext));
+			}
+
+			nodeContext.Tokens.Add(token);
+		}
 	}
 
 	private EventManager? ResolveListenManager(GraphContext graphContext)

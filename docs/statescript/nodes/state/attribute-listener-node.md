@@ -45,6 +45,7 @@ new AttributeListenerNode(attributeKey)
 1. On activation, subscribes to `EntityAttribute.OnValueChanged` for the configured attribute on the resolved entity.
 2. On each change, writes **New Value** and **Delta**, then emits `OnChanged` synchronously.
 3. Unsubscribes on deactivation.
+4. A [restore](README.md#writing-rollback-safe-nodes) unsubscribes the activation it replaces and subscribes the one it brings back, to the entity it recorded, looking its attribute up again.
 
 The node follows its attribute across changes to the entity's [attribute sets](../../../attributes.md#adding-and-removing-attribute-sets). If the set carrying the attribute is removed the node goes quiet rather than staying attached to the detached instance, and it rebinds when that set — or any set providing the key — is added back. A node whose attribute is not present on activation is not inert either: it picks the attribute up if a set later brings it in.
 

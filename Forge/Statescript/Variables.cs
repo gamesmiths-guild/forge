@@ -581,6 +581,51 @@ public class Variables
 	}
 
 	/// <summary>
+	/// Makes <paramref name="destination"/> hold the same variables as this, with the same values, and nothing else.
+	/// Arrays are copied, so writing to either afterwards leaves the other as it was; the objects held in object
+	/// variables are shared.
+	/// </summary>
+	/// <remarks>
+	/// A graph snapshot copies its graph variables this way. Shared variables belong to the entity, which every graph
+	/// the entity runs shares, so they are copied by whatever snapshots the entity.
+	/// </remarks>
+	/// <param name="destination">The variables to overwrite.</param>
+	public void CopyTo(Variables destination)
+	{
+		if (ReferenceEquals(destination, this))
+		{
+			return;
+		}
+
+		destination._variables.Clear();
+		destination._arrays.Clear();
+		destination._objectVariables.Clear();
+		destination._objectArrays.Clear();
+
+		foreach (KeyValuePair<StringKey, Variant128> variable in _variables)
+		{
+			destination._variables.Add(variable.Key, variable.Value);
+		}
+
+		foreach (KeyValuePair<StringKey, List<Variant128>> array in _arrays)
+		{
+			destination._arrays.Add(array.Key, [.. array.Value]);
+		}
+
+		foreach (KeyValuePair<StringKey, ObjectVariableStorage> variable in _objectVariables)
+		{
+			destination._objectVariables.Add(variable.Key, variable.Value);
+		}
+
+		foreach (KeyValuePair<StringKey, ObjectArrayStorage> array in _objectArrays)
+		{
+			destination._objectArrays.Add(
+				array.Key,
+				new ObjectArrayStorage(array.Value.ElementType, [.. array.Value.Values]));
+		}
+	}
+
+	/// <summary>
 	/// Creates a <see cref="Variant128"/> from a typed value.
 	/// </summary>
 	/// <typeparam name="T">The type of the value. Must be supported by <see cref="Variant128"/>.</typeparam>

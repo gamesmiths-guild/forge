@@ -314,6 +314,24 @@ public abstract class Node
 	}
 
 	/// <summary>
+	/// Lets go of what the node's running activation holds outside the graph, before a restore replaces it. The default
+	/// implementation holds nothing.
+	/// </summary>
+	/// <param name="graphContext">The graph context.</param>
+	internal virtual void DetachForRestore(GraphContext graphContext)
+	{
+	}
+
+	/// <summary>
+	/// Takes hold again of what a running activation brought back by a restore holds outside the graph. The default
+	/// implementation holds nothing.
+	/// </summary>
+	/// <param name="graphContext">The graph context.</param>
+	internal virtual void AttachForRestore(GraphContext graphContext)
+	{
+	}
+
+	/// <summary>
 	/// Creates a port of the specified type with the given index.
 	/// </summary>
 	/// <typeparam name="T">The type of port to create.</typeparam>

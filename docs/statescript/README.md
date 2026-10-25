@@ -119,6 +119,27 @@ var behavior = new GraphAbilityBehavior<DashData>(graph);
 
 For full details, see [Ability Integration](ability-integration.md).
 
+## Snapshots
+
+A graph run can be taken as a snapshot and put back later, which is what rollback and replay build on. `GraphProcessor.CaptureSnapshot()` returns a `GraphSnapshot` holding which state nodes are running, a copy of every node context and of the graph variables, the count that numbers activations, and what the run was started with: its shared variables, activation context, random and completion callback. `GraphProcessor.RestoreSnapshot(snapshot)` puts the run back as it was.
+
+```csharp
+GraphSnapshot snapshot = processor.CaptureSnapshot();
+
+processor.FixedUpdateGraph(fixedDeltaTime); // The run moves on...
+
+processor.RestoreSnapshot(snapshot); // ...and is back where the snapshot was taken.
+```
+
+- **A restore is silent.** No node activates or deactivates, nothing is emitted, and `OnGraphCompleted` isn't called, whether the restore starts the run again, ends it or changes it. The presentation pass then shows only what changed.
+- **The same steps run the same way again.** Restored activations keep their ids, and new ones are numbered on from where the snapshot was taken. `GraphContext.UpdateStamp` counts on rather than going back, since values are cached against it.
+- **A snapshot never changes.** It holds copies, and each restore copies them again, so one snapshot can be restored any number of times.
+- **Only the graph comes back.** Entities, effects, attributes and engine objects are referenced, not copied. Shared variables belong to the entity, which every graph it runs shares, so they aren't part of a graph snapshot either; `Variables.CopyTo` copies them for whatever snapshots the entity.
+- **A snapshot goes back into the processor that took it.** Activation ids, stamps and what node contexts point at belong to that processor's run, so restoring it into another processor throws, even one running the same graph.
+- **Snapshots are taken and restored by the host, between updates.** Doing either from inside a node, an update, a message delivery or a presentation pass throws.
+
+Nodes stay correct across a restore by keeping their run state in their node context and letting go of what they hold outside the graph. See [Writing rollback-safe nodes](nodes/state/README.md#writing-rollback-safe-nodes).
+
 ## Loop Detection
 
 Statescript graphs must be **acyclic**. The framework validates this at graph construction time and rejects connections that would create loops.

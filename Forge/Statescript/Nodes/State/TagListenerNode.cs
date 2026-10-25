@@ -93,15 +93,8 @@ public class TagListenerNode : StateNode<TagListenerNodeContext>
 			nodeContext.LastPresence[tags[i]] = entity.Tags.AllTags.HasTag(tags[i]);
 		}
 
-		void Handler(TagContainer allTags)
-		{
-			OnTagsChanged(graphContext, allTags);
-		}
-
 		nodeContext.SubscribedEntity = entity;
-		nodeContext.Handler = Handler;
-
-		entity.Tags.OnTagsChanged += Handler;
+		Subscribe(graphContext, nodeContext, entity);
 	}
 
 	/// <inheritdoc/>
@@ -109,14 +102,47 @@ public class TagListenerNode : StateNode<TagListenerNodeContext>
 	{
 		TagListenerNodeContext nodeContext = graphContext.GetNodeContext<TagListenerNodeContext>(NodeID);
 
-		if (nodeContext.SubscribedEntity is not null && nodeContext.Handler is not null)
-		{
-			nodeContext.SubscribedEntity.Tags.OnTagsChanged -= nodeContext.Handler;
-		}
+		Unsubscribe(nodeContext);
 
 		nodeContext.SubscribedEntity = null;
 		nodeContext.Handler = null;
 		nodeContext.LastPresence.Clear();
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestoreDetach(GraphContext graphContext)
+	{
+		Unsubscribe(graphContext.GetNodeContext<TagListenerNodeContext>(NodeID));
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestoreAttach(GraphContext graphContext)
+	{
+		TagListenerNodeContext nodeContext = graphContext.GetNodeContext<TagListenerNodeContext>(NodeID);
+
+		if (nodeContext.SubscribedEntity is not null)
+		{
+			Subscribe(graphContext, nodeContext, nodeContext.SubscribedEntity);
+		}
+	}
+
+	private static void Unsubscribe(TagListenerNodeContext nodeContext)
+	{
+		if (nodeContext.SubscribedEntity is not null && nodeContext.Handler is not null)
+		{
+			nodeContext.SubscribedEntity.Tags.OnTagsChanged -= nodeContext.Handler;
+		}
+	}
+
+	private void Subscribe(GraphContext graphContext, TagListenerNodeContext nodeContext, IForgeEntity entity)
+	{
+		void Handler(TagContainer allTags)
+		{
+			OnTagsChanged(graphContext, allTags);
+		}
+
+		nodeContext.Handler = Handler;
+		entity.Tags.OnTagsChanged += Handler;
 	}
 
 	private void OnTagsChanged(GraphContext graphContext, TagContainer allTags)

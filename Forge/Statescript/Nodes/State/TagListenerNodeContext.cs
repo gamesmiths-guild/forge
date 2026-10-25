@@ -19,7 +19,14 @@ public class TagListenerNodeContext : StateNodeContext
 	/// <summary>
 	/// Gets the last observed presence per watched tag.
 	/// </summary>
-	public Dictionary<Tag, bool> LastPresence { get; } = [];
+	public Dictionary<Tag, bool> LastPresence { get; private set; } = [];
 
 	internal Action<TagContainer>? Handler { get; set; }
+
+	/// <inheritdoc/>
+	protected override void OnCopied()
+	{
+		base.OnCopied();
+		LastPresence = new Dictionary<Tag, bool>(LastPresence);
+	}
 }

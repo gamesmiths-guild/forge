@@ -63,7 +63,8 @@ public sealed class GraphContext
 	/// <see cref="GraphProcessor"/> is started again - the processor keeps its context, so the count carries across
 	/// restarts. That is deliberate rather than an oversight: resetting to zero would let a resolver holding a cache
 	/// entry from the previous execution match a stamp from the new one and serve a value computed before the
-	/// restart.</para>
+	/// restart. For the same reason a restored snapshot (<see cref="GraphProcessor.RestoreSnapshot"/>) does not take it
+	/// back: the restore counts as a pass of its own, so nothing cached before it is served after.</para>
 	/// <para><b>It is a cache epoch, not a clock, and in particular it is not a network tick.</b> It is local to one
 	/// context and only ever counts up. A simulation tick shared between peers is neither - it has to mean the same
 	/// number on every machine and has to be settable, because reconciliation rewinds it. A stamp that could go
@@ -471,6 +472,16 @@ public sealed class GraphContext
 	internal bool HasNodeContext(Guid nodeID)
 	{
 		return _nodeContexts.ContainsKey(nodeID);
+	}
+
+	internal bool TryGetNodeContext(Guid nodeID, [NotNullWhen(true)] out INodeContext? context)
+	{
+		return _nodeContexts.TryGetValue(nodeID, out context);
+	}
+
+	internal void SetNodeContext(Guid nodeID, INodeContext context)
+	{
+		_nodeContexts[nodeID] = context;
 	}
 
 	internal void RemoveAllNodeContext()

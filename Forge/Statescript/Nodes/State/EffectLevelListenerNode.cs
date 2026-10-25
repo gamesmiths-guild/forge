@@ -70,15 +70,8 @@ public class EffectLevelListenerNode : StateNode<EffectLevelListenerNodeContext>
 			return;
 		}
 
-		void Handler(int newLevel)
-		{
-			OnLevelChanged(graphContext, newLevel);
-		}
-
 		nodeContext.SubscribedEffect = effect;
-		nodeContext.Handler = Handler;
-
-		effect.OnLevelChanged += Handler;
+		Subscribe(graphContext, nodeContext, effect);
 	}
 
 	/// <inheritdoc/>
@@ -87,13 +80,47 @@ public class EffectLevelListenerNode : StateNode<EffectLevelListenerNodeContext>
 		EffectLevelListenerNodeContext nodeContext =
 			graphContext.GetNodeContext<EffectLevelListenerNodeContext>(NodeID);
 
+		Unsubscribe(nodeContext);
+
+		nodeContext.SubscribedEffect = null;
+		nodeContext.Handler = null;
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestoreDetach(GraphContext graphContext)
+	{
+		Unsubscribe(graphContext.GetNodeContext<EffectLevelListenerNodeContext>(NodeID));
+	}
+
+	/// <inheritdoc/>
+	protected override void OnRestoreAttach(GraphContext graphContext)
+	{
+		EffectLevelListenerNodeContext nodeContext =
+			graphContext.GetNodeContext<EffectLevelListenerNodeContext>(NodeID);
+
+		if (nodeContext.SubscribedEffect is not null)
+		{
+			Subscribe(graphContext, nodeContext, nodeContext.SubscribedEffect);
+		}
+	}
+
+	private static void Unsubscribe(EffectLevelListenerNodeContext nodeContext)
+	{
 		if (nodeContext.SubscribedEffect is not null && nodeContext.Handler is not null)
 		{
 			nodeContext.SubscribedEffect.OnLevelChanged -= nodeContext.Handler;
 		}
+	}
 
-		nodeContext.SubscribedEffect = null;
-		nodeContext.Handler = null;
+	private void Subscribe(GraphContext graphContext, EffectLevelListenerNodeContext nodeContext, Effect effect)
+	{
+		void Handler(int newLevel)
+		{
+			OnLevelChanged(graphContext, newLevel);
+		}
+
+		nodeContext.Handler = Handler;
+		effect.OnLevelChanged += Handler;
 	}
 
 	private void OnLevelChanged(GraphContext graphContext, int newLevel)

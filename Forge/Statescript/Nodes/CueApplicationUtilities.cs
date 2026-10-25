@@ -3,6 +3,7 @@
 using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Statescript.Nodes.State;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Statescript.Nodes;
@@ -50,7 +51,7 @@ internal static class CueApplicationUtilities
 		StringKey sourceInputName,
 		StringKey customParametersInputName,
 		ICollection<AppliedCue>? appliedCues = null,
-		StateNodeContext? nodeContext = null)
+		CueNodeContext? nodeContext = null)
 	{
 		FireCues(
 			graphContext,
@@ -119,7 +120,7 @@ internal static class CueApplicationUtilities
 		StringKey customParametersInputName,
 		CueOperation operation,
 		ICollection<AppliedCue>? appliedCues,
-		StateNodeContext? nodeContext = null)
+		CueNodeContext? nodeContext = null)
 	{
 		if (!ResolveCueTags(graphContext, cueTagInputName, out IReadOnlyList<Tag> cueTags)
 			|| !ResolveTargets(graphContext, targetInputName, out IReadOnlyList<IForgeEntity> targets))
@@ -158,7 +159,7 @@ internal static class CueApplicationUtilities
 						break;
 
 					case CueOperation.Apply:
-						target.CuesManager.ApplyCue(cueTag, target, parameters, nodeContext);
+						target.CuesManager.ApplyCue(cueTag, target, parameters, nodeContext?.Application);
 						appliedCues?.Add(new AppliedCue(cueTag, target));
 						break;
 

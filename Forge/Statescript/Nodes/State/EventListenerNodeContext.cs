@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Statescript.Properties;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Statescript.Nodes.State;
 
@@ -13,7 +14,7 @@ public class EventListenerNodeContext : StateNodeContext
 	/// <summary>
 	/// Gets the subscription tokens to release on deactivation.
 	/// </summary>
-	public List<EventSubscriptionToken> Tokens { get; } = [];
+	public List<EventSubscriptionToken> Tokens { get; private set; } = [];
 
 	/// <summary>
 	/// Gets the event bus this node is subscribed to while active.
@@ -21,8 +22,20 @@ public class EventListenerNodeContext : StateNodeContext
 	public EventManager? SubscribedManager { get; internal set; }
 
 	/// <summary>
+	/// Gets the event tags this node is subscribed to while active.
+	/// </summary>
+	public IReadOnlyList<Tag> SubscribedTags { get; internal set; } = [];
+
+	/// <summary>
 	/// Gets the payload writer used to decompose received payloads into output variables, or <see langword="null"/>
 	/// when no provider is bound.
 	/// </summary>
 	public EventPayloadWriter? PayloadWriter { get; internal set; }
+
+	/// <inheritdoc/>
+	protected override void OnCopied()
+	{
+		base.OnCopied();
+		Tokens = [.. Tokens];
+	}
 }

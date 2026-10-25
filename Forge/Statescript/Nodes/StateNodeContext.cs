@@ -32,10 +32,34 @@ public class StateNodeContext : INodeContext
 	internal ulong ActivationStamp { get; set; }
 
 	// Unique within the graph context across runs, so the presentation pass can tell a running activation from one
-	// that replaced it since the last pass.
+	// that replaced it since the last pass. A restored snapshot counts from where it was taken, so running the same
+	// activations again gives them the same ids.
 	internal ulong ActivationId { get; set; }
 
 	internal int[]? DeferredDeactivationEventPortIds { get; set; }
 
 	internal List<int> DeferredEmitMessageData { get; set; } = [];
+
+	// A member-by-member copy for a graph snapshot, which every context type gets without code of its own.
+	internal StateNodeContext Copy()
+	{
+		var copy = (StateNodeContext)MemberwiseClone();
+		copy.DeferredEmitMessageData = [.. DeferredEmitMessageData];
+		copy.OnCopied();
+		return copy;
+	}
+
+	/// <summary>
+	/// Called on a copy of this context that a graph snapshot has just made, member by member, either to keep or to
+	/// restore. Until this returns, the copy shares every object the original holds. Give it a copy of its own of each
+	/// one the node changes in place, such as a list it adds to.
+	/// </summary>
+	/// <remarks>
+	/// Values need nothing, and neither do references the node only reads or replaces whole: an entity, an effect, an
+	/// array it never writes into. Those stay shared, so a restored context points at the same objects. Overrides call
+	/// the base first.
+	/// </remarks>
+	protected virtual void OnCopied()
+	{
+	}
 }

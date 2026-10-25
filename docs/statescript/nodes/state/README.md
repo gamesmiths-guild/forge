@@ -216,6 +216,97 @@ public class WaitForTagNode(Tag tag, bool restartOnRetrigger = false)
 
 No deactivation runs before `OnRestart`: the node stays active, so one that holds something — an applied effect, a subscription, a spawned instance — releases it there before acquiring it again, or the first one is left behind. Releasing can reach the rest of the graph — an effect's removal, a cue handler, a subgraph that ends — and end the node or stop the graph along the way, so check that the node context it released from is still `Active` before acquiring again. A node whose subgraph depends on what the restart replaces, such as a spawned instance that the subgraph moves around, disables that subgraph first (`((SubgraphPort)OutputPorts[SubgraphPort]).EmitDisableSubgraphMessage(graphContext)`), so it comes back fresh when the Subgraph port emits again.
 
+## Writing rollback-safe nodes
+
+A [graph snapshot](../../README.md#snapshots) keeps a copy of every node context, and a restore puts copies of those back without running `OnActivate` or `OnDeactivate`. A node comes through that intact when it follows three rules.
+
+**Keep everything a run changes in the node context.** Fields on the node itself belong to the graph definition, which every run shares, so a snapshot never sees them.
+
+**Give a copy collections of its own.** A context is copied member by member. Values need nothing, and neither do references the node only reads or replaces whole: an entity, an effect, an array it never writes into. A collection the node changes in place, such as a list it adds to, would be shared with the snapshot, so override `OnCopied` and give the copy its own. `OnCopied` runs on the copy, whose members still point at the original's objects until it replaces them:
+
+```csharp
+public class WatchNodeContext : StateNodeContext
+{
+    public List<IForgeEntity> Seen { get; private set; } = [];
+
+    protected override void OnCopied()
+    {
+        base.OnCopied();
+        Seen = [.. Seen];
+    }
+}
+```
+
+**Let go of what the node holds outside the graph, and take hold of it again.** An event subscription, a property the node overrides or a signal connection isn't graph state, so no snapshot can bring it back. A node that holds one while it runs overrides two hooks:
+
+- `OnRestoreDetach` runs before a restore replaces the node's running activation, which the restore may bring straight back. Let go of what it holds, as `OnDeactivate` would, but change no gameplay or graph state: emit nothing, write no variables, apply or remove no effects.
+- `OnRestoreAttach` runs after a restore brings back a running activation. Take hold again from what the context recorded, such as the entity it subscribed to, rather than resolving inputs again: they may have changed since.
+
+Running nodes are detached newest activation first and attached oldest first, so holds stacked on one object, such as two overrides of the same property, unwind and come back in order. Attaching makes a new handler rather than reusing the one the context recorded, which may have been made for another context: a restore puts in a copy, not the object a handler captured.
+
+```csharp
+public class WaitForDamageNodeContext : StateNodeContext
+{
+    public IForgeEntity? Entity { get; set; }
+
+    internal Action<EntityAttribute, int>? Handler { get; set; }
+}
+
+public class WaitForDamageNode : StateNode<WaitForDamageNodeContext>
+{
+    protected override void OnActivate(GraphContext graphContext)
+    {
+        var context = graphContext.GetNodeContext<WaitForDamageNodeContext>(NodeID);
+        graphContext.TryGetActivationContext(out AbilityBehaviorContext? ability);
+        context.Entity = ability?.Owner;
+        Subscribe(graphContext, context);
+    }
+
+    protected override void OnDeactivate(GraphContext graphContext)
+    {
+        Unsubscribe(graphContext.GetNodeContext<WaitForDamageNodeContext>(NodeID));
+    }
+
+    protected override void OnRestoreDetach(GraphContext graphContext)
+    {
+        Unsubscribe(graphContext.GetNodeContext<WaitForDamageNodeContext>(NodeID));
+    }
+
+    protected override void OnRestoreAttach(GraphContext graphContext)
+    {
+        Subscribe(graphContext, graphContext.GetNodeContext<WaitForDamageNodeContext>(NodeID));
+    }
+
+    private static void Unsubscribe(WaitForDamageNodeContext context)
+    {
+        if (context.Entity?.Attributes["Vitals.Health"] is EntityAttribute health && context.Handler is not null)
+        {
+            health.OnValueChanged -= context.Handler;
+        }
+    }
+
+    private void Subscribe(GraphContext graphContext, WaitForDamageNodeContext context)
+    {
+        if (context.Entity?.Attributes["Vitals.Health"] is not EntityAttribute health)
+        {
+            return;
+        }
+
+        context.Handler = (_, change) =>
+        {
+            if (change < 0)
+            {
+                DeactivateNode(graphContext);
+            }
+        };
+
+        health.OnValueChanged += context.Handler;
+    }
+}
+```
+
+What a node did to the world, such as an effect it applied or an ability it granted, isn't the node's to restore: it comes back with whatever restores the world, and the node's context still points at the same objects.
+
 ## Built-in State Nodes
 
 | Node | Description |
