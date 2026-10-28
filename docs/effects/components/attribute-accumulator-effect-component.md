@@ -36,6 +36,8 @@ new AttributeAccumulatorEffectComponent(attribute, magnitudeTag, policy)
 | `OnEffectApplied` | Does the same for an instant effect, which never becomes active. No subscription: it executes once, immediately. |
 | `OnEffectExecuted` | Measures the attribute against the baseline, adds the result under the policy, and republishes the total. |
 | `OnActiveEffectUnapplied` | Unsubscribes on full removal. A stack removal changes nothing. |
+| `CaptureSnapshot`, `RestoreSnapshot` | Captures the tracked attribute, the baseline and the total for an [entity snapshot](../../rollback.md), and puts them back on a restore. |
+| `OnRestoreDetach`, `OnRestoreAttach` | Unsubscribes before a restore and subscribes again after it. |
 
 ## Behavior
 

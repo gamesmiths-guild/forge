@@ -135,13 +135,15 @@ ActiveEffectHandle? fire = hero.EffectsManager.ApplyEffect(
 
 ## 5. Drive time
 
-Forge never reads a clock. Your game loop tells each entity how much time has passed, and timed and periodic effects, cooldowns and running abilities advance by exactly that much:
+Forge never reads a clock. Your game loop advances each entity by a step of the length it chooses, and timed and periodic effects, cooldowns and running abilities advance by exactly that much:
 
 ```csharp
+long tick;
+
 void Tick(Hero hero, float deltaTime)
 {
-    hero.EffectsManager.UpdateEffects(deltaTime);
-    hero.Abilities.UpdateAbilities(deltaTime);
+    // The tick number counts up by one per step.
+    EntitySimulation.Tick(hero, ++tick, deltaTime);
 }
 ```
 
@@ -156,7 +158,7 @@ Tick(hero, 2f);
 // Health: still 75
 ```
 
-Because time is an argument rather than a clock, the same code runs turn-based (call `Tick(hero, 1f)` once per turn), in a fixed-step simulation, or in a unit test.
+Because time is an argument rather than a clock, the same code runs turn-based (call `Tick(hero, 1f)` once per turn), in a fixed-step simulation, or in a unit test. [Simulation Tick](simulation.md) shows what a tick runs, and in which order.
 
 ## 6. Show it with a cue
 
@@ -294,7 +296,7 @@ healHandle.TryActivate(out failures);
 - **Tags**: as cue keys and as a cooldown marker.
 - **Cues**: presentation kept out of gameplay code.
 - **Abilities**: a behavior with a cost and a cooldown, granted and activated through a handle.
-- **Time**: one `Tick` call per entity, from your game loop.
+- **Time**: one `EntitySimulation.Tick` call per entity and step, from your game loop.
 
 ## Where to go next
 

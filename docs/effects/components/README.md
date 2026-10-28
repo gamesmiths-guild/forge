@@ -100,6 +100,10 @@ public interface IEffectComponent
     void OnActiveEffectChanged(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData);
     void OnEffectApplied(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData);
     void OnEffectExecuted(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData);
+    object? CaptureSnapshot();
+    void RestoreSnapshot(object? snapshot);
+    void OnRestoreDetach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData);
+    void OnRestoreAttach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData);
 }
 ```
 
@@ -289,6 +293,78 @@ Use cases:
 - Tracking execution statistics.
 - Triggering additional gameplay reactions.
 
+#### Rollback hooks
+
+An [entity snapshot](../../rollback.md) keeps every active effect with its component instances, and a restore puts each instance's state back into the same object. A component that changes its own fields after `OnActiveEffectAdded`, or holds something outside its effect, such as an event subscription, takes part through four hooks. A stateless component, shared by every application, needs none of them.
+
+| Hook | Called | Does |
+|---|---|---|
+| `CaptureSnapshot()` | When a snapshot is taken. | Returns what `RestoreSnapshot` needs to put the instance back, copying anything the instance changes in place, such as a list. |
+| `OnRestoreDetach(target, data)` | First in a restore. | Lets go of what the instance holds outside its effect. |
+| `RestoreSnapshot(snapshot)` | Once every instance has let go. | Puts the instance's fields back from what `CaptureSnapshot` returned. A snapshot can be restored more than once, so it copies out of it anything the instance goes on changing. |
+| `OnRestoreAttach(target, data)` | Last in a restore. | Takes hold again, from the restored state rather than by resolving anything again. |
+
+A restore is silent: none of them applies an effect, raises an event or fires a cue. Every active effect on the entity lets go newest first and takes hold again oldest first, so subscriptions come back in the order they were first made, and handlers sharing an event run in the same order after a restore.
+
+```csharp
+public class TagCounterComponent : IEffectComponent
+{
+    private Action<TagContainer>? _handler;
+
+    public int Changes { get; private set; }
+
+    public IEffectComponent CreateInstance() => new TagCounterComponent();
+
+    public bool OnActiveEffectAdded(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+    {
+        _handler = _ => Changes++;
+        target.Tags.OnTagsChanged += _handler;
+        return true;
+    }
+
+    public void OnActiveEffectUnapplied(
+        IForgeEntity target,
+        in ActiveEffectEvaluatedData activeEffectEvaluatedData,
+        bool removed,
+        EffectRemovalReason reason)
+    {
+        if (removed && _handler is not null)
+        {
+            target.Tags.OnTagsChanged -= _handler;
+        }
+    }
+
+    public object? CaptureSnapshot() => new Snapshot(_handler, Changes);
+
+    public void RestoreSnapshot(object? snapshot)
+    {
+        var restored = (Snapshot)snapshot!;
+        _handler = restored.Handler;
+        Changes = restored.Changes;
+    }
+
+    public void OnRestoreDetach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+    {
+        if (_handler is not null)
+        {
+            target.Tags.OnTagsChanged -= _handler;
+        }
+    }
+
+    public void OnRestoreAttach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+    {
+        if (_handler is not null)
+        {
+            target.Tags.OnTagsChanged += _handler;
+        }
+    }
+
+    private sealed record Snapshot(Action<TagContainer>? Handler, int Changes);
+}
+```
+
+What the component did to the entity, such as tags it added or abilities it granted, comes back with the entity itself; the hooks only put back what the instance remembers about it.
+
 ### Creating Custom Components
 
 Example custom component:
@@ -423,7 +499,7 @@ var complexEffectData = new EffectData(
 ## Best Practices
 
 1. **Single Responsibility**: Each component should handle one specific aspect of behavior.
-2. **Manage Resources**: Clean up any subscriptions or external resources in `OnActiveEffectUnapplied`.
+2. **Manage Resources**: Clean up any subscriptions or external resources in `OnActiveEffectUnapplied`, and let go of them and take hold again across a restore with the [rollback hooks](#rollback-hooks).
 3. **Consider Performance**: Components are called frequently, so optimize for performance.
 4. **Use Return Values Correctly**: Return `false` from validation methods only when you want to block behavior.
 5. **Leverage Existing Components**: Combine with built-in components when possible.

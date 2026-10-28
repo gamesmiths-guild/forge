@@ -61,7 +61,7 @@ AbilityHandle handle = player.Abilities.GrantAbilityPermanently(
 handle.TryActivate(out AbilityActivationFailures failureFlags, enemy);
 ```
 
-Activating the ability starts the graph at its Entry node; `UpdateAbilities` ticks it each frame, and the ability instance ends automatically when the graph finishes. Everything you already know about costs, cooldowns, tag requirements and triggers applies unchanged — the graph replaces the behavior, not the ability.
+Activating the ability starts the graph at its Entry node; `EntitySimulation.Tick` advances it each step, through `FixedUpdateAbilities`, and the ability instance ends automatically when the graph finishes. Everything you already know about costs, cooldowns, tag requirements and triggers applies unchanged — the graph replaces the behavior, not the ability.
 
 From here the [Statescript overview](../statescript/README.md) covers the [node catalog](../statescript/nodes/README.md), the [resolvers](../statescript/resolvers/README.md) that feed node inputs, [variables and data flow](../statescript/variables.md), and [ability integration](../statescript/ability-integration.md) in depth.
 

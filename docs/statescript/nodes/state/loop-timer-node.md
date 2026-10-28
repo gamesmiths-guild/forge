@@ -32,12 +32,12 @@ new LoopTimerNode(restartOnRetrigger = false)
 
 | Index | Label | Type | Description |
 |-------|-------|------|-------------|
-| 0 | Interval | `double` | The interval length in seconds, re-resolved every update. Non-positive intervals pause the timer. |
+| 0 | Interval | `double` | The interval length in seconds, re-resolved every fixed step. Non-positive intervals pause the timer. |
 | 1 | Loop Count | `int` | The number of loops to run. When unbound or non-positive, the timer loops until the node is deactivated externally. |
 
 ## Behavior
 
-1. Accumulates elapsed time each update. When more than one interval elapses in a single update, `OnInterval` is emitted once per completed interval.
+1. Accumulates elapsed time each fixed step. When more than one interval elapses in a single step, `OnInterval` is emitted once per completed interval.
 2. When the configured number of loops completes, it emits a final `OnInterval` followed by `OnFinished`, then self-deactivates.
 3. A retrigger is ignored, so the cadence and the loops already counted carry on. With `restartOnRetrigger`, the interval and the loop count both start again from zero.
 
@@ -57,5 +57,5 @@ loop.BindInput(LoopTimerNode.LoopCountInput, "ticks");
 
 - [State Nodes Overview](README.md)
 - [TimerNode](timer-node.md)
-- [RepeatNode](repeat-node.md) — a bounded loop that can also run entirely on the activation frame
+- [RepeatNode](repeat-node.md) — a bounded loop that can also run entirely as it activates
 - [ForEachNode](for-each-node.md) — the same bounded loop, driven by an array

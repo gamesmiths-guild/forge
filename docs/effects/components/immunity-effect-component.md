@@ -24,6 +24,8 @@ new ImmunityEffectComponent(immunityQueries)
 |------|--------------------------|
 | `OnActiveEffectAdded` | Stashes its own handle and registers itself as an `IEffectApplicationBlocker` on the target's `EffectsManager`. |
 | `OnActiveEffectUnapplied` | Unregisters when the effect is fully removed. A stack removal changes nothing. |
+| `CaptureSnapshot`, `RestoreSnapshot` | Captures its handle for an [entity snapshot](../../rollback.md), and puts it back on a restore. |
+| `OnRestoreDetach`, `OnRestoreAttach` | Unregisters before a restore and registers again after it. |
 
 ## Behavior
 

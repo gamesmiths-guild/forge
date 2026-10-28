@@ -57,6 +57,8 @@ public readonly record struct AttributeRequirement(
 | `CanApplyEffect` | Rejects the application if the application requirements are unmet, or the removal requirements are already met. |
 | `OnActiveEffectAdded` | Subscribes to every watched attribute's `OnValueChanged` and reports the initial inhibition state. |
 | `OnActiveEffectUnapplied` | Unsubscribes when the effect is fully removed. |
+| `CaptureSnapshot`, `RestoreSnapshot` | Captures which attributes it subscribed to for an [entity snapshot](../../rollback.md), and puts them back on a restore. |
+| `OnRestoreDetach`, `OnRestoreAttach` | Unsubscribes before a restore and subscribes again after it. |
 
 ## Behavior
 
