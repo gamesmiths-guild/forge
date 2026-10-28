@@ -10,7 +10,7 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// </summary>
 /// <remarks>
 /// <para>The interval input must resolve to a <see langword="double"/> value representing seconds, and is re-resolved
-/// every update so it can be driven by attributes or other dynamic values. Non-positive intervals pause the timer.
+/// every fixed step so it can be driven by attributes or other dynamic values. Non-positive intervals pause the timer.
 /// </para>
 /// <para>The loop-count input must resolve to an <see langword="int"/>. When unbound or non-positive, the timer loops
 /// until the node is deactivated externally.</para>
@@ -84,7 +84,7 @@ public class LoopTimerNode(bool restartOnRetrigger = false) : StateNode<LoopTime
 	}
 
 	/// <inheritdoc/>
-	protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+	protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
 	{
 		if (!graphContext.TryResolve(InputProperties[IntervalInput].BoundName, out double interval)
 			|| interval <= 0)

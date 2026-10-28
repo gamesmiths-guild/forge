@@ -193,7 +193,7 @@ public class NodeParameterTests
 
 		processor.GraphContext.IsActive.Should().BeTrue();
 
-		processor.UpdateGraph(3.0);
+		processor.FixedUpdateGraph(3.0);
 
 		processor.GraphContext.IsActive.Should().BeFalse();
 	}

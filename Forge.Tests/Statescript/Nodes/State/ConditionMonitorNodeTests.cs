@@ -65,7 +65,7 @@ public class ConditionMonitorNodeTests
 
 		// Flip to false: the true subgraph is disabled and the false subgraph activates.
 		processor.GraphContext.GraphVariables.SetVar("condition", false);
-		processor.UpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
 
 		becameFalse.ExecutionCount.Should().Be(1);
 		trueChildDeactivated.ExecutionCount.Should().Be(1);
@@ -73,7 +73,7 @@ public class ConditionMonitorNodeTests
 
 		// Flip back to true: the true subgraph re-activates.
 		processor.GraphContext.GraphVariables.SetVar("condition", true);
-		processor.UpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
 
 		becameTrue.ExecutionCount.Should().Be(2);
 		trueChildDeactivated.ExecutionCount.Should().Be(1);
@@ -104,8 +104,8 @@ public class ConditionMonitorNodeTests
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
-		processor.UpdateGraph(0.1);
-		processor.UpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
 
 		becameTrue.ExecutionCount.Should().Be(1);
 	}
@@ -138,7 +138,7 @@ public class ConditionMonitorNodeTests
 		becameTrue.ExecutionCount.Should().Be(0);
 
 		processor.GraphContext.GraphVariables.SetVar("condition", true);
-		processor.UpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
 
 		becameTrue.ExecutionCount.Should().Be(1);
 		processor.GraphContext.IsActive.Should().BeFalse();
@@ -191,7 +191,7 @@ public class ConditionMonitorNodeTests
 
 		becameTrue.ExecutionCount.Should().Be(0);
 
-		processor.UpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
 
 		becameTrue.ExecutionCount.Should().Be(1);
 	}
@@ -231,7 +231,7 @@ public class ConditionMonitorNodeTests
 		processor.StartGraph();
 		processor.GraphContext.GraphVariables.SetVar("condition", true);
 
-		processor.Invoking(x => x.UpdateGraph(0.1)).Should().NotThrow();
+		processor.Invoking(x => x.FixedUpdateGraph(0.1)).Should().NotThrow();
 
 		trueChild.ActivateCount.Should().Be(0, "the graph stopped before the true subgraph started");
 		processor.GraphContext.IsActive.Should().BeFalse();
@@ -270,7 +270,7 @@ public class ConditionMonitorNodeTests
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 		processor.GraphContext.GraphVariables.SetVar("condition", true);
-		processor.UpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
 
 		trueChild.ActivateCount.Should().Be(0, "a subgraph started under an aborted node would have nothing to end it");
 	}

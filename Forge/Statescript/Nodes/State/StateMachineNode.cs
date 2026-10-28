@@ -9,8 +9,8 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// graph-native state machine.
 /// </summary>
 /// <remarks>
-/// <para>The state input must resolve to an <see langword="int"/> and is re-evaluated on activation and every update
-/// tick. Out-of-range selectors are clamped to the valid state range.</para>
+/// <para>The state input must resolve to an <see langword="int"/> and is re-evaluated on activation and every fixed
+/// step. Out-of-range selectors are clamped to the valid state range.</para>
 /// <para>When the selection changes, the previous state's subgraph is disabled, the new state's subgraph is
 /// activated, the Current State output variable (<see langword="int"/>) is written, and
 /// <see cref="OnStateChangedPort"/> is emitted. Entering the first state after activation counts as a change.</para>
@@ -82,7 +82,7 @@ public class StateMachineNode(int stateCount = 2) : StateNode<StateMachineNodeCo
 	}
 
 	/// <inheritdoc/>
-	protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+	protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
 	{
 		EvaluateState(graphContext);
 	}

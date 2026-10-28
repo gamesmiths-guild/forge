@@ -33,15 +33,15 @@ public class TimerNodeTests
 		processor.GraphContext.IsActive.Should().BeTrue();
 
 		// Not enough time has passed.
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 		processor.GraphContext.IsActive.Should().BeTrue();
 
 		// Still not enough.
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(0.5);
 		processor.GraphContext.IsActive.Should().BeTrue();
 
 		// Now it should deactivate (total: 1.0 + 0.5 + 0.5 = 2.0).
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(0.5);
 		processor.GraphContext.IsActive.Should().BeFalse();
 	}
 
@@ -70,7 +70,7 @@ public class TimerNodeTests
 
 		onDeactivateAction.ExecutionCount.Should().Be(0);
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		onDeactivateAction.ExecutionCount.Should().Be(1);
 	}
@@ -100,7 +100,7 @@ public class TimerNodeTests
 
 		onTimerEndAction.ExecutionCount.Should().Be(0);
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		onTimerEndAction.ExecutionCount.Should().Be(1);
 	}
@@ -134,7 +134,7 @@ public class TimerNodeTests
 
 		readNode.Found.Should().BeFalse();
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		readNode.Found.Should().BeTrue();
 		readNode.LastReadValue.Should().Be(1);
@@ -163,7 +163,7 @@ public class TimerNodeTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		processor.StopGraph();
 
@@ -198,7 +198,7 @@ public class TimerNodeTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(0.5);
 
 		onTimerEndAction.ExecutionCount.Should().Be(0);
 		processor.GraphContext.IsActive.Should().BeFalse();
@@ -250,13 +250,13 @@ public class TimerNodeTests
 		processor1.StartGraph();
 		processor2.StartGraph();
 
-		processor1.UpdateGraph(2.0);
-		processor2.UpdateGraph(1.0);
+		processor1.FixedUpdateGraph(2.0);
+		processor2.FixedUpdateGraph(1.0);
 
 		processor1.GraphContext.IsActive.Should().BeFalse();
 		processor2.GraphContext.IsActive.Should().BeTrue();
 
-		processor2.UpdateGraph(1.0);
+		processor2.FixedUpdateGraph(1.0);
 		processor2.GraphContext.IsActive.Should().BeFalse();
 	}
 
@@ -272,8 +272,8 @@ public class TimerNodeTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.5);
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(1.5);
+		processor.FixedUpdateGraph(0.5);
 
 		onTimerEnd.ExecutionCount.Should().Be(1);
 	}
@@ -291,13 +291,13 @@ public class TimerNodeTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
-		processor.UpdateGraph(0.5);
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
+		processor.FixedUpdateGraph(0.5);
+		processor.FixedUpdateGraph(1.0);
 
 		onTimerEnd.ExecutionCount.Should().Be(0);
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		onTimerEnd.ExecutionCount.Should().Be(1);
 	}

@@ -315,7 +315,7 @@ public class GraphProcessorTests
 
 		processor.GraphContext.IsActive.Should().BeTrue();
 
-		processor.UpdateGraph(5f);
+		processor.FixedUpdateGraph(5f);
 
 		processor.GraphContext.IsActive.Should().BeFalse();
 
@@ -504,7 +504,7 @@ public class GraphProcessorTests
 		processor.GraphContext.IsActive.Should().BeTrue();
 		completed.Should().BeFalse();
 
-		processor.UpdateGraph(5.0);
+		processor.FixedUpdateGraph(5.0);
 
 		processor.GraphContext.IsActive.Should().BeFalse();
 		completed.Should().BeTrue();
@@ -570,7 +570,7 @@ public class GraphProcessorTests
 
 		processor.GraphContext.IsActive.Should().BeTrue();
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		processor.GraphContext.IsActive.Should().BeFalse();
 		completed.Should().BeTrue();
@@ -608,7 +608,7 @@ public class GraphProcessorTests
 		var processor = new GraphProcessor(graph);
 
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		readNode.ExecutionCount.Should().Be(1);
 		readNode.Found.Should().BeTrue();
@@ -616,7 +616,7 @@ public class GraphProcessorTests
 		processor.GraphContext.IsActive.Should().BeFalse();
 
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		readNode.ExecutionCount.Should().Be(2);
 		readNode.Found.Should().BeTrue();
@@ -667,7 +667,7 @@ public class GraphProcessorTests
 		processor.GraphContext.IsActive.Should().BeTrue();
 		completed.Should().BeFalse();
 
-		processor.UpdateGraph(2.0);
+		processor.FixedUpdateGraph(2.0);
 
 		processor.GraphContext.IsActive.Should().BeFalse();
 		completed.Should().BeTrue();
@@ -702,11 +702,11 @@ public class GraphProcessorTests
 		processor.GraphContext.IsActive.Should().BeTrue();
 		completed.Should().BeFalse();
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 		processor.GraphContext.IsActive.Should().BeTrue();
 		completed.Should().BeFalse();
 
-		processor.UpdateGraph(2.0);
+		processor.FixedUpdateGraph(2.0);
 		processor.GraphContext.IsActive.Should().BeFalse();
 		completed.Should().BeTrue();
 	}
@@ -743,7 +743,7 @@ public class GraphProcessorTests
 		completed.Should().BeFalse("the timer the same message starts keeps the graph running");
 		processor.GraphContext.IsActive.Should().BeTrue();
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 		completed.Should().BeTrue();
 	}
 
@@ -777,12 +777,12 @@ public class GraphProcessorTests
 		bool completed = false;
 		processor.OnGraphCompleted = () => completed = true;
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		completed.Should().BeFalse("the timer the same message starts keeps the graph running");
 		processor.GraphContext.IsActive.Should().BeTrue();
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 		completed.Should().BeTrue();
 	}
 
@@ -831,13 +831,13 @@ public class GraphProcessorTests
 		};
 
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		completions.Should().Be(1, "the second run's timer started a node that keeps it running");
 		processor.GraphContext.IsActive.Should().BeTrue();
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		completions.Should().Be(2, "the second run completes once its last node ends");
 		processor.GraphContext.IsActive.Should().BeFalse();
@@ -873,7 +873,7 @@ public class GraphProcessorTests
 		var processor = new GraphProcessor(graph);
 		RestartOnFirstCompletion(processor);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		processor.GraphContext.IsActive.Should().BeTrue("the update that ended the first run reaches none of the next");
 	}
@@ -957,7 +957,7 @@ public class GraphProcessorTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		node.DeactivateCount.Should().Be(1, "the stop finishes ending the node it found being disabled");
 		child.DeactivateCount.Should().Be(1, "the stop reaches the subgraph that disabling had yet to");
@@ -995,7 +995,7 @@ public class GraphProcessorTests
 		var processor = new GraphProcessor(graph);
 		stop.Processor = processor;
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		started.ActivateCount.Should().Be(1);
 		started.DeactivateCount.Should().Be(1, "the stop ends a node it can only reach through one being disabled");
@@ -1019,12 +1019,12 @@ public class GraphProcessorTests
 		processor.OnGraphCompleted = () => completedCount++;
 		processor.StartGraph();
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 		completedCount.Should().Be(1);
 
 		// Subsequent updates should be no-ops and not throw or fire the callback again.
-		processor.UpdateGraph(1.0);
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 		completedCount.Should().Be(1);
 		processor.GraphContext.IsActive.Should().BeFalse();
 	}
@@ -1132,7 +1132,7 @@ public class GraphProcessorTests
 
 		processor.GraphContext.IsActive.Should().BeTrue();
 
-		processor.UpdateGraph(2.0);
+		processor.FixedUpdateGraph(2.0);
 
 		processor.GraphContext.IsActive.Should().BeFalse(
 			"timer should use the variable (2.0) not the property (100.0)");
@@ -1158,7 +1158,7 @@ public class GraphProcessorTests
 
 		processor.GraphContext.IsActive.Should().BeTrue();
 
-		processor.UpdateGraph(7.5);
+		processor.FixedUpdateGraph(7.5);
 
 		processor.GraphContext.IsActive.Should().BeFalse("timer should complete using the property-defined duration");
 	}

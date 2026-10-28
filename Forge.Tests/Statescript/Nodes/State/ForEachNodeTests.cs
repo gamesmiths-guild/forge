@@ -190,12 +190,12 @@ public class ForEachNodeTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 		processor.StartGraph();
 		elements.ReadValues.Should().Equal(10);
 
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(0.5);
 		elements.ReadValues.Should().Equal(10, 20);
 		onFinished.ExecutionCount.Should().Be(0);
 		processor.GraphContext.IsActive.Should().BeTrue();
 
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(0.5);
 		elements.ReadValues.Should().Equal(10, 20, 30);
 		onFinished.ExecutionCount.Should().Be(1);
 		processor.GraphContext.IsActive.Should().BeFalse();
@@ -357,9 +357,9 @@ public class ForEachNodeTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
-		processor.UpdateGraph(0.5);
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(1.0);
+		processor.FixedUpdateGraph(0.5);
+		processor.FixedUpdateGraph(0.5);
 
 		elements.ReadValues.Should().Equal(10, 20, 30);
 	}
@@ -380,14 +380,14 @@ public class ForEachNodeTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		// Changed after the first snapshot was taken, so only a fresh one sees it.
 		processor.GraphContext.GraphVariables.SetArrayElement("source", 0, 99);
 
-		processor.UpdateGraph(0.5);
-		processor.UpdateGraph(1.0);
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(0.5);
+		processor.FixedUpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		elements.ReadValues.Should().Equal(10, 20, 99, 20, 30);
 		onFinished.ExecutionCount.Should().Be(1);

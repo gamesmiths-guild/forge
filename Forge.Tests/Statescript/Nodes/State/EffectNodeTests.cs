@@ -284,7 +284,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		target.EffectsManager.GetEffectStackData(effectData).Should().ContainSingle();
 
 		target.EffectsManager.UpdateEffects(1.0);
-		processor.UpdateGraph(0.0);
+		processor.FixedUpdateGraph(0.0);
 
 		effectEndMessages.Should().Be(1);
 		completed.Should().BeTrue();
@@ -323,7 +323,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		target.EffectsManager.GetEffectStackData(infiniteEffect).Should().ContainSingle();
 
 		target.EffectsManager.UpdateEffects(1.0);
-		processor.UpdateGraph(0.0);
+		processor.FixedUpdateGraph(0.0);
 
 		effectEndMessages.Should().Be(0);
 		completed.Should().BeFalse();
@@ -334,7 +334,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute2", [7, 2, 5, 0]);
 
 		target.EffectsManager.RemoveEffectData(infiniteEffect);
-		processor.UpdateGraph(0.0);
+		processor.FixedUpdateGraph(0.0);
 
 		effectEndMessages.Should().Be(1);
 		completed.Should().BeTrue();
@@ -382,7 +382,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		processor.GraphContext.IsActive.Should().BeTrue();
 		target.EffectsManager.GetEffectStackData(effectData).Should().ContainSingle();
 
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(0.5);
 
 		effectEndMessages.Should().Be(0);
 		completed.Should().BeTrue();
@@ -569,7 +569,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 
@@ -595,7 +595,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		counter.AddedCount.Should().Be(2);
 		counter.RemovedCount.Should().Be(1);
@@ -636,7 +636,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		counter.Removed = processor.StopGraph;
 		processor.StartGraph();
 
-		processor.Invoking(x => x.UpdateGraph(1.0)).Should().NotThrow();
+		processor.Invoking(x => x.FixedUpdateGraph(1.0)).Should().NotThrow();
 
 		counter.AddedCount.Should().Be(1, "the restart ended with the graph instead of applying again");
 		counter.RemovedCount.Should().Be(1, "the graph stopping does not remove the effect a second time");
@@ -673,7 +673,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 		counter.Removed = processor.StopGraph;
 		RestartOnFirstCompletion(processor);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		counter.AddedCount.Should().Be(2, "the new run applied the effect, and the restart it replaced did not");
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
@@ -812,7 +812,7 @@ public class EffectNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixt
 
 		RestartOnFirstCompletion(processor);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		TestUtils.TestAttribute(target, "TestAttributeSet.Attribute1", [11, 1, 10, 0]);
 		processor.GraphContext.IsActive.Should().BeTrue("the new run still holds its effect");

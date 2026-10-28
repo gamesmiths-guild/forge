@@ -382,7 +382,7 @@ public class GrantAbilityNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : ICl
 		handle.TryActivate(out _).Should().BeTrue();
 		handle.IsActive.Should().BeTrue();
 
-		owner.Abilities.UpdateAbilities(1.0);
+		owner.Abilities.FixedUpdateAbilities(1.0);
 
 		handle.IsActive.Should().BeFalse();
 		endedAbilities.Should().ContainSingle().Which.WasCanceled.Should().BeTrue();

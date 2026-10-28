@@ -70,7 +70,7 @@ public class StateNodeActivationTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		later.ActivateCount.Should().Be(0, "a node reached after the graph stopped would run in a graph that is gone");
 		processor.GraphContext.IsActive.Should().BeFalse();
@@ -104,7 +104,7 @@ public class StateNodeActivationTests
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 		processor.GraphContext.GraphVariables.SetVar("condition", true);
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		later.ActivateCount.Should().Be(0, "a node reached after the graph stopped would run in a graph that is gone");
 		processor.GraphContext.IsActive.Should().BeFalse();
@@ -137,7 +137,7 @@ public class StateNodeActivationTests
 		var processor = new GraphProcessor(graph);
 		node.Processor = processor;
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		onActivate.ExecutionCount.Should().Be(1, "the graph stopped before the restart finished");
 	}
@@ -562,7 +562,7 @@ public class StateNodeActivationTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		child.DeactivateCount.Should().Be(1);
 		processor.GraphContext.IsActive.Should().BeFalse("the timer ended along with its subgraph");
@@ -1098,7 +1098,7 @@ public class StateNodeActivationTests
 		processor.StartGraph();
 
 		// The timer runs out, and what its OnDeactivate reaches fails as it ends.
-		processor.Invoking(x => x.UpdateGraph(1.0)).Should().Throw<NotSupportedException>();
+		processor.Invoking(x => x.FixedUpdateGraph(1.0)).Should().Throw<NotSupportedException>();
 
 		IsActive(processor, timer).Should().BeFalse();
 		onTimerEnd.ExecutionCount.Should().Be(1, "the timer has still run out, and what waits on that goes on");
@@ -1287,7 +1287,7 @@ public class StateNodeActivationTests
 		var processor = new GraphProcessor(graph);
 		RestartOnFirstCompletion(processor);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		child.ActivateCount.Should().Be(2);
 		child.DeactivateCount.Should().Be(1, "the stop ended the first run's child, and nothing ends the new one's");
@@ -1323,7 +1323,7 @@ public class StateNodeActivationTests
 		var processor = new GraphProcessor(graph);
 		RestartOnFirstCompletion(processor);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		node.ActivateCount.Should().Be(2);
 		node.DeactivateCount.Should().Be(1, "the stop ended the first run's node, and nothing ends the new one's");
@@ -1372,7 +1372,7 @@ public class StateNodeActivationTests
 		var processor = new GraphProcessor(graph);
 		RestartOnFirstCompletion(processor);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		IsActive(processor, parentSibling).Should().BeTrue("the first run's disabling ends none of the next run's");
 		IsActive(processor, exitingSibling).Should().BeTrue("the first run's disabling ends none of the next run's");
@@ -1410,7 +1410,7 @@ public class StateNodeActivationTests
 		var processor = new GraphProcessor(graph);
 		RestartOnFirstCompletion(processor);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		IsActive(processor, child).Should().BeTrue("the first run's disabling ends none of the next run's");
 	}
@@ -1447,7 +1447,7 @@ public class StateNodeActivationTests
 		var processor = new GraphProcessor(graph);
 		node.Processor = processor;
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		onActivate.ExecutionCount.Should().Be(0, "the graph stopped before the node finished activating");
 	}

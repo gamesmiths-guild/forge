@@ -10,7 +10,7 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// <para>The count input must resolve to an <see langword="int"/> and is re-resolved before every iteration, so a
 /// count driven by an attribute can grow or shrink while the loop runs. When it is unbound or non-positive the node
 /// runs no iterations at all and finishes immediately — an unbound count is never an endless loop, which matters
-/// because the whole loop can run within a single frame.</para>
+/// because the whole loop can run within a single step.</para>
 /// <para>See <see cref="IterationNode{T}"/> for the condition, interval and ending semantics shared with
 /// <see cref="ForEachNode"/>, including what a retrigger does.</para>
 /// </remarks>
@@ -28,8 +28,8 @@ public class RepeatNode(bool restartOnRetrigger = false) : IterationNode<Iterati
 	public const byte IndexOutput = 0;
 
 	/// <inheritdoc/>
-	public override string Description => "Emits an iteration event a fixed number of times, all within the " +
-		"activation frame or spaced by an interval, then deactivates.";
+	public override string Description => "Emits an iteration event a fixed number of times, all as it " +
+		"activates or spaced by an interval, then deactivates.";
 
 	/// <inheritdoc/>
 	protected override void DefineSourceParameters(

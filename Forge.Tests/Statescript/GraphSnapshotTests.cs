@@ -20,11 +20,11 @@ public class GraphSnapshotTests
 	public void A_restore_brings_back_the_running_nodes_their_contexts_and_the_graph_variables()
 	{
 		(GraphProcessor processor, TimerNode timer) = StartTimer();
-		processor.UpdateGraph(0.25);
+		processor.FixedUpdateGraph(0.25);
 		GraphSnapshot snapshot = processor.CaptureSnapshot();
 
 		processor.GraphContext.GraphVariables.SetArrayElement("history", 0, 9);
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 		processor.GraphContext.IsActive.Should().BeFalse();
 		ReadCount(processor).Should().Be(1);
 
@@ -36,9 +36,9 @@ public class GraphSnapshotTests
 		processor.GraphContext.GraphVariables.TryGetArrayElement("history", 0, out int first).Should().BeTrue();
 		first.Should().Be(1);
 
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(0.5);
 		processor.GraphContext.IsActive.Should().BeTrue();
-		processor.UpdateGraph(0.25);
+		processor.FixedUpdateGraph(0.25);
 		processor.GraphContext.IsActive.Should().BeFalse("the restored timer finishes on its own time");
 		ReadCount(processor).Should().Be(1);
 	}
@@ -48,7 +48,7 @@ public class GraphSnapshotTests
 	public void A_snapshot_is_left_as_it_was_and_restores_any_number_of_times()
 	{
 		(GraphProcessor processor, TimerNode timer) = StartTimer();
-		processor.UpdateGraph(0.25);
+		processor.FixedUpdateGraph(0.25);
 		GraphSnapshot snapshot = processor.CaptureSnapshot();
 
 		for (int i = 0; i < 3; i++)
@@ -59,7 +59,7 @@ public class GraphSnapshotTests
 			processor.GraphContext.GraphVariables.TryGetArrayElement("history", 0, out int first).Should().BeTrue();
 			first.Should().Be(1);
 
-			processor.UpdateGraph(0.5);
+			processor.FixedUpdateGraph(0.5);
 			processor.GraphContext.GraphVariables.SetArrayElement("history", 0, 9);
 		}
 	}
@@ -116,13 +116,13 @@ public class GraphSnapshotTests
 		processor.GraphContext.SharedVariables = new Variables();
 		processor.OnGraphCompleted = () => log.Add("second");
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		processor.RestoreSnapshot(snapshot);
 
 		processor.GraphContext.ActivationContext.Should().Be("first");
 		processor.GraphContext.SharedVariables.Should().BeSameAs(firstShared);
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 		log.Should().Equal("first", "second", "first");
 	}
 
@@ -275,8 +275,8 @@ public class GraphSnapshotTests
 	{
 		(GraphProcessor processor, _) = StartTimer();
 		GraphSnapshot snapshot = processor.CaptureSnapshot();
-		processor.UpdateGraph(0.1);
-		processor.UpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
 		ulong stamp = processor.GraphContext.UpdateStamp;
 
 		processor.RestoreSnapshot(snapshot);

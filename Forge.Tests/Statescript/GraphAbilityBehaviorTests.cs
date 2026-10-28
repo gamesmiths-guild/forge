@@ -77,10 +77,10 @@ public class GraphAbilityBehaviorTests(TagsAndCuesFixture fixture) : IClassFixtu
 		failureFlags.Should().Be(AbilityActivationFailures.None);
 		handle.IsActive.Should().BeTrue();
 
-		behavior.Processor.UpdateGraph(1.0);
+		behavior.Processor.FixedUpdateGraph(1.0);
 		handle.IsActive.Should().BeTrue();
 
-		behavior.Processor.UpdateGraph(1.0);
+		behavior.Processor.FixedUpdateGraph(1.0);
 		handle.IsActive.Should().BeFalse();
 	}
 

@@ -113,7 +113,7 @@ public class FlowNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		// Switch to state 1: state 0's subgraph is disabled.
 		processor.GraphContext.GraphVariables.SetVar("state", 1);
-		processor.UpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
 
 		stateChanged.ExecutionCount.Should().Be(2);
 		stateZeroDeactivated.ExecutionCount.Should().Be(1);
@@ -122,7 +122,7 @@ public class FlowNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 
 		// Out-of-range selectors are clamped: 99 clamps to state 1, which is already active.
 		processor.GraphContext.GraphVariables.SetVar("state", 99);
-		processor.UpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
 
 		stateChanged.ExecutionCount.Should().Be(2);
 	}
@@ -162,7 +162,7 @@ public class FlowNodesTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixtu
 		processor.StartGraph();
 		processor.GraphContext.GraphVariables.SetVar("state", 1);
 
-		processor.Invoking(x => x.UpdateGraph(0.1)).Should().NotThrow();
+		processor.Invoking(x => x.FixedUpdateGraph(0.1)).Should().NotThrow();
 
 		stateOneChild.ActivateCount.Should().Be(0, "the graph stopped before state 1 was entered");
 		processor.GraphContext.IsActive.Should().BeFalse();

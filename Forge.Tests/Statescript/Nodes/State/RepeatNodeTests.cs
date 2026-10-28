@@ -74,12 +74,12 @@ public class RepeatNodeTests
 		onIteration.ExecutionCount.Should().Be(1);
 		onFinished.ExecutionCount.Should().Be(0);
 
-		processor.UpdateGraph(0.2);
+		processor.FixedUpdateGraph(0.2);
 		onIteration.ExecutionCount.Should().Be(2);
 		onFinished.ExecutionCount.Should().Be(0);
 		processor.GraphContext.IsActive.Should().BeTrue();
 
-		processor.UpdateGraph(0.2);
+		processor.FixedUpdateGraph(0.2);
 		onIteration.ExecutionCount.Should().Be(3);
 		onFinished.ExecutionCount.Should().Be(1);
 		processor.GraphContext.IsActive.Should().BeFalse();
@@ -99,7 +99,7 @@ public class RepeatNodeTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(3.5);
+		processor.FixedUpdateGraph(3.5);
 
 		onIteration.ExecutionCount.Should().Be(4);
 		onFinished.ExecutionCount.Should().Be(1);
@@ -330,7 +330,7 @@ public class RepeatNodeTests
 		stop.Processor = processor;
 		RestartOnFirstCompletion(processor);
 		processor.StartGraph();
-		processor.UpdateGraph(3.0);
+		processor.FixedUpdateGraph(3.0);
 
 		onIteration.ExecutionCount.Should().Be(3, "the rest of the update belonged to the old run, not the new one");
 		processor.GraphContext.IsActive.Should().BeTrue();
@@ -385,9 +385,9 @@ public class RepeatNodeTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
-		processor.UpdateGraph(0.5);
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(1.0);
+		processor.FixedUpdateGraph(0.5);
+		processor.FixedUpdateGraph(0.5);
 
 		onIteration.ExecutionCount.Should().Be(3);
 		onFinished.ExecutionCount.Should().Be(1);
@@ -408,17 +408,17 @@ public class RepeatNodeTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(1.0);
+		processor.FixedUpdateGraph(0.5);
 
 		// Two iterations before the retrigger, and the restart runs its first one on the same frame.
 		onIteration.ExecutionCount.Should().Be(3);
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		onFinished.ExecutionCount.Should().Be(0);
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		onIteration.ExecutionCount.Should().Be(5);
 		onFinished.ExecutionCount.Should().Be(1);

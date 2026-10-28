@@ -199,7 +199,7 @@ public class NodeSnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 			i =>
 			{
 				processor.GraphContext.GraphVariables.SetVar("state", states[i]);
-				processor.UpdateGraph(Delta);
+				processor.FixedUpdateGraph(Delta);
 			},
 			() => $"{Describe(processor, [stateMachine, .. timers])} current={Read<int>(processor, "current")}");
 	}
@@ -575,7 +575,7 @@ public class NodeSnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 	private static void Step(GraphProcessor processor, int step)
 	{
 		processor.GraphContext.GraphVariables.SetVar("gate", _gate[step]);
-		processor.UpdateGraph(Delta);
+		processor.FixedUpdateGraph(Delta);
 	}
 
 	// Puts the node under a condition monitor that watches the gate, which the steps close and open.

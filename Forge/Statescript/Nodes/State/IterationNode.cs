@@ -10,11 +10,11 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// and one of three mutually exclusive endings when it stops.
 /// </summary>
 /// <remarks>
-/// <para>The first iteration always runs on the activation frame. When the interval input is unbound or resolves to a
-/// non-positive value the whole loop runs there too, one iteration after another, which is what makes same-frame
+/// <para>The first iteration always runs as the node activates. When the interval input is unbound or resolves to a
+/// non-positive value the whole loop runs then too, one iteration after another, which is what makes same-step
 /// chains and burst patterns expressible. A positive interval instead spaces out the iterations that follow the first
 /// one, so the synchronous behavior is simply the zero-interval limit of the paced one. This is deliberately unlike
-/// <see cref="LoopTimerNode"/>, which never fires on the activation frame.</para>
+/// <see cref="LoopTimerNode"/>, which never fires as it activates.</para>
 /// <para>The optional condition input is evaluated once per iteration, right before that iteration is due, including
 /// the first: the loop ends as soon as it does not hold. Leaving it unbound means the loop has no early exit.</para>
 /// <para><b>Every way a loop can end has its own port</b>, and exactly one of them fires:</para>
@@ -37,7 +37,7 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// and <see cref="PrepareIteration"/>. Their source input always occupies index 0, because the shared condition and
 /// interval inputs are appended after it.</para>
 /// <para>A retrigger while the loop runs is ignored, or with <paramref name="restartOnRetrigger"/> the walk starts over
-/// from the first iteration, which runs on the restart frame just as it does on activation.</para>
+/// from the first iteration, which runs as the node restarts just as it does on activation.</para>
 /// </remarks>
 /// <typeparam name="T">The type of the iteration node context.</typeparam>
 /// <param name="restartOnRetrigger">Whether a retrigger restarts the loop instead of being ignored.</param>
@@ -185,7 +185,7 @@ public abstract class IterationNode<T>(bool restartOnRetrigger = false) : StateN
 	/// <inheritdoc/>
 	protected override void OnActivated(GraphContext graphContext)
 	{
-		// The first iteration always runs on the activation frame; the interval only spaces out the ones after it. It
+		// The first iteration always runs as the node activates; the interval only spaces out the ones after it. It
 		// is resolved after that first iteration so the loop still starts even when a dynamic interval is only
 		// meaningful once the loop is under way.
 		IterationOutcome outcome = RunNextIteration(graphContext);
@@ -203,7 +203,7 @@ public abstract class IterationNode<T>(bool restartOnRetrigger = false) : StateN
 	}
 
 	/// <inheritdoc/>
-	protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+	protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
 	{
 		double interval = ResolveInterval(graphContext);
 
