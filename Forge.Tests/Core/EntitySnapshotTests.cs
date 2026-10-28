@@ -71,6 +71,28 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 	[Fact]
 	[Trait("Simulation", "Snapshot")]
+	public void A_set_added_since_the_snapshot_leaves_without_the_modifiers_its_effects_gave_it()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var vitals = new VitalAttributeSet();
+		Apply(entity, Lasting("Buff", DurationType.Infinite, Flat("VitalAttributeSet.Vitality", 10)));
+		EntitySnapshot snapshot = EntitySimulation.CaptureSnapshot(entity);
+
+		entity.Attributes.AddAttributeSet(vitals);
+		vitals.Vitality.CurrentValue.Should().Be(20);
+
+		EntitySimulation.RestoreSnapshot(entity, snapshot);
+
+		entity.Attributes.AttributeSets.Should().NotContain(vitals);
+		vitals.Vitality.CurrentValue.Should().Be(10, "the set left without the buff's modifier");
+
+		entity.Attributes.AddAttributeSet(vitals);
+
+		vitals.Vitality.CurrentValue.Should().Be(20, "adding the set again brings the buff's modifier only once");
+	}
+
+	[Fact]
+	[Trait("Simulation", "Snapshot")]
 	public void A_restore_puts_tags_back_and_raises_nothing()
 	{
 		var log = new List<string>();
@@ -331,6 +353,58 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 	[Fact]
 	[Trait("Simulation", "Snapshot")]
+	public void A_component_takes_hold_again_after_what_an_earlier_component_granted()
+	{
+		var log = new List<string>();
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		EntityReplay.Watch(entity, log);
+
+		// The granted watcher takes hold of the tags before the ward that comes after the grant in the same effect.
+		Apply(entity, GrantingWard("Granter", Triggered("Watcher", "color.red")));
+		EntitySimulation.RestoreSnapshot(entity, EntitySimulation.CaptureSnapshot(entity));
+		log.Clear();
+
+		Apply(entity, Tagged("Red", "color.red"));
+
+		log.Where(x => !x.StartsWith("tags", StringComparison.Ordinal)).Should().Equal(
+			"activated",
+			"ended Watcher",
+			"changed Granter",
+			"added Red");
+	}
+
+	[Fact]
+	[Trait("Simulation", "Snapshot")]
+	public void A_component_that_fails_to_come_back_stops_neither_the_restore_nor_what_takes_hold_again()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		Apply(
+			entity,
+			new EffectData(
+				"Faulty",
+				new DurationData(DurationType.Infinite),
+				effectComponents: [new FaultyRestoreComponent()]));
+		ActiveEffectHandle ward = Apply(entity, Ward("Ward"))!;
+		AbilityHandle watcher = Grant(entity, Triggered("Watcher", "color.red"));
+		EntitySnapshot snapshot = EntitySimulation.CaptureSnapshot(entity);
+
+		entity.EffectsManager.RemoveEffect(ward);
+		Apply(entity, Lasting("Late", DurationType.Infinite, Flat(Attribute1, 10)));
+
+		FluentActions.Invoking(() => EntitySimulation.RestoreSnapshot(entity, snapshot))
+			.Should().Throw<InvalidOperationException>().WithMessage(FaultyRestoreComponent.Message);
+
+		ward.IsValid.Should().BeTrue("the effects after the faulty one came back");
+		entity.PlayerAttributeSet.Attribute1.CurrentValue.Should().Be(1, "the late effect went");
+
+		Apply(entity, Tagged("Red", "color.red"));
+
+		ward.IsInhibited.Should().BeTrue("the ward took hold of the tags again");
+		watcher.IsActive.Should().BeTrue("the trigger took hold again");
+	}
+
+	[Fact]
+	[Trait("Simulation", "Snapshot")]
 	public void A_restore_brings_back_shared_variables_input_random_and_body()
 	{
 		var input = new EntityInput(new InputActionSet(["jump"]));
@@ -429,6 +503,59 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 		FluentActions.Invoking(() => Apply(entity, Instant("Hit", Attribute1, 1)))
 			.Should().Throw<InvalidOperationException>("the application is still under way");
+	}
+
+	[Fact]
+	[Trait("Simulation", "Snapshot")]
+	public void Snapshots_are_refused_while_an_effect_is_removed_or_updated()
+	{
+		var removing = new TestEntity(_tagsManager, _cuesManager);
+		ActiveEffectHandle buff = Apply(removing, Lasting("Buff", DurationType.Infinite, Flat(Attribute1, 10)))!;
+		EntitySnapshot snapshot = EntitySimulation.CaptureSnapshot(removing);
+		removing.EffectsManager.OnActiveEffectRemoved += (_, _) => EntitySimulation.RestoreSnapshot(removing, snapshot);
+
+		FluentActions.Invoking(() => removing.EffectsManager.RemoveEffect(buff))
+			.Should().Throw<InvalidOperationException>("the removal is still under way");
+
+		var updating = new TestEntity(_tagsManager, _cuesManager);
+		Apply(
+			updating,
+			new EffectData(
+				"Pulse",
+				new DurationData(DurationType.Infinite),
+				[Flat(Attribute1, 1)],
+				periodicData: new PeriodicData(new ScalableFloat(0.25f), false, PeriodInhibitionRemovedPolicy.NeverReset)));
+		updating.EffectsManager.OnEffectExecuted += _ => EntitySimulation.CaptureSnapshot(updating);
+
+		FluentActions.Invoking(() => updating.EffectsManager.UpdateEffects(0.25))
+			.Should().Throw<InvalidOperationException>("the update is still under way");
+	}
+
+	[Fact]
+	[Trait("Simulation", "Snapshot")]
+	public void Snapshots_are_refused_while_an_ability_activates_ends_or_goes()
+	{
+		var activating = new TestEntity(_tagsManager, _cuesManager);
+		AbilityHandle first = Grant(activating, Triggered("First", "color.red"));
+		activating.Abilities.OnAbilityActivated += _ => EntitySimulation.CaptureSnapshot(activating);
+
+		FluentActions.Invoking(() => first.TryActivate(out _))
+			.Should().Throw<InvalidOperationException>("the instance hasn't started yet");
+
+		var ending = new TestEntity(_tagsManager, _cuesManager);
+		AbilityHandle second = Grant(ending, Triggered("Second", "color.red"));
+		second.TryActivate(out _).Should().BeTrue();
+		ending.Abilities.OnAbilityEnded += _ => EntitySimulation.CaptureSnapshot(ending);
+
+		FluentActions.Invoking(second.Cancel).Should().Throw<InvalidOperationException>("the instance is still ending");
+
+		var removing = new TestEntity(_tagsManager, _cuesManager);
+		AbilityHandle third = Grant(removing, Triggered("Third", "color.red"));
+		EntitySnapshot snapshot = EntitySimulation.CaptureSnapshot(removing);
+		removing.Abilities.OnAbilityRemoved += _ => EntitySimulation.RestoreSnapshot(removing, snapshot);
+
+		FluentActions.Invoking(() => removing.Abilities.ClearAbility(third))
+			.Should().Throw<InvalidOperationException>("the ability is still going");
 	}
 
 	[Fact]
@@ -597,6 +724,27 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 			]);
 	}
 
+	// Grants the ability, then is held back while the entity has the red tag.
+	private EffectData GrantingWard(string name, AbilityData abilityData)
+	{
+		return new EffectData(
+			name,
+			new DurationData(DurationType.Infinite),
+			effectComponents:
+			[
+				new GrantAbilityEffectComponent(
+				[
+					new GrantAbilityConfig(
+						abilityData,
+						new ScalableInt(1),
+						AbilityDeactivationPolicy.CancelImmediately,
+						AbilityDeactivationPolicy.CancelImmediately),
+				]),
+				new TargetTagRequirementsEffectComponent(
+					ongoingTagRequirements: new TagRequirements(IgnoreTags: Tags("color.red"))),
+			]);
+	}
+
 	// Runs a half second timer under a red cooldown it commits as it starts.
 	private AbilityData ChannelAbility(List<GraphProcessor> graphs)
 	{
@@ -709,6 +857,16 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 		public void OnEnded(AbilityBehaviorContext context)
 		{
+		}
+	}
+
+	private sealed class FaultyRestoreComponent : IEffectComponent
+	{
+		public const string Message = "The component can't be put back.";
+
+		public void RestoreSnapshot(object? snapshot)
+		{
+			throw new InvalidOperationException(Message);
 		}
 	}
 }

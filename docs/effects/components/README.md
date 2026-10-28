@@ -304,7 +304,7 @@ An [entity snapshot](../../rollback.md) keeps every active effect with its compo
 | `RestoreSnapshot(snapshot)` | Once every instance has let go. | Puts the instance's fields back from what `CaptureSnapshot` returned. A snapshot can be restored more than once, so it copies out of it anything the instance goes on changing. |
 | `OnRestoreAttach(target, data)` | Last in a restore. | Takes hold again, from the restored state rather than by resolving anything again. |
 
-A restore is silent: none of them applies an effect, raises an event or fires a cue. Every active effect on the entity lets go newest first and takes hold again oldest first, so subscriptions come back in the order they were first made, and handlers sharing an event run in the same order after a restore.
+A restore is silent: none of them applies an effect, raises an event or fires a cue. Every component instance on the entity lets go newest first and takes hold again oldest first, each counted from just before its `OnActiveEffectAdded`, so subscriptions come back in the order they were first made, even around an ability an earlier component granted, and handlers sharing an event run in the same order after a restore. A hook that throws doesn't stop the restore, and its exception is rethrown once the restore completes.
 
 ```csharp
 public class TagCounterComponent : IEffectComponent

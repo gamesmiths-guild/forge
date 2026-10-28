@@ -207,10 +207,10 @@ public interface IEffectComponent
 	/// puts its state back.
 	/// </summary>
 	/// <remarks>
-	/// <para>A restore has every active effect on the entity let go, newest first, before it puts their state back, and
-	/// take hold again after, oldest first, through <see cref="OnRestoreAttach"/>. Subscriptions therefore end up in
-	/// the order they were first made, which keeps handlers sharing an event running in the same order on a replay.
-	/// </para>
+	/// <para>A restore has every component instance on the entity let go, newest first, before it puts their state
+	/// back, and take hold again after, oldest first, through <see cref="OnRestoreAttach"/>, each counted from just
+	/// before its <see cref="OnActiveEffectAdded"/>. Subscriptions therefore end up in the order they were first made,
+	/// which keeps handlers sharing an event running in the same order on a replay.</para>
 	/// <para>Undo only what <see cref="OnRestoreAttach"/> redoes, from the instance's current state, and change nothing
 	/// else.</para>
 	/// </remarks>

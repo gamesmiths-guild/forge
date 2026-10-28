@@ -86,12 +86,14 @@ public sealed class EntityHistory
 	/// <param name="tick">The number of the tick the entity was just advanced through.</param>
 	public void Record(long tick)
 	{
+		// Taken first, so a snapshot that can't be taken leaves the history as it was.
+		EntitySnapshot snapshot = EntitySimulation.CaptureSnapshot(Entity);
 		long? oldestTick = OldestTick;
 		int kept = oldestTick is long oldest && tick >= oldest && tick <= _newestTick + 1 ? (int)(tick - oldest) : 0;
 
 		_count = Math.Min(kept + 1, Capacity);
 		_newestTick = tick;
-		Store(tick, EntitySimulation.CaptureSnapshot(Entity), Entity.Input?.Current ?? default);
+		Store(tick, snapshot, Entity.Input?.Current ?? default);
 		_currentTick = tick;
 	}
 

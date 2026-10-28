@@ -919,18 +919,36 @@ internal sealed class Ability
 
 	private void Activate(IForgeEntity? abilityTarget, float magnitude)
 	{
-		AbilityInstance instance = CreateInstance(abilityTarget);
-		_activeInstances.Add(instance);
-		NotifyActivated();
-		instance.Start(magnitude);
+		Owner.Abilities.BeginChange();
+
+		try
+		{
+			AbilityInstance instance = CreateInstance(abilityTarget);
+			_activeInstances.Add(instance);
+			NotifyActivated();
+			instance.Start(magnitude);
+		}
+		finally
+		{
+			Owner.Abilities.EndChange();
+		}
 	}
 
 	private void Activate<TData>(IForgeEntity? abilityTarget, TData data, float magnitude)
 	{
-		AbilityInstance instance = CreateInstance(abilityTarget);
-		_activeInstances.Add(instance);
-		NotifyActivated();
-		instance.Start(data, magnitude);
+		Owner.Abilities.BeginChange();
+
+		try
+		{
+			AbilityInstance instance = CreateInstance(abilityTarget);
+			_activeInstances.Add(instance);
+			NotifyActivated();
+			instance.Start(data, magnitude);
+		}
+		finally
+		{
+			Owner.Abilities.EndChange();
+		}
 	}
 
 	private void NotifyActivated()

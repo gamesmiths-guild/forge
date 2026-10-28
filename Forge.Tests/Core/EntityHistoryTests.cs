@@ -92,6 +92,28 @@ public class EntityHistoryTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 
 	[Fact]
 	[Trait("Simulation", "History")]
+	public void A_tick_that_cannot_be_recorded_leaves_the_history_as_it_was()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var history = new EntityHistory(entity, capacity: 8, Step);
+		RunAndRecord(entity, history, 1, 2);
+
+		AbilityHandle coded = entity.Abilities.GrantAbilityPermanently(
+			new AbilityData("Coded", behaviorFactory: () => new CodedBehavior()),
+			1,
+			LevelComparison.None,
+			entity);
+		coded.TryActivate(out _).Should().BeTrue();
+		EntitySimulation.Tick(entity, 3, Step);
+
+		history.Invoking(x => x.Record(3)).Should().Throw<NotSupportedException>();
+
+		history.NewestTick.Should().Be(2);
+		history.Invoking(x => x.Rollback(3)).Should().Throw<ArgumentOutOfRangeException>();
+	}
+
+	[Fact]
+	[Trait("Simulation", "History")]
 	public void A_replay_runs_only_the_ticks_after_the_current_one_up_to_the_newest()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
@@ -484,6 +506,17 @@ public class EntityHistoryTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 		public void RestoreState(in BodyState state)
 		{
 			_body = state;
+		}
+	}
+
+	private sealed class CodedBehavior : IAbilityBehavior
+	{
+		public void OnStarted(AbilityBehaviorContext context)
+		{
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
 		}
 	}
 }

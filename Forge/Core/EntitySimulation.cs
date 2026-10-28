@@ -178,7 +178,16 @@ public static class EntitySimulation
 			}
 		}
 
-		snapshot.RestoreState();
+		try
+		{
+			ExceptionDispatchInfo? stateFailure = snapshot.RestoreState();
+			failure ??= stateFailure;
+		}
+		catch (Exception exception)
+		{
+			// Such as a mover's: what came back still takes hold again.
+			failure ??= ExceptionDispatchInfo.Capture(exception);
+		}
 
 		holds.Clear();
 		AddHoldsInOrder(entity, holds);
@@ -200,7 +209,7 @@ public static class EntitySimulation
 
 	private static void ThrowIfCannotSnapshot(IForgeEntity entity, string action)
 	{
-		if (entity.Abilities.IsChanging || entity.EffectsManager.IsApplying || entity.Attributes.IsChanging)
+		if (entity.Abilities.IsChanging || entity.EffectsManager.IsChanging || entity.Attributes.IsChanging)
 		{
 			throw new InvalidOperationException(
 				$"An entity snapshot cannot be {action} while the entity's abilities, effects or attributes are " +

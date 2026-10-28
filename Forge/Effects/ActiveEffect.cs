@@ -29,8 +29,12 @@ internal sealed class ActiveEffect
 
 	internal ActiveEffectHandle Handle { get; }
 
-	// When the application took hold of what the effect and its components hold outside it.
-	internal long HoldOrder { get; } = HoldSequence.Next();
+	// When the application took hold of what the effect itself holds outside it, after its components did.
+	internal long HoldOrder { get; private set; }
+
+	// When each component took hold of what it holds outside the effect, just before its OnActiveEffectAdded, so what
+	// one grants or applies there takes hold between it and the next.
+	internal long[] ComponentHoldOrders { get; }
 
 	internal EffectEvaluatedData EffectEvaluatedData { get; }
 
@@ -73,6 +77,8 @@ internal sealed class ActiveEffect
 			ComponentInstances[i] = definitions[i].CreateInstance();
 		}
 
+		ComponentHoldOrders = new long[definitions.Length];
+
 		if (effect.EffectData.StackingData.HasValue)
 		{
 			StackCount = effect.EffectData.StackingData.Value.InitialStack.GetValue(effect.Level);
@@ -114,6 +120,7 @@ internal sealed class ActiveEffect
 			_internalTime = 0;
 			IsInhibited = inhibited;
 			RemainingDuration = EffectEvaluatedData.Duration;
+			HoldOrder = HoldSequence.Next();
 
 			if (!EffectData.SnapshotLevel)
 			{
@@ -417,8 +424,9 @@ internal sealed class ActiveEffect
 	}
 
 	// Puts the effect back into this same object, silently, so its handle and its evaluated data are the ones that
-	// already point at it.
-	internal void RestoreSnapshot(ActiveEffectSnapshot snapshot)
+	// already point at it. A component that throws doesn't keep the others from being put back, and the first exception
+	// is handed back.
+	internal ExceptionDispatchInfo? RestoreSnapshot(ActiveEffectSnapshot snapshot)
 	{
 		Handle.Restore(this);
 		RemainingDuration = snapshot.RemainingDuration;
@@ -430,16 +438,53 @@ internal sealed class ActiveEffect
 		EffectEvaluatedData.RestoreSnapshot(snapshot.EffectEvaluatedData);
 		Effect.RestoreSnapshot(snapshot.EffectLevel, snapshot.EffectDataTags);
 
+		ExceptionDispatchInfo? failure = null;
+
 		for (int i = 0; i < ComponentInstances.Length; i++)
 		{
-			ComponentInstances[i].RestoreSnapshot(snapshot.Components[i]);
+			try
+			{
+				ComponentInstances[i].RestoreSnapshot(snapshot.Components[i]);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		return failure;
+	}
+
+	// The effect's own subscriptions and each component's, with the order each took hold in, for an entity restore to
+	// let go and take hold again across the entity.
+	internal void AddHolds(List<EntityHold> holds)
+	{
+		holds.Add(new EntityHold(HoldOrder, this));
+
+		for (int i = 0; i < ComponentInstances.Length; i++)
+		{
+			holds.Add(new EntityHold(ComponentHoldOrders[i], this, Component: i));
 		}
 	}
 
-	// Lets go of what the effect holds outside itself before an entity restore puts its state back: its own
-	// subscriptions, taken last on application, then its components'.
-	internal void DetachForRestore()
+	// Lets go of what one of the effect's components, or the effect itself, holds outside it before an entity restore
+	// puts its state back.
+	internal void DetachForRestore(int? component)
 	{
+		if (component is int index)
+		{
+			ComponentInstances[index].OnRestoreDetach(
+				EffectEvaluatedData.Target,
+				new ActiveEffectEvaluatedData(
+					Handle,
+					EffectEvaluatedData,
+					RemainingDuration,
+					NextPeriodicTick,
+					ExecutionCount));
+
+			return;
+		}
+
 		Effect.OnSetByCallerFloatChanged -= Effect_OnSetByCallerFloatChanged;
 		UnregisterAttributeDependencies();
 		DetachAttributeBindings();
@@ -448,53 +493,23 @@ internal sealed class ActiveEffect
 		{
 			Effect.OnLevelChanged -= Effect_OnLevelChanged;
 		}
-
-		ActiveEffectEvaluatedData activeEffectEvaluatedData = new(
-			Handle,
-			EffectEvaluatedData,
-			RemainingDuration,
-			NextPeriodicTick,
-			ExecutionCount);
-
-		ExceptionDispatchInfo? failure = null;
-
-		for (int i = ComponentInstances.Length - 1; i >= 0; i--)
-		{
-			try
-			{
-				ComponentInstances[i].OnRestoreDetach(EffectEvaluatedData.Target, activeEffectEvaluatedData);
-			}
-			catch (Exception exception)
-			{
-				failure ??= ExceptionDispatchInfo.Capture(exception);
-			}
-		}
-
-		failure?.Throw();
 	}
 
-	// Takes hold again, after an entity restore put the effect's state back, in the order the application first did.
-	internal void AttachForRestore()
+	// Takes hold again, after an entity restore put the effect's state back.
+	internal void AttachForRestore(int? component)
 	{
-		ActiveEffectEvaluatedData activeEffectEvaluatedData = new(
-			Handle,
-			EffectEvaluatedData,
-			RemainingDuration,
-			NextPeriodicTick,
-			ExecutionCount);
-
-		ExceptionDispatchInfo? failure = null;
-
-		foreach (IEffectComponent component in ComponentInstances)
+		if (component is int index)
 		{
-			try
-			{
-				component.OnRestoreAttach(EffectEvaluatedData.Target, activeEffectEvaluatedData);
-			}
-			catch (Exception exception)
-			{
-				failure ??= ExceptionDispatchInfo.Capture(exception);
-			}
+			ComponentInstances[index].OnRestoreAttach(
+				EffectEvaluatedData.Target,
+				new ActiveEffectEvaluatedData(
+					Handle,
+					EffectEvaluatedData,
+					RemainingDuration,
+					NextPeriodicTick,
+					ExecutionCount));
+
+			return;
 		}
 
 		if (!EffectData.SnapshotLevel)
@@ -509,8 +524,6 @@ internal sealed class ActiveEffect
 
 		RegisterAttributeDependencies();
 		Effect.OnSetByCallerFloatChanged += Effect_OnSetByCallerFloatChanged;
-
-		failure?.Throw();
 	}
 
 	internal bool RebuildAfterAttributeChange()

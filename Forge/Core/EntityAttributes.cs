@@ -288,7 +288,8 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 	}
 
 	// Puts the sets and their values back without raising anything. The restored effects bring their own modifiers
-	// back, so nothing is rebuilt around a change of sets.
+	// back, so nothing is rebuilt around a change of sets. A set added since the snapshot leaves without the modifiers
+	// the effects gave it, as a removed set does, so none comes back with it if it is added again.
 	internal void RestoreSnapshot(
 		AttributeSet[] attributeSets,
 		KeyValuePair<EntityAttribute, AttributeSnapshot>[] attributes)
@@ -298,6 +299,14 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 			foreach (AttributeSet attributeSet in _attributeSets.ToArray())
 			{
 				DetachAttributeSet(attributeSet);
+
+				if (Array.IndexOf(attributeSets, attributeSet) < 0)
+				{
+					foreach (EntityAttribute attribute in attributeSet.AttributesMap.Values)
+					{
+						attribute.DropModifiers();
+					}
+				}
 			}
 
 			foreach (AttributeSet attributeSet in attributeSets)

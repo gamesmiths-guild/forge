@@ -34,6 +34,9 @@ public class EntityAbilities(IForgeEntity owner)
 
 	private bool _updating;
 
+	// Activations, ends and removals in progress, which raise their notifications part way through.
+	private int _changeDepth;
+
 	private Action<Ability>? _removeAbility;
 	private Action<Ability>? _inhibitAbility;
 
@@ -118,7 +121,7 @@ public class EntityAbilities(IForgeEntity owner)
 	{
 		get
 		{
-			if (_updating)
+			if (_updating || _changeDepth > 0)
 			{
 				return true;
 			}
@@ -781,6 +784,16 @@ public class EntityAbilities(IForgeEntity owner)
 		InhibitAbilityBasedOnPolicy(abilityToInhibit, grantSource.InhibitionPolicy);
 	}
 
+	internal void BeginChange()
+	{
+		_changeDepth++;
+	}
+
+	internal void EndChange()
+	{
+		_changeDepth--;
+	}
+
 	internal void NotifyAbilityEnded(AbilityEndedData abilityEndedData)
 	{
 		OnAbilityEnded?.Invoke(abilityEndedData);
@@ -1093,18 +1106,28 @@ public class EntityAbilities(IForgeEntity owner)
 			return;
 		}
 
-		abilityToRemove.Cleanup();
+		_changeDepth++;
 
-		// Raised before the handle is freed, so handlers can still read what went away.
-		OnAbilityRemoved?.Invoke(abilityToRemove.Handle);
+		try
+		{
+			abilityToRemove.Cleanup();
 
-		abilityToRemove.Handle.Free();
-		_grantedAbilities.Remove(abilityToRemove.Handle);
-		_grantOrder.Remove(abilityToRemove.Handle);
+			// Raised before the handle is freed, so handlers can still read what went away.
+			OnAbilityRemoved?.Invoke(abilityToRemove.Handle);
 
-		// The ability is gone for good, so its now-empty entry goes too. Leaving it behind roots the dead Ability as a
-		// dictionary key for the lifetime of the entity, and a revoke/re-grant cycle repeats that without bound.
-		_grantSources.Remove(abilityToRemove);
+			abilityToRemove.Handle.Free();
+			_grantedAbilities.Remove(abilityToRemove.Handle);
+			_grantOrder.Remove(abilityToRemove.Handle);
+
+			// The ability is gone for good, so its now-empty entry goes too. Leaving it behind roots the dead Ability
+			// as a dictionary key for the lifetime of the entity, and a revoke/re-grant cycle repeats that without
+			// bound.
+			_grantSources.Remove(abilityToRemove);
+		}
+		finally
+		{
+			_changeDepth--;
+		}
 	}
 
 	private void InhibitAbility(Ability abilityToInhibit)

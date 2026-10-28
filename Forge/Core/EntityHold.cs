@@ -6,16 +6,16 @@ using Gamesmiths.Forge.Statescript;
 
 namespace Gamesmiths.Forge.Core;
 
-// Something on an entity that holds on to something outside itself - an active effect, a granted ability's trigger, a
-// running state node of one of its graphs - with the order it took hold in.
-internal readonly record struct EntityHold(long Order, object Holder, Node? Node = null)
+// Something on an entity that holds on to something outside itself - an active effect or one of its components, a
+// granted ability's trigger, a running state node of one of its graphs - with the order it took hold in.
+internal readonly record struct EntityHold(long Order, object Holder, Node? Node = null, int? Component = null)
 {
 	internal void Detach()
 	{
 		switch (Holder)
 		{
 			case ActiveEffect effect:
-				effect.DetachForRestore();
+				effect.DetachForRestore(Component);
 				break;
 
 			case Ability ability:
@@ -33,7 +33,7 @@ internal readonly record struct EntityHold(long Order, object Holder, Node? Node
 		switch (Holder)
 		{
 			case ActiveEffect effect:
-				effect.AttachForRestore();
+				effect.AttachForRestore(Component);
 				break;
 
 			case Ability ability:

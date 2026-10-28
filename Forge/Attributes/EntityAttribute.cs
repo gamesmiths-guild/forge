@@ -428,6 +428,15 @@ public sealed class EntityAttribute
 		}
 	}
 
+	// Takes every modifier away without raising OnValueChanged, for an entity restore that takes the attribute's set
+	// away. Only active effects add modifiers, so this is where removing the set would leave it.
+	internal void DropModifiers()
+	{
+		Array.Clear(_channels, 0, _channels.Length);
+		_attributeOverrides.Clear();
+		UpdateCachedValues();
+	}
+
 	/// <summary>
 	/// Resolves which of the active overrides of a channel is the one in effect.
 	/// </summary>

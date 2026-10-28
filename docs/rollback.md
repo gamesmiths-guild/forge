@@ -18,7 +18,7 @@ EntitySimulation.RestoreSnapshot(entity, snapshot);
 
 | Part | What comes back |
 |---|---|
-| Attributes | Base, current, minimum and maximum values, with the modifiers in each channel exactly as they were rather than added up again. |
+| Attributes | The attribute sets, and their base, current, minimum and maximum values, with the modifiers in each channel exactly as they were rather than added up again. A set added since the snapshot leaves as a removed set does, without the modifiers effects gave it. |
 | Tags | The base tags, and how many effects grant each modifier tag. |
 | Effects | Each active effect with its level, stacks, remaining duration, period timing, inhibition, set-by-caller values, evaluated magnitudes and the state of its [components](effects/components/README.md#rollback-hooks). |
 | Abilities | The granted abilities with their grant sources, levels, inhibition and cooldowns, the blocked ability tags, and each running instance with its Statescript graph. |
@@ -46,7 +46,7 @@ EntitySimulation.RestoreSnapshot(entity, snapshot);
 
 Take and restore snapshots from the host, between ticks, never from inside an ability, an effect, a graph or a handler:
 
-- While the entity is changing, part way through applying an effect, changing an attribute or activating an ability, both throw `InvalidOperationException`.
+- While the entity is changing, part way through applying, removing or updating effects, changing an attribute, or activating, ending or removing an ability, both throw `InvalidOperationException`.
 - While one of the entity's abilities runs a behavior that isn't a Statescript graph, both throw `NotSupportedException`: a snapshot can't reach what a coded `IAbilityBehavior` keeps. A behavior that ends within its own activation, such as the [Quick Start](quick-start.md)'s heal, never runs between ticks and never gets in the way.
 - A snapshot goes back only into the entity it was taken from. Restoring it into another throws `ArgumentException`.
 

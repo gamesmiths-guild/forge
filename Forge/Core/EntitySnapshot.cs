@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Statescript;
@@ -55,13 +56,14 @@ public sealed class EntitySnapshot
 		Body = entity.Mover?.CaptureState();
 	}
 
-	// Puts the entity's state back, silently, between the restore's letting go and taking hold again.
-	internal void RestoreState()
+	// Puts the entity's state back, silently, between the restore's letting go and taking hold again. An effect
+	// component that throws doesn't keep the rest from coming back, and the first exception is handed back.
+	internal ExceptionDispatchInfo? RestoreState()
 	{
 		Entity.Attributes.RestoreSnapshot(AttributeSets, Attributes);
 		Entity.Tags.RestoreSnapshot(Tags);
 		Entity.Abilities.BlockedAbilityTags.RestoreSnapshot(BlockedAbilityTags);
-		Entity.EffectsManager.RestoreSnapshot(Effects);
+		ExceptionDispatchInfo? failure = Entity.EffectsManager.RestoreSnapshot(Effects);
 		Entity.Abilities.RestoreSnapshot(Abilities);
 		SharedVariables.CopyTo(Entity.SharedVariables);
 
@@ -79,5 +81,7 @@ public sealed class EntitySnapshot
 		{
 			Entity.Mover?.RestoreState(body);
 		}
+
+		return failure;
 	}
 }
