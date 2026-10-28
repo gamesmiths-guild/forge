@@ -31,13 +31,13 @@ EntitySimulation.RestoreSnapshot(entity, snapshot);
 
 **Effects and abilities keep their identity.** Active effects, abilities and ability instances come back as the same objects, so a handle from before the snapshot points at the same thing after the restore. An effect removed since the snapshot comes back, and its handle is valid again. An effect applied since then goes without a removal, and its handle is no longer valid. The same holds for granted abilities and running instances.
 
-**What holds on comes back in its first order.** Effect components, ability triggers and running graph nodes subscribe to the entity's events, such as tag and attribute changes. A restore has every one of them let go, newest first, then puts the state back, then has them take hold again, oldest first, in the order each first took hold. Handlers that share an event then run in the same order as before the restore, which a replay depends on. A hook that throws doesn't stop the others or the restore, and the first exception is rethrown after.
+**What holds on comes back in its first order.** Effect components, ability triggers and running graph nodes subscribe to the entity's events, such as tag and attribute changes. A restore has every one of them let go, newest first, then puts the state back, then has them take hold again, oldest first, in the order each first took hold. Handlers that share an event then run in the same order as before the restore, which a replay depends on. One that subscribed again since it first did, as an effect watching an attribute does when an attribute set is added or removed, comes back where it first took hold. A hook that throws doesn't stop the others or the restore, and the first exception is rethrown after.
 
 **A snapshot never changes**, so it can be restored any number of times.
 
 ### What a snapshot leaves out
 
-- **Other entities.** Each entity restores only itself. An effect it applied to another entity is the other entity's, and comes back only with a snapshot of that one.
+- **Other entities.** Each entity restores only itself. An effect it applied to another entity is the other entity's, and comes back only with a snapshot of that one. An `Effect` applied to several entities is one object, though: a restore puts its level and set by caller values back for all of them, without their effects evaluating again, so give each entity its own `Effect` when those change at runtime.
 - **Handlers your code added.** Subscriptions to an entity's events from outside it, such as a health bar's, aren't the entity's to let go of, so they stay subscribed throughout. The entity's own handlers take hold again after them, so a handler of yours that subscribed after one of the entity's runs before it once the entity is restored.
 - **Cues.** A restore fires no cue. A persistent cue an effect started stays shown when the restore takes the effect away, and one that ended stays off when the restore brings its effect back. Ticks replayed after a rollback fire their cues again.
 - **Your own state.** Fields of your entity class, engine objects and anything else outside Forge stay as they are.
@@ -68,8 +68,8 @@ history.Replay(newestTick);
 ```
 
 - **`Record(tick)`** keeps how the tick left the entity, with its input frame. Recording a tick the history already holds, such as the one after a tick rolled back to, forgets the ticks after it, since they belong to the run it replaces. Recording a tick that doesn't follow the newest one starts the history over.
-- **`Rollback(tick)`** restores the snapshot of a tick the history holds. The ticks after it are kept for a replay.
-- **`Replay(toTick)`** runs each tick after the one the entity is at again, up to `toTick`, through `EntitySimulation.Tick` and with the input frame it first ran with, and records it anew.
+- **`Rollback(tick)`** restores the snapshot of a tick the history holds. The ticks after it are kept for a replay. The entity's input comes back as that tick left it, so submit the next tick's frame after rolling back and replaying, not before.
+- **`Replay(toTick)`** records the tick the entity is at anew, so a correction made after the rollback is kept, then runs each tick after it again, up to `toTick`, through `EntitySimulation.Tick` and with the input frame it first ran with, and records it anew.
 - **`OldestTick` and `NewestTick`** say which ticks the history holds. It keeps the most recent `Capacity` of them.
 
 **Only the fixed rail replays.** A replayed tick runs what `EntitySimulation.Tick` runs: input, movement, effects and the abilities' fixed rail. Frame updates and presentation passes aren't replayed, so anything that must come out the same belongs on the fixed rail. That's why the built-in timers run there; see [Two update rails](statescript/nodes/state/README.md#two-update-rails).

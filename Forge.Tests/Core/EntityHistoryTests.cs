@@ -134,6 +134,24 @@ public class EntityHistoryTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 
 	[Fact]
 	[Trait("Simulation", "History")]
+	public void A_correction_made_after_a_rollback_is_what_the_next_rollback_brings_back()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var history = new EntityHistory(entity, capacity: 8, Step);
+		RunAndRecord(entity, history, 1, 4);
+
+		history.Rollback(2);
+		int corrected = entity.Attributes[Speed].BaseValue + 3;
+		entity.EffectsManager.ApplyEffect(
+			new Effect(Instant("Correction", Speed, 3), new EffectOwnership(entity, entity)));
+		history.Replay(4);
+		history.Rollback(2);
+
+		entity.Attributes[Speed].BaseValue.Should().Be(corrected, "the replay recorded tick 2 as corrected");
+	}
+
+	[Fact]
+	[Trait("Simulation", "History")]
 	public void A_replay_repeats_stacking_periodic_and_expiring_effects()
 	{
 		var log = new List<string>();

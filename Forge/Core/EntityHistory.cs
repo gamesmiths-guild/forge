@@ -102,7 +102,8 @@ public sealed class EntityHistory
 	/// </summary>
 	/// <remarks>
 	/// The ticks recorded after it are kept, so <see cref="Replay"/> can run them again with the input frames they
-	/// ran with.
+	/// ran with. The entity's input comes back as the tick left it too, so submit the next tick's frame after rolling
+	/// back and replaying, not before.
 	/// </remarks>
 	/// <param name="tick">A tick the history holds.</param>
 	/// <exception cref="ArgumentOutOfRangeException">Thrown when the history doesn't hold the tick.</exception>
@@ -122,8 +123,10 @@ public sealed class EntityHistory
 	/// the input frame it first ran with, and records how each now leaves the entity.
 	/// </summary>
 	/// <remarks>
-	/// Each tick runs through <see cref="EntitySimulation.Tick(IForgeEntity, long, double)"/>, with its frame made the
-	/// tick's input as it is rather than merged with one already waiting.
+	/// The tick the entity is at is recorded anew first, so a correction made to the entity after a rollback is what a
+	/// later rollback to that tick brings back. Each tick then runs through
+	/// <see cref="EntitySimulation.Tick(IForgeEntity, long, double)"/>, with its frame made the tick's input as it is
+	/// rather than merged with one already waiting.
 	/// </remarks>
 	/// <param name="toTick">The last tick to run again, at most the newest the history holds.</param>
 	/// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="toTick"/> isn't after the tick the
@@ -137,6 +140,8 @@ public sealed class EntityHistory
 				toTick,
 				"Only ticks after the one the entity is at, up to the newest one held, can be replayed.");
 		}
+
+		_snapshots[Slot(_currentTick)] = EntitySimulation.CaptureSnapshot(Entity);
 
 		for (long tick = _currentTick + 1; tick <= toTick; tick++)
 		{
