@@ -165,6 +165,19 @@ public sealed class DeterministicRandom : IRandom
 		}
 	}
 
+	internal State CaptureSnapshot()
+	{
+		return new State(_s0, _s1, _s2, _s3);
+	}
+
+	internal void RestoreSnapshot(State state)
+	{
+		_s0 = state.S0;
+		_s1 = state.S1;
+		_s2 = state.S2;
+		_s3 = state.S3;
+	}
+
 	private static ulong SplitMix64(ref ulong state)
 	{
 		ulong z = state = unchecked(state + GoldenGamma);
@@ -218,4 +231,7 @@ public sealed class DeterministicRandom : IRandom
 			}
 		}
 	}
+
+	// The generator's four words of state, for an entity snapshot.
+	internal readonly record struct State(ulong S0, ulong S1, ulong S2, ulong S3);
 }

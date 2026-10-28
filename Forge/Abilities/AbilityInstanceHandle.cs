@@ -44,4 +44,10 @@ public sealed class AbilityInstanceHandle : IValidatable
 	{
 		AbilityInstance = null;
 	}
+
+	// An entity restore brings back the instance this handle was made for.
+	internal void Restore(AbilityInstance instance)
+	{
+		AbilityInstance = instance;
+	}
 }

@@ -60,6 +60,21 @@ internal sealed class AbilityInstance
 		EndInstance(wasCanceled: true);
 	}
 
+	// An entity restore brings the instance back running. The tags it owns come back with the entity's tags.
+	internal void Restore()
+	{
+		IsActive = true;
+		Handle.Restore(this);
+	}
+
+	// An entity restore takes the instance away without ending it: nothing is notified, and the tags it owned go with
+	// the entity's tags.
+	internal void Drop()
+	{
+		IsActive = false;
+		Handle.Free();
+	}
+
 	private void EndInstance(bool wasCanceled)
 	{
 		if (!IsActive)

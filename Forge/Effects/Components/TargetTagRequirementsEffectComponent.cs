@@ -112,4 +112,34 @@ public class TargetTagRequirementsEffectComponent(
 			_handler = null;
 		}
 	}
+
+	/// <inheritdoc/>
+	public object? CaptureSnapshot()
+	{
+		return _handler;
+	}
+
+	/// <inheritdoc/>
+	public void RestoreSnapshot(object? snapshot)
+	{
+		_handler = (Action<TagContainer>?)snapshot;
+	}
+
+	/// <inheritdoc/>
+	public void OnRestoreDetach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		if (_handler is not null)
+		{
+			target.Tags.OnTagsChanged -= _handler;
+		}
+	}
+
+	/// <inheritdoc/>
+	public void OnRestoreAttach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		if (_handler is not null)
+		{
+			target.Tags.OnTagsChanged += _handler;
+		}
+	}
 }

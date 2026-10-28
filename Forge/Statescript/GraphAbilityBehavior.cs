@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Abilities;
+using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Statescript;
 
@@ -11,21 +12,23 @@ namespace Gamesmiths.Forge.Statescript;
 /// ability stops the graph immediately.
 /// </summary>
 /// <remarks>
-/// <para>Because <see cref="IAbilityBehavior"/> has no update method, the caller must tick the <see cref="Processor"/>
-/// each frame via <see cref="GraphProcessor.UpdateGraph"/>. A typical pattern is to call it from the entity's game loop
-/// alongside <see cref="Effects.EffectsManager.UpdateEffects(double)"/>.</para>
+/// <para>The entity's abilities advance the graph through <see cref="OnFixedUpdate"/> and <see cref="OnUpdate"/>. The
+/// built-in timers count on the fixed rail, which <see cref="EntitySimulation.Tick(IForgeEntity, long, double)"/>
+/// advances together with the entity's effects.</para>
 /// </remarks>
 /// <param name="graph">The graph definition to execute when the ability activates.</param>
-public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
+public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior, ISnapshotAbilityBehavior
 {
 	/// <summary>
-	/// Gets the <see cref="GraphProcessor"/> that drives this behavior. Callers must invoke
-	/// <see cref="GraphProcessor.UpdateGraph"/> each frame to advance time-dependent state nodes.
+	/// Gets the <see cref="GraphProcessor"/> that runs this behavior's graph.
 	/// </summary>
 	public GraphProcessor Processor { get; } = new GraphProcessor(graph);
 
 	/// <inheritdoc/>
 	public bool IsPresenting => Processor.IsPresenting;
+
+	/// <inheritdoc/>
+	bool ISnapshotAbilityBehavior.IsChanging => Processor.IsChanging;
 
 	/// <inheritdoc/>
 	public void OnStarted(AbilityBehaviorContext context)
@@ -102,6 +105,32 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior
 		{
 			Processor.StopGraph();
 		}
+	}
+
+	/// <inheritdoc/>
+#pragma warning disable SA1202 // Elements should be ordered by access
+	object ISnapshotAbilityBehavior.CaptureSnapshot()
+#pragma warning restore SA1202 // Elements should be ordered by access
+	{
+		return Processor.CaptureSnapshot();
+	}
+
+	/// <inheritdoc/>
+	void ISnapshotAbilityBehavior.RestoreSnapshot(object snapshot)
+	{
+		Processor.SwapIn((GraphSnapshot)snapshot);
+	}
+
+	/// <inheritdoc/>
+	void ISnapshotAbilityBehavior.DropRun()
+	{
+		Processor.DropRun();
+	}
+
+	/// <inheritdoc/>
+	void ISnapshotAbilityBehavior.AddHolds(List<EntityHold> holds)
+	{
+		Processor.AddHolds(holds);
 	}
 
 	// OnStarted has returned by the time a start that waited runs, so the abilities system can no longer cancel the

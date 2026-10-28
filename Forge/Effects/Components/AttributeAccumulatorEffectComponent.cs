@@ -201,6 +201,41 @@ public class AttributeAccumulatorEffectComponent(
 		trackedAttribute.OnValueChanged += _handler;
 	}
 
+	/// <inheritdoc/>
+	public object? CaptureSnapshot()
+	{
+		return new Snapshot(_trackedAttribute, _handler, _baseline, _tracking, Total);
+	}
+
+	/// <inheritdoc/>
+	public void RestoreSnapshot(object? snapshot)
+	{
+		var restored = (Snapshot)snapshot!;
+		_trackedAttribute = restored.TrackedAttribute;
+		_handler = restored.Handler;
+		_baseline = restored.Baseline;
+		_tracking = restored.Tracking;
+		Total = restored.Total;
+	}
+
+	/// <inheritdoc/>
+	public void OnRestoreDetach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		if (_trackedAttribute is not null && _handler is not null)
+		{
+			_trackedAttribute.OnValueChanged -= _handler;
+		}
+	}
+
+	/// <inheritdoc/>
+	public void OnRestoreAttach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		if (_trackedAttribute is not null && _handler is not null)
+		{
+			_trackedAttribute.OnValueChanged += _handler;
+		}
+	}
+
 	private bool TryStartTracking(IForgeEntity target, Effect effect)
 	{
 		if (_tracking)
@@ -225,4 +260,11 @@ public class AttributeAccumulatorEffectComponent(
 
 		return true;
 	}
+
+	private sealed record Snapshot(
+		EntityAttribute? TrackedAttribute,
+		Action<EntityAttribute, int>? Handler,
+		int Baseline,
+		bool Tracking,
+		float Total);
 }

@@ -715,6 +715,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 			nodeContext.Activating = true;
 			nodeContext.ActivationStamp = graphContext.UpdateStamp;
 			nodeContext.ActivationId = ++graphContext.ActivationCount;
+			nodeContext.HoldOrder = HoldSequence.Next();
 
 			if (restarting)
 			{

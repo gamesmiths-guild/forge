@@ -240,6 +240,44 @@ public class GraphSnapshotTests
 
 	[Fact]
 	[Trait("Graph", "Snapshot")]
+	public void A_run_that_exited_while_a_message_was_on_its_way_restores_and_ends_again()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+		TimerNode timer = CreateTimerNode("duration");
+		var exit = new ExitNode();
+		graph.AddNode(timer);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnTimerEndPort],
+			exit.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		int completions = 0;
+		processor.OnGraphCompleted = () => completions++;
+		processor.StartGraph();
+		GraphSnapshot snapshot = processor.CaptureSnapshot();
+
+		// The timer's end reaches the Exit while the message announcing it is still on its way.
+		processor.FixedUpdateGraph(1.0);
+		processor.GraphContext.IsActive.Should().BeFalse();
+
+		processor.RestoreSnapshot(snapshot);
+
+		processor.Invoking(x => x.CaptureSnapshot()).Should().NotThrow(
+			"the message the first run left on its way went with that run");
+
+		processor.FixedUpdateGraph(1.0);
+
+		processor.GraphContext.IsActive.Should().BeFalse();
+		completions.Should().Be(2, "the restored run ends the way the first one did");
+	}
+
+	[Fact]
+	[Trait("Graph", "Snapshot")]
 	public void A_snapshot_from_another_processor_is_refused()
 	{
 		(GraphProcessor processor, _) = StartTimer();

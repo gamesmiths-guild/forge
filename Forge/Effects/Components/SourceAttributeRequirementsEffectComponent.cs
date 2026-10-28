@@ -180,6 +180,49 @@ public class SourceAttributeRequirementsEffectComponent(
 		}
 	}
 
+	/// <inheritdoc/>
+	public object? CaptureSnapshot()
+	{
+		return new Snapshot(_handler, [.. _subscribedAttributes]);
+	}
+
+	/// <inheritdoc/>
+	public void RestoreSnapshot(object? snapshot)
+	{
+		var restored = (Snapshot)snapshot!;
+		_handler = restored.Handler;
+		_subscribedAttributes.Clear();
+		_subscribedAttributes.AddRange(restored.SubscribedAttributes);
+	}
+
+	/// <inheritdoc/>
+	public void OnRestoreDetach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		if (_handler is null)
+		{
+			return;
+		}
+
+		foreach (EntityAttribute attribute in _subscribedAttributes)
+		{
+			attribute.OnValueChanged -= _handler;
+		}
+	}
+
+	/// <inheritdoc/>
+	public void OnRestoreAttach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		if (_handler is null)
+		{
+			return;
+		}
+
+		foreach (EntityAttribute attribute in _subscribedAttributes)
+		{
+			attribute.OnValueChanged += _handler;
+		}
+	}
+
 	private IForgeEntity? ResolveEntity(EffectOwnership ownership)
 	{
 		return OwnershipEntity == OwnershipEntity.Owner ? ownership.Owner : ownership.Source;
@@ -210,4 +253,6 @@ public class SourceAttributeRequirementsEffectComponent(
 			attribute.OnValueChanged += handler;
 		}
 	}
+
+	private sealed record Snapshot(Action<EntityAttribute, int>? Handler, EntityAttribute[] SubscribedAttributes);
 }

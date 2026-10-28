@@ -151,6 +151,19 @@ public class AdditionalEffectsEffectComponent(
 		RemoveTrackedEffects();
 	}
 
+	/// <inheritdoc/>
+	public object? CaptureSnapshot()
+	{
+		return _removeOnEndEffects.ToArray();
+	}
+
+	/// <inheritdoc/>
+	public void RestoreSnapshot(object? snapshot)
+	{
+		_removeOnEndEffects.Clear();
+		_removeOnEndEffects.AddRange((RemoveOnEndEffect[])snapshot!);
+	}
+
 	private static bool HasRemoveOnEnd(ConditionalEffect[] conditionalEffects)
 	{
 		return Array.Exists(conditionalEffects, x => x.IsTakenBack);

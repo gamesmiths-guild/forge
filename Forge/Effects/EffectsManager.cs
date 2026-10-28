@@ -137,6 +137,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// </summary>
 	public IForgeEntity Owner { get; } = owner;
 
+	internal bool IsApplying => _applicationDepth > 0;
+
 	/// <summary>
 	/// Applies an effect to the owner of this manager.
 	/// </summary>
@@ -624,6 +626,50 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		activeEffectHandle = ApplyEffectInternal(effect, applicationContext: null, out bool applied);
 		return applied;
+	}
+
+	internal KeyValuePair<ActiveEffect, ActiveEffectSnapshot>[] CaptureSnapshot()
+	{
+		var effects = new KeyValuePair<ActiveEffect, ActiveEffectSnapshot>[_activeEffects.Count];
+
+		for (int i = 0; i < effects.Length; i++)
+		{
+			ActiveEffect activeEffect = _activeEffects[i];
+			effects[i] = new KeyValuePair<ActiveEffect, ActiveEffectSnapshot>(
+				activeEffect,
+				activeEffect.CaptureSnapshot());
+		}
+
+		return effects;
+	}
+
+	// Puts the active effects back as the same objects, in the same order, without raising anything. An effect applied
+	// since the snapshot is dropped with its handle freed, and none of its removal callbacks run.
+	internal void RestoreSnapshot(KeyValuePair<ActiveEffect, ActiveEffectSnapshot>[] effects)
+	{
+		foreach (ActiveEffect activeEffect in _activeEffects)
+		{
+			if (!Array.Exists(effects, x => x.Key == activeEffect))
+			{
+				activeEffect.Handle.Free();
+			}
+		}
+
+		_activeEffects.Clear();
+
+		foreach (KeyValuePair<ActiveEffect, ActiveEffectSnapshot> effect in effects)
+		{
+			_activeEffects.Add(effect.Key);
+			effect.Key.RestoreSnapshot(effect.Value);
+		}
+	}
+
+	internal void AddHolds(List<EntityHold> holds)
+	{
+		foreach (ActiveEffect activeEffect in _activeEffects)
+		{
+			holds.Add(new EntityHold(activeEffect.HoldOrder, activeEffect));
+		}
 	}
 
 	private static bool IsStillActive(ActiveEffect activeEffect)

@@ -108,6 +108,22 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 		}
 	}
 
+	/// <inheritdoc/>
+	public object? CaptureSnapshot()
+	{
+		return new Snapshot([.. _grantedAbilities], [.. _grantSources], _hasGrantedAbilities, _isInhibited);
+	}
+
+	/// <inheritdoc/>
+	public void RestoreSnapshot(object? snapshot)
+	{
+		var restored = (Snapshot)snapshot!;
+		Array.Copy(restored.GrantedAbilities, _grantedAbilities, _grantedAbilities.Length);
+		Array.Copy(restored.GrantSources, _grantSources, _grantSources.Length);
+		_hasGrantedAbilities = restored.HasGrantedAbilities;
+		_isInhibited = restored.IsInhibited;
+	}
+
 	private void GrantAbilitiesPermanently(IForgeEntity target, in EffectEvaluatedData effectEvaluatedData)
 	{
 		for (int i = 0; i < _grantAbilityConfigs.Length; i++)
@@ -175,4 +191,10 @@ public class GrantAbilityEffectComponent(GrantAbilityConfig[] grantAbilityConfig
 			target.Abilities.InhibitGrantedAbility(ability, _grantSources[i]);
 		}
 	}
+
+	private sealed record Snapshot(
+		AbilityHandle[] GrantedAbilities,
+		IAbilityGrantSource[] GrantSources,
+		bool HasGrantedAbilities,
+		bool IsInhibited);
 }

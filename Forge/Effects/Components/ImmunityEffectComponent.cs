@@ -78,6 +78,36 @@ public class ImmunityEffectComponent(EffectQuery[] immunityQueries) : IEffectCom
 	}
 
 	/// <inheritdoc/>
+	public object? CaptureSnapshot()
+	{
+		return _handle;
+	}
+
+	/// <inheritdoc/>
+	public void RestoreSnapshot(object? snapshot)
+	{
+		_handle = (ActiveEffectHandle?)snapshot;
+	}
+
+	/// <inheritdoc/>
+	public void OnRestoreDetach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		if (_handle is not null)
+		{
+			target.EffectsManager.UnregisterApplicationBlocker(this);
+		}
+	}
+
+	/// <inheritdoc/>
+	public void OnRestoreAttach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		if (_handle is not null)
+		{
+			target.EffectsManager.RegisterApplicationBlocker(this);
+		}
+	}
+
+	/// <inheritdoc/>
 	public bool AllowEffectApplication(in Effect effect)
 	{
 		// The effect can already be gone while its removal is still cascading — removal callbacks can apply further

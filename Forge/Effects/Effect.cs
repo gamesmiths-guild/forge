@@ -327,6 +327,18 @@ public class Effect
 		return tagsManager is null ? null : new TagContainer(tagsManager);
 	}
 
+	// Puts the level and set by caller values back without raising OnLevelChanged or OnSetByCallerFloatChanged.
+	internal void RestoreSnapshot(int level, KeyValuePair<Tag, float>[] dataTags)
+	{
+		Level = level;
+		DataTag.Clear();
+
+		foreach (KeyValuePair<Tag, float> dataTag in dataTags)
+		{
+			DataTag.Add(dataTag.Key, dataTag.Value);
+		}
+	}
+
 	internal bool CanApply(IForgeEntity target)
 	{
 		foreach (IEffectComponent component in EffectData.EffectComponents)
