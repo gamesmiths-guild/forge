@@ -29,7 +29,7 @@ public class StateNodeRetriggerTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		node.ActivateCount.Should().Be(1);
 		node.RestartCount.Should().Be(0);
@@ -49,7 +49,7 @@ public class StateNodeRetriggerTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		node.ActivateCount.Should().Be(1);
 		node.RestartCount.Should().Be(1);
@@ -77,7 +77,7 @@ public class StateNodeRetriggerTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		parent.RestartCount.Should().Be(1);
 		ignoringChild.ActivateCount.Should().Be(1);
@@ -117,7 +117,7 @@ public class StateNodeRetriggerTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		ElapsedTime(processor, updatedBefore).Should().Be(0);
 		ElapsedTime(processor, updatedAfter).Should().Be(0, "the pass's delta is time from before the retrigger");
@@ -157,7 +157,7 @@ public class StateNodeRetriggerTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		ElapsedTime(processor, updatedBefore).Should().Be(0);
 		ElapsedTime(processor, updatedAfter).Should().Be(0, "the pass's delta is time from before it started again");
@@ -181,7 +181,7 @@ public class StateNodeRetriggerTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		log.Should().Equal("activate", "activate", "deactivate", "ended");
 	}
@@ -233,8 +233,8 @@ public class StateNodeRetriggerTests
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
-		processor.UpdateGraph(0.5);
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(0.5);
+		processor.FixedUpdateGraph(0.5);
 
 		node.ActivateCount.Should().Be(2);
 		node.DeactivateCount.Should().Be(1);

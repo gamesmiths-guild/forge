@@ -4,6 +4,8 @@ using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Components;
+using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
@@ -20,7 +22,7 @@ internal static class Program
 
 	private static int Main()
 	{
-		var tagsManager = new TagsManager(["event.hit"]);
+		var tagsManager = new TagsManager(["event.hit", "status.burning"]);
 		var eventTag = Tag.RequestTag(tagsManager, "event.hit");
 
 		Check("Typed event trigger with a class payload", () =>
@@ -37,6 +39,7 @@ internal static class Program
 		Check("Input binding activates a typed ability with data built from the tick's input", () =>
 			ActivateFromInput(tagsManager) == new StructPayload(5));
 		Check("Graph snapshot copies a node context and restores it", RestoresGraphSnapshot);
+		Check("Entity history rolls an entity back and replays its ticks", () => ReplaysEntityHistory(tagsManager));
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -148,6 +151,51 @@ internal static class Program
 		return processor.GraphContext.GetNodeContext<CountingNodeContext>(node.NodeID).Updates.Count == 1;
 	}
 
+	private static bool ReplaysEntityHistory(TagsManager tagsManager)
+	{
+		var node = new CountingNode();
+		var graph = new Graph();
+		graph.AddNode(node);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			node.InputPorts[CountingNode.InputPort]));
+
+		var entity = new SmokeEntity(tagsManager);
+		GraphAbilityBehavior? behavior = null;
+		AbilityHandle ability = entity.Abilities.GrantAbilityPermanently(
+			new AbilityData("Counting", behaviorFactory: () => behavior = new GraphAbilityBehavior(graph)),
+			1,
+			LevelComparison.None,
+			null);
+
+		var ward = new EffectData(
+			"Ward",
+			new DurationData(DurationType.Infinite),
+			effectComponents:
+			[
+				new TargetTagRequirementsEffectComponent(ongoingTagRequirements: new TagRequirements(
+					IgnoreTags: Tag.RequestTag(tagsManager, "status.burning").GetSingleTagContainer())),
+			]);
+
+		ActiveEffectHandle? wardHandle =
+			entity.EffectsManager.ApplyEffect(new Effect(ward, new EffectOwnership(entity, entity)));
+		ability.TryActivate(out _);
+
+		var history = new EntityHistory(entity, 8, 1.0 / 64.0);
+
+		for (long tick = 0; tick < 4; tick++)
+		{
+			EntitySimulation.Tick(entity, tick, history.FixedDeltaTime);
+			history.Record(tick);
+		}
+
+		history.Rollback(1);
+		history.Replay(3);
+
+		return wardHandle?.IsValid == true
+			&& behavior!.Processor.GraphContext.GetNodeContext<CountingNodeContext>(node.NodeID).Updates.Count == 4;
+	}
+
 	private static int ResolveActivationData(TagsManager tagsManager, Tag eventTag, StructPayload payload)
 	{
 		var resolver = new AbilityActivationDataResolver(typeof(StructPayload), nameof(StructPayload.Value));
@@ -256,6 +304,11 @@ internal static class Program
 		}
 
 		protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+		{
+			graphContext.GetNodeContext<CountingNodeContext>(NodeID).Updates.Add(deltaTime);
+		}
+
+		protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
 		{
 			graphContext.GetNodeContext<CountingNodeContext>(NodeID).Updates.Add(deltaTime);
 		}

@@ -32,7 +32,7 @@ new StateMachineNode(stateCount = 2)
 
 | Index | Label | Type | Description |
 |-------|-------|------|-------------|
-| 0 | State | `int` | The state selector, re-evaluated on activation and every update tick. Out-of-range selectors are clamped. |
+| 0 | State | `int` | The state selector, re-evaluated on activation and every fixed step. Out-of-range selectors are clamped. |
 
 **Output Variables:**
 
@@ -42,7 +42,7 @@ new StateMachineNode(stateCount = 2)
 
 ## Behavior
 
-1. Evaluates the selector on activation and every update. Out-of-range selectors clamp to the valid range.
+1. Evaluates the selector on activation and every fixed step. Out-of-range selectors clamp to the valid range.
 2. On a change, disables the previous state's subgraph, activates the new one, writes **Current State**, and emits `OnStateChanged`. Entering the first state after activation counts as a change.
 3. All state subgraphs are cleaned up when the node deactivates.
 

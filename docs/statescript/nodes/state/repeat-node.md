@@ -5,7 +5,7 @@
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.State.RepeatNode`
 > **Context:** `IterationNodeContext`
 
-Emits an iteration event a fixed number of times, all within the activation frame or spaced by an interval, then deactivates.
+Emits an iteration event a fixed number of times, all as it activates or spaced by an interval, then deactivates.
 
 Together with [ForEachNode](for-each-node.md) this is the graph's bounded loop. Both derive from `IterationNode<T>` and share their port shape, condition, interval and ending semantics; they differ only in what drives the sequence — a count here, an array there.
 
@@ -39,7 +39,7 @@ new RepeatNode(restartOnRetrigger = false)
 |-------|-------|------|-------------|
 | 0 | Count | `int` | The number of iterations to run, re-resolved before every iteration. Unbound or non-positive runs no iterations at all. |
 | 1 | Condition | `bool` | Optional guard, evaluated once per iteration right before that iteration is due. The loop ends through `OnConditionFailed` as soon as it does not hold. Unbound means no early exit. |
-| 2 | Interval | `double` | Optional spacing between iterations, in seconds. Unbound or non-positive runs the whole loop on the activation frame. |
+| 2 | Interval | `double` | Optional spacing between iterations, in seconds. Unbound or non-positive runs the whole loop as the node activates. |
 
 **Output Variables:**
 
@@ -49,22 +49,22 @@ new RepeatNode(restartOnRetrigger = false)
 
 ## Behavior
 
-1. The first iteration always runs on the **activation frame**, right after `OnActivate` and the Subgraph port have fired.
-2. With no interval, the remaining iterations follow immediately, one after another, all in that same frame. This is what makes same-frame chains and burst patterns expressible without unrolling the graph.
-3. With a positive interval, the iterations after the first are spaced by it — so a count of 3 at `0.2` runs at `0.0`, `0.2` and `0.4`. The synchronous mode is simply the zero-interval limit of this one. (Contrast [LoopTimerNode](loop-timer-node.md), which never fires on the activation frame and is the right node for an endless heartbeat.)
-4. When several intervals elapse in a single update, the loop catches up within that update.
+1. The first iteration always runs **as the node activates**, right after `OnActivate` and the Subgraph port have fired.
+2. With no interval, the remaining iterations follow immediately, one after another, all in that same step. This is what makes same-step chains and burst patterns expressible without unrolling the graph.
+3. With a positive interval, the iterations after the first are spaced by it — so a count of 3 at `0.2` runs at `0.0`, `0.2` and `0.4`. The synchronous mode is simply the zero-interval limit of this one. (Contrast [LoopTimerNode](loop-timer-node.md), which never fires as it activates and is the right node for an endless heartbeat.)
+4. When several intervals elapse in a single fixed step, the loop catches up within that step.
 5. The loop finishes on the same tick as its final iteration: `OnFinished` fires, then the node deactivates. A condition that stops holding is discovered when the next iteration comes due, which in a paced loop is one interval later — the same way a guarded loop with a delay in its body behaves; it ends through `OnConditionFailed`.
 6. Aborting the node emits `OnAbort` and neither ending event. An iteration that stops the graph or aborts the node drops the iterations that would have followed.
-7. A retrigger while the loop is running is ignored. With `restartOnRetrigger`, the walk starts over from index 0 and its first iteration runs on the retrigger's frame, just as it does on activation — a burst that starts again from the top when fired mid-way.
+7. A retrigger while the loop is running is ignored. With `restartOnRetrigger`, the walk starts over from index 0 and its first iteration runs as it restarts, just as it does on activation — a burst that starts again from the top when fired mid-way.
 
-**An unbound count is never an endless loop.** Because the whole loop can run within one frame, a count that resolves to nothing runs zero iterations and finishes immediately, rather than spinning.
+**An unbound count is never an endless loop.** Because the whole loop can run within one step, a count that resolves to nothing runs zero iterations and finishes immediately, rather than spinning.
 
 **The index output cannot steer the loop.** How far the loop has walked lives in its node context and is never read back from the variable, so an iteration that writes the index variable — including rewinding it — changes nothing: the next iteration simply overwrites it.
 
 ## Usage
 
 ```csharp
-// Fire a 5-pellet shotgun blast, all on the same frame, with per-pellet spread driven by the index.
+// Fire a 5-pellet shotgun blast, all on the same step, with per-pellet spread driven by the index.
 graph.VariableDefinitions.DefineVariable("pellets", 5);
 graph.VariableDefinitions.DefineVariable("pelletIndex", 0);
 

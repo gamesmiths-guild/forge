@@ -171,4 +171,67 @@ public interface IEffectComponent
 	{
 		// This method is intentionally left blank.
 	}
+
+	/// <summary>
+	/// Captures what this instance changes while its effect is active, for an entity snapshot.
+	/// </summary>
+	/// <remarks>
+	/// <para>An entity snapshot keeps every active effect with its component instances, and a restore puts their state
+	/// back into the same instances. Return what <see cref="RestoreSnapshot"/> needs to put this instance back as it is
+	/// now, copying anything it changes in place, such as a list.</para>
+	/// <para>The default captures nothing, which suits a component that changes nothing after
+	/// <see cref="OnActiveEffectAdded"/>, and a stateless one shared by every application.</para>
+	/// </remarks>
+	/// <returns>What the instance needs to be put back, or <see langword="null"/> for nothing.</returns>
+	object? CaptureSnapshot()
+	{
+		return null;
+	}
+
+	/// <summary>
+	/// Puts this instance back as it was when <see cref="CaptureSnapshot"/> returned <paramref name="snapshot"/>.
+	/// </summary>
+	/// <remarks>
+	/// A restore calls it between <see cref="OnRestoreDetach"/> and <see cref="OnRestoreAttach"/>, and it must be
+	/// silent: change only the instance's own fields, and apply no effect, raise no event and fire no cue. A snapshot
+	/// can be restored more than once, so copy out of it anything the instance goes on changing in place.
+	/// </remarks>
+	/// <param name="snapshot">What <see cref="CaptureSnapshot"/> returned.</param>
+	void RestoreSnapshot(object? snapshot)
+	{
+		// This method is intentionally left blank.
+	}
+
+	/// <summary>
+	/// Lets go of what this instance holds outside its effect, such as an event subscription, before an entity restore
+	/// puts its state back.
+	/// </summary>
+	/// <remarks>
+	/// <para>A restore has every component instance on the entity let go, newest first, before it puts their state
+	/// back, and take hold again after, oldest first, through <see cref="OnRestoreAttach"/>, each counted from just
+	/// before its <see cref="OnActiveEffectAdded"/>. Subscriptions therefore end up in the order they were first made,
+	/// which keeps handlers sharing an event running in the same order on a replay.</para>
+	/// <para>Undo only what <see cref="OnRestoreAttach"/> redoes, from the instance's current state, and change nothing
+	/// else.</para>
+	/// </remarks>
+	/// <param name="target">The target of the active effect.</param>
+	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect.</param>
+	void OnRestoreDetach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		// This method is intentionally left blank.
+	}
+
+	/// <summary>
+	/// Takes hold again of what this instance holds outside its effect, after an entity restore put its state back.
+	/// </summary>
+	/// <remarks>
+	/// Take hold from the restored state rather than resolving anything again. Like <see cref="OnRestoreDetach"/>, it
+	/// applies no effect, raises no event and fires no cue.
+	/// </remarks>
+	/// <param name="target">The target of the active effect.</param>
+	/// <param name="activeEffectEvaluatedData">The evaluated data for the active effect.</param>
+	void OnRestoreAttach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		// This method is intentionally left blank.
+	}
 }

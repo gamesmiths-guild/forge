@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
@@ -33,6 +34,9 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	private readonly List<IEffectApplicationBlocker> _applicationBlockers = [];
 
 	private int _applicationDepth;
+
+	// Removals and updates in progress, which like applications run callbacks part way through.
+	private int _changeDepth;
 
 	/// <summary>
 	/// Event triggered whenever an effect lands on the owner, carrying its evaluated data.
@@ -137,6 +141,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// </summary>
 	public IForgeEntity Owner { get; } = owner;
 
+	internal bool IsChanging => _applicationDepth > 0 || _changeDepth > 0;
+
 	/// <summary>
 	/// Applies an effect to the owner of this manager.
 	/// </summary>
@@ -237,15 +243,24 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <param name="deltaTime">Time passed since the last update call.</param>
 	public void UpdateEffects(double deltaTime)
 	{
-		ActiveEffect[] effectsToUpdate = [.. _activeEffects];
-		foreach (ActiveEffect effect in effectsToUpdate)
-		{
-			effect.Update(deltaTime);
-		}
+		_changeDepth++;
 
-		foreach (ActiveEffect expiredEffect in effectsToUpdate.Where(x => x.IsExpired).ToArray())
+		try
 		{
-			RemoveActiveEffect(expiredEffect, EffectRemovalReason.Expired);
+			ActiveEffect[] effectsToUpdate = [.. _activeEffects];
+			foreach (ActiveEffect effect in effectsToUpdate)
+			{
+				effect.Update(deltaTime);
+			}
+
+			foreach (ActiveEffect expiredEffect in effectsToUpdate.Where(x => x.IsExpired).ToArray())
+			{
+				RemoveActiveEffect(expiredEffect, EffectRemovalReason.Expired);
+			}
+		}
+		finally
+		{
+			_changeDepth--;
 		}
 	}
 
@@ -626,6 +641,56 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return applied;
 	}
 
+	internal KeyValuePair<ActiveEffect, ActiveEffectSnapshot>[] CaptureSnapshot()
+	{
+		var effects = new KeyValuePair<ActiveEffect, ActiveEffectSnapshot>[_activeEffects.Count];
+
+		for (int i = 0; i < effects.Length; i++)
+		{
+			ActiveEffect activeEffect = _activeEffects[i];
+			effects[i] = new KeyValuePair<ActiveEffect, ActiveEffectSnapshot>(
+				activeEffect,
+				activeEffect.CaptureSnapshot());
+		}
+
+		return effects;
+	}
+
+	// Puts the active effects back as the same objects, in the same order, without raising anything. An effect applied
+	// since the snapshot is dropped with its handle freed, and none of its removal callbacks run. A component that
+	// throws doesn't keep the rest from being put back, and the first exception is handed back.
+	internal ExceptionDispatchInfo? RestoreSnapshot(KeyValuePair<ActiveEffect, ActiveEffectSnapshot>[] effects)
+	{
+		foreach (ActiveEffect activeEffect in _activeEffects)
+		{
+			if (!Array.Exists(effects, x => x.Key == activeEffect))
+			{
+				activeEffect.Handle.Free();
+			}
+		}
+
+		_activeEffects.Clear();
+
+		ExceptionDispatchInfo? failure = null;
+
+		foreach (KeyValuePair<ActiveEffect, ActiveEffectSnapshot> effect in effects)
+		{
+			_activeEffects.Add(effect.Key);
+			ExceptionDispatchInfo? effectFailure = effect.Key.RestoreSnapshot(effect.Value);
+			failure ??= effectFailure;
+		}
+
+		return failure;
+	}
+
+	internal void AddHolds(List<EntityHold> holds)
+	{
+		foreach (ActiveEffect activeEffect in _activeEffects)
+		{
+			activeEffect.AddHolds(holds);
+		}
+	}
+
 	private static bool IsStillActive(ActiveEffect activeEffect)
 	{
 		return activeEffect.EffectEvaluatedData.Target.EffectsManager._activeEffects.Contains(activeEffect);
@@ -831,8 +896,10 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		bool remainActive = true;
 
-		foreach (IEffectComponent component in activeEffect.ComponentInstances)
+		for (int i = 0; i < activeEffect.ComponentInstances.Length; i++)
 		{
+			IEffectComponent component = activeEffect.ComponentInstances[i];
+			activeEffect.ComponentHoldOrders[i] = HoldSequence.Next();
 			remainActive &= component.OnActiveEffectAdded(
 				Owner,
 				new ActiveEffectEvaluatedData(
@@ -905,47 +972,65 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			return;
 		}
 
-		if (!forceRemoval
-			&& effectToRemove.EffectData.StackingData.HasValue
-			&& effectToRemove.EffectData.StackingData.Value.ExpirationPolicy
-			== StackExpirationPolicy.RemoveSingleStackAndRefreshDuration)
-		{
-			effectToRemove.RemoveStack(EffectRemovalReason.Removed);
-			effectToRemove.RemainingDuration = effectToRemove.EffectEvaluatedData.Duration;
+		_changeDepth++;
 
-			if (effectToRemove.StackCount == 0)
+		try
+		{
+			if (!forceRemoval
+				&& effectToRemove.EffectData.StackingData.HasValue
+				&& effectToRemove.EffectData.StackingData.Value.ExpirationPolicy
+				== StackExpirationPolicy.RemoveSingleStackAndRefreshDuration)
 			{
-				RemoveActiveEffect(effectToRemove, EffectRemovalReason.Removed);
+				effectToRemove.RemoveStack(EffectRemovalReason.Removed);
+				effectToRemove.RemainingDuration = effectToRemove.EffectEvaluatedData.Duration;
+
+				if (effectToRemove.StackCount == 0)
+				{
+					RemoveActiveEffect(effectToRemove, EffectRemovalReason.Removed);
+				}
+
+				return;
 			}
 
-			return;
+			effectToRemove.Unapply();
+
+			// This method is only ever reached through the public removal API, so the effect never got the chance to
+			// expire on its own, regardless of its duration type.
+			RemoveActiveEffect(effectToRemove, EffectRemovalReason.Removed);
 		}
-
-		effectToRemove.Unapply();
-
-		// This method is only ever reached through the public removal API, so the effect never got the chance to expire
-		// on its own, regardless of its duration type.
-		RemoveActiveEffect(effectToRemove, EffectRemovalReason.Removed);
+		finally
+		{
+			_changeDepth--;
+		}
 	}
 
 	private void RemoveStacks(ActiveEffect effectToRemove, int stacksToRemove)
 	{
-		if (stacksToRemove < 0)
-		{
-			effectToRemove.Unapply();
-			RemoveActiveEffect(effectToRemove, EffectRemovalReason.Removed);
-			return;
-		}
+		_changeDepth++;
 
-		for (int i = 0; i < stacksToRemove && effectToRemove.StackCount > 0; i++)
+		try
 		{
-			effectToRemove.RemoveStack(EffectRemovalReason.Removed);
-
-			if (effectToRemove.StackCount == 0)
+			if (stacksToRemove < 0)
 			{
+				effectToRemove.Unapply();
 				RemoveActiveEffect(effectToRemove, EffectRemovalReason.Removed);
 				return;
 			}
+
+			for (int i = 0; i < stacksToRemove && effectToRemove.StackCount > 0; i++)
+			{
+				effectToRemove.RemoveStack(EffectRemovalReason.Removed);
+
+				if (effectToRemove.StackCount == 0)
+				{
+					RemoveActiveEffect(effectToRemove, EffectRemovalReason.Removed);
+					return;
+				}
+			}
+		}
+		finally
+		{
+			_changeDepth--;
 		}
 	}
 
@@ -956,32 +1041,42 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			return;
 		}
 
-		_activeEffects.Remove(effectToRemove);
+		_changeDepth++;
 
-		EffectEvaluatedData effectEvaluatedData = effectToRemove.EffectEvaluatedData;
-
-		foreach (IEffectComponent component in effectToRemove.ComponentInstances)
+		try
 		{
-			component.OnActiveEffectUnapplied(
-				Owner,
-				new ActiveEffectEvaluatedData(
-					effectToRemove.Handle,
-					effectEvaluatedData,
-					effectToRemove.RemainingDuration,
-					effectToRemove.NextPeriodicTick,
-					effectToRemove.ExecutionCount),
-				true,
-				reason);
+			_activeEffects.Remove(effectToRemove);
+
+			EffectEvaluatedData effectEvaluatedData = effectToRemove.EffectEvaluatedData;
+
+			foreach (IEffectComponent component in effectToRemove.ComponentInstances)
+			{
+				component.OnActiveEffectUnapplied(
+					Owner,
+					new ActiveEffectEvaluatedData(
+						effectToRemove.Handle,
+						effectEvaluatedData,
+						effectToRemove.RemainingDuration,
+						effectToRemove.NextPeriodicTick,
+						effectToRemove.ExecutionCount),
+					true,
+					reason);
+			}
+
+			// Raised before the handle is freed so that handlers can still read what ended, and not before the
+			// component callbacks so that the effect's own components — the ones that can still change the outcome — go
+			// first.
+			OnActiveEffectRemoved?.Invoke(effectToRemove.Handle, reason);
+
+			effectToRemove.Handle.Free();
+
+			effectToRemove.EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
+
+			_cuesManager.RemoveCues(in effectEvaluatedData, reason == EffectRemovalReason.Removed);
 		}
-
-		// Raised before the handle is freed so that handlers can still read what ended, and not before the component
-		// callbacks so that the effect's own components — the ones that can still change the outcome — go first.
-		OnActiveEffectRemoved?.Invoke(effectToRemove.Handle, reason);
-
-		effectToRemove.Handle.Free();
-
-		effectToRemove.EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
-
-		_cuesManager.RemoveCues(in effectEvaluatedData, reason == EffectRemovalReason.Removed);
+		finally
+		{
+			_changeDepth--;
+		}
 	}
 }

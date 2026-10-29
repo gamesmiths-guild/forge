@@ -31,6 +31,7 @@ public IReadOnlyList<AbilityHandle> GrantedAbilities { get; }
 | `OnActiveEffectChanged` | Tracks inhibition flips, inhibiting or re-enabling the grants and honouring `TryActivateOnEnable`. |
 | `OnActiveEffectUnapplied` | Removes the grants when the effect is fully removed. |
 | `OnEffectExecuted` | Grants the abilities **permanently** — the instant-effect path. |
+| `CaptureSnapshot`, `RestoreSnapshot` | Captures the grants and whether they're inhibited for an [entity snapshot](../../rollback.md), and puts them back on a restore. The abilities themselves come back with the entity. |
 
 ## Behavior
 

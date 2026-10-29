@@ -56,22 +56,21 @@ When the ability is canceled:
 `GraphAbilityBehavior` implements both update hooks. `IAbilityBehavior.OnUpdate(deltaTime)` calls `GraphProcessor.UpdateGraph(deltaTime)`, and `IAbilityBehavior.OnFixedUpdate(deltaTime)` calls `GraphProcessor.FixedUpdateGraph(deltaTime)`. Each advances the state nodes that override the matching hook — see [Two update rails](nodes/state/README.md#two-update-rails).
 
 ```csharp
-// In your game loop, update the entity's abilities
-// (This is handled by whatever drives your abilities, typically alongside EffectsManager)
-behavior.Processor.UpdateGraph(deltaTime);
-
-// And from the fixed callback, if your host has one
+// From the fixed callback, or once per turn
 behavior.Processor.FixedUpdateGraph(fixedDeltaTime);
+
+// And from the frame callback, if any of the graph's nodes runs on the frame rail
+behavior.Processor.UpdateGraph(deltaTime);
 ```
 
 If you're using `GraphAbilityBehavior` through the standard Abilities system, drive the entity instead and both rails reach the graph:
 
 ```csharp
-entity.Abilities.UpdateAbilities(deltaTime);           // from the frame callback
 entity.Abilities.FixedUpdateAbilities(fixedDeltaTime); // from the fixed callback
+entity.Abilities.UpdateAbilities(deltaTime);           // from the frame callback
 ```
 
-**Drive whichever rails your host has.** A host with a fixed step advances effects and the fixed rail together through `EntitySimulation.Tick`, which runs them in the order every machine agrees on; see [Simulation Tick](../simulation.md). A turn-based game may call only `UpdateAbilities` and `EffectsManager.UpdateEffects`; a host with no fixed step never calls `FixedUpdateAbilities`, and nodes on that rail simply do not run.
+**Every host drives the fixed rail.** The built-in timers count on it, so a graph whose fixed rail never runs never ends a timer. `EntitySimulation.Tick` advances effects and the fixed rail together, in the order every machine agrees on; see [Simulation Tick](../simulation.md). A turn-based game calls it once per turn, with the turn's length as the step.
 
 **Then present.** At the end of the frame, `entity.Abilities.PresentAbilities()` runs each graph's [presentation pass](nodes/state/README.md#simulation-and-presentation), which plays, stops and restores what the graph's presentation nodes show. An instance that ended since the last pass still gets this call, so what its graph showed ends too.
 
@@ -203,10 +202,10 @@ var processor = new GraphProcessor(graph);
 processor.OnGraphCompleted = () => Console.WriteLine("Graph finished!");
 processor.StartGraph();
 
-// Drive the graph in your game loop
-void Update(float deltaTime)
+// Drive the graph from your loop's fixed step, which the built-in timers count on
+void FixedUpdate(double fixedDeltaTime)
 {
-    processor.UpdateGraph(deltaTime);
+    processor.FixedUpdateGraph(fixedDeltaTime);
 }
 ```
 

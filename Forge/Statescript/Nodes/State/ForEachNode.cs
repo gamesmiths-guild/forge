@@ -17,8 +17,8 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// write. Leaving the element variable unbound is allowed — the array is then iterated for its length and index
 /// alone.</para>
 /// <para>The array is <b>snapshotted on activation</b>, so an iteration that mutates the source variable does not
-/// change the sequence being walked, and a loop spread over several frames by the interval input keeps iterating the
-/// array it started with. A restart takes a fresh snapshot.</para>
+/// change the sequence being walked, and a loop spread over several fixed steps by the interval input keeps iterating
+/// the array it started with. A restart takes a fresh snapshot.</para>
 /// <para>See <see cref="IterationNode{T}"/> for the condition, interval and ending semantics shared with
 /// <see cref="RepeatNode"/>, including what a retrigger does.</para>
 /// </remarks>
@@ -41,8 +41,8 @@ public class ForEachNode(bool restartOnRetrigger = false) : IterationNode<ForEac
 	public const byte IndexOutput = 1;
 
 	/// <inheritdoc/>
-	public override string Description => "Iterates an array, publishing each element to a variable, all within the " +
-		"activation frame or spaced by an interval, then deactivates.";
+	public override string Description => "Iterates an array, publishing each element to a variable, all as it " +
+		"activates or spaced by an interval, then deactivates.";
 
 	/// <inheritdoc/>
 	protected override void DefineSourceParameters(

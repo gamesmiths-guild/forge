@@ -39,6 +39,8 @@ All the requirement buckets are optional, and reuse the same [`TagRequirements`]
 | `CanApplyEffect` | Rejects the application if the source's application requirements are unmet, or its removal requirements are already met. |
 | `OnActiveEffectAdded` | Subscribes to the *source's* `OnTagsChanged` and reports the initial inhibition state. |
 | `OnActiveEffectUnapplied` | Unsubscribes when the effect is fully removed. |
+| `CaptureSnapshot`, `RestoreSnapshot` | Captures whose tags it subscribed to for an [entity snapshot](../../rollback.md), and puts that back on a restore. |
+| `OnRestoreDetach`, `OnRestoreAttach` | Unsubscribes before a restore and subscribes again after it. |
 
 ## Behavior
 

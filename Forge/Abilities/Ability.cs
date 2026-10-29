@@ -47,7 +47,7 @@ internal sealed class Ability
 
 	private readonly Action<TagContainer>? _tagChangedHandler;
 
-	private readonly EventSubscriptionToken? _eventSubscriptionToken;
+	private EventSubscriptionToken? _eventSubscriptionToken;
 
 	private AbilityInstance? _persistentInstance;
 
@@ -71,6 +71,15 @@ internal sealed class Ability
 	internal bool IsInhibited { get; set; }
 
 	internal bool IsActive => _activeInstances.Count > 0;
+
+	// When the grant took hold of what the ability's trigger watches.
+	internal long HoldOrder { get; } = HoldSequence.Next();
+
+	internal bool IsChanging =>
+		_updating || _behaviors.Values.Any(x => x.Behavior is ISnapshotAbilityBehavior { IsChanging: true });
+
+	// A behavior that isn't a Statescript graph keeps its run where an entity snapshot can't reach it.
+	internal bool RunsUnsnapshottableBehavior => _behaviors.Values.Any(x => x.Behavior is not ISnapshotAbilityBehavior);
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Ability"/> class.
@@ -126,30 +135,13 @@ internal sealed class Ability
 			{
 				case AbilityTriggerSource.TagAdded:
 					_tagChangedHandler = TagAdded_OnTagChanged;
-					owner.Tags.OnTagsChanged += _tagChangedHandler;
 					break;
 				case AbilityTriggerSource.TagPresent:
 					_tagChangedHandler = TagPresent_OnTagChanged;
-					owner.Tags.OnTagsChanged += _tagChangedHandler;
-					break;
-				case AbilityTriggerSource.Event:
-					if (triggerData.SubscribeTypedEvent is not null)
-					{
-						_eventSubscriptionToken = triggerData.SubscribeTypedEvent(
-							this,
-							triggerData.TriggerTag,
-							triggerData.Priority);
-					}
-					else
-					{
-						_eventSubscriptionToken = owner.Events.Subscribe(
-							triggerData.TriggerTag,
-							x => TryActivateAbility(x.Target, out _, x.EventMagnitude),
-							triggerData.Priority);
-					}
-
 					break;
 			}
+
+			SubscribeTrigger();
 		}
 
 		Handle = new AbilityHandle(this);
@@ -251,6 +243,119 @@ internal sealed class Ability
 		if (_eventSubscriptionToken is not null)
 		{
 			Owner.Events.Unsubscribe(_eventSubscriptionToken.Value);
+		}
+	}
+
+	internal Snapshot CaptureSnapshot()
+	{
+		var behaviors = new List<BehaviorSnapshot>(_behaviors.Count);
+
+		foreach (AbilityInstance instance in _activeInstances)
+		{
+			if (_behaviors.TryGetValue(instance, out BehaviorBinding binding))
+			{
+				behaviors.Add(new BehaviorSnapshot(
+					instance,
+					binding.Behavior,
+					binding.Context,
+					((ISnapshotAbilityBehavior)binding.Behavior).CaptureSnapshot()));
+			}
+		}
+
+		return new Snapshot(
+			Level,
+			IsInhibited,
+			[.. _activeInstances],
+			_persistentInstance,
+			_activeCooldownHandles is null ? [] : [.. _activeCooldownHandles],
+			[.. behaviors],
+			OnAbilityDeactivated);
+	}
+
+	// Puts the ability back into this same object without raising anything. An instance started since the snapshot is
+	// dropped rather than ended: its graph stops without running a node, and the next presentation pass ends what it
+	// showed.
+	internal void RestoreSnapshot(Snapshot snapshot)
+	{
+		Handle.Restore(this);
+
+		foreach (AbilityInstance instance in _activeInstances)
+		{
+			if (Array.IndexOf(snapshot.ActiveInstances, instance) < 0)
+			{
+				DropInstance(instance);
+			}
+		}
+
+		Level = snapshot.Level;
+		IsInhibited = snapshot.IsInhibited;
+		_activeInstances.Clear();
+		_behaviors.Clear();
+
+		foreach (AbilityInstance instance in snapshot.ActiveInstances)
+		{
+			instance.Restore();
+			_activeInstances.Add(instance);
+		}
+
+		foreach (BehaviorSnapshot behavior in snapshot.Behaviors)
+		{
+			_behaviors[behavior.Instance] = new BehaviorBinding(behavior.Behavior, behavior.Context);
+			((ISnapshotAbilityBehavior)behavior.Behavior).RestoreSnapshot(behavior.State);
+			Owner.Abilities.UnretireBehavior(behavior.Behavior);
+		}
+
+		_persistentInstance = snapshot.PersistentInstance;
+
+		if (_activeCooldownHandles is not null)
+		{
+			Array.Copy(snapshot.CooldownHandles, _activeCooldownHandles, _activeCooldownHandles.Length);
+		}
+
+		OnAbilityDeactivated = snapshot.OnAbilityDeactivated;
+	}
+
+	// Takes the ability away without raising anything, for a restore to before it was granted.
+	internal void Drop()
+	{
+		foreach (AbilityInstance instance in _activeInstances)
+		{
+			DropInstance(instance);
+		}
+
+		_activeInstances.Clear();
+		_behaviors.Clear();
+		_persistentInstance = null;
+		Handle.Free();
+	}
+
+	internal void DetachForRestore()
+	{
+		Cleanup();
+	}
+
+	internal void AttachForRestore()
+	{
+		SubscribeTrigger();
+	}
+
+	// The trigger, and the running nodes of each graph its instances run; a graph two instances share counts once.
+	internal void AddHolds(List<EntityHold> holds)
+	{
+		if (AbilityData.AbilityTriggerData is not null)
+		{
+			holds.Add(new EntityHold(HoldOrder, this));
+		}
+
+		var behaviors = new List<IAbilityBehavior>(_behaviors.Count);
+
+		foreach (AbilityInstance instance in _activeInstances)
+		{
+			if (_behaviors.TryGetValue(instance, out BehaviorBinding binding) && !behaviors.Contains(binding.Behavior))
+			{
+				behaviors.Add(binding.Behavior);
+				((ISnapshotAbilityBehavior)binding.Behavior).AddHolds(holds);
+			}
 		}
 	}
 
@@ -677,8 +782,10 @@ internal sealed class Ability
 
 		_updating = true;
 
+		// In start order. The dictionary's order also depends on which slots ended instances freed, which a restore
+		// doesn't bring back.
 		_behaviorBuffer.Clear();
-		_behaviorBuffer.AddRange(_behaviors.Keys);
+		_behaviorBuffer.AddRange(_activeInstances);
 
 		return true;
 	}
@@ -812,18 +919,36 @@ internal sealed class Ability
 
 	private void Activate(IForgeEntity? abilityTarget, float magnitude)
 	{
-		AbilityInstance instance = CreateInstance(abilityTarget);
-		_activeInstances.Add(instance);
-		NotifyActivated();
-		instance.Start(magnitude);
+		Owner.Abilities.BeginChange();
+
+		try
+		{
+			AbilityInstance instance = CreateInstance(abilityTarget);
+			_activeInstances.Add(instance);
+			NotifyActivated();
+			instance.Start(magnitude);
+		}
+		finally
+		{
+			Owner.Abilities.EndChange();
+		}
 	}
 
 	private void Activate<TData>(IForgeEntity? abilityTarget, TData data, float magnitude)
 	{
-		AbilityInstance instance = CreateInstance(abilityTarget);
-		_activeInstances.Add(instance);
-		NotifyActivated();
-		instance.Start(data, magnitude);
+		Owner.Abilities.BeginChange();
+
+		try
+		{
+			AbilityInstance instance = CreateInstance(abilityTarget);
+			_activeInstances.Add(instance);
+			NotifyActivated();
+			instance.Start(data, magnitude);
+		}
+		finally
+		{
+			Owner.Abilities.EndChange();
+		}
 	}
 
 	private void NotifyActivated()
@@ -898,6 +1023,52 @@ internal sealed class Ability
 		return [.. modifiersEvaluatedData];
 	}
 
+	private void SubscribeTrigger()
+	{
+		if (_tagChangedHandler is not null)
+		{
+			Owner.Tags.OnTagsChanged += _tagChangedHandler;
+			return;
+		}
+
+		if (AbilityData.AbilityTriggerData is not { TriggerSource: AbilityTriggerSource.Event } triggerData)
+		{
+			return;
+		}
+
+		if (triggerData.SubscribeTypedEvent is not null)
+		{
+			_eventSubscriptionToken = triggerData.SubscribeTypedEvent(
+				this,
+				triggerData.TriggerTag,
+				triggerData.Priority);
+
+			return;
+		}
+
+		_eventSubscriptionToken = Owner.Events.Subscribe(
+			triggerData.TriggerTag,
+			x => TryActivateAbility(x.Target, out _, x.EventMagnitude),
+			triggerData.Priority);
+	}
+
+	private void DropInstance(AbilityInstance instance)
+	{
+		instance.Drop();
+
+		if (!_behaviors.TryGetValue(instance, out BehaviorBinding binding))
+		{
+			return;
+		}
+
+		((ISnapshotAbilityBehavior)binding.Behavior).DropRun();
+
+		if (binding.Behavior.IsPresenting)
+		{
+			Owner.Abilities.RetireBehavior(binding.Behavior);
+		}
+	}
+
 	private void TagPresent_OnTagChanged(TagContainer container)
 	{
 		if (container.HasTag(AbilityData.AbilityTriggerData!.Value.TriggerTag))
@@ -917,4 +1088,37 @@ internal sealed class Ability
 			TryActivateAbility(null, out _, 0f);
 		}
 	}
+
+	/// <summary>
+	/// The ability as an entity snapshot took it: its level and inhibition, its running instances, the cooldowns its
+	/// last commit applied, the run of each instance's graph, and who waits for it to end.
+	/// </summary>
+	/// <param name="Level">The ability's level.</param>
+	/// <param name="IsInhibited">Whether the ability was inhibited.</param>
+	/// <param name="ActiveInstances">The running instances, in start order.</param>
+	/// <param name="PersistentInstance">The instance a per-entity ability reuses.</param>
+	/// <param name="CooldownHandles">The cooldowns the last commit applied.</param>
+	/// <param name="Behaviors">Each running instance's behavior and its captured run.</param>
+	/// <param name="OnAbilityDeactivated">Who waits for the ability to end, such as a pending removal.</param>
+	internal sealed record Snapshot(
+		int Level,
+		bool IsInhibited,
+		AbilityInstance[] ActiveInstances,
+		AbilityInstance? PersistentInstance,
+		ActiveEffectHandle?[] CooldownHandles,
+		BehaviorSnapshot[] Behaviors,
+		Action<Ability>? OnAbilityDeactivated);
+
+	/// <summary>
+	/// A running instance's behavior, with what it was started with and its captured run.
+	/// </summary>
+	/// <param name="Instance">The running instance.</param>
+	/// <param name="Behavior">The behavior the instance runs.</param>
+	/// <param name="Context">The context the behavior was started with.</param>
+	/// <param name="State">The behavior's captured run.</param>
+	internal readonly record struct BehaviorSnapshot(
+		AbilityInstance Instance,
+		IAbilityBehavior Behavior,
+		AbilityBehaviorContext Context,
+		object State);
 }

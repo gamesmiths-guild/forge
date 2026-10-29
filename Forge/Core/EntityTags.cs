@@ -183,4 +183,37 @@ public class EntityTags
 			RemoveModifierTag(tag);
 		}
 	}
+
+	internal EntityTagsSnapshot CaptureSnapshot()
+	{
+		return new EntityTagsSnapshot([.. BaseTags], [.. _modifierTagCounts]);
+	}
+
+	// Puts the tags back into the same containers without raising OnTagsChanged.
+	internal void RestoreSnapshot(EntityTagsSnapshot snapshot)
+	{
+		BaseTags.Reset(snapshot.BaseTags.Length);
+
+		foreach (Tag tag in snapshot.BaseTags)
+		{
+			BaseTags.AddTagFast(tag);
+		}
+
+		_modifierTagCounts.Clear();
+		ModifierTags.Reset(snapshot.ModifierTagCounts.Length);
+
+		foreach (KeyValuePair<Tag, int> modifierTagCount in snapshot.ModifierTagCounts)
+		{
+			_modifierTagCounts.Add(modifierTagCount.Key, modifierTagCount.Value);
+
+			if (modifierTagCount.Value > 0)
+			{
+				ModifierTags.AddTagFast(modifierTagCount.Key);
+			}
+		}
+
+		AllTags.Reset(BaseTags.InternalTags.Count + ModifierTags.InternalTags.Count);
+		AllTags.AppendTags(BaseTags);
+		AllTags.AppendTags(ModifierTags);
+	}
 }

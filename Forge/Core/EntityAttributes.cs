@@ -61,6 +61,9 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 
 	internal IReadOnlyCollection<ActiveEffect> DependentEffects => _dependentEffects;
 
+	// An operation part way through writing attributes keeps a change scope open.
+	internal bool IsChanging => _openChanges.Count > 0;
+
 	/// <summary>
 	/// Gets the mapping for the attributes of this container.
 	/// </summary>
@@ -265,6 +268,56 @@ public class EntityAttributes(IForgeEntity owner) : IEnumerable<EntityAttribute>
 		if (_openChanges.Count > 0)
 		{
 			_openChanges[^1].Record(attribute, delta);
+		}
+	}
+
+	internal KeyValuePair<EntityAttribute, AttributeSnapshot>[] CaptureSnapshot()
+	{
+		var attributes = new List<KeyValuePair<EntityAttribute, AttributeSnapshot>>(_attributes.Count);
+
+		foreach (AttributeSet attributeSet in _attributeSets)
+		{
+			foreach (EntityAttribute attribute in attributeSet.AttributesMap.Values)
+			{
+				attributes.Add(
+					new KeyValuePair<EntityAttribute, AttributeSnapshot>(attribute, attribute.CaptureSnapshot()));
+			}
+		}
+
+		return [.. attributes];
+	}
+
+	// Puts the sets and their values back without raising anything. The restored effects bring their own modifiers
+	// back, so nothing is rebuilt around a change of sets. A set added since the snapshot leaves without the modifiers
+	// the effects gave it, as a removed set does, so none comes back with it if it is added again.
+	internal void RestoreSnapshot(
+		AttributeSet[] attributeSets,
+		KeyValuePair<EntityAttribute, AttributeSnapshot>[] attributes)
+	{
+		if (!_attributeSets.SequenceEqual(attributeSets))
+		{
+			foreach (AttributeSet attributeSet in _attributeSets.ToArray())
+			{
+				DetachAttributeSet(attributeSet);
+
+				if (Array.IndexOf(attributeSets, attributeSet) < 0)
+				{
+					foreach (EntityAttribute attribute in attributeSet.AttributesMap.Values)
+					{
+						attribute.DropModifiers();
+					}
+				}
+			}
+
+			foreach (AttributeSet attributeSet in attributeSets)
+			{
+				AttachAttributeSet(attributeSet);
+			}
+		}
+
+		foreach (KeyValuePair<EntityAttribute, AttributeSnapshot> attribute in attributes)
+		{
+			attribute.Key.RestoreSnapshot(attribute.Value);
 		}
 	}
 #pragma warning restore T0009 // Internal Styling Rule T0009

@@ -132,11 +132,12 @@ public class QuickStartTests
 		hero.Attributes["HeroAttributes.Mana"].CurrentValue.Should().Be(50);
 	}
 
-	// The game loop's job: advance time for everything the entity owns.
-	private static void Tick(Hero hero, float deltaTime)
+	private long _tick;
+
+	// The game loop's job: advance the entity by one step of the given length.
+	private void Tick(Hero hero, float deltaTime)
 	{
-		hero.EffectsManager.UpdateEffects(deltaTime);
-		hero.Abilities.UpdateAbilities(deltaTime);
+		EntitySimulation.Tick(hero, ++_tick, deltaTime);
 	}
 
 	public class HeroAttributes : AttributeSet

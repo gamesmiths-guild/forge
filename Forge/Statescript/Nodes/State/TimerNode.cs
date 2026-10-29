@@ -11,9 +11,9 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// </summary>
 /// <remarks>
 /// <para>The duration input must resolve to a <see langword="double"/> value representing seconds.</para>
-/// <para>The node accumulates elapsed time in its <see cref="TimerNodeContext"/> during
-/// <see cref="StateNode{T}.OnUpdate"/> calls. When the elapsed time reaches or exceeds the duration, the node
-/// deactivates itself.</para>
+/// <para>The node accumulates elapsed time in its <see cref="TimerNodeContext"/> one fixed step at a time, during
+/// <see cref="StateNode{T}.OnFixedUpdate"/> calls, so it ends on the same step on every machine. When the elapsed time
+/// reaches or exceeds the duration, the node deactivates itself.</para>
 /// <para>A retrigger while the timer runs is ignored, or with <paramref name="restartOnRetrigger"/> the elapsed time
 /// starts again from zero, so the timer runs a full duration from the retrigger.</para>
 /// </remarks>
@@ -66,7 +66,7 @@ public class TimerNode(bool restartOnRetrigger = false) : StateNode<TimerNodeCon
 	}
 
 	/// <inheritdoc/>
-	protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+	protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
 	{
 		TimerNodeContext nodeContext = graphContext.GetNodeContext<TimerNodeContext>(NodeID);
 

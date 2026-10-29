@@ -51,6 +51,7 @@ new ConditionalEffect(EffectData, SourceTagRequirements, RemovalPolicy, StacksTo
 |------|--------------------------|
 | `OnEffectApplied` | Evaluates each conditional's source requirements and applies the ones that pass, tracking the handles of any `RemoveOnEnd` entries. |
 | `OnActiveEffectUnapplied` | On full removal only: applies `onCompleteAlways`, then whichever of `onCompleteNormal` / `onCompletePrematurely` matches the removal reason, then takes back the tracked `RemoveOnEnd` effects. |
+| `CaptureSnapshot`, `RestoreSnapshot` | Captures the tracked `RemoveOnEnd` handles for an [entity snapshot](../../rollback.md), and puts them back on a restore. |
 
 ## Behavior
 

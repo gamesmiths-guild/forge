@@ -40,6 +40,7 @@ The `ConditionalEffect`'s `RemovalPolicy` asks whether the applied effect outliv
 | `OnPostActiveEffectAdded` | Evaluates the initial stack count, so an effect arriving with enough stacks crosses on arrival. |
 | `OnActiveEffectChanged` | Re-evaluates whenever the count changes, applying or taking back accordingly. |
 | `OnActiveEffectUnapplied` | Takes the `RemoveOnEnd` entries back on full removal. |
+| `CaptureSnapshot`, `RestoreSnapshot` | Captures which thresholds have fired, with the handles of what they applied, for an [entity snapshot](../../rollback.md), and puts them back on a restore. |
 
 ## Behavior
 

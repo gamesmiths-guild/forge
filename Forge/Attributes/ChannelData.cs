@@ -43,6 +43,20 @@ internal struct ChannelData
 	public readonly double PercentModifier => 1 + _percentTotal;
 
 	/// <summary>
+	/// Copies the channel with groups of its own, for an entity snapshot.
+	/// </summary>
+	/// <returns>The copy.</returns>
+	public readonly ChannelData Copy()
+	{
+		ChannelData copy = this;
+		copy._flatMaxGroup = _flatMaxGroup is null ? null : [.. _flatMaxGroup];
+		copy._flatMinGroup = _flatMinGroup is null ? null : [.. _flatMinGroup];
+		copy._percentMaxGroup = _percentMaxGroup is null ? null : [.. _percentMaxGroup];
+		copy._percentMinGroup = _percentMinGroup is null ? null : [.. _percentMinGroup];
+		return copy;
+	}
+
+	/// <summary>
 	/// Adds a flat modifier to its aggregation group.
 	/// </summary>
 	/// <param name="value">The value of the modifier.</param>

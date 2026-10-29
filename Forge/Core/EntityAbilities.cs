@@ -34,6 +34,9 @@ public class EntityAbilities(IForgeEntity owner)
 
 	private bool _updating;
 
+	// Activations, ends and removals in progress, which raise their notifications part way through.
+	private int _changeDepth;
+
 	private Action<Ability>? _removeAbility;
 	private Action<Ability>? _inhibitAbility;
 
@@ -113,6 +116,27 @@ public class EntityAbilities(IForgeEntity owner)
 	/// Gets the tags that block abilities from being used.
 	/// </summary>
 	public EntityTags BlockedAbilityTags { get; } = new EntityTags(new TagContainer(owner.Tags.BaseTags.TagsManager));
+
+	internal bool IsChanging
+	{
+		get
+		{
+			if (_updating || _changeDepth > 0)
+			{
+				return true;
+			}
+
+			foreach (AbilityHandle handle in _grantOrder)
+			{
+				if (handle.Ability?.IsChanging == true)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+	}
 
 	/// <summary>
 	/// Tries to get a granted ability from its data.
@@ -629,6 +653,12 @@ public class EntityAbilities(IForgeEntity owner)
 		_retiredBehaviors.Add(behavior);
 	}
 
+	// A restore brought the behavior's instance back, so the active walk presents it again.
+	internal void UnretireBehavior(IAbilityBehavior behavior)
+	{
+		_retiredBehaviors.Remove(behavior);
+	}
+
 	// The input stage of a tick: abilities bound to an action that showed their edge try to activate, in grant order.
 	internal void ActivateBoundAbilities(EntityInput input)
 	{
@@ -754,6 +784,16 @@ public class EntityAbilities(IForgeEntity owner)
 		InhibitAbilityBasedOnPolicy(abilityToInhibit, grantSource.InhibitionPolicy);
 	}
 
+	internal void BeginChange()
+	{
+		_changeDepth++;
+	}
+
+	internal void EndChange()
+	{
+		_changeDepth--;
+	}
+
 	internal void NotifyAbilityEnded(AbilityEndedData abilityEndedData)
 	{
 		OnAbilityEnded?.Invoke(abilityEndedData);
@@ -767,6 +807,71 @@ public class EntityAbilities(IForgeEntity owner)
 	internal void NotifyAbilityActivationFailed(AbilityHandle abilityHandle, AbilityActivationFailures failureFlags)
 	{
 		OnAbilityActivationFailed?.Invoke(abilityHandle, failureFlags);
+	}
+
+	// The first granted ability running a behavior an entity snapshot can't capture, if any.
+	internal AbilityData? FindUnsnapshottableAbility()
+	{
+		foreach (AbilityHandle handle in _grantOrder)
+		{
+			if (handle.Ability is { RunsUnsnapshottableBehavior: true } ability)
+			{
+				return ability.AbilityData;
+			}
+		}
+
+		return null;
+	}
+
+	internal EntityAbilitiesSnapshot CaptureSnapshot()
+	{
+		var abilities = new GrantedAbilitySnapshot[_grantOrder.Count];
+
+		for (int i = 0; i < abilities.Length; i++)
+		{
+			Ability ability = _grantOrder[i].Ability!;
+			abilities[i] = new GrantedAbilitySnapshot(ability, [.. _grantSources[ability]], ability.CaptureSnapshot());
+		}
+
+		return new EntityAbilitiesSnapshot(abilities, _removeAbility, _inhibitAbility);
+	}
+
+	// Puts the granted abilities back as the same objects, in grant order, without raising anything. An ability granted
+	// since the snapshot is dropped with its handle freed.
+	internal void RestoreSnapshot(EntityAbilitiesSnapshot snapshot)
+	{
+		foreach (AbilityHandle handle in _grantOrder)
+		{
+			Ability ability = handle.Ability!;
+
+			if (!Array.Exists(snapshot.Abilities, x => x.Ability == ability))
+			{
+				ability.Drop();
+			}
+		}
+
+		_grantOrder.Clear();
+		_grantedAbilities.Clear();
+		_grantSources.Clear();
+
+		foreach (GrantedAbilitySnapshot granted in snapshot.Abilities)
+		{
+			granted.Ability.RestoreSnapshot(granted.State);
+			_grantOrder.Add(granted.Ability.Handle);
+			_grantedAbilities.Add(granted.Ability.Handle);
+			_grantSources[granted.Ability] = [.. granted.GrantSources];
+		}
+
+		_removeAbility = snapshot.RemoveAbility;
+		_inhibitAbility = snapshot.InhibitAbility;
+	}
+
+	internal void AddHolds(List<EntityHold> holds)
+	{
+		foreach (AbilityHandle handle in _grantOrder)
+		{
+			handle.Ability!.AddHolds(holds);
+		}
 	}
 
 	private static bool MatchesTags(Ability ability, TagContainer tagsToActivate)
@@ -1001,18 +1106,28 @@ public class EntityAbilities(IForgeEntity owner)
 			return;
 		}
 
-		abilityToRemove.Cleanup();
+		_changeDepth++;
 
-		// Raised before the handle is freed, so handlers can still read what went away.
-		OnAbilityRemoved?.Invoke(abilityToRemove.Handle);
+		try
+		{
+			abilityToRemove.Cleanup();
 
-		abilityToRemove.Handle.Free();
-		_grantedAbilities.Remove(abilityToRemove.Handle);
-		_grantOrder.Remove(abilityToRemove.Handle);
+			// Raised before the handle is freed, so handlers can still read what went away.
+			OnAbilityRemoved?.Invoke(abilityToRemove.Handle);
 
-		// The ability is gone for good, so its now-empty entry goes too. Leaving it behind roots the dead Ability as a
-		// dictionary key for the lifetime of the entity, and a revoke/re-grant cycle repeats that without bound.
-		_grantSources.Remove(abilityToRemove);
+			abilityToRemove.Handle.Free();
+			_grantedAbilities.Remove(abilityToRemove.Handle);
+			_grantOrder.Remove(abilityToRemove.Handle);
+
+			// The ability is gone for good, so its now-empty entry goes too. Leaving it behind roots the dead Ability
+			// as a dictionary key for the lifetime of the entity, and a revoke/re-grant cycle repeats that without
+			// bound.
+			_grantSources.Remove(abilityToRemove);
+		}
+		finally
+		{
+			_changeDepth--;
+		}
 	}
 
 	private void InhibitAbility(Ability abilityToInhibit)

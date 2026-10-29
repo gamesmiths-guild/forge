@@ -55,6 +55,15 @@ public class GraphProcessor
 	/// </summary>
 	public bool IsPresenting => _presented.Count > 0;
 
+	// A run part way through changing - a pass walking it, a stop tearing it down, node code or a message on its way
+	// back - has nothing settled for a snapshot to keep or to replace. A message of a run that has ended leaves its
+	// count behind, which the next run starts over from.
+	internal bool IsChanging => _updating
+		|| _presenting
+		|| GraphContext.IsStopping
+		|| GraphContext.RunningFrames > 0
+		|| (GraphContext.HasStarted && GraphContext.FinalizationDeferralCount > 0);
+
 	/// <summary>
 	/// Initializes a new instance of the <see cref="GraphProcessor"/> class.
 	/// </summary>
@@ -462,6 +471,27 @@ public class GraphProcessor
 			}
 		}
 
+		SwapIn(snapshot);
+
+		foreach (Node node in RunningNodesByActivation(newestFirst: false))
+		{
+			try
+			{
+				node.AttachForRestore(GraphContext);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		failure?.Throw();
+	}
+
+	// Puts the snapshot's run in place without running any node code. What the running nodes hold outside the graph is
+	// let go of before and taken hold of again after, by RestoreSnapshot or by an entity restore.
+	internal void SwapIn(GraphSnapshot snapshot)
+	{
 		GraphContext.RemoveAllNodeContext();
 
 		foreach (GraphSnapshot.NodeContextCopy nodeContext in snapshot.NodeContexts)
@@ -481,6 +511,7 @@ public class GraphProcessor
 		snapshot.GraphVariables.CopyTo(GraphContext.GraphVariables);
 		GraphContext.HasStarted = snapshot.HasStarted;
 		GraphContext.Processor = snapshot.HasStarted ? this : null;
+		GraphContext.FinalizationDeferralCount = 0;
 		GraphContext.ActivationCount = snapshot.ActivationCount;
 		GraphContext.SharedVariables = snapshot.SharedVariables;
 		GraphContext.ActivationContext = snapshot.ActivationContext;
@@ -491,20 +522,35 @@ public class GraphProcessor
 		// run the restore replaced.
 		GraphContext.RunStamp++;
 		GraphContext.UpdateStamp++;
+	}
 
-		foreach (Node node in RunningNodesByActivation(newestFirst: false))
+	// Ends the run without running any node code, for an ability instance an entity restore takes away. The running
+	// nodes have already let go of what they hold, and the next presentation pass ends what the run showed.
+	internal void DropRun()
+	{
+		GraphContext.RemoveAllNodeContext();
+		GraphContext.ActiveStateNodes.Clear();
+		GraphContext.InternalNodeActivationStatus.Clear();
+		GraphContext.HasStarted = false;
+		GraphContext.Processor = null;
+		GraphContext.FinalizationDeferralCount = 0;
+		OnGraphCompleted = null;
+		GraphContext.RunStamp++;
+		GraphContext.UpdateStamp++;
+	}
+
+	// Each running state node, with the order it took hold in, for an entity restore to let go and take hold again
+	// across the entity's graphs.
+	internal void AddHolds(List<EntityHold> holds)
+	{
+		foreach (Node node in GraphContext.ActiveStateNodes)
 		{
-			try
+			if (GraphContext.TryGetNodeContext(node.NodeID, out INodeContext? context)
+				&& context is StateNodeContext nodeContext)
 			{
-				node.AttachForRestore(GraphContext);
-			}
-			catch (Exception exception)
-			{
-				failure ??= ExceptionDispatchInfo.Capture(exception);
+				holds.Add(new EntityHold(nodeContext.HoldOrder, this, node));
 			}
 		}
-
-		failure?.Throw();
 	}
 
 	/// <summary>
@@ -566,15 +612,9 @@ public class GraphProcessor
 		return true;
 	}
 
-	// A run part way through changing - a pass walking it, a stop tearing it down, node code or a message on its way
-	// back - has nothing settled for a snapshot to keep or to replace.
 	private void ThrowIfChanging(string action)
 	{
-		if (_updating
-			|| _presenting
-			|| GraphContext.IsStopping
-			|| GraphContext.RunningFrames > 0
-			|| GraphContext.FinalizationDeferralCount > 0)
+		if (IsChanging)
 		{
 			throw new InvalidOperationException(
 				$"A graph snapshot cannot be {action} while the graph is updating, presenting or stopping, or while " +

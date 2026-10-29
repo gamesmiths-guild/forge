@@ -27,7 +27,7 @@ new ConditionMonitorNode(deactivateWhenTrue = false, initialCheckOnActivate = tr
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | deactivateWhenTrue | `bool` | When `true`, the node emits `OnBecameTrue` and deactivates itself the moment the condition becomes true ("wait until" mode). |
-| initialCheckOnActivate | `bool` | When `true`, the condition is evaluated immediately on activation instead of waiting for the first update tick. |
+| initialCheckOnActivate | `bool` | When `true`, the condition is evaluated immediately on activation instead of waiting for the first fixed step. |
 
 ## Parameters
 
@@ -35,11 +35,11 @@ new ConditionMonitorNode(deactivateWhenTrue = false, initialCheckOnActivate = tr
 
 | Index | Label | Type | Description |
 |-------|-------|------|-------------|
-| 0 | Condition | `bool` | The monitored condition, evaluated on activation and every update tick. |
+| 0 | Condition | `bool` | The monitored condition, evaluated on activation and every fixed step. |
 
 ## Behavior
 
-1. Evaluates the condition on activation (unless `initialCheckOnActivate` is disabled) and once per update tick.
+1. Evaluates the condition on activation (unless `initialCheckOnActivate` is disabled) and once per fixed step.
 2. On each transition, emits `OnBecameTrue`/`OnBecameFalse`. The first evaluation after activation counts as a transition into the evaluated value.
 3. While the condition holds, the matching subgraph is active; on a flip, the previous subgraph is disabled and the other activated. Both are cleaned up when the node deactivates.
 4. With `deactivateWhenTrue`, becoming true emits `OnBecameTrue` and self-deactivates.

@@ -24,7 +24,7 @@ new {ClassName}({parameters})
 |------|--------------------------|
 | {`OnActiveEffectAdded`} | {What it does in this hook.} |
 
-> List only the hooks the component actually overrides, in the order they fire. See [Component Lifecycle Methods](../effects/components/README.md#component-lifecycle-methods) for what each hook guarantees.
+> List only the hooks the component actually overrides, in the order they fire, with the [rollback hooks](../effects/components/README.md#rollback-hooks) last. See [Component Lifecycle Methods](../effects/components/README.md#component-lifecycle-methods) for what each hook guarantees.
 
 ## Behavior
 
@@ -33,6 +33,7 @@ new {ClassName}({parameters})
 - {What it does on application.}
 - {How it reacts to inhibition, stacking, and level changes — or state explicitly that it ignores them.}
 - {What it undoes on removal, and whether a stack removal counts.}
+- {For a stateful component: what an [entity restore](../rollback.md) puts back, and what it lets go of and takes hold of again. Remove this otherwise.}
 
 ## Validation
 

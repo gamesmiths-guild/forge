@@ -47,7 +47,7 @@ new TimerNode(restartOnRetrigger = false)
 ## Behavior
 
 1. **Activation:** The elapsed time counter is reset to 0.
-2. **Update:** Each frame, the elapsed time is incremented by `deltaTime`. When the elapsed time reaches or exceeds the bound duration, the node emits `OnTimerEnd` and deactivates.
+2. **Update:** Each fixed step, the elapsed time is incremented by the step's length, so the timer ends on the same step on every machine. When the elapsed time reaches or exceeds the bound duration, the node emits `OnTimerEnd` and deactivates.
 3. **Deactivation:** Standard state node deactivation, `OnDeactivate` port emits and the subgraph receives a disable signal.
 4. **Interrupted End:** If the node is aborted or deactivated externally before the duration finishes, `OnTimerEnd` does not emit.
 5. **Retrigger:** Ignored, so the timer keeps the end it started with. With `restartOnRetrigger`, the elapsed time starts again from zero and the timer runs a full duration from the retrigger — a timer that keeps being pushed back while something keeps poking it.

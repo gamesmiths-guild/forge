@@ -68,6 +68,18 @@ public class BlockAbilityTagsEffectComponent(TagContainer tagsToBlock) : IEffect
 		UpdateBlocking(target, false);
 	}
 
+	/// <inheritdoc/>
+	public object? CaptureSnapshot()
+	{
+		return _isBlocking;
+	}
+
+	/// <inheritdoc/>
+	public void RestoreSnapshot(object? snapshot)
+	{
+		_isBlocking = (bool)snapshot!;
+	}
+
 	private void UpdateBlocking(IForgeEntity target, bool shouldBlock)
 	{
 		// Guarded so that OnActiveEffectChanged, which also fires for level, modifier and stack changes, never double

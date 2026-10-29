@@ -179,4 +179,10 @@ public class AbilityHandle : IValidatable
 	{
 		Ability = null;
 	}
+
+	// An entity restore brings back the ability this handle was made for.
+	internal void Restore(Ability ability)
+	{
+		Ability = ability;
+	}
 }

@@ -146,7 +146,7 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		(GraphProcessor processor, RecordingCueHandler handler) = BuildSingleCueGraph(retriggerAt: 1.0);
 
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		handler.ApplyCount.Should().Be(1);
 		handler.RemoveCount.Should().Be(0);
@@ -160,7 +160,7 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 			BuildSingleCueGraph(retriggerAt: 1.0, restartOnRetrigger: true);
 
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		handler.ApplyCount.Should().Be(2);
 		handler.RemoveCount.Should().Be(1);
@@ -179,7 +179,7 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		handler.Removed = processor.StopGraph;
 		processor.StartGraph();
 
-		processor.Invoking(x => x.UpdateGraph(1.0)).Should().NotThrow();
+		processor.Invoking(x => x.FixedUpdateGraph(1.0)).Should().NotThrow();
 
 		handler.ApplyCount.Should().Be(1, "the restart ended with the graph instead of applying again");
 		handler.RemoveCount.Should().Be(1, "the graph stopping does not remove the cue a second time");
@@ -196,7 +196,7 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 		handler.Removed = processor.StopGraph;
 		RestartOnFirstCompletion(processor);
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		handler.ApplyCount.Should().Be(2, "the new run applied the cue, and the restart it replaced did not");
 

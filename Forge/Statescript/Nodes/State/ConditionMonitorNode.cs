@@ -10,7 +10,7 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// </summary>
 /// <remarks>
 /// <para>The condition input must resolve to a <see langword="bool"/>. It is evaluated on activation (unless
-/// <paramref name="initialCheckOnActivate"/> is disabled) and once per update tick while the node is active.</para>
+/// <paramref name="initialCheckOnActivate"/> is disabled) and once per fixed step while the node is active.</para>
 /// <para>On every transition the node emits <see cref="OnBecameTruePort"/> or <see cref="OnBecameFalsePort"/>. The
 /// first evaluation after activation counts as a transition into the evaluated value.</para>
 /// <para>The <see cref="TrueSubgraphPort"/> and <see cref="FalseSubgraphPort"/> subgraphs mirror the condition: while
@@ -93,7 +93,7 @@ public class ConditionMonitorNode(bool deactivateWhenTrue = false, bool initialC
 	}
 
 	/// <inheritdoc/>
-	protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+	protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
 	{
 		EvaluateCondition(graphContext);
 	}

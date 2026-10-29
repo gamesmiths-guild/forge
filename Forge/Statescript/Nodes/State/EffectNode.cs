@@ -136,7 +136,7 @@ public class EffectNode(bool restartOnRetrigger = false) : StateNode<EffectNodeC
 	}
 
 	/// <inheritdoc/>
-	protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+	protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
 	{
 		EffectNodeContext nodeContext = graphContext.GetNodeContext<EffectNodeContext>(NodeID);
 

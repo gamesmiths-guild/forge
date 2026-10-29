@@ -5,7 +5,7 @@
 > **Class:** `Gamesmiths.Forge.Statescript.Nodes.State.ForEachNode`
 > **Context:** `ForEachNodeContext`
 
-Iterates an array, publishing each element to a variable, all within the activation frame or spaced by an interval, then deactivates.
+Iterates an array, publishing each element to a variable, all as it activates or spaced by an interval, then deactivates.
 
 Together with [RepeatNode](repeat-node.md) this is the graph's bounded loop. Both derive from `IterationNode<T>` and share their port shape, condition, interval and ending semantics; they differ only in what drives the sequence — an array here, a count there.
 
@@ -41,7 +41,7 @@ new ForEachNode(restartOnRetrigger = false)
 |-------|-------|------|-------------|
 | 0 | Array | `object[]` | The array to walk. Any array works — value-typed or object-backed — and the bound element variable decides how it is read. |
 | 1 | Condition | `bool` | Optional guard, evaluated once per iteration right before that iteration is due. The loop ends through `OnConditionFailed` as soon as it does not hold. Unbound means no early exit. |
-| 2 | Interval | `double` | Optional spacing between iterations, in seconds. Unbound or non-positive walks the whole array on the activation frame. |
+| 2 | Interval | `double` | Optional spacing between iterations, in seconds. Unbound or non-positive walks the whole array as the node activates. |
 
 **Output Variables:**
 
@@ -64,13 +64,13 @@ So: to iterate entities, declare an `IForgeEntity` graph variable and bind it to
 
 ## Behavior
 
-1. The array is **snapshotted on activation**. An iteration that reassigns the source variable does not change the sequence being walked, and a loop spread over several frames keeps iterating the array it started with.
-2. The first iteration always runs on the **activation frame**, right after `OnActivate` and the Subgraph port have fired.
-3. With no interval, the rest of the array follows immediately, all in that same frame.
-4. With a positive interval, the elements after the first are spaced by it — so a 3-element array at `0.2` runs at `0.0`, `0.2` and `0.4`. When several intervals elapse in a single update, the loop catches up within that update.
+1. The array is **snapshotted on activation**. An iteration that reassigns the source variable does not change the sequence being walked, and a loop spread over several fixed steps keeps iterating the array it started with.
+2. The first iteration always runs **as the node activates**, right after `OnActivate` and the Subgraph port have fired.
+3. With no interval, the rest of the array follows immediately, all in that same step.
+4. With a positive interval, the elements after the first are spaced by it — so a 3-element array at `0.2` runs at `0.0`, `0.2` and `0.4`. When several intervals elapse in a single fixed step, the loop catches up within that step.
 5. The loop finishes on the same tick as its final element: `OnFinished` fires, then the node deactivates. An empty or unresolvable source finishes immediately, having emitted nothing.
 6. Aborting the node emits `OnAbort` and neither ending event. An iteration that stops the graph or aborts the node drops the elements that would have followed.
-7. A retrigger while the loop is running is ignored. With `restartOnRetrigger`, the walk starts over from the first element of a **fresh snapshot**, so it sees the array as it is at the retrigger, and its first iteration runs on that frame.
+7. A retrigger while the loop is running is ignored. With `restartOnRetrigger`, the walk starts over from the first element of a **fresh snapshot**, so it sees the array as it is at the retrigger, and its first iteration runs as it restarts.
 
 **Neither output can steer the loop.** Position lives in the node context and the elements come from the activation snapshot, so an iteration that writes the element or index variable — including rewinding the index — changes nothing: the next iteration simply overwrites both.
 

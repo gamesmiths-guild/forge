@@ -23,6 +23,7 @@ new BlockAbilityTagsEffectComponent(tagsToBlock)
 | `OnPostActiveEffectAdded` | Applies the blocks, unless the effect landed inhibited. |
 | `OnActiveEffectChanged` | Drops or restores the blocks as the effect's inhibition state flips. |
 | `OnActiveEffectUnapplied` | Removes the blocks when the effect is fully removed. |
+| `CaptureSnapshot`, `RestoreSnapshot` | Captures whether the blocks are applied for an [entity snapshot](../../rollback.md), and puts that back on a restore. The blocks themselves come back with the entity. |
 
 The initial decision happens in `OnPostActiveEffectAdded` rather than `OnActiveEffectAdded` because inhibition is only settled after every component has processed `OnActiveEffectAdded`.
 

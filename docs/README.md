@@ -51,6 +51,8 @@ Going deeper into effects: [Stacking](effects/stacking.md), [Periodic effects](e
 
 Going deeper into Statescript: the [node library](statescript/nodes/README.md), [resolvers](statescript/resolvers/README.md), [variables and data](statescript/variables.md), [ability integration](statescript/ability-integration.md) and [custom resolvers](statescript/custom-resolvers.md).
 
+Going deeper into the simulation: the [simulation tick](simulation.md) and [rollback](rollback.md).
+
 ## Guides
 
 Task-focused walkthroughs, with code that runs in the test suite: [effect recipes](guides/effect-recipes.md), [extending effects](guides/extending-effects.md), [cues and events](guides/cues-and-events.md), [ability recipes](guides/ability-recipes.md) and [Statescript in code](guides/statescript-in-code.md). See the [guides index](guides/README.md).
@@ -61,7 +63,7 @@ Task-focused walkthroughs, with code that runs in the test suite: [effect recipe
 2. **Data-driven.** Effects and abilities are definitions (`EffectData`, `AbilityData`) that can be authored as data and shared.
 3. **Modular.** Use attributes and effects alone, or add abilities, events, cues and Statescript as you need them.
 4. **Time is an argument.** Forge never reads a clock; your loop passes the delta, so real-time, turn-based and simulated games work alike.
-5. **Deterministic.** Integer attributes, explicit time, a seeded per-tick random and fixed update orders keep results predictable, with networking and replays in mind. See [Simulation Tick](simulation.md).
+5. **Deterministic.** Integer attributes, explicit time, a seeded per-tick random and fixed update orders keep results predictable, with networking and replays in mind. See [Simulation Tick](simulation.md) and [Rollback](rollback.md).
 
 ## Validation and Debugging
 
@@ -84,4 +86,4 @@ The NuGet package ships with [Source Link](https://learn.microsoft.com/en-us/dot
 Forge has no engine dependency. Integrations wrap it in the engine's own idioms:
 
 - **Godot:** [Forge for Godot](https://github.com/gamesmiths-guild/forge-godot) adds nodes, Inspector resources, a tags editor and a visual Statescript graph editor.
-- **Anything else:** implement `IForgeEntity` on your objects and call `EffectsManager.UpdateEffects` and `Abilities.UpdateAbilities` from your loop, as the [Quick Start](quick-start.md#5-drive-time) shows. With a fixed step, drive each entity through `EntitySimulation.Tick` instead; see [Simulation Tick](simulation.md).
+- **Anything else:** implement `IForgeEntity` on your objects and advance each one with `EntitySimulation.Tick` from your loop, as the [Quick Start](quick-start.md#5-drive-time) shows. See [Simulation Tick](simulation.md).

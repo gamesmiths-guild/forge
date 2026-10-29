@@ -83,9 +83,9 @@ public sealed class EffectEvaluatedData
 
 	internal EffectApplicationContext? ApplicationContext { get; }
 
-	internal Dictionary<AttributeSnapshotKey, float> SnapshotAttributes { get; } = [];
+	internal Dictionary<AttributeSnapshotKey, float> SnapshotAttributes { get; private set; } = [];
 
-	internal Dictionary<Tag, float> SnapshotSetByCallers { get; } = [];
+	internal Dictionary<Tag, float> SnapshotSetByCallers { get; private set; } = [];
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="EffectEvaluatedData"/> class.
@@ -171,6 +171,33 @@ public sealed class EffectEvaluatedData
 	internal void RefreshCustomCueParameters()
 	{
 		CustomCueParameters = EvaluateCustomCueParameters();
+	}
+
+	// A copy for an entity snapshot, with snapshot caches of its own. The arrays are shared, since an evaluation
+	// replaces them rather than changing them.
+	internal EffectEvaluatedData Copy()
+	{
+		var copy = (EffectEvaluatedData)MemberwiseClone();
+		copy.SnapshotAttributes = new Dictionary<AttributeSnapshotKey, float>(SnapshotAttributes);
+		copy.SnapshotSetByCallers = new Dictionary<Tag, float>(SnapshotSetByCallers);
+		return copy;
+	}
+
+	// Puts the evaluation a copy holds back into this object, which the effect's cues are applied for and handlers know
+	// the effect by.
+	internal void RestoreSnapshot(EffectEvaluatedData snapshot)
+	{
+		Effect = snapshot.Effect;
+		Stack = snapshot.Stack;
+		Level = snapshot.Level;
+		Duration = snapshot.Duration;
+		Period = snapshot.Period;
+		ModifiersEvaluatedData = snapshot.ModifiersEvaluatedData;
+		AttributesToCapture = snapshot.AttributesToCapture;
+		CustomCueParameters = snapshot.CustomCueParameters;
+		ModifierCount = snapshot.ModifierCount;
+		SnapshotAttributes = new Dictionary<AttributeSnapshotKey, float>(snapshot.SnapshotAttributes);
+		SnapshotSetByCallers = new Dictionary<Tag, float>(snapshot.SnapshotSetByCallers);
 	}
 
 	internal HashSet<AttributeCaptureSource> CollectLiveCaptureSources()

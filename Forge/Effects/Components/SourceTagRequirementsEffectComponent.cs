@@ -137,6 +137,38 @@ public class SourceTagRequirementsEffectComponent(
 		}
 	}
 
+	/// <inheritdoc/>
+	public object? CaptureSnapshot()
+	{
+		return new Snapshot(_handler, _subscribedTags);
+	}
+
+	/// <inheritdoc/>
+	public void RestoreSnapshot(object? snapshot)
+	{
+		var restored = (Snapshot)snapshot!;
+		_handler = restored.Handler;
+		_subscribedTags = restored.SubscribedTags;
+	}
+
+	/// <inheritdoc/>
+	public void OnRestoreDetach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		if (_handler is not null && _subscribedTags is not null)
+		{
+			_subscribedTags.OnTagsChanged -= _handler;
+		}
+	}
+
+	/// <inheritdoc/>
+	public void OnRestoreAttach(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
+	{
+		if (_handler is not null && _subscribedTags is not null)
+		{
+			_subscribedTags.OnTagsChanged += _handler;
+		}
+	}
+
 	private IForgeEntity? ResolveEntity(EffectOwnership ownership)
 	{
 		return OwnershipEntity == OwnershipEntity.Owner ? ownership.Owner : ownership.Source;
@@ -149,4 +181,6 @@ public class SourceTagRequirementsEffectComponent(
 		return ResolveEntity(ownership)?.Tags.AllTags
 			?? new TagContainer(target.Tags.BaseTags.TagsManager);
 	}
+
+	private sealed record Snapshot(Action<TagContainer>? Handler, EntityTags? SubscribedTags);
 }

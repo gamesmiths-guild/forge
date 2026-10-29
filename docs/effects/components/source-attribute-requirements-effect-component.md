@@ -39,6 +39,8 @@ All the buckets are optional and reuse the same [`AttributeRequirement`](attribu
 | `CanApplyEffect` | Rejects the application if the source's application requirements are unmet, or its removal requirements are already met. |
 | `OnActiveEffectAdded` | Subscribes to the *source's* watched attributes and reports the initial inhibition state. |
 | `OnActiveEffectUnapplied` | Unsubscribes when the effect is fully removed. |
+| `CaptureSnapshot`, `RestoreSnapshot` | Captures which of the source's attributes it subscribed to for an [entity snapshot](../../rollback.md), and puts them back on a restore. |
+| `OnRestoreDetach`, `OnRestoreAttach` | Unsubscribes before a restore and subscribes again after it. |
 
 ## Behavior
 

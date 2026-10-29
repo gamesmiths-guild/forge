@@ -20,11 +20,11 @@ public class GraphSnapshotTests
 	public void A_restore_brings_back_the_running_nodes_their_contexts_and_the_graph_variables()
 	{
 		(GraphProcessor processor, TimerNode timer) = StartTimer();
-		processor.UpdateGraph(0.25);
+		processor.FixedUpdateGraph(0.25);
 		GraphSnapshot snapshot = processor.CaptureSnapshot();
 
 		processor.GraphContext.GraphVariables.SetArrayElement("history", 0, 9);
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 		processor.GraphContext.IsActive.Should().BeFalse();
 		ReadCount(processor).Should().Be(1);
 
@@ -36,9 +36,9 @@ public class GraphSnapshotTests
 		processor.GraphContext.GraphVariables.TryGetArrayElement("history", 0, out int first).Should().BeTrue();
 		first.Should().Be(1);
 
-		processor.UpdateGraph(0.5);
+		processor.FixedUpdateGraph(0.5);
 		processor.GraphContext.IsActive.Should().BeTrue();
-		processor.UpdateGraph(0.25);
+		processor.FixedUpdateGraph(0.25);
 		processor.GraphContext.IsActive.Should().BeFalse("the restored timer finishes on its own time");
 		ReadCount(processor).Should().Be(1);
 	}
@@ -48,7 +48,7 @@ public class GraphSnapshotTests
 	public void A_snapshot_is_left_as_it_was_and_restores_any_number_of_times()
 	{
 		(GraphProcessor processor, TimerNode timer) = StartTimer();
-		processor.UpdateGraph(0.25);
+		processor.FixedUpdateGraph(0.25);
 		GraphSnapshot snapshot = processor.CaptureSnapshot();
 
 		for (int i = 0; i < 3; i++)
@@ -59,7 +59,7 @@ public class GraphSnapshotTests
 			processor.GraphContext.GraphVariables.TryGetArrayElement("history", 0, out int first).Should().BeTrue();
 			first.Should().Be(1);
 
-			processor.UpdateGraph(0.5);
+			processor.FixedUpdateGraph(0.5);
 			processor.GraphContext.GraphVariables.SetArrayElement("history", 0, 9);
 		}
 	}
@@ -116,13 +116,13 @@ public class GraphSnapshotTests
 		processor.GraphContext.SharedVariables = new Variables();
 		processor.OnGraphCompleted = () => log.Add("second");
 		processor.StartGraph();
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		processor.RestoreSnapshot(snapshot);
 
 		processor.GraphContext.ActivationContext.Should().Be("first");
 		processor.GraphContext.SharedVariables.Should().BeSameAs(firstShared);
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 		log.Should().Equal("first", "second", "first");
 	}
 
@@ -240,6 +240,44 @@ public class GraphSnapshotTests
 
 	[Fact]
 	[Trait("Graph", "Snapshot")]
+	public void A_run_that_exited_while_a_message_was_on_its_way_restores_and_ends_again()
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineVariable("duration", 1.0);
+		TimerNode timer = CreateTimerNode("duration");
+		var exit = new ExitNode();
+		graph.AddNode(timer);
+		graph.AddNode(exit);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			timer.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			timer.OutputPorts[TimerNode.OnTimerEndPort],
+			exit.InputPorts[ExitNode.InputPort]));
+
+		var processor = new GraphProcessor(graph);
+		int completions = 0;
+		processor.OnGraphCompleted = () => completions++;
+		processor.StartGraph();
+		GraphSnapshot snapshot = processor.CaptureSnapshot();
+
+		// The timer's end reaches the Exit while the message announcing it is still on its way.
+		processor.FixedUpdateGraph(1.0);
+		processor.GraphContext.IsActive.Should().BeFalse();
+
+		processor.RestoreSnapshot(snapshot);
+
+		processor.Invoking(x => x.CaptureSnapshot()).Should().NotThrow(
+			"the message the first run left on its way went with that run");
+
+		processor.FixedUpdateGraph(1.0);
+
+		processor.GraphContext.IsActive.Should().BeFalse();
+		completions.Should().Be(2, "the restored run ends the way the first one did");
+	}
+
+	[Fact]
+	[Trait("Graph", "Snapshot")]
 	public void A_snapshot_from_another_processor_is_refused()
 	{
 		(GraphProcessor processor, _) = StartTimer();
@@ -275,8 +313,8 @@ public class GraphSnapshotTests
 	{
 		(GraphProcessor processor, _) = StartTimer();
 		GraphSnapshot snapshot = processor.CaptureSnapshot();
-		processor.UpdateGraph(0.1);
-		processor.UpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
+		processor.FixedUpdateGraph(0.1);
 		ulong stamp = processor.GraphContext.UpdateStamp;
 
 		processor.RestoreSnapshot(snapshot);

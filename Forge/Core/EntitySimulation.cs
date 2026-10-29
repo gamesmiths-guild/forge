@@ -1,5 +1,8 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
+using Gamesmiths.Forge.Abilities;
+
 namespace Gamesmiths.Forge.Core;
 
 /// <summary>
@@ -101,5 +104,130 @@ public static class EntitySimulation
 		entity.Mover?.Move(fixedDeltaTime);
 		entity.EffectsManager.UpdateEffects(fixedDeltaTime);
 		entity.Abilities.FixedUpdateAbilities(fixedDeltaTime);
+	}
+
+	/// <summary>
+	/// Takes a snapshot of the entity's simulation, to put it back later with <see cref="RestoreSnapshot"/>.
+	/// </summary>
+	/// <remarks>
+	/// <para>The snapshot holds the entity's attributes, tags, active effects, granted abilities with their running
+	/// instances and graphs, shared variables, input, random source and, through its <see cref="IForgeEntity.Mover"/>,
+	/// body. See <see cref="EntitySnapshot"/>.</para>
+	/// <para>Take it from the host, between ticks, rather than from inside an ability, an effect or a graph, where the
+	/// entity is part way through changing.</para>
+	/// </remarks>
+	/// <param name="entity">The entity to take the snapshot of.</param>
+	/// <returns>The snapshot.</returns>
+	/// <exception cref="InvalidOperationException">Thrown while the entity's abilities, effects or attributes are
+	/// changing.</exception>
+	/// <exception cref="NotSupportedException">Thrown while one of the entity's abilities runs a behavior other than a
+	/// Statescript graph.</exception>
+	public static EntitySnapshot CaptureSnapshot(IForgeEntity entity)
+	{
+		ThrowIfCannotSnapshot(entity, "taken");
+
+		return new EntitySnapshot(entity);
+	}
+
+	/// <summary>
+	/// Puts the entity's simulation back as it was when <see cref="CaptureSnapshot"/> took <paramref name="snapshot"/>,
+	/// silently: no event, cue, callback or graph node runs.
+	/// </summary>
+	/// <remarks>
+	/// <para>Active effects, abilities and ability instances come back as the same objects, so the handles that point
+	/// at them are valid again, and ones added since the snapshot go, with their handles freed and none of their
+	/// removal or end callbacks run. The presentation pass after the restore shows only what changed.</para>
+	/// <para>The restore happens in three steps. Everything on the entity that holds something outside itself - each
+	/// active effect and its components, each granted ability's trigger, each running state node of its graphs - lets
+	/// go of it, newest first. Then the state is put back. Then everything takes hold again, oldest first, in the order
+	/// it first did across the entity's effects, abilities and graphs, so handlers that share an event run in the same
+	/// order as before. A hook that throws keeps neither the others from running nor the restore from completing, and
+	/// the first exception is rethrown after.</para>
+	/// <para>Restore it from the host, between ticks, like <see cref="CaptureSnapshot"/>.</para>
+	/// </remarks>
+	/// <param name="entity">The entity to restore.</param>
+	/// <param name="snapshot">A snapshot taken from <paramref name="entity"/>.</param>
+	/// <exception cref="ArgumentException">Thrown when the snapshot was taken from another entity.</exception>
+	/// <exception cref="InvalidOperationException">Thrown while the entity's abilities, effects or attributes are
+	/// changing.</exception>
+	/// <exception cref="NotSupportedException">Thrown while one of the entity's abilities runs a behavior other than a
+	/// Statescript graph.</exception>
+	public static void RestoreSnapshot(IForgeEntity entity, EntitySnapshot snapshot)
+	{
+		if (snapshot.Entity != entity)
+		{
+			throw new ArgumentException("The snapshot was taken from another entity.", nameof(snapshot));
+		}
+
+		ThrowIfCannotSnapshot(entity, "restored");
+
+		ExceptionDispatchInfo? failure = null;
+		List<EntityHold> holds = [];
+
+		AddHoldsInOrder(entity, holds);
+
+		for (int i = holds.Count - 1; i >= 0; i--)
+		{
+			try
+			{
+				holds[i].Detach();
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		try
+		{
+			ExceptionDispatchInfo? stateFailure = snapshot.RestoreState();
+			failure ??= stateFailure;
+		}
+		catch (Exception exception)
+		{
+			// Such as a mover's: what came back still takes hold again.
+			failure ??= ExceptionDispatchInfo.Capture(exception);
+		}
+
+		holds.Clear();
+		AddHoldsInOrder(entity, holds);
+
+		foreach (EntityHold hold in holds)
+		{
+			try
+			{
+				hold.Attach();
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		failure?.Throw();
+	}
+
+	private static void ThrowIfCannotSnapshot(IForgeEntity entity, string action)
+	{
+		if (entity.Abilities.IsChanging || entity.EffectsManager.IsChanging || entity.Attributes.IsChanging)
+		{
+			throw new InvalidOperationException(
+				$"An entity snapshot cannot be {action} while the entity's abilities, effects or attributes are " +
+				"changing. Take and restore snapshots from the host, between ticks.");
+		}
+
+		if (entity.Abilities.FindUnsnapshottableAbility() is AbilityData abilityData)
+		{
+			throw new NotSupportedException(
+				$"An entity snapshot cannot be {action} while the ability '{abilityData.Name}' runs a behavior that " +
+				"isn't a Statescript graph, since a snapshot can't reach what such a behavior keeps.");
+		}
+	}
+
+	private static void AddHoldsInOrder(IForgeEntity entity, List<EntityHold> holds)
+	{
+		entity.EffectsManager.AddHolds(holds);
+		entity.Abilities.AddHolds(holds);
+		holds.Sort(static (x, y) => x.Order.CompareTo(y.Order));
 	}
 }

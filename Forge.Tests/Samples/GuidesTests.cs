@@ -1211,10 +1211,10 @@ public class GuidesTests(ExamplesTestFixture tagsAndCueFixture) : IClassFixture<
 
 		handle.TryActivate(out AbilityActivationFailures failureFlags, enemy).Should().BeTrue();
 
-		player.Abilities.UpdateAbilities(0.5);
+		player.Abilities.FixedUpdateAbilities(0.5);
 		enemy.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(100);
 
-		player.Abilities.UpdateAbilities(0.5);
+		player.Abilities.FixedUpdateAbilities(0.5);
 		enemy.Attributes["PlayerAttributeSet.Health"].CurrentValue.Should().Be(90);
 		handle.IsActive.Should().BeFalse();
 	}

@@ -39,7 +39,7 @@ Some nodes can instead **restart**, and do so when built with `restartOnRetrigge
 |------|---------------------|
 | [TimerNode](timer-node.md) | The elapsed time starts again from zero, so the timer runs a full duration from the retrigger. |
 | [LoopTimerNode](loop-timer-node.md) | The interval and the loop count both start again from zero. |
-| [RepeatNode](repeat-node.md), [ForEachNode](for-each-node.md) | The walk starts over from the first iteration, which runs on the restart frame. ForEachNode snapshots its array again. |
+| [RepeatNode](repeat-node.md), [ForEachNode](for-each-node.md) | The walk starts over from the first iteration, which runs as the node restarts. ForEachNode snapshots its array again. |
 | [EffectNode](effect-node.md) | The effects it applied are removed and applied again with the inputs re-resolved — a refresh. |
 | [CueNode](cue-node.md) | The cues it applied are removed, as interrupted, and applied again with the inputs re-resolved. |
 
@@ -60,14 +60,14 @@ A state node can be advanced on either of two independent rails, and it should o
 
 | Hook | Driven by | Delta | Use it for |
 |---|---|---|---|
-| `OnUpdate(deltaTime, graphContext)` | `GraphProcessor.UpdateGraph` | The frame's elapsed time | Timers, animations, polling an input device, anything counting wall-clock time |
-| `OnFixedUpdate(deltaTime, graphContext)` | `GraphProcessor.FixedUpdateGraph` | The fixed step's length | Moving a body, steering a character, querying the physics world, reading an entity's [input](../../../input.md), anything a networked peer must reproduce step for step |
+| `OnUpdate(deltaTime, graphContext)` | `GraphProcessor.UpdateGraph` | The frame's elapsed time | Work that follows the rendered frame and that no networked peer or replay needs to reproduce, such as polling a device the entity's input doesn't carry |
+| `OnFixedUpdate(deltaTime, graphContext)` | `GraphProcessor.FixedUpdateGraph` | The fixed step's length | Timers, moving a body, steering a character, querying the physics world, reading an entity's [input](../../../input.md): anything that changes gameplay, which a networked peer or a [replay](../../../rollback.md) must reproduce step for step |
 
-The two rates differ and neither substitutes for the other. The frame rate is whatever the machine manages and drifts far above or below the fixed rate, so a body driven from `OnUpdate` is pushed a different amount per second on a fast machine than on a slow one, and a query asked from there is asked several times about a world that has not changed, or not at all in the step where it did.
+The two rates differ and neither substitutes for the other. The frame rate is whatever the machine manages and drifts far above or below the fixed rate, so a body driven from `OnUpdate` is pushed a different amount per second on a fast machine than on a slow one, and a query asked from there is asked several times about a world that has not changed, or not at all in the step where it did. A timer is no different: counted in frames, it ends on whichever frame crosses its duration, which isn't the same on every machine. Every built-in node that updates, the timers included, runs on the fixed rail.
 
 The hook is called **fixed** rather than **physics** because the interval is the guarantee and physics is only the most common reason to want one. A dedicated server with physics switched off still runs this rail, and a networked simulation drives it from its own clock rather than from the engine's.
 
-**A host drives whichever rails it has.** Godot calls `UpdateGraph` from `_Process` and `FixedUpdateGraph` from `_PhysicsProcess`; a turn-based game may call only the first. A host with no fixed step never calls `FixedUpdateGraph`, and nodes that override `OnFixedUpdate` simply do not run — which is the honest failure, since falling back to the frame would reintroduce exactly what overriding it avoids.
+**Every host drives the fixed rail.** It's the gameplay clock. Godot calls `FixedUpdateGraph` from `_PhysicsProcess` and `UpdateGraph` from `_Process`. A game without a physics step still has a step of its own, such as a turn-based game whose step is a turn: it calls `FixedUpdateGraph` with the turn's length, and `UpdateGraph` only if it has nodes on the frame rail. A host that never calls `FixedUpdateGraph` never ends a timer.
 
 **Within a pass, active nodes update in graph order** (`Node.Index`: the entry node is 0, then the nodes in the order they were added), not in the order they activated. Two machines that build the same graph therefore walk it the same way. See [Simulation Tick](../../../simulation.md#deterministic-order).
 
@@ -167,7 +167,7 @@ public class WaitForTagNode : StateNode<WaitForTagNodeContext>
         // Cleanup if needed
     }
 
-    protected override void OnUpdate(double deltaTime, GraphContext graphContext)
+    protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
     {
         if (!graphContext.TryGetActivationContext<AbilityBehaviorContext>(out var abilityContext))
         {
@@ -184,7 +184,7 @@ public class WaitForTagNode : StateNode<WaitForTagNodeContext>
 
 Use `DeactivateNode(graphContext)` for simple deactivation, or `DeactivateNodeAndEmitMessage(graphContext, portIds)` to emit custom event port messages before deactivation.
 
-**Emitting on the activation frame.** Messages emitted from `OnActivate` are *deferred* and flushed as a batch once activation completes, so `OnActivate` and Subgraph always fire first. That is fine for a fixed set of events, but it means any per-emission state you write alongside them already holds its final value by the time they fire. When you need emissions **interleaved** with state changes on the activation frame — a loop writing an iteration variable before each event — override `OnActivated` instead. It runs once activation is fully complete, and only if the node is still active. Anything you reach from there can deactivate the node or stop the graph, so a method that emits more than once must re-check between emissions that the node context it holds is still `Active`. Check that context rather than `IsNodeActive(graphContext)`, which looks up whatever context the node has by then: the one you hold reads inactive once the node ends or its run does. The same caution applies to an `OnUpdate` that emits in a loop. `IterationNode<T>` (the base of [RepeatNode](repeat-node.md) and [ForEachNode](for-each-node.md)) is the worked example.
+**Emitting on the activation frame.** Messages emitted from `OnActivate` are *deferred* and flushed as a batch once activation completes, so `OnActivate` and Subgraph always fire first. That is fine for a fixed set of events, but it means any per-emission state you write alongside them already holds its final value by the time they fire. When you need emissions **interleaved** with state changes on the activation frame — a loop writing an iteration variable before each event — override `OnActivated` instead. It runs once activation is fully complete, and only if the node is still active. Anything you reach from there can deactivate the node or stop the graph, so a method that emits more than once must re-check between emissions that the node context it holds is still `Active`. Check that context rather than `IsNodeActive(graphContext)`, which looks up whatever context the node has by then: the one you hold reads inactive once the node ends or its run does. The same caution applies to an update that emits in a loop. `IterationNode<T>` (the base of [RepeatNode](repeat-node.md) and [ForEachNode](for-each-node.md)) is the worked example.
 
 If your state node defines additional event or subgraph ports, override `DefinePorts`, call `base.DefinePorts(...)`, and create each custom port with an explicit label:
 
@@ -218,7 +218,7 @@ No deactivation runs before `OnRestart`: the node stays active, so one that hold
 
 ## Writing rollback-safe nodes
 
-A [graph snapshot](../../README.md#snapshots) keeps a copy of every node context, and a restore puts copies of those back without running `OnActivate` or `OnDeactivate`. A node comes through that intact when it follows three rules.
+A [graph snapshot](../../README.md#snapshots) keeps a copy of every node context, and a restore puts copies of those back without running `OnActivate` or `OnDeactivate`. An [entity snapshot](../../../rollback.md) takes one of every graph the entity's abilities run, so the same holds there. A node comes through that intact when it follows three rules.
 
 **Keep everything a run changes in the node context.** Fields on the node itself belong to the graph definition, which every run shares, so a snapshot never sees them.
 
@@ -242,7 +242,7 @@ public class WatchNodeContext : StateNodeContext
 - `OnRestoreDetach` runs before a restore replaces the node's running activation, which the restore may bring straight back. Let go of what it holds, as `OnDeactivate` would, but change no gameplay or graph state: emit nothing, write no variables, apply or remove no effects.
 - `OnRestoreAttach` runs after a restore brings back a running activation. Take hold again from what the context recorded, such as the entity it subscribed to, rather than resolving inputs again: they may have changed since.
 
-Running nodes are detached newest activation first and attached oldest first, so holds stacked on one object, such as two overrides of the same property, unwind and come back in order. Attaching makes a new handler rather than reusing the one the context recorded, which may have been made for another context: a restore puts in a copy, not the object a handler captured.
+Running nodes are detached newest activation first and attached oldest first, so holds stacked on one object, such as two overrides of the same property, unwind and come back in order. An entity restore orders them together with the entity's effects and ability triggers, by when each first took hold. Attaching makes a new handler rather than reusing the one the context recorded, which may have been made for another context: a restore puts in a copy, not the object a handler captured.
 
 ```csharp
 public class WaitForDamageNodeContext : StateNodeContext
@@ -318,11 +318,11 @@ What a node did to the world, such as an effect it applied or an ability it gran
 | [EffectLevelListenerNode](effect-level-listener-node.md) | Listens for effect level changes and emits OnLevelChanged with the new level. |
 | [EffectNode](effect-node.md) | Applies effects on activation, emits OnEffectEnd on natural completion, and removes still-active instances on deactivation. |
 | [EventListenerNode](event-listener-node.md) | Listens for events while active and emits OnEvent each time a matching event fires. |
-| [ForEachNode](for-each-node.md) | Walks an array, publishing each element to a variable, on the activation frame or spaced by an interval. |
+| [ForEachNode](for-each-node.md) | Walks an array, publishing each element to a variable, as it activates or spaced by an interval. |
 | [GrantAbilityNode](grant-ability-node.md) | Grants an ability while active, removing the grant on deactivation. |
 | [InputActionNode](input-action-node.md) | Watches a button of an entity's input, emitting OnPressed and OnReleased and routing a WhilePressed subgraph. |
 | [LoopTimerNode](loop-timer-node.md) | Emits an interval event every period while active, optionally finishing after a number of loops. |
-| [RepeatNode](repeat-node.md) | Emits an iteration event a fixed number of times, on the activation frame or spaced by an interval. |
+| [RepeatNode](repeat-node.md) | Emits an iteration event a fixed number of times, as it activates or spaced by an interval. |
 | [StateMachineNode](state-machine-node.md) | Keeps exactly one state subgraph active, selected by an integer input. |
 | [TagListenerNode](tag-listener-node.md) | Listens for watched tags being added to or removed from an entity. |
 | [TimerNode](timer-node.md) | Remains active for a configured duration and emits OnTimerEnd when it finishes naturally. |

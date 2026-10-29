@@ -36,6 +36,10 @@ public class StateNodeContext : INodeContext
 	// activations again gives them the same ids.
 	internal ulong ActivationId { get; set; }
 
+	// When this activation took hold of what the node holds outside the graph, so an entity restore can take hold again
+	// in the same order across the entity's graphs, effects and abilities.
+	internal long HoldOrder { get; set; }
+
 	internal int[]? DeferredDeactivationEventPortIds { get; set; }
 
 	internal List<int> DeferredEmitMessageData { get; set; } = [];

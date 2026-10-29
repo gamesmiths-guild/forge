@@ -175,4 +175,10 @@ public class ActiveEffectHandle : IValidatable
 	{
 		ActiveEffect = null;
 	}
+
+	// An entity restore brings back the active effect this handle was made for.
+	internal void Restore(ActiveEffect activeEffect)
+	{
+		ActiveEffect = activeEffect;
+	}
 }

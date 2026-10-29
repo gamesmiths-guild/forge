@@ -1,6 +1,6 @@
 # Simulation Tick
 
-A game that runs on a fixed step advances each entity once per step with `EntitySimulation.Tick`. One call runs the entity's input, movement, effects and fixed-rail abilities in a fixed order and restarts its random source. Every machine that runs the same entity with the same tick numbers and the same step then gets the same result, which networking and replays depend on.
+A game that runs on a fixed step advances each entity once per step with `EntitySimulation.Tick`. One call runs the entity's input, movement, effects and fixed-rail abilities in a fixed order and restarts its random source. Every machine that runs the same entity with the same tick numbers and the same step then gets the same result, which networking and [rollback](rollback.md) depend on.
 
 ## Advancing an entity
 
@@ -32,7 +32,7 @@ EntitySimulation.Tick(entities, tick, fixedDeltaTime);
 
 It begins every entity's tick, then advances each in list order. A host that advances each entity from its own callback does the same in two steps: `EntitySimulation.BeginTick(entity, tick)` for every entity first, then `EntitySimulation.Advance(entity, fixedDeltaTime)` for each.
 
-A game without a fixed step, such as a turn-based one, keeps calling `EffectsManager.UpdateEffects` and `Abilities.UpdateAbilities` from its own loop, as the [Quick Start](quick-start.md#5-drive-time) shows.
+A game without a physics step, such as a turn-based one, still has a step: the turn. It calls `EntitySimulation.Tick` once per turn with the turn's length, as the [Quick Start](quick-start.md#5-drive-time) does, and the turn number can be the tick number.
 
 ## Movement
 
@@ -50,7 +50,7 @@ The mover reads what drives it, such as the entity's input, attributes and tags,
 - **An effect that ends this tick** still applies to this tick's step. An effect lasting a number of ticks shapes exactly that many steps.
 - **Graphs advance after the mover**, so a graph that moves the body itself, such as a dash, moves it after the mover's step.
 
-`CaptureState` and `RestoreState` let the body go back to an earlier tick and simulate it again: restoring a captured state and moving with the same input gives the same result. A 2D body uses the X and Y components and turns about the Z axis.
+`CaptureState` and `RestoreState` let the body go back to an earlier tick and simulate it again: restoring a captured state and moving with the same input gives the same result. An [entity snapshot](rollback.md) captures the body this way, along with the rest of the entity. A 2D body uses the X and Y components and turns about the Z axis.
 
 ```csharp
 // A body without an engine behind it, walking on the ground plane.

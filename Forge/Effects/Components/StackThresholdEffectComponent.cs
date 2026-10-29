@@ -114,6 +114,20 @@ public class StackThresholdEffectComponent(
 		}
 	}
 
+	/// <inheritdoc/>
+	public object? CaptureSnapshot()
+	{
+		return new Snapshot([.. _appliedHandles], [.. _hasFired]);
+	}
+
+	/// <inheritdoc/>
+	public void RestoreSnapshot(object? snapshot)
+	{
+		var restored = (Snapshot)snapshot!;
+		Array.Copy(restored.AppliedHandles, _appliedHandles, _appliedHandles.Length);
+		Array.Copy(restored.HasFired, _hasFired, _hasFired.Length);
+	}
+
 	private void Evaluate(IForgeEntity target, in ActiveEffectEvaluatedData activeEffectEvaluatedData)
 	{
 		EffectEvaluatedData effectEvaluatedData = activeEffectEvaluatedData.EffectEvaluatedData;
@@ -179,4 +193,6 @@ public class StackThresholdEffectComponent(
 			handle.Target?.EffectsManager.RemoveEffect(handle, ThresholdEffects[i].StacksToRemove);
 		}
 	}
+
+	private sealed record Snapshot(ActiveEffectHandle?[] AppliedHandles, bool[] HasFired);
 }

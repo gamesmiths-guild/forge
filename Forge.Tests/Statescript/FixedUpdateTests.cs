@@ -80,7 +80,7 @@ public class FixedUpdateTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 
 	[Fact]
 	[Trait("Graph", "FixedUpdate")]
-	public void A_timer_does_not_advance_on_fixed_updates()
+	public void A_timer_advances_on_fixed_updates_only()
 	{
 		var graph = new Graph();
 		graph.VariableDefinitions.DefineVariable("duration", 1.0);
@@ -94,12 +94,12 @@ public class FixedUpdateTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();
 
-		processor.FixedUpdateGraph(5.0);
+		processor.UpdateGraph(5.0);
 
 		processor.GraphContext.IsActive.Should().BeTrue(
-			"a timer counts wall-clock time and is not driven by the fixed step");
+			"a timer counts fixed steps, so the frame's time doesn't end it");
 
-		processor.UpdateGraph(1.0);
+		processor.FixedUpdateGraph(1.0);
 
 		processor.GraphContext.IsActive.Should().BeFalse();
 	}

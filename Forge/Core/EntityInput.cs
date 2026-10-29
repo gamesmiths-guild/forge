@@ -183,6 +183,26 @@ public sealed class EntityInput(InputActionSet actions)
 		_frameTakenForAdvance = true;
 	}
 
+	internal EntityInputSnapshot CaptureSnapshot()
+	{
+		return new EntityInputSnapshot(Current, _waiting, _begunTick, _frameTakenForAdvance, FrameNumber);
+	}
+
+	internal void RestoreSnapshot(EntityInputSnapshot snapshot)
+	{
+		Current = snapshot.Current;
+		_waiting = snapshot.Waiting;
+		_begunTick = snapshot.BegunTick;
+		_frameTakenForAdvance = snapshot.FrameTakenForAdvance;
+		FrameNumber = snapshot.FrameNumber;
+	}
+
+	// A replayed tick runs with exactly the frame it first ran with, rather than one merged with whatever was waiting.
+	internal void SubmitForReplay(in InputFrame frame)
+	{
+		_waiting = frame;
+	}
+
 	// Takes the frame itself when the tick was not begun since the last advance.
 	internal void BeginInputStage()
 	{

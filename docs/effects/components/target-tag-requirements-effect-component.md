@@ -27,6 +27,8 @@ All three are optional; an omitted or empty requirement is simply not evaluated.
 | `CanApplyEffect` | Rejects the application if the application requirements are unmet, or the removal requirements are already met. |
 | `OnActiveEffectAdded` | Subscribes to the target's `OnTagsChanged` and reports the initial inhibition state. |
 | `OnActiveEffectUnapplied` | Unsubscribes when the effect is fully removed. |
+| `CaptureSnapshot`, `RestoreSnapshot` | Captures its handler for an [entity snapshot](../../rollback.md), and puts it back on a restore. |
+| `OnRestoreDetach`, `OnRestoreAttach` | Unsubscribes before a restore and subscribes again after it. |
 
 ## Behavior
 

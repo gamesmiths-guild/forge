@@ -60,6 +60,21 @@ internal sealed class AbilityInstance
 		EndInstance(wasCanceled: true);
 	}
 
+	// An entity restore brings the instance back running. The tags it owns come back with the entity's tags.
+	internal void Restore()
+	{
+		IsActive = true;
+		Handle.Restore(this);
+	}
+
+	// An entity restore takes the instance away without ending it: nothing is notified, and the tags it owned go with
+	// the entity's tags.
+	internal void Drop()
+	{
+		IsActive = false;
+		Handle.Free();
+	}
+
 	private void EndInstance(bool wasCanceled)
 	{
 		if (!IsActive)
@@ -67,21 +82,31 @@ internal sealed class AbilityInstance
 			return;
 		}
 
-		// Remove activation-owned tags.
-		if (_ability.AbilityData.ActivationOwnedTags is not null)
-		{
-			_ability.Owner.Tags.RemoveModifierTags(_ability.AbilityData.ActivationOwnedTags);
-		}
+		EntityAbilities abilities = _ability.Owner.Abilities;
+		abilities.BeginChange();
 
-		// Unblock abilities with tags for this instance.
-		TagContainer? blockTags = _ability.AbilityData.BlockAbilitiesWithTag;
-		if (blockTags is not null)
+		try
 		{
-			_ability.Owner.Abilities.BlockedAbilityTags.RemoveModifierTags(blockTags);
-		}
+			// Remove activation-owned tags.
+			if (_ability.AbilityData.ActivationOwnedTags is not null)
+			{
+				_ability.Owner.Tags.RemoveModifierTags(_ability.AbilityData.ActivationOwnedTags);
+			}
 
-		IsActive = false;
-		_ability.OnInstanceEnded(this, wasCanceled);
+			// Unblock abilities with tags for this instance.
+			TagContainer? blockTags = _ability.AbilityData.BlockAbilitiesWithTag;
+			if (blockTags is not null)
+			{
+				abilities.BlockedAbilityTags.RemoveModifierTags(blockTags);
+			}
+
+			IsActive = false;
+			_ability.OnInstanceEnded(this, wasCanceled);
+		}
+		finally
+		{
+			abilities.EndChange();
+		}
 	}
 
 	private void ApplyActivationState()

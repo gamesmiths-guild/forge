@@ -382,6 +382,61 @@ public sealed class EntityAttribute
 		}
 	}
 
+	internal AttributeSnapshot CaptureSnapshot()
+	{
+		var channels = new ChannelData[_channels.Length];
+
+		for (int i = 0; i < channels.Length; i++)
+		{
+			channels[i] = _channels[i].Copy();
+		}
+
+		return new AttributeSnapshot(
+			BaseValue,
+			CurrentValue,
+			Min,
+			Max,
+			Modifier,
+			Overflow,
+			PendingValueChange,
+			channels,
+			[.. _attributeOverrides]);
+	}
+
+	// Puts the values back without raising OnValueChanged. The channels come back as they were summed, rather than
+	// summed again from the effects, which could round differently.
+	internal void RestoreSnapshot(AttributeSnapshot snapshot)
+	{
+		BaseValue = snapshot.BaseValue;
+		CurrentValue = snapshot.CurrentValue;
+		Min = snapshot.Min;
+		Max = snapshot.Max;
+		Modifier = snapshot.Modifier;
+		Overflow = snapshot.Overflow;
+		PendingValueChange = snapshot.PendingValueChange;
+
+		for (int i = 0; i < _channels.Length; i++)
+		{
+			_channels[i] = snapshot.Channels[i].Copy();
+		}
+
+		_attributeOverrides.Clear();
+
+		foreach (AttributeOverride attributeOverride in snapshot.Overrides)
+		{
+			_attributeOverrides.AddLast(attributeOverride);
+		}
+	}
+
+	// Takes every modifier away without raising OnValueChanged, for an entity restore that takes the attribute's set
+	// away. Only active effects add modifiers, so this is where removing the set would leave it.
+	internal void DropModifiers()
+	{
+		Array.Clear(_channels, 0, _channels.Length);
+		_attributeOverrides.Clear();
+		UpdateCachedValues();
+	}
+
 	/// <summary>
 	/// Resolves which of the active overrides of a channel is the one in effect.
 	/// </summary>
