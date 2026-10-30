@@ -30,7 +30,7 @@ When one entity's tick can reach another, for example by applying an effect with
 EntitySimulation.Tick(entities, tick, fixedDeltaTime);
 ```
 
-It begins every entity's tick, then advances each in list order. A host that advances each entity from its own callback does the same in two steps: `EntitySimulation.BeginTick(entity, tick)` for every entity first, then `EntitySimulation.Advance(entity, fixedDeltaTime)` for each.
+It begins every entity's tick, then advances each in list order. A host that advances each entity from its own callback does the same in two steps: `EntitySimulation.BeginTick(entity, tick)` for every entity first, then `EntitySimulation.Advance(entity, fixedDeltaTime)` for each. A [world history](rollback.md#world-history) keeps such a list of entities and rolls them back together.
 
 A game without a physics step, such as a turn-based one, still has a step: the turn. It calls `EntitySimulation.Tick` once per turn with the turn's length, as the [Quick Start](quick-start.md#5-drive-time) does, and the turn number can be the tick number.
 
