@@ -40,6 +40,7 @@ internal static class Program
 			ActivateFromInput(tagsManager) == new StructPayload(5));
 		Check("Graph snapshot copies a node context and restores it", RestoresGraphSnapshot);
 		Check("Entity history rolls an entity back and replays its ticks", () => ReplaysEntityHistory(tagsManager));
+		Check("World history rolls a world back past a death and a spawn", () => RollsWorldBack(tagsManager));
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -194,6 +195,34 @@ internal static class Program
 
 		return wardHandle?.IsValid == true
 			&& behavior!.Processor.GraphContext.GetNodeContext<CountingNodeContext>(node.NodeID).Updates.Count == 4;
+	}
+
+	private static bool RollsWorldBack(TagsManager tagsManager)
+	{
+		var stays = new SmokeEntity(tagsManager);
+		var dies = new SmokeEntity(tagsManager);
+		var spawned = new SmokeEntity(tagsManager);
+		var world = new WorldHistory(8, 1.0 / 64.0);
+		bool returned = false;
+		world.LeftLimbo += x => returned |= x == dies;
+		world.Add(stays);
+		world.Add(dies);
+
+		for (long tick = 1; tick <= 4; tick++)
+		{
+			if (tick == 3)
+			{
+				world.Remove(dies);
+				world.Add(spawned);
+			}
+
+			EntitySimulation.Tick(world.Entities, tick, world.FixedDeltaTime);
+			world.Record(tick);
+		}
+
+		world.Rollback(2);
+
+		return returned && world.Entities.Count == 2 && world.Entities[1] == dies;
 	}
 
 	private static int ResolveActivationData(TagsManager tagsManager, Tag eventTag, StructPayload payload)

@@ -160,12 +160,29 @@ public static class EntitySimulation
 			throw new ArgumentException("The snapshot was taken from another entity.", nameof(snapshot));
 		}
 
-		ThrowIfCannotSnapshot(entity, "restored");
+		RestoreSnapshots([entity], [snapshot])?.Throw();
+	}
+
+	// Puts several entities back as one. Every hold of the detaching entities lets go, newest first across all of them,
+	// each snapshot puts its entity's state back, then every hold of the snapshots' entities takes hold again, oldest
+	// first across all of them, so handlers sharing an event run in the order they first took hold in, whichever entity
+	// they belong to. With no snapshots, the detaching entities only let go. Every entity is checked before any
+	// changes, and the first exception a hook threw is handed back.
+	internal static ExceptionDispatchInfo? RestoreSnapshots(
+		IReadOnlyList<IForgeEntity> detaching,
+		IReadOnlyList<EntitySnapshot> snapshots)
+	{
+		ThrowIfCannotRestore(detaching, snapshots);
 
 		ExceptionDispatchInfo? failure = null;
 		List<EntityHold> holds = [];
 
-		AddHoldsInOrder(entity, holds);
+		foreach (IForgeEntity entity in detaching)
+		{
+			AddHolds(entity, holds);
+		}
+
+		holds.Sort(static (x, y) => x.Order.CompareTo(y.Order));
 
 		for (int i = holds.Count - 1; i >= 0; i--)
 		{
@@ -179,19 +196,25 @@ public static class EntitySimulation
 			}
 		}
 
-		try
+		holds.Clear();
+
+		foreach (EntitySnapshot snapshot in snapshots)
 		{
-			ExceptionDispatchInfo? stateFailure = snapshot.RestoreState();
-			failure ??= stateFailure;
-		}
-		catch (Exception exception)
-		{
-			// Such as a mover's: what came back still takes hold again.
-			failure ??= ExceptionDispatchInfo.Capture(exception);
+			try
+			{
+				ExceptionDispatchInfo? stateFailure = snapshot.RestoreState();
+				failure ??= stateFailure;
+			}
+			catch (Exception exception)
+			{
+				// Such as a mover's: what came back still takes hold again.
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+
+			AddHolds(snapshot.Entity, holds);
 		}
 
-		holds.Clear();
-		AddHoldsInOrder(entity, holds);
+		holds.Sort(static (x, y) => x.Order.CompareTo(y.Order));
 
 		foreach (EntityHold hold in holds)
 		{
@@ -205,10 +228,27 @@ public static class EntitySimulation
 			}
 		}
 
-		failure?.Throw();
+		return failure;
 	}
 
-	private static void ThrowIfCannotSnapshot(IForgeEntity entity, string action)
+	// Throws if one of the entities can't let go, or one of the snapshots can't be put back, so a caller can act
+	// between the check and the restore.
+	internal static void ThrowIfCannotRestore(
+		IReadOnlyList<IForgeEntity> detaching,
+		IReadOnlyList<EntitySnapshot> snapshots)
+	{
+		foreach (IForgeEntity entity in detaching)
+		{
+			ThrowIfChanging(entity, "restored");
+		}
+
+		foreach (EntitySnapshot snapshot in snapshots)
+		{
+			ThrowIfCannotSnapshot(snapshot.Entity, "restored");
+		}
+	}
+
+	private static void ThrowIfChanging(IForgeEntity entity, string action)
 	{
 		if (entity.Abilities.IsChanging || entity.EffectsManager.IsChanging || entity.Attributes.IsChanging)
 		{
@@ -216,6 +256,11 @@ public static class EntitySimulation
 				$"An entity snapshot cannot be {action} while the entity's abilities, effects or attributes are " +
 				"changing. Take and restore snapshots from the host, between ticks.");
 		}
+	}
+
+	private static void ThrowIfCannotSnapshot(IForgeEntity entity, string action)
+	{
+		ThrowIfChanging(entity, action);
 
 		if (entity.Abilities.FindUnsnapshottableAbility() is AbilityData abilityData)
 		{
@@ -225,10 +270,9 @@ public static class EntitySimulation
 		}
 	}
 
-	private static void AddHoldsInOrder(IForgeEntity entity, List<EntityHold> holds)
+	private static void AddHolds(IForgeEntity entity, List<EntityHold> holds)
 	{
 		entity.EffectsManager.AddHolds(holds);
 		entity.Abilities.AddHolds(holds);
-		holds.Sort(static (x, y) => x.Order.CompareTo(y.Order));
 	}
 }
