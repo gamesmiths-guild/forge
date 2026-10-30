@@ -439,6 +439,20 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 	[Fact]
 	[Trait("Simulation", "Snapshot")]
+	public void A_restore_brings_back_state_kept_outside_Forge_through_the_hook()
+	{
+		var hook = new CounterHook { Count = 3 };
+		var entity = new TestEntity(_tagsManager, _cuesManager) { StateHook = hook };
+
+		EntitySnapshot snapshot = EntitySimulation.CaptureSnapshot(entity);
+		hook.Count = 9;
+		EntitySimulation.RestoreSnapshot(entity, snapshot);
+
+		hook.Count.Should().Be(3);
+	}
+
+	[Fact]
+	[Trait("Simulation", "Snapshot")]
 	public void A_snapshot_restores_any_number_of_times()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
@@ -857,6 +871,21 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 		public void OnEnded(AbilityBehaviorContext context)
 		{
+		}
+	}
+
+	private sealed class CounterHook : IEntityStateHook
+	{
+		public int Count { get; set; }
+
+		public Variant128 CaptureState()
+		{
+			return new Variant128(Count);
+		}
+
+		public void RestoreState(in Variant128 state)
+		{
+			Count = state.AsInt();
 		}
 	}
 

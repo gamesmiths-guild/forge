@@ -33,6 +33,8 @@ public class TestEntity : IForgeEntity
 
 	public IEntityMover? Mover { get; set; }
 
+	public IEntityStateHook? StateHook { get; set; }
+
 	public TestEntity(TagsManager tagsManager, CuesManager cuesManager)
 	{
 		PlayerAttributeSet = new TestAttributeSet();

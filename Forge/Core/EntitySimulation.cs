@@ -111,8 +111,9 @@ public static class EntitySimulation
 	/// </summary>
 	/// <remarks>
 	/// <para>The snapshot holds the entity's attributes, tags, active effects, granted abilities with their running
-	/// instances and graphs, shared variables, input, random source and, through its <see cref="IForgeEntity.Mover"/>,
-	/// body. See <see cref="EntitySnapshot"/>.</para>
+	/// instances and graphs, shared variables, input, random source, body, through its
+	/// <see cref="IForgeEntity.Mover"/>, and state kept outside Forge, through its
+	/// <see cref="IForgeEntity.StateHook"/>. See <see cref="EntitySnapshot"/>.</para>
 	/// <para>Take it from the host, between ticks, rather than from inside an ability, an effect or a graph, where the
 	/// entity is part way through changing.</para>
 	/// </remarks>

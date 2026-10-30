@@ -80,4 +80,14 @@ public interface IForgeEntity
 	/// input stage and before effects and abilities advance.
 	/// </remarks>
 	IEntityMover? Mover => null;
+
+	/// <summary>
+	/// Gets the hook that captures and restores state this entity keeps outside Forge, or <see langword="null"/> for an
+	/// entity whose rollback Forge's own state covers.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="EntitySimulation.CaptureSnapshot"/> captures the state with the rest of the entity, and
+	/// <see cref="EntitySimulation.RestoreSnapshot"/> puts it back.
+	/// </remarks>
+	IEntityStateHook? StateHook => null;
 }
