@@ -84,7 +84,7 @@ Every node has a `NetworkKind` that says what its work means to a networked game
 A presentation state node splits its work in two halves:
 
 - **The simulation half** is the usual `OnActivate`, `OnRestart`, `OnFixedUpdate` and `OnDeactivate`. It resolves the node's inputs and keeps what the presentation needs in the node context, such as which player and at what speed, and counts anything that ends the node, such as the length of a clip, in fixed steps. The node then ends on the same step on every machine, whatever the engine is doing.
-- **The presentation half** is `OnPresentationActivated` and `OnPresentationDeactivated`. It does the engine work from what the node context holds: playing, stopping, writing and restoring.
+- **The presentation half** is `OnPresentationActivated`, `OnPresentationDeactivated` and `OnPresentationRestored`. It does the engine work from what the node context holds: playing, stopping, writing and restoring.
 
 The presentation half runs in the presentation pass, `GraphProcessor.Present`, which the host calls at the end of each frame (for ability graphs, through `EntityAbilities.PresentAbilities`). The pass shows only the net change since the last one:
 
@@ -93,6 +93,7 @@ The presentation half runs in the presentation pass, `GraphProcessor.Present`, w
 - When the presented activation ends, restarts, or its graph stops, the next pass calls `OnPresentationDeactivated` with whatever `OnPresentationActivated` returned. The node's context may be gone by then, so that return value is all it gets.
 - A presentation that ends its own activation as it starts, such as through a signal the engine emits, is ended right away in the same pass.
 - Presentations that end go first, then new ones start, each in graph order.
+- After a [restore](../../../rollback.md), a presented activation the restore kept running is still the same activation, so it isn't started again. Instead the next pass calls `OnPresentationRestored`, so the presentation can catch up with where the restored activation is, such as an animation seeking to the pose its elapsed time gives. A node that can't catch up yet, such as a sound while the game is paused, returns `false` and is asked again at each pass until it returns `true`. One the restore ended or replaced is ended and started again as usual. A node that keeps its activation's progress in its context, as a clip's elapsed time, can present an activation part way through too, which a restore brings back mid-way.
 
 **Resolve inputs in `OnActivate` or `OnRestart`, not in the pass.** Keep what the presentation needs in the node context and have `OnPresentationActivated` read it from there. A resolver can draw from `GraphContext.Random`, the deterministic gameplay random, and a draw made only on peers that present puts their rolls out of step with the rest; an input can also change before the pass runs.
 

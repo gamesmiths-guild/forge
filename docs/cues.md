@@ -230,6 +230,17 @@ Deferred handlers see only net change:
 
 An effect applied and removed within one frame then shows no cue at all, instead of flickering for a frame. See [Simulation Tick](simulation.md#presentation-pass) for where the pass fits.
 
+### Cues after a restore
+
+A [restore](rollback.md) puts an entity back as it was, and its persistent cues follow, so what handlers show matches the state they show it for:
+
+- The persistent cues of active effects and running Cue nodes that the restore takes away are removed, as interrupted.
+- Those of effects and Cue nodes it brings back are applied again, with the parameters they were last applied or updated with.
+- Those of effects it keeps are updated when their parameters changed, such as a stack count.
+- No cue executes. Executions belong to the moments that happened, and a restore only puts the state back.
+
+An entity that goes to a world history's [limbo](rollback.md#limbo) takes its persistent cues with it, and one that comes back shows them again. Cues applied by calling `ApplyCue` directly aren't part of any entity's state, so a restore leaves them as they are. With deferred dispatch, the changes a restore makes arrive at the next pass like any others: a cue that a replayed tick applied and the restore after it took away is never shown.
+
 ### Implementing Cue Handlers
 
 Cue handlers implement the `ICueHandler` interface to respond to cue events:

@@ -70,7 +70,7 @@ new {ClassName}({parameter} = {default}, restartOnRetrigger = false)
 2. **Update:** {What happens each fixed step while active.}
 3. **Deactivation:** {What triggers deactivation and what cleanup occurs.}
 4. **Retrigger:** {Ignored. For a node that overrides `OnRestart`, add what `restartOnRetrigger` makes a retrigger do instead, and what the restart releases before acquiring again.}
-5. **Presentation:** {For a presentation node only: what the presentation pass shows for a running activation and what it undoes once that activation ends. Remove this step otherwise.}
+5. **Presentation:** {For a presentation node only: what the presentation pass shows for a running activation, what it undoes once that activation ends, and how it catches up when a restore keeps the activation running at another point of it. Remove this step otherwise.}
 6. **Restore:** {For a node that holds something outside the graph while it runs - a subscription, an override, a connection - what it lets go of before a [restore](../statescript/nodes/state/README.md#writing-rollback-safe-nodes) replaces its activation and takes hold of again after one brings it back. Remove this step otherwise.}
 
 ## Usage

@@ -85,7 +85,7 @@ entity.Abilities.PresentAbilities();
 cuesManager.PresentCues();
 ```
 
-The pass shows the net change since the previous one. An animation node that started and ended within the frame plays nothing, and one still running is started once, however many ticks it lasts. Nothing the pass runs may change gameplay, so a host with nothing to show, such as a dedicated server, skips it and still simulates the same game. See [Simulation and presentation](statescript/nodes/state/README.md#simulation-and-presentation) for the node side and [Deferred dispatch](cues.md#deferred-dispatch) for cues.
+The pass shows the net change since the previous one. An animation node that started and ended within the frame plays nothing, and one still running is started once, however many ticks it lasts. After a [restore](rollback.md), an animation still running catches up with the pose the restored tick gives it. Nothing the pass runs may change gameplay, so a host with nothing to show, such as a dedicated server, skips it and still simulates the same game. See [Simulation and presentation](statescript/nodes/state/README.md#simulation-and-presentation) for the node side and [Deferred dispatch](cues.md#deferred-dispatch) for cues.
 
 ## Deterministic randomness
 

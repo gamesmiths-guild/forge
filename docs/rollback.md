@@ -1,6 +1,6 @@
 # Rollback
 
-A game that runs on a fixed step can put an entity back as it was after an earlier tick and run the ticks since then again. Networking does it when the server's word on a past tick differs from what a client predicted. A test does it to prove the game plays the same way twice. Three pieces do the work: the **entity snapshot**, which captures an entity and puts it back, the **entity history**, which keeps an entity's recent ticks to roll back to, and the **world history**, which does the same for a world of entities together, keeping the ones that die or join meanwhile in limbo.
+A game that runs on a fixed step can put an entity back as it was after an earlier tick and run the ticks since then again. Networking does it when the server's word on a past tick differs from what a client predicted. A test does it to prove the game plays the same way twice. Three pieces do the work: the **entity snapshot**, which captures an entity and puts it back, the **entity history**, which keeps an entity's recent ticks to roll back to, and the **world history**, which does the same for a world of entities together, keeping the ones that die or join meanwhile in limbo, and can replay its ticks to check they come out the same.
 
 Both build on the [simulation tick](simulation.md): a tick that runs again with the same input has to come out the same.
 
@@ -28,7 +28,7 @@ EntitySimulation.RestoreSnapshot(entity, snapshot);
 | Body | The `BodyState` its [mover](simulation.md#movement) captures, if the entity has a `Mover`. |
 | Outside state | What its [state hook](#state-outside-forge) captures, if the entity has a `StateHook`. |
 
-**A restore is silent.** No attribute, tag, effect or ability event is raised, no cue fires, and no graph node activates or deactivates. The [presentation pass](simulation.md#presentation-pass) after it shows only the net change in what the graphs present.
+**A restore is silent.** No attribute, tag, effect or ability event is raised, no cue executes, and no graph node activates or deactivates. The [presentation pass](simulation.md#presentation-pass) after it shows only the net change in what the graphs present, and persistent cues follow it: those of effects and Cue nodes it takes away end, and those it brings back start again. See [Cues after a restore](cues.md#cues-after-a-restore).
 
 **Effects and abilities keep their identity.** Active effects, abilities and ability instances come back as the same objects, so a handle from before the snapshot points at the same thing after the restore. An effect removed since the snapshot comes back, and its handle is valid again. An effect applied since then goes without a removal, and its handle is no longer valid. The same holds for granted abilities and running instances.
 
@@ -40,7 +40,7 @@ EntitySimulation.RestoreSnapshot(entity, snapshot);
 
 - **Other entities.** Each entity restores only itself. An effect it applied to another entity is the other entity's, and comes back only with a snapshot of that one. An `Effect` applied to several entities is one object, though: a restore puts its level and set by caller values back for all of them, without their effects evaluating again, so give each entity its own `Effect` when those change at runtime.
 - **Handlers your code added.** Subscriptions to an entity's events from outside it, such as a health bar's, aren't the entity's to let go of, so they stay subscribed throughout. The entity's own handlers take hold again after them, so a handler of yours that subscribed after one of the entity's runs before it once the entity is restored.
-- **Cues.** A restore fires no cue. A persistent cue an effect started stays shown when the restore takes the effect away, and one that ended stays off when the restore brings its effect back. Ticks replayed after a rollback fire their cues again.
+- **Cues applied by hand.** A cue applied by calling `CuesManager.ApplyCue` directly belongs to no effect or node, so a restore leaves it as it is.
 - **Your own state.** Fields of your entity class, engine objects and anything else outside Forge stay as they are, unless a [state hook](#state-outside-forge) captures them.
 
 ### When a snapshot can be taken
@@ -144,6 +144,36 @@ An entity that leaves the world after it was recorded goes to **limbo** instead 
 Recording the tick right after the one the world is at continues the world from there. The ticks after it belong to a future the world left behind, so they go: the entities that joined in them are released, and the ones that left in them are back in the world, for good this time. Rolling back and then recording is how a game resumes from an earlier moment.
 
 A tick that doesn't follow the one the world is at starts the history over: limbo is emptied, and every entity in the world is recorded anew from that tick.
+
+### Replaying a world
+
+`Replay(toTick)` runs the ticks after the one the world is at again, up to `toTick`, and checks each against the recording. Each tick runs from how the tick before it was recorded, with the input frames every entity ran it with, then its [checksum](#checksums) is compared with the recorded one and the world is put back as the tick was recorded:
+
+```csharp
+world.Rollback(120);
+
+foreach (WorldDesync desync in world.Replay(world.NewestTick!.Value))
+{
+    Console.WriteLine($"Tick {desync.Tick} ran differently:{Environment.NewLine}{desync.Describe()}");
+}
+```
+
+- **The recording stays the truth.** A tick that runs differently is reported, and the next one runs from the recording rather than from the difference, so each report is about its own tick. The history doesn't change, and the world ends at `toTick` as it was recorded.
+- **Spawns are compared by place.** An entity that joins while a tick runs again, such as one a graph spawns, is compared with the one that joined in that tick the first time, by its place among the world's entities, then released when the world is put back, so the recorded one comes back in its place. For the two to compare equal, the host seeds a spawned entity's random from the tick and its place among that tick's spawns rather than from a clock.
+- **An entity that left in a tick** runs it again with the input frame it left with, which no snapshot holds.
+- **`advance`** runs each tick. Without one, `Replay` advances `Entities` through `EntitySimulation.Tick`. A host that advances its entities its own way passes the method it advances live ticks with.
+- **`WorldDesync.Describe`** lists, for each entity whose state differs, every value that differs, as recorded and as replayed. It keeps both sets of snapshots, so it can be asked long after the replay. Pass it a function to name the entities.
+
+A replay that finds nothing proves the world is deterministic over those ticks: anything a tick does that a replay can't do again, such as an effect applied from outside the simulation between two ticks, shows up as a difference on the tick that follows it.
+
+### Checksums
+
+`ChecksumAt(tick)` hashes the world as a tick held left it into 64 bits that come out the same on every machine and in every run that leaves the world the same:
+
+- **Forge's state, value for value:** each entity's attributes, tags, active effects with their timing, stacks and set-by-caller values, granted abilities with the running nodes and variables of their graphs, shared variables, input, random and outside state.
+- **The body to a thousandth of a unit**, the precision the network sends it at, so float noise below that isn't a difference.
+- **Entities by their place in the world.** An effect's owner or a variable pointing at an entity counts by that entity's place, so a world that spawned an equal entity in the same place hashes the same.
+- **Not covered directly:** what a running node or an effect component keeps for itself. It counts through what it changes.
 
 ## State outside Forge
 
