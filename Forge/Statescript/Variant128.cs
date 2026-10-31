@@ -279,7 +279,7 @@ public readonly struct Variant128
 	/// <typeparam name="T">The unmanaged type to retrieve.</typeparam>
 	/// <returns>The stored value as type T.</returns>
 	/// <exception cref="InvalidOperationException">Exception thrown if the type T is unsupported.</exception>
-	public readonly T Get<T>()
+	public T Get<T>()
 		where T : unmanaged
 	{
 		if (typeof(T) == typeof(bool))
@@ -379,7 +379,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a boolean.
 	/// </summary>
 	/// <returns>The stored boolean value.</returns>
-	public readonly bool AsBool()
+	public bool AsBool()
 	{
 		return _bool;
 	}
@@ -388,7 +388,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a byte.
 	/// </summary>
 	/// <returns>The stored byte value.</returns>
-	public readonly byte AsByte()
+	public byte AsByte()
 	{
 		return _byte;
 	}
@@ -397,7 +397,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as an sbyte.
 	/// </summary>
 	/// <returns>The stored sbyte value.</returns>
-	public readonly sbyte AsSByte()
+	public sbyte AsSByte()
 	{
 		return _sbyte;
 	}
@@ -406,7 +406,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a char.
 	/// </summary>
 	/// <returns>The stored char value.</returns>
-	public readonly char AsChar()
+	public char AsChar()
 	{
 		return _char;
 	}
@@ -415,7 +415,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a decimal.
 	/// </summary>
 	/// <returns>The stored decimal value.</returns>
-	public readonly decimal AsDecimal()
+	public decimal AsDecimal()
 	{
 		return _decimal;
 	}
@@ -424,7 +424,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a double.
 	/// </summary>
 	/// <returns>The stored double value.</returns>
-	public readonly double AsDouble()
+	public double AsDouble()
 	{
 		return _double;
 	}
@@ -433,7 +433,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a float.
 	/// </summary>
 	/// <returns>The stored float value.</returns>
-	public readonly float AsFloat()
+	public float AsFloat()
 	{
 		return _float;
 	}
@@ -442,7 +442,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as an int.
 	/// </summary>
 	/// <returns>The stored int value.</returns>
-	public readonly int AsInt()
+	public int AsInt()
 	{
 		return _int;
 	}
@@ -451,7 +451,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a uint.
 	/// </summary>
 	/// <returns>The stored uint value.</returns>
-	public readonly uint AsUInt()
+	public uint AsUInt()
 	{
 		return _uint;
 	}
@@ -460,7 +460,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a long.
 	/// </summary>
 	/// <returns>The stored long value.</returns>
-	public readonly long AsLong()
+	public long AsLong()
 	{
 		return _long;
 	}
@@ -469,7 +469,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a ulong.
 	/// </summary>
 	/// <returns>The stored ulong value.</returns>
-	public readonly ulong AsULong()
+	public ulong AsULong()
 	{
 		return _ulong;
 	}
@@ -478,7 +478,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a short.
 	/// </summary>
 	/// <returns>The stored short value.</returns>
-	public readonly short AsShort()
+	public short AsShort()
 	{
 		return _short;
 	}
@@ -487,7 +487,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a ushort.
 	/// </summary>
 	/// <returns>The stored ushort value.</returns>
-	public readonly ushort AsUShort()
+	public ushort AsUShort()
 	{
 		return _ushort;
 	}
@@ -496,7 +496,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a Vector2.
 	/// </summary>
 	/// <returns>The stored Vector2 value.</returns>
-	public readonly Vector2 AsVector2()
+	public Vector2 AsVector2()
 	{
 		return _vector2;
 	}
@@ -505,7 +505,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a Vector3.
 	/// </summary>
 	/// <returns>The stored Vector3 value.</returns>
-	public readonly Vector3 AsVector3()
+	public Vector3 AsVector3()
 	{
 		return _vector3;
 	}
@@ -514,7 +514,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a Vector4.
 	/// </summary>
 	/// <returns>The stored Vector4 value.</returns>
-	public readonly Vector4 AsVector4()
+	public Vector4 AsVector4()
 	{
 		return _vector4;
 	}
@@ -523,7 +523,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a Plane.
 	/// </summary>
 	/// <returns>The stored Plane value.</returns>
-	public readonly Plane AsPlane()
+	public Plane AsPlane()
 	{
 		return _plane;
 	}
@@ -532,7 +532,7 @@ public readonly struct Variant128
 	/// Retrieves the stored value as a Quaternion.
 	/// </summary>
 	/// <returns>The stored Quaternion value.</returns>
-	public readonly Quaternion AsQuaternion()
+	public Quaternion AsQuaternion()
 	{
 		return _quaternion;
 	}

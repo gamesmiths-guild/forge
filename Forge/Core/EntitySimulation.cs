@@ -160,20 +160,19 @@ public static class EntitySimulation
 			throw new ArgumentException("The snapshot was taken from another entity.", nameof(snapshot));
 		}
 
+		ThrowIfCannotRestore([entity], [snapshot]);
 		RestoreSnapshots([entity], [snapshot])?.Throw();
 	}
 
 	// Puts several entities back as one. Every hold of the detaching entities lets go, newest first across all of them,
 	// each snapshot puts its entity's state back, then every hold of the snapshots' entities takes hold again, oldest
 	// first across all of them, so handlers sharing an event run in the order they first took hold in, whichever entity
-	// they belong to. With no snapshots, the detaching entities only let go. Every entity is checked before any
-	// changes, and the first exception a hook threw is handed back.
+	// they belong to. With no snapshots, the detaching entities only let go. Callers check the entities first with
+	// ThrowIfCannotRestore, and the first exception a hook threw is handed back.
 	internal static ExceptionDispatchInfo? RestoreSnapshots(
 		IReadOnlyList<IForgeEntity> detaching,
 		IReadOnlyList<EntitySnapshot> snapshots)
 	{
-		ThrowIfCannotRestore(detaching, snapshots);
-
 		ExceptionDispatchInfo? failure = null;
 		List<EntityHold> holds = [];
 

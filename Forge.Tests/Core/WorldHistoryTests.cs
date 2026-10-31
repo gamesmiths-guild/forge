@@ -277,6 +277,24 @@ public class WorldHistoryTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 
 	[Fact]
 	[Trait("Simulation", "World")]
+	public void An_entity_rolled_back_before_it_was_recorded_is_released()
+	{
+		TestEntity a = Entity();
+		TestEntity c = Entity();
+		WorldHistory world = World(8, a);
+		List<string> changes = Watch(world, a, null, c);
+		Run(world, 1, 2);
+
+		world.Add(c);
+		world.Rollback(2);
+
+		changes.Should().Equal("released c");
+		world.Entities.Should().Equal(a);
+		world.Invoking(x => x.Remove(c)).Should().Throw<ArgumentException>();
+	}
+
+	[Fact]
+	[Trait("Simulation", "World")]
 	public void An_entity_that_leaves_running_a_behavior_that_is_not_a_graph_is_refused()
 	{
 		TestEntity a = Entity();

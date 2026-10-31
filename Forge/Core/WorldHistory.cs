@@ -137,8 +137,8 @@ public sealed class WorldHistory
 	/// Adds an entity to the world. It's recorded from the next tick recorded on.
 	/// </summary>
 	/// <remarks>
-	/// An entity that joins while the world is rolled back belongs to the ticks that follow the one the world is at, so
-	/// another rollback sets it aside with them.
+	/// Until then it has no tick to come back to, so a rollback releases it, as it does one that joins while the world
+	/// is rolled back.
 	/// </remarks>
 	/// <param name="entity">The entity to add.</param>
 	/// <exception cref="ArgumentException">Thrown when the entity is already in the world or in its limbo.</exception>
@@ -232,6 +232,7 @@ public sealed class WorldHistory
 			}
 		}
 
+		EntitySimulation.ThrowIfCannotRestore(leaving, []);
 		ExceptionDispatchInfo? failure = EntitySimulation.RestoreSnapshots(leaving, []);
 		List<PendingChange> changes = [];
 
@@ -362,7 +363,7 @@ public sealed class WorldHistory
 			{
 				member.State = MemberState.InWorld;
 			}
-			else if (member.State == MemberState.Leaving && member.JoinTick is null)
+			else if (member.JoinTick is null)
 			{
 				Release(member, changes);
 			}
@@ -385,7 +386,7 @@ public sealed class WorldHistory
 	{
 		foreach (Member member in _members.ToArray())
 		{
-			if (member.State == MemberState.Limbo && (member.JoinTick is null || member.JoinTick > _currentTick))
+			if (member.State == MemberState.Limbo && member.JoinTick > _currentTick)
 			{
 				Release(member, changes);
 			}
