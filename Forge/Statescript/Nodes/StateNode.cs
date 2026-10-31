@@ -161,6 +161,12 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	}
 
 	/// <inheritdoc/>
+	internal override bool RestorePresentation(GraphContext graphContext, object? presentation)
+	{
+		return OnPresentationRestored(graphContext, presentation);
+	}
+
+	/// <inheritdoc/>
 	internal override void DetachForRestore(GraphContext graphContext)
 	{
 		OnRestoreDetach(graphContext);
@@ -328,6 +334,32 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// it threw.</param>
 	protected virtual void OnPresentationDeactivated(object? presentation)
 	{
+	}
+
+	/// <summary>
+	/// Brings what <see cref="OnPresentationActivated"/> started in line with the activation after a restore that kept
+	/// it running, in the first presentation pass after the restore: seeks an animation to the pose the activation is
+	/// now at, or a sound to where it now plays. The default has nothing to bring in line.
+	/// </summary>
+	/// <remarks>
+	/// <para>A restore can put a running activation back to an earlier or later point of itself, as scrubbing a
+	/// timeline does, and the pass presents net change only: the activation is still the one presented, so it isn't
+	/// started again. What the activation counts in its context, such as the time it has played, is the restored
+	/// count. A restore that ends the activation or replaces it with another ends the presentation and starts the new
+	/// one instead, through <see cref="OnPresentationDeactivated"/> and <see cref="OnPresentationActivated"/>.</para>
+	/// <para>A presentation that can't catch up yet, such as a sound while the game is paused, returns
+	/// <see langword="false"/>, and is asked again at each pass until it returns <see langword="true"/> or its
+	/// activation ends.</para>
+	/// <para>The same rules as <see cref="OnPresentationActivated"/> apply: read only what the simulation half kept in
+	/// the context, and change no gameplay or graph state. A restore that leaves the activation where the presentation
+	/// already shows it, as replaying ticks to the same point does, should change nothing.</para>
+	/// </remarks>
+	/// <param name="graphContext">The graph's context.</param>
+	/// <param name="presentation">What <see cref="OnPresentationActivated"/> returned.</param>
+	/// <returns>Whether the presentation caught up with the activation.</returns>
+	protected virtual bool OnPresentationRestored(GraphContext graphContext, object? presentation)
+	{
+		return true;
 	}
 
 	/// <summary>

@@ -314,6 +314,18 @@ public abstract class Node
 	}
 
 	/// <summary>
+	/// Brings a presentation <see cref="StartPresentation"/> started in line with the activation a restore kept
+	/// running. The default implementation has nothing to bring in line.
+	/// </summary>
+	/// <param name="graphContext">The graph's context.</param>
+	/// <param name="presentation">What <see cref="StartPresentation"/> returned.</param>
+	/// <returns>Whether the presentation caught up; one that didn't is asked again at the next pass.</returns>
+	internal virtual bool RestorePresentation(GraphContext graphContext, object? presentation)
+	{
+		return true;
+	}
+
+	/// <summary>
 	/// Lets go of what the node's running activation holds outside the graph, before a restore replaces it. The default
 	/// implementation holds nothing.
 	/// </summary>

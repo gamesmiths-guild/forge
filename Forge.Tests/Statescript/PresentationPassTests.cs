@@ -196,6 +196,59 @@ public class PresentationPassTests
 		log.Should().Equal(["start a#1", "end a#1", "start b#1"], "it is ended only once");
 	}
 
+	[Fact]
+	[Trait("Graph", "Presentation")]
+	public void A_presentation_whose_activation_a_restore_kept_is_told_once_at_the_next_pass()
+	{
+		var log = new List<string>();
+		var node = new PresentingNode("a", log);
+		GraphProcessor processor = Start([node], node);
+		processor.Present();
+
+		processor.RestoreSnapshot(processor.CaptureSnapshot());
+		processor.Present();
+		processor.Present();
+
+		log.Should().Equal("start a#1", "restore a#1");
+	}
+
+	[Fact]
+	[Trait("Graph", "Presentation")]
+	public void A_presentation_that_could_not_catch_up_with_a_restore_is_told_again_until_it_has()
+	{
+		var log = new List<string>();
+		var node = new PresentingNode("a", log, catchUpOn: 3);
+		GraphProcessor processor = Start([node], node);
+		processor.Present();
+
+		processor.RestoreSnapshot(processor.CaptureSnapshot());
+
+		for (int i = 0; i < 5; i++)
+		{
+			processor.Present();
+		}
+
+		log.Should().Equal("start a#1", "restore a#1", "restore a#1", "restore a#1");
+	}
+
+	[Fact]
+	[Trait("Graph", "Presentation")]
+	public void A_restore_that_replaces_the_activation_ends_its_presentation_and_starts_the_restored_one()
+	{
+		var log = new List<string>();
+		var node = new PresentingNode("a", log, restartOnRetrigger: true);
+		GraphProcessor processor = Start([node], node);
+		GraphSnapshot first = processor.CaptureSnapshot();
+		processor.Present();
+
+		Trigger(node, processor);
+		processor.Present();
+		processor.RestoreSnapshot(first);
+		processor.Present();
+
+		log.Should().Equal("start a#1", "end a#1", "start a#2", "end a#2", "start a#3");
+	}
+
 	private static GraphProcessor Start(Node[] nodes, params Node[] startedByEntry)
 	{
 		var graph = new Graph();
@@ -228,12 +281,14 @@ public class PresentationPassTests
 		node.InputPorts[StateNode<StateNodeContext>.AbortPort].ReceiveMessage(processor.GraphContext);
 	}
 
+	// Catches up with a restore on the given try.
 	private sealed class PresentingNode(
 		string name,
 		List<string> log,
 		bool restartOnRetrigger = false,
 		bool throwOnStart = false,
-		bool abortOnStart = false) : StateNode<StateNodeContext>(restartOnRetrigger)
+		bool abortOnStart = false,
+		int catchUpOn = 1) : StateNode<StateNodeContext>(restartOnRetrigger)
 	{
 		private readonly string _name = name;
 
@@ -244,6 +299,8 @@ public class PresentationPassTests
 		private readonly bool _abortOnStart = abortOnStart;
 
 		private int _starts;
+
+		private int _catchUpAfter = catchUpOn;
 
 		public override NodeNetworkKind NetworkKind => NodeNetworkKind.Presentation;
 
@@ -281,6 +338,12 @@ public class PresentationPassTests
 		protected override void OnPresentationDeactivated(object? presentation)
 		{
 			_log.Add($"end {presentation ?? "nothing"}");
+		}
+
+		protected override bool OnPresentationRestored(GraphContext graphContext, object? presentation)
+		{
+			_log.Add($"restore {presentation ?? "nothing"}");
+			return --_catchUpAfter <= 0;
 		}
 	}
 
