@@ -13,7 +13,8 @@ namespace Gamesmiths.Forge.Core;
 /// </summary>
 /// <remarks>
 /// <para>It holds the entity's attributes, tags, active effects, granted abilities with their running instances and
-/// graphs, shared variables, input, random source and body. Active effects, abilities and instances are kept as the
+/// graphs, shared variables, input, random source, body and the state its <see cref="IForgeEntity.StateHook"/> keeps
+/// outside Forge. Active effects, abilities and instances are kept as the
 /// objects they are, with copies of their state, so a restore brings back the very handles that point at them.</para>
 /// <para>A snapshot never changes, so it can be restored any number of times.</para>
 /// </remarks>
@@ -41,6 +42,8 @@ public sealed class EntitySnapshot
 
 	internal BodyState? Body { get; }
 
+	internal Variant128? ExternalState { get; }
+
 	internal EntitySnapshot(IForgeEntity entity)
 	{
 		Entity = entity;
@@ -54,10 +57,12 @@ public sealed class EntitySnapshot
 		Input = entity.Input?.CaptureSnapshot();
 		Random = entity.Random?.CaptureSnapshot();
 		Body = entity.Mover?.CaptureState();
+		ExternalState = entity.StateHook?.CaptureState();
 	}
 
 	// Puts the entity's state back, silently, between the restore's letting go and taking hold again. An effect
-	// component that throws doesn't keep the rest from coming back, and the first exception is handed back.
+	// component, a mover or a state hook that throws doesn't keep the rest from coming back, and the first exception is
+	// handed back.
 	internal ExceptionDispatchInfo? RestoreState()
 	{
 		Entity.Attributes.RestoreSnapshot(AttributeSets, Attributes);
@@ -79,7 +84,26 @@ public sealed class EntitySnapshot
 
 		if (Body is BodyState body)
 		{
-			Entity.Mover?.RestoreState(body);
+			try
+			{
+				Entity.Mover?.RestoreState(body);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		if (ExternalState is Variant128 externalState)
+		{
+			try
+			{
+				Entity.StateHook?.RestoreState(externalState);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 
 		return failure;

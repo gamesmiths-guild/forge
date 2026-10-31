@@ -439,6 +439,20 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 	[Fact]
 	[Trait("Simulation", "Snapshot")]
+	public void A_restore_brings_back_state_kept_outside_Forge_through_the_hook()
+	{
+		var hook = new CounterHook { Count = 3 };
+		var entity = new TestEntity(_tagsManager, _cuesManager) { StateHook = hook };
+
+		EntitySnapshot snapshot = EntitySimulation.CaptureSnapshot(entity);
+		hook.Count = 9;
+		EntitySimulation.RestoreSnapshot(entity, snapshot);
+
+		hook.Count.Should().Be(3);
+	}
+
+	[Fact]
+	[Trait("Simulation", "Snapshot")]
 	public void A_snapshot_restores_any_number_of_times()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
@@ -556,6 +570,27 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 		FluentActions.Invoking(() => removing.Abilities.ClearAbility(third))
 			.Should().Throw<InvalidOperationException>("the ability is still going");
+	}
+
+	[Fact]
+	[Trait("Simulation", "Snapshot")]
+	public void A_mover_that_fails_to_come_back_neither_skips_the_state_hook_nor_hides_an_earlier_failure()
+	{
+		var hook = new CounterHook { Count = 3 };
+		var entity = new TestEntity(_tagsManager, _cuesManager) { Mover = new FaultyMover(), StateHook = hook };
+		Apply(
+			entity,
+			new EffectData(
+				"Faulty",
+				new DurationData(DurationType.Infinite),
+				effectComponents: [new FaultyRestoreComponent()]));
+		EntitySnapshot snapshot = EntitySimulation.CaptureSnapshot(entity);
+		hook.Count = 9;
+
+		FluentActions.Invoking(() => EntitySimulation.RestoreSnapshot(entity, snapshot))
+			.Should().Throw<InvalidOperationException>().WithMessage(FaultyRestoreComponent.Message);
+
+		hook.Count.Should().Be(3);
 	}
 
 	[Fact]
@@ -849,6 +884,23 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 		}
 	}
 
+	private sealed class FaultyMover : IEntityMover
+	{
+		public void Move(double fixedDeltaTime)
+		{
+		}
+
+		public BodyState CaptureState()
+		{
+			return default;
+		}
+
+		public void RestoreState(in BodyState state)
+		{
+			throw new InvalidOperationException("The body can't be put back.");
+		}
+	}
+
 	private sealed class CodedBehavior : IAbilityBehavior
 	{
 		public void OnStarted(AbilityBehaviorContext context)
@@ -857,6 +909,21 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 		public void OnEnded(AbilityBehaviorContext context)
 		{
+		}
+	}
+
+	private sealed class CounterHook : IEntityStateHook
+	{
+		public int Count { get; set; }
+
+		public Variant128 CaptureState()
+		{
+			return new Variant128(Count);
+		}
+
+		public void RestoreState(in Variant128 state)
+		{
+			Count = state.AsInt();
 		}
 	}
 

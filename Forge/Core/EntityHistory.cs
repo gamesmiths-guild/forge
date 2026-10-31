@@ -7,9 +7,9 @@ namespace Gamesmiths.Forge.Core;
 /// so the entity can be rolled back to one of them and the ticks after it run again.
 /// </summary>
 /// <remarks>
-/// <para>Call <see cref="Record"/> after advancing the entity through each tick. <see cref="Rollback"/> then puts the
-/// entity back as a recorded tick left it, and <see cref="Replay"/> runs the ticks after it again, each with the input
-/// frame it first ran with, recording them anew.</para>
+/// <para>Call <see cref="Record(long)"/> after advancing the entity through each tick. <see cref="Rollback"/> then puts
+/// the entity back as a recorded tick left it, and <see cref="Replay"/> runs the ticks after it again, each with the
+/// input frame it first ran with, recording them anew.</para>
 /// <para>The history keeps the most recent <see cref="Capacity"/> ticks. A replayed tick runs the way
 /// <see cref="EntitySimulation.Tick(IForgeEntity, long, double)"/> runs it, so only the fixed rail replays: anything
 /// that must come out the same on a replay belongs on it.</para>
@@ -87,14 +87,7 @@ public sealed class EntityHistory
 	public void Record(long tick)
 	{
 		// Taken first, so a snapshot that can't be taken leaves the history as it was.
-		EntitySnapshot snapshot = EntitySimulation.CaptureSnapshot(Entity);
-		long? oldestTick = OldestTick;
-		int kept = oldestTick is long oldest && tick >= oldest && tick <= _newestTick + 1 ? (int)(tick - oldest) : 0;
-
-		_count = Math.Min(kept + 1, Capacity);
-		_newestTick = tick;
-		Store(tick, snapshot, Entity.Input?.Current ?? default);
-		_currentTick = tick;
+		Record(tick, EntitySimulation.CaptureSnapshot(Entity));
 	}
 
 	/// <summary>
@@ -109,12 +102,7 @@ public sealed class EntityHistory
 	/// <exception cref="ArgumentOutOfRangeException">Thrown when the history doesn't hold the tick.</exception>
 	public void Rollback(long tick)
 	{
-		if (_count == 0 || tick < OldestTick || tick > _newestTick)
-		{
-			throw new ArgumentOutOfRangeException(nameof(tick), tick, "The history doesn't hold that tick.");
-		}
-
-		EntitySimulation.RestoreSnapshot(Entity, _snapshots[Slot(tick)]!);
+		EntitySimulation.RestoreSnapshot(Entity, SnapshotAt(tick));
 		_currentTick = tick;
 	}
 
@@ -151,6 +139,34 @@ public sealed class EntityHistory
 			_snapshots[slot] = EntitySimulation.CaptureSnapshot(Entity);
 			_currentTick = tick;
 		}
+	}
+
+	internal void Record(long tick, EntitySnapshot snapshot)
+	{
+		long? oldestTick = OldestTick;
+
+		int kept = 0;
+		if (oldestTick is long oldest
+			&& tick >= oldest
+			&& tick <= _newestTick + 1)
+		{
+			kept = (int)(tick - oldest);
+		}
+
+		_count = Math.Min(kept + 1, Capacity);
+		_newestTick = tick;
+		Store(tick, snapshot, Entity.Input?.Current ?? default);
+		_currentTick = tick;
+	}
+
+	internal EntitySnapshot SnapshotAt(long tick)
+	{
+		if (_count == 0 || tick < OldestTick || tick > _newestTick)
+		{
+			throw new ArgumentOutOfRangeException(nameof(tick), tick, "The history doesn't hold that tick.");
+		}
+
+		return _snapshots[Slot(tick)]!;
 	}
 
 	private void Store(long tick, EntitySnapshot snapshot, InputFrame input)
