@@ -143,6 +143,25 @@ public readonly record struct InputFrame
 		return later with { Pressed = Pressed | later.Pressed, Released = Released | later.Released };
 	}
 
+	internal void Write(IStateWriter writer)
+	{
+		writer.Write("Held", unchecked((long)Held));
+		writer.Write("Pressed", unchecked((long)Pressed));
+		writer.Write("Released", unchecked((long)Released));
+		writer.Write("Vectors", unchecked((long)PackedVectors));
+		writer.Write("Has aim", HasAim ? 1 : 0);
+		writer.Open("Aim point");
+		writer.Write("x", AimPoint.X);
+		writer.Write("y", AimPoint.Y);
+		writer.Write("z", AimPoint.Z);
+		writer.Close();
+		writer.Open("Aim direction");
+		writer.Write("x", AimDirection.X);
+		writer.Write("y", AimDirection.Y);
+		writer.Write("z", AimDirection.Z);
+		writer.Close();
+	}
+
 	private static int VectorShift(int vector)
 	{
 		Validation.Assert(vector is >= 0 and < InputActionSet.MaxVectors, "An input vector slot is between 0 and 3.");

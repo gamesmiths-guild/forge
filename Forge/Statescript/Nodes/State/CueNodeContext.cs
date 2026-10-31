@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Cues;
+
 namespace Gamesmiths.Forge.Statescript.Nodes.State;
 
 /// <summary>
@@ -15,6 +17,9 @@ public class CueNodeContext : StateNodeContext
 	// What a deferred removal cancels the matching apply by. A copy keeps it, so a restored context still matches
 	// what the context it replaced applied.
 	internal object Application { get; } = new();
+
+	// What the cues were applied with, for a restore that brings them back.
+	internal CueParameters? Parameters { get; set; }
 
 	/// <inheritdoc/>
 	protected override void OnCopied()

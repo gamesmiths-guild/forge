@@ -1,14 +1,15 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Statescript.Nodes.State;
 
 /// <summary>
 /// Applies one or more persistent cues
-/// (<see cref="Cues.CuesManager.ApplyCue(Tag, IForgeEntity, Cues.CueParameters?)"/>) on activation and removes them
-/// (<see cref="Cues.CuesManager.RemoveCue(Tag, IForgeEntity, bool)"/>) on deactivation.
+/// (<see cref="CuesManager.ApplyCue(Tag, IForgeEntity, Cues.CueParameters?)"/>) on activation and removes them
+/// (<see cref="CuesManager.RemoveCue(Tag, IForgeEntity, bool)"/>) on deactivation.
 /// </summary>
 /// <remarks>
 /// <para>The cue-tag input accepts either a single <see cref="Tag"/> or an array of tags; the target input accepts a
@@ -59,6 +60,17 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 	/// <inheritdoc/>
 	public override string Description =>
 		"Applies cues while active and removes them on deactivation.";
+
+	// The cues the running activation holds applied, for a restore to compare.
+	internal void AddPersistentCues(GraphContext graphContext, List<PersistentCue> cues)
+	{
+		CueNodeContext nodeContext = graphContext.GetNodeContext<CueNodeContext>(NodeID);
+
+		foreach (AppliedCue applied in nodeContext.AppliedCues)
+		{
+			cues.Add(new PersistentCue(nodeContext.Application, applied.Tag, applied.Target, nodeContext.Parameters));
+		}
+	}
 
 	/// <inheritdoc/>
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)

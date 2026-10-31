@@ -233,7 +233,7 @@ public sealed class WorldHistory
 		}
 
 		EntitySimulation.ThrowIfCannotRestore(leaving, []);
-		ExceptionDispatchInfo? failure = EntitySimulation.RestoreSnapshots(leaving, []);
+		ExceptionDispatchInfo? failure = EntitySimulation.RestoreSnapshots(leaving, [], Forgotten());
 		List<PendingChange> changes = [];
 
 		if (continues)
@@ -264,6 +264,7 @@ public sealed class WorldHistory
 			{
 				member.State = MemberState.Limbo;
 				member.LeaveTick = tick;
+				member.LeaveInput = member.Entity.Input?.Current ?? default;
 				changes.Add(new PendingChange(Change.EnteredLimbo, member.Entity));
 			}
 		}
@@ -350,7 +351,7 @@ public sealed class WorldHistory
 			LeftLimbo?.Invoke(entity);
 		}
 
-		ExceptionDispatchInfo? failure = EntitySimulation.RestoreSnapshots(detaching, snapshots);
+		ExceptionDispatchInfo? failure = EntitySimulation.RestoreSnapshots(detaching, snapshots, Forgotten());
 		List<PendingChange> changes = [];
 
 		foreach (Member member in _members.ToArray())
@@ -378,6 +379,142 @@ public sealed class WorldHistory
 		RefreshEntities();
 		Raise(changes);
 		failure?.Throw();
+	}
+
+	/// <summary>
+	/// Runs the ticks after the one the world is at again, up to and including <paramref name="toTick"/>, each from how
+	/// the tick before it was recorded and with the input frames it was recorded with, and checks that each comes out
+	/// the way it was recorded.
+	/// </summary>
+	/// <remarks>
+	/// <para>The recording stays the truth. Once a tick has run again, its <see cref="ChecksumAt">checksum</see> is
+	/// compared with the recorded one and the world is put back as the tick was recorded, the way
+	/// <see cref="Rollback"/> puts it. A tick that came out differently is reported, and the next one runs from the
+	/// recording rather than from the difference, so each report is about its own tick. The history doesn't change.
+	/// </para>
+	/// <para>An entity that joins while a tick runs again, such as one a graph spawns, is compared with the one that
+	/// joined the first time by its place in the world, and is released when the world is put back, so the recorded
+	/// one comes back in its place. An entity that left in the tick runs it with the input frame it left with.</para>
+	/// <para>Each tick runs through <paramref name="advance"/>, which advances <see cref="Entities"/> through the tick
+	/// it's given, or through <see cref="EntitySimulation.Tick(IReadOnlyList{IForgeEntity}, long, double)"/> without
+	/// one. A host that advances its entities its own way passes the method it advances live ticks with, so a tick runs
+	/// again the way it ran the first time.</para>
+	/// </remarks>
+	/// <param name="toTick">The last tick to run again, at most the newest the history holds.</param>
+	/// <param name="advance">Advances the world's entities through the tick it's given.</param>
+	/// <returns>The ticks that came out differently, oldest first; empty when every tick came out as recorded.
+	/// </returns>
+	/// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="toTick"/> isn't after the tick the
+	/// world is at, or is newer than the newest tick the history holds.</exception>
+	/// <exception cref="InvalidOperationException">Thrown while one of the entities' abilities, effects or attributes
+	/// are changing.</exception>
+	/// <exception cref="NotSupportedException">Thrown while one of the entities' abilities runs a behavior other than
+	/// a Statescript graph.</exception>
+	public IReadOnlyList<WorldDesync> Replay(long toTick, Action<long>? advance = null)
+	{
+		if (_count == 0 || toTick <= _currentTick || toTick > _newestTick)
+		{
+			throw new ArgumentOutOfRangeException(
+				nameof(toTick),
+				toTick,
+				"Only ticks after the one the world is at, up to the newest one held, can be replayed.");
+		}
+
+		List<WorldDesync> desyncs = [];
+
+		for (long tick = _currentTick + 1; tick <= toTick; tick++)
+		{
+			foreach (Member member in _members)
+			{
+				if (member.State != MemberState.InWorld || member.Entity.Input is not EntityInput input)
+				{
+					continue;
+				}
+
+				if (member.LeaveTick == tick)
+				{
+					input.SubmitForReplay(member.LeaveInput);
+				}
+				else if (member.WasIn(tick))
+				{
+					input.SubmitForReplay(member.History.InputAt(tick));
+				}
+			}
+
+			EntitySnapshot[] replayed;
+
+			try
+			{
+				if (advance is null)
+				{
+					EntitySimulation.Tick(Entities, tick, FixedDeltaTime);
+				}
+				else
+				{
+					advance(tick);
+				}
+
+				replayed = [.. Entities.Select(EntitySimulation.CaptureSnapshot)];
+			}
+			catch
+			{
+				// The world goes back as the tick was recorded either way.
+				Rollback(tick);
+				throw;
+			}
+
+			Rollback(tick);
+			EntitySnapshot[] recorded = RecordedSnapshots(tick);
+
+			if (Checksum(recorded) != Checksum(replayed))
+			{
+				desyncs.Add(new WorldDesync(tick, recorded, replayed));
+			}
+		}
+
+		return desyncs;
+	}
+
+	/// <summary>
+	/// Gets the checksum of the world as a tick held left it: a 64-bit hash of the state of every entity in the world
+	/// then, in the order they joined it, that comes out the same on every machine and in every run that leaves the
+	/// world the same.
+	/// </summary>
+	/// <remarks>
+	/// <para>It covers each entity's attributes, tags, active effects, granted abilities with the running nodes and
+	/// variables of their graphs, shared variables, input, random and outside state, value for value, and its body to
+	/// a thousandth of a unit, the precision the network sends it at, so float noise below that isn't a difference. An
+	/// entity that an effect or a variable points at counts by its place in the world, so a world that spawned an equal
+	/// entity in the same place comes out the same. What a running node or an effect component keeps for itself counts
+	/// through what it changes.</para>
+	/// <para><see cref="Replay"/> compares these checksums to find the ticks that ran differently.</para>
+	/// </remarks>
+	/// <param name="tick">A tick the history holds.</param>
+	/// <returns>The checksum.</returns>
+	/// <exception cref="ArgumentOutOfRangeException">Thrown when the history doesn't hold the tick.</exception>
+	public ulong ChecksumAt(long tick)
+	{
+		if (_count == 0 || tick < OldestTick || tick > _newestTick)
+		{
+			throw new ArgumentOutOfRangeException(nameof(tick), tick, "The history doesn't hold that tick.");
+		}
+
+		return Checksum(RecordedSnapshots(tick));
+	}
+
+	// The world's state, each entity by its place in the world the snapshots make up.
+	internal static ulong Checksum(EntitySnapshot[] snapshots)
+	{
+		var checksum = new StateChecksum([.. snapshots.Select(x => x.Entity)]);
+
+		for (int i = 0; i < snapshots.Length; i++)
+		{
+			checksum.Open("Entities", i);
+			snapshots[i].Write(checksum);
+			checksum.Close();
+		}
+
+		return checksum.Value;
 	}
 
 	// After a rollback, the ticks after the one the world is at are left behind: entities that joined in them are let
@@ -413,6 +550,18 @@ public sealed class WorldHistory
 			member.LeaveTick = null;
 			member.History = new EntityHistory(member.Entity, Capacity, FixedDeltaTime);
 		}
+	}
+
+	// The snapshots of the entities that were in the world on the tick, in the order they joined it.
+	private EntitySnapshot[] RecordedSnapshots(long tick)
+	{
+		return [.. _members.Where(x => !x.Forgotten && x.WasIn(tick)).Select(x => x.History.SnapshotAt(tick))];
+	}
+
+	// The entities the host forgot, whose cues go with them untouched when they let go.
+	private List<IForgeEntity>? Forgotten()
+	{
+		return _members.Exists(x => x.Forgotten) ? [.. _members.Where(x => x.Forgotten).Select(x => x.Entity)] : null;
 	}
 
 	private Member Find(IForgeEntity entity)
@@ -488,6 +637,9 @@ public sealed class WorldHistory
 
 		// The first tick recorded without it after it left, or null while it hasn't.
 		public long? LeaveTick { get; set; }
+
+		// The input frame it ran the tick it left in with, which no snapshot of it holds.
+		public InputFrame LeaveInput { get; set; }
 
 		public bool WasIn(long tick)
 		{

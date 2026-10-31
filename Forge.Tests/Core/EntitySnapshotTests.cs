@@ -474,7 +474,7 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 	[Fact]
 	[Trait("Simulation", "Snapshot")]
-	public void A_restore_fires_no_cue()
+	public void A_restore_ends_the_cues_of_effects_it_takes_away_and_starts_those_of_effects_it_brings_back()
 	{
 		var cuesManager = new CuesManager();
 		var handler = new RecordingCueHandler();
@@ -493,8 +493,16 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 		EntitySimulation.RestoreSnapshot(entity, snapshot);
 
-		handler.ApplyCount.Should().Be(applies);
-		handler.RemoveCount.Should().Be(removes);
+		handler.RemoveCount.Should().Be(removes + 1, "the late effect is taken away");
+		handler.LastInterrupted.Should().BeTrue();
+		handler.ApplyCount.Should().Be(applies + 1, "the kept effect comes back");
+		handler.LastParameters!.Value.Magnitude.Should().Be(1, "it's shown with its level, as it was");
+		handler.ExecuteCount.Should().Be(0);
+
+		EntitySimulation.RestoreSnapshot(entity, snapshot);
+
+		handler.ApplyCount.Should().Be(applies + 1, "a restore that changes nothing shows nothing");
+		handler.RemoveCount.Should().Be(removes + 1);
 	}
 
 	[Fact]

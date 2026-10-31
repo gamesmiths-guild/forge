@@ -41,6 +41,7 @@ internal static class Program
 		Check("Graph snapshot copies a node context and restores it", RestoresGraphSnapshot);
 		Check("Entity history rolls an entity back and replays its ticks", () => ReplaysEntityHistory(tagsManager));
 		Check("World history rolls a world back past a death and a spawn", () => RollsWorldBack(tagsManager));
+		Check("World replay reconciles cues and finds a tick that ran differently", () => ReplaysWorld(tagsManager));
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -225,6 +226,47 @@ internal static class Program
 		return returned && world.Entities.Count == 2 && world.Entities[1] == dies;
 	}
 
+	// A rollback past an effect's application ends its cue, a replay finds the tick an effect was applied from outside
+	// the simulation, and its description names the effect.
+	private static bool ReplaysWorld(TagsManager tagsManager)
+	{
+		var entity = new SmokeEntity(tagsManager);
+		var cueTag = Tag.RequestTag(tagsManager, "status.burning");
+		var cue = new CountingCue();
+		entity.CuesManager.RegisterCue(cueTag, cue);
+
+		var shield = new EffectData(
+			"Shield",
+			new DurationData(DurationType.Infinite),
+			cues: [new CueData(cueTag.GetSingleTagContainer(), 0, 1, CueMagnitudeType.EffectLevel)]);
+		var world = new WorldHistory(8, 1.0 / 64.0);
+		world.Add(entity);
+
+		for (long tick = 1; tick <= 4; tick++)
+		{
+			if (tick == 3)
+			{
+				entity.EffectsManager.ApplyEffect(new Effect(shield, new EffectOwnership(entity, entity)));
+			}
+
+			EntitySimulation.Tick(world.Entities, tick, world.FixedDeltaTime);
+			world.Record(tick);
+		}
+
+		ulong checksum = world.ChecksumAt(4);
+		world.Rollback(2);
+		bool removed = cue.Removes == 1;
+		IReadOnlyList<WorldDesync> desyncs = world.Replay(4);
+
+		return removed
+			&& cue.Applies == 2
+			&& desyncs.Count == 1
+			&& desyncs[0].Tick == 3
+			&& desyncs[0].Describe().Contains("Shield", StringComparison.Ordinal)
+			&& world.ChecksumAt(4) == checksum
+			&& world.ChecksumAt(4) != world.ChecksumAt(2);
+	}
+
 	private static int ResolveActivationData(TagsManager tagsManager, Tag eventTag, StructPayload payload)
 	{
 		var resolver = new AbilityActivationDataResolver(typeof(StructPayload), nameof(StructPayload.Value));
@@ -340,6 +382,31 @@ internal static class Program
 		protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
 		{
 			graphContext.GetNodeContext<CountingNodeContext>(NodeID).Updates.Add(deltaTime);
+		}
+	}
+
+	private sealed class CountingCue : ICueHandler
+	{
+		public int Applies { get; private set; }
+
+		public int Removes { get; private set; }
+
+		public void OnExecute(IForgeEntity? target, CueParameters? parameters)
+		{
+		}
+
+		public void OnApply(IForgeEntity? target, CueParameters? parameters)
+		{
+			Applies++;
+		}
+
+		public void OnRemove(IForgeEntity? target, bool interrupted)
+		{
+			Removes++;
+		}
+
+		public void OnUpdate(IForgeEntity? target, CueParameters? parameters)
+		{
 		}
 	}
 

@@ -256,6 +256,85 @@ public sealed class CuesManager
 		return true;
 	}
 
+	/// <summary>
+	/// Ends the persistent cues held before a restore that the restored state no longer holds, starts the ones it
+	/// holds that weren't held before, and updates the ones held on both sides with different parameters. No cue
+	/// executes.
+	/// </summary>
+	/// <remarks>
+	/// Removals go first, as interruptions, so a cue that ends for one application and starts for another ends before
+	/// it starts again. A handler that throws keeps neither the other handlers nor the rest of the cues from being
+	/// dispatched, and the first exception is handed back.
+	/// </remarks>
+	/// <param name="before">The persistent cues held before the restore.</param>
+	/// <param name="after">The persistent cues held after it.</param>
+	/// <returns>The first exception a handler threw, or <see langword="null"/>.</returns>
+	internal static ExceptionDispatchInfo? Reconcile(List<PersistentCue> before, List<PersistentCue> after)
+	{
+		ExceptionDispatchInfo? failure = null;
+		List<PersistentCue> ended = [.. before];
+		List<PersistentCue> updated = [];
+		List<PersistentCue> started = [];
+
+		foreach (PersistentCue cue in after)
+		{
+			int index = ended.FindIndex(x => x.Application == cue.Application
+				&& x.CueTag == cue.CueTag
+				&& x.Target == cue.Target);
+
+			if (index < 0)
+			{
+				started.Add(cue);
+				continue;
+			}
+
+			if (ended[index].Parameters != cue.Parameters)
+			{
+				updated.Add(cue);
+			}
+
+			ended.RemoveAt(index);
+		}
+
+		foreach (PersistentCue cue in ended)
+		{
+			try
+			{
+				cue.Target.CuesManager.RemoveCue(cue.CueTag, cue.Target, interrupted: true, cue.Application);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		foreach (PersistentCue cue in updated)
+		{
+			try
+			{
+				cue.Target.CuesManager.UpdateCue(cue.CueTag, cue.Target, cue.Parameters, cue.Application);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		foreach (PersistentCue cue in started)
+		{
+			try
+			{
+				cue.Target.CuesManager.ApplyCue(cue.CueTag, cue.Target, cue.Parameters, cue.Application);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
+		return failure;
+	}
+
 	// The application is what the cue is applied for - an active effect, a Cue node's activation - so a deferred
 	// removal can tell its own pending apply from another one of the same cue on the same target.
 	internal void ApplyCue(Tag cueTag, IForgeEntity? target, CueParameters? parameters, object? application)
@@ -326,7 +405,9 @@ public sealed class CuesManager
 	/// </summary>
 	/// <param name="effectEvaluatedData">The evaluated data of the applied effect.</param>
 	/// <param name="changes">The changes the application made to the target's attributes.</param>
-	internal void ApplyCues(in EffectEvaluatedData effectEvaluatedData, AttributeChangeSet changes)
+	/// <returns>The magnitude each cue was applied with, or <see langword="null"/> when the cues didn't fire.
+	/// </returns>
+	internal int[]? ApplyCues(in EffectEvaluatedData effectEvaluatedData, AttributeChangeSet changes)
 	{
 		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
 		Span<int> magnitudes = cues.Length <= MaxStackCueMagnitudes
@@ -335,7 +416,7 @@ public sealed class CuesManager
 
 		if (!TryCaptureCueMagnitudes(in effectEvaluatedData, CueTriggerRequirement.OnApply, changes, magnitudes))
 		{
-			return;
+			return null;
 		}
 
 		for (int i = 0; i < cues.Length; i++)
@@ -360,6 +441,8 @@ public sealed class CuesManager
 				effectEvaluatedData);
 			}
 		}
+
+		return magnitudes.ToArray();
 	}
 
 	internal void RemoveCues(in EffectEvaluatedData effectEvaluatedData, bool interrupted)
@@ -410,25 +493,6 @@ public sealed class CuesManager
 					effectEvaluatedData.Effect.Ownership.Source,
 					effectEvaluatedData.CustomCueParameters));
 			}
-		}
-	}
-
-	/// <summary>
-	/// Updates the cues of an active effect whose change ran no hooks, reading and dispatching them in one go.
-	/// </summary>
-	/// <param name="effectEvaluatedData">The evaluated data of the changed effect.</param>
-	/// <param name="changes">The changes the operation made to the target's attributes, or <see langword="null"/>
-	/// when it made none.</param>
-	internal void UpdateCues(in EffectEvaluatedData effectEvaluatedData, AttributeChangeSet? changes)
-	{
-		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
-		Span<int> magnitudes = cues.Length <= MaxStackCueMagnitudes
-			? stackalloc int[cues.Length]
-			: new int[cues.Length];
-
-		if (TryCaptureCueMagnitudes(in effectEvaluatedData, CueTriggerRequirement.OnUpdate, changes, magnitudes))
-		{
-			UpdateCues(in effectEvaluatedData, magnitudes);
 		}
 	}
 

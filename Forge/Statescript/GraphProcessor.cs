@@ -2,7 +2,9 @@
 
 using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Statescript.Nodes;
+using Gamesmiths.Forge.Statescript.Nodes.State;
 
 namespace Gamesmiths.Forge.Statescript;
 
@@ -455,6 +457,8 @@ public class GraphProcessor
 	/// called, whether the restore starts the run again, ends it or changes it.
 	/// </summary>
 	/// <remarks>
+	/// <para>The persistent cues of running Cue nodes follow the restore: those of activations it ends are removed, as
+	/// interrupted, and those of activations it brings back are applied again.</para>
 	/// <para>Running nodes that the restore replaces let go of what they hold outside the graph, newest activation
 	/// first, and the running nodes it brings back take hold of it again, oldest first, through <c>OnRestoreDetach</c>
 	/// and <c>OnRestoreAttach</c> on <see cref="StateNode{T}"/>. A hook that throws keeps neither the others from
@@ -481,6 +485,7 @@ public class GraphProcessor
 		ThrowIfChanging("restored");
 
 		ExceptionDispatchInfo? failure = null;
+		List<PersistentCue> cuesBefore = PersistentCues();
 
 		// Newest first, so what one node holds on top of what another holds is let go of in reverse.
 		foreach (Node node in RunningNodesByActivation(newestFirst: true))
@@ -507,6 +512,14 @@ public class GraphProcessor
 			{
 				failure ??= ExceptionDispatchInfo.Capture(exception);
 			}
+		}
+
+		List<PersistentCue> cuesAfter = PersistentCues();
+
+		if (cuesBefore.Count > 0 || cuesAfter.Count > 0)
+		{
+			ExceptionDispatchInfo? cueFailure = CuesManager.Reconcile(cuesBefore, cuesAfter);
+			failure ??= cueFailure;
 		}
 
 		failure?.Throw();
@@ -597,6 +610,22 @@ public class GraphProcessor
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();
 		OnGraphCompleted?.Invoke();
+	}
+
+	// The persistent cues the graph's running Cue nodes hold applied.
+	private List<PersistentCue> PersistentCues()
+	{
+		List<PersistentCue> cues = [];
+
+		foreach (Node node in Graph.Nodes)
+		{
+			if (node is CueNode cueNode && node.TryGetActivation(GraphContext, out _))
+			{
+				cueNode.AddPersistentCues(GraphContext, cues);
+			}
+		}
+
+		return cues;
 	}
 
 	// Snapshots the active nodes before either update walks them, because a node updated part way through can

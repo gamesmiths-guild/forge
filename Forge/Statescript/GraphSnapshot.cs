@@ -70,5 +70,22 @@ public sealed class GraphSnapshot
 		OnGraphCompleted = onGraphCompleted;
 	}
 
+	// Writes what a checksum covers of the run: whether it started, how many activations it counted, which state nodes
+	// run and the graph variables. What a running node keeps in its context counts through what it changes.
+	internal void Write(IStateWriter writer)
+	{
+		writer.Write("Started", HasStarted ? 1 : 0);
+		writer.Write("Activations", unchecked((long)ActivationCount));
+
+		for (int i = 0; i < ActiveNodes.Length; i++)
+		{
+			writer.Open("Active nodes", i);
+			writer.Write("Index", ActiveNodes[i].Index);
+			writer.Close();
+		}
+
+		GraphVariables.Write(writer, "Variables");
+	}
+
 	internal readonly record struct NodeContextCopy(Node Node, StateNodeContext Context);
 }
