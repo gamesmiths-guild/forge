@@ -207,7 +207,7 @@ public static class EntitySimulation
 			}
 			catch (Exception exception)
 			{
-				// Such as a mover's: what came back still takes hold again.
+				// What came back still takes hold again.
 				failure ??= ExceptionDispatchInfo.Capture(exception);
 			}
 
@@ -239,7 +239,7 @@ public static class EntitySimulation
 	{
 		foreach (IForgeEntity entity in detaching)
 		{
-			ThrowIfChanging(entity, "restored");
+			ThrowIfCannotSnapshot(entity, "restored");
 		}
 
 		foreach (EntitySnapshot snapshot in snapshots)

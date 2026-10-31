@@ -574,6 +574,27 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 	[Fact]
 	[Trait("Simulation", "Snapshot")]
+	public void A_mover_that_fails_to_come_back_neither_skips_the_state_hook_nor_hides_an_earlier_failure()
+	{
+		var hook = new CounterHook { Count = 3 };
+		var entity = new TestEntity(_tagsManager, _cuesManager) { Mover = new FaultyMover(), StateHook = hook };
+		Apply(
+			entity,
+			new EffectData(
+				"Faulty",
+				new DurationData(DurationType.Infinite),
+				effectComponents: [new FaultyRestoreComponent()]));
+		EntitySnapshot snapshot = EntitySimulation.CaptureSnapshot(entity);
+		hook.Count = 9;
+
+		FluentActions.Invoking(() => EntitySimulation.RestoreSnapshot(entity, snapshot))
+			.Should().Throw<InvalidOperationException>().WithMessage(FaultyRestoreComponent.Message);
+
+		hook.Count.Should().Be(3);
+	}
+
+	[Fact]
+	[Trait("Simulation", "Snapshot")]
 	public void Snapshots_are_refused_while_an_ability_runs_a_behavior_that_is_not_a_graph()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
@@ -860,6 +881,23 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 		public void RestoreState(in BodyState state)
 		{
 			_body = state;
+		}
+	}
+
+	private sealed class FaultyMover : IEntityMover
+	{
+		public void Move(double fixedDeltaTime)
+		{
+		}
+
+		public BodyState CaptureState()
+		{
+			return default;
+		}
+
+		public void RestoreState(in BodyState state)
+		{
+			throw new InvalidOperationException("The body can't be put back.");
 		}
 	}
 

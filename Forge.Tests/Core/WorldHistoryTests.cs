@@ -277,6 +277,24 @@ public class WorldHistoryTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 
 	[Fact]
 	[Trait("Simulation", "World")]
+	public void An_entity_that_leaves_running_a_behavior_that_is_not_a_graph_is_refused()
+	{
+		TestEntity a = Entity();
+		TestEntity c = Entity();
+		WorldHistory world = World(8, a);
+		Run(world, 1, 2);
+
+		world.Add(c);
+		AbilityHandle coded = Grant(c, new AbilityData("Coded", behaviorFactory: () => new CodedBehavior()));
+		coded.TryActivate(out _).Should().BeTrue();
+		world.Remove(c);
+		EntitySimulation.Tick(world.Entities, 3, Step);
+
+		world.Invoking(x => x.Record(3)).Should().Throw<NotSupportedException>();
+	}
+
+	[Fact]
+	[Trait("Simulation", "World")]
 	public void A_forgotten_entity_never_comes_back()
 	{
 		TestEntity a = Entity();
@@ -496,5 +514,16 @@ public class WorldHistoryTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 	private TagContainer Tags(string tag)
 	{
 		return new TagContainer(_tagsManager, [Tag.RequestTag(_tagsManager, tag)]);
+	}
+
+	private sealed class CodedBehavior : IAbilityBehavior
+	{
+		public void OnStarted(AbilityBehaviorContext context)
+		{
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
+		}
 	}
 }

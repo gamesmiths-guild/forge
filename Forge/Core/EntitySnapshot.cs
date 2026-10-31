@@ -61,7 +61,8 @@ public sealed class EntitySnapshot
 	}
 
 	// Puts the entity's state back, silently, between the restore's letting go and taking hold again. An effect
-	// component that throws doesn't keep the rest from coming back, and the first exception is handed back.
+	// component, a mover or a state hook that throws doesn't keep the rest from coming back, and the first exception is
+	// handed back.
 	internal ExceptionDispatchInfo? RestoreState()
 	{
 		Entity.Attributes.RestoreSnapshot(AttributeSets, Attributes);
@@ -83,12 +84,26 @@ public sealed class EntitySnapshot
 
 		if (Body is BodyState body)
 		{
-			Entity.Mover?.RestoreState(body);
+			try
+			{
+				Entity.Mover?.RestoreState(body);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 
 		if (ExternalState is Variant128 externalState)
 		{
-			Entity.StateHook?.RestoreState(externalState);
+			try
+			{
+				Entity.StateHook?.RestoreState(externalState);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 
 		return failure;
