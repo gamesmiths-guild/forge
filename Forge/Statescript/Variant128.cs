@@ -9,7 +9,7 @@ namespace Gamesmiths.Forge.Statescript;
 /// Represents a 128-bit variant type that can hold different data types.
 /// </summary>
 [StructLayout(LayoutKind.Explicit, Size = 16)]
-public struct Variant128
+public readonly struct Variant128
 {
 	[FieldOffset(0)]
 	private readonly bool _bool;
@@ -63,7 +63,7 @@ public struct Variant128
 	private readonly Plane _plane;
 
 	[FieldOffset(0)]
-	private Quaternion _quaternion;
+	private readonly Quaternion _quaternion;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Variant128"/> struct with the specified bool value.
@@ -266,8 +266,9 @@ public struct Variant128
 	public byte[] ToBytes()
 	{
 		byte[] result = new byte[16];
+		Quaternion value = _quaternion;
 #pragma warning disable CS9191 // Suppress "in" argument
-		MemoryMarshal.Write(result.AsSpan(), ref _quaternion);
+		MemoryMarshal.Write(result.AsSpan(), ref value);
 #pragma warning restore CS9191
 		return result;
 	}
