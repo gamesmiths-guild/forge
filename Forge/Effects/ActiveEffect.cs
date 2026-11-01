@@ -52,6 +52,10 @@ internal sealed class ActiveEffect
 		DurationType.HasDuration &&
 		RemainingDuration <= 0;
 
+	// What each of the effect's cues was last applied or updated with, or null while its persistent cues aren't applied:
+	// the application didn't fire them. Replaced rather than changed, so a snapshot can share it.
+	internal CueParameters[]? AppliedCues { get; set; }
+
 	internal EffectData EffectData => EffectEvaluatedData.Effect.EffectData;
 
 	internal Effect Effect => EffectEvaluatedData.Effect;
@@ -306,10 +310,7 @@ internal sealed class ActiveEffect
 		else
 		{
 			// Nothing was re-applied, so there are no attribute changes for the update cues to report.
-			EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
-			effectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(
-				in effectEvaluatedData,
-				changes: null);
+			EffectEvaluatedData.Target.EffectsManager.TriggerCuesUpdate_InternalCall(this, changes: null);
 		}
 
 		if (stackingData.ApplicationRefreshPolicy == StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication)
@@ -420,7 +421,8 @@ internal sealed class ActiveEffect
 			EffectEvaluatedData.Copy(),
 			Effect.Level,
 			[.. Effect.DataTag],
-			components);
+			components,
+			AppliedCues);
 	}
 
 	// Puts the effect back into this same object, silently, so its handle and its evaluated data are the ones that
@@ -435,6 +437,7 @@ internal sealed class ActiveEffect
 		ExecutionCount = snapshot.ExecutionCount;
 		StackCount = snapshot.StackCount;
 		IsInhibited = snapshot.IsInhibited;
+		AppliedCues = snapshot.AppliedCues;
 		EffectEvaluatedData.RestoreSnapshot(snapshot.EffectEvaluatedData);
 		Effect.RestoreSnapshot(snapshot.EffectLevel, snapshot.EffectDataTags);
 
@@ -453,6 +456,52 @@ internal sealed class ActiveEffect
 		}
 
 		return failure;
+	}
+
+	// Keeps what an update sends to cues the effect holds applied.
+	internal void UpdateAppliedCues(ReadOnlySpan<int> magnitudes)
+	{
+		if (AppliedCues is null)
+		{
+			return;
+		}
+
+		CueData[] cues = EffectData.Cues;
+
+		for (int i = 0; i < cues.Length; i++)
+		{
+			if (!CuesManager.SameParameters(
+				AppliedCues[i],
+				CuesManager.ParametersOf(EffectEvaluatedData, cues[i], magnitudes[i])))
+			{
+				AppliedCues = CuesManager.ParametersOf(EffectEvaluatedData, magnitudes);
+				return;
+			}
+		}
+	}
+
+	// The persistent cues the effect holds applied on its target, for a restore to compare.
+	internal void AddPersistentCues(List<PersistentCue> cues)
+	{
+		if (AppliedCues is not CueParameters[] parameters)
+		{
+			return;
+		}
+
+		CueData[] cueData = EffectData.Cues;
+
+		for (int i = 0; i < cueData.Length; i++)
+		{
+			if (cueData[i].CueTags is not TagContainer cueTags)
+			{
+				continue;
+			}
+
+			foreach (Tag cueTag in cueTags)
+			{
+				cues.Add(new PersistentCue(EffectEvaluatedData, cueTag, EffectEvaluatedData.Target, parameters[i]));
+			}
+		}
 	}
 
 	// The effect's own subscriptions and each component's, with the order each took hold in, for an entity restore to
@@ -715,7 +764,7 @@ internal sealed class ActiveEffect
 
 		if (triggerCues)
 		{
-			effectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData, cueMagnitudes);
+			effectsManager.TriggerCuesUpdate_InternalCall(this, cueMagnitudes);
 		}
 
 		targetAttributes.ReleaseChanges(changes);

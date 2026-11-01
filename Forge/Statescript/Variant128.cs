@@ -65,6 +65,9 @@ public readonly struct Variant128
 	[FieldOffset(0)]
 	private readonly Quaternion _quaternion;
 
+	[FieldOffset(8)]
+	private readonly ulong _upper;
+
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Variant128"/> struct with the specified bool value.
 	/// </summary>
@@ -535,5 +538,11 @@ public readonly struct Variant128
 	public Quaternion AsQuaternion()
 	{
 		return _quaternion;
+	}
+
+	// The upper 64 of the value's 128 bits, which with AsULong's lower 64 hash a value of any type.
+	internal ulong AsUpperULong()
+	{
+		return _upper;
 	}
 }

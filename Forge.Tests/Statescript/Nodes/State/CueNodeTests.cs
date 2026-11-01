@@ -170,6 +170,24 @@ public class CueNodeTests(TagsAndCuesFixture tagsAndCuesFixture) : IClassFixture
 
 	[Fact]
 	[Trait("Graph", "CueNode")]
+	public void A_restore_from_before_a_restart_ends_the_cue_it_applied_and_shows_the_one_restored()
+	{
+		(GraphProcessor processor, RecordingCueHandler handler) =
+			BuildSingleCueGraph(retriggerAt: 1.0, restartOnRetrigger: true);
+		processor.StartGraph();
+		GraphSnapshot beforeRestart = processor.CaptureSnapshot();
+		processor.FixedUpdateGraph(1.0);
+
+		processor.RestoreSnapshot(beforeRestart);
+
+		handler.RemoveCount.Should().Be(2, "the restart's cue isn't the one the restored activation applied");
+		handler.LastInterrupted.Should().BeTrue();
+		handler.ApplyCount.Should().Be(3);
+		handler.IsApplied.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Graph", "CueNode")]
 	public void A_restart_whose_removal_stops_the_graph_applies_nothing_more()
 	{
 		(GraphProcessor processor, RecordingCueHandler handler) =

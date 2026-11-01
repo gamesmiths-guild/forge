@@ -161,12 +161,24 @@ public sealed class EntityHistory
 
 	internal EntitySnapshot SnapshotAt(long tick)
 	{
+		ThrowIfNotHeld(tick);
+
+		return _snapshots[Slot(tick)]!;
+	}
+
+	internal InputFrame InputAt(long tick)
+	{
+		ThrowIfNotHeld(tick);
+
+		return _inputs[Slot(tick)];
+	}
+
+	private void ThrowIfNotHeld(long tick)
+	{
 		if (_count == 0 || tick < OldestTick || tick > _newestTick)
 		{
 			throw new ArgumentOutOfRangeException(nameof(tick), tick, "The history doesn't hold that tick.");
 		}
-
-		return _snapshots[Slot(tick)]!;
 	}
 
 	private void Store(long tick, EntitySnapshot snapshot, InputFrame input)

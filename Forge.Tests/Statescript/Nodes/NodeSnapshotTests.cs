@@ -475,7 +475,7 @@ public class NodeSnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 
 	[Fact]
 	[Trait("Graph", "Snapshot")]
-	public void Cue_node_comes_back_holding_its_cues_without_applying_them_again()
+	public void Cue_node_comes_back_holding_its_cues_and_shows_them_again()
 	{
 		var cuesManager = new CuesManager();
 		var handler = new RecordingCueHandler();
@@ -495,7 +495,10 @@ public class NodeSnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 
 		AssertComesBackAfterStops(processor, node);
 
-		handler.ApplyCount.Should().Be(1, "a restore applies nothing");
+		handler.RemoveCount.Should().Be(2, "each stop removes the cue");
+		handler.ApplyCount.Should().Be(3, "each restore brings the cue the stop removed back");
+		handler.IsApplied.Should().BeTrue();
+		handler.ExecuteCount.Should().Be(0);
 	}
 
 	[Fact]

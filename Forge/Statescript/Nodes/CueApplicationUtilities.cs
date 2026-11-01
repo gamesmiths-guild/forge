@@ -137,6 +137,11 @@ internal static class CueApplicationUtilities
 			customParametersInputName);
 		ulong run = graphContext.RunStamp;
 
+		if (nodeContext is not null)
+		{
+			nodeContext.Parameters = parameters;
+		}
+
 		for (int targetIndex = 0; targetIndex < targets.Count; targetIndex++)
 		{
 			IForgeEntity target = targets[targetIndex];

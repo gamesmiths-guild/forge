@@ -659,6 +659,67 @@ public class Variables
 		};
 	}
 
+	// Writes every variable by name: values as they are stored, entities by their place in the world, and other objects
+	// by their type. Each kind of variable has its own scope, since a value and an object variable can share a name,
+	// and an array writes its length, so an empty one is listed too.
+	internal void Write(IStateWriter writer, string name)
+	{
+		writer.OpenSet(name);
+		writer.OpenSet("Values");
+
+		foreach (KeyValuePair<StringKey, Variant128> variable in _variables)
+		{
+			writer.Write(variable.Key.ToString(), variable.Value);
+		}
+
+		writer.Close();
+		writer.OpenSet("Arrays");
+
+		foreach (KeyValuePair<StringKey, List<Variant128>> array in _arrays)
+		{
+			writer.Open(array.Key.ToString());
+			writer.Write("Count", array.Value.Count);
+
+			for (int i = 0; i < array.Value.Count; i++)
+			{
+				writer.Open("Item", i);
+				writer.Write("Value", array.Value[i]);
+				writer.Close();
+			}
+
+			writer.Close();
+		}
+
+		writer.Close();
+		writer.OpenSet("Objects");
+
+		foreach (KeyValuePair<StringKey, ObjectVariableStorage> variable in _objectVariables)
+		{
+			WriteObject(writer, variable.Key.ToString(), variable.Value.Value);
+		}
+
+		writer.Close();
+		writer.OpenSet("Object arrays");
+
+		foreach (KeyValuePair<StringKey, ObjectArrayStorage> array in _objectArrays)
+		{
+			writer.Open(array.Key.ToString());
+			writer.Write("Count", array.Value.Values.Count);
+
+			for (int i = 0; i < array.Value.Values.Count; i++)
+			{
+				writer.Open("Item", i);
+				WriteObject(writer, "Value", array.Value.Values[i]);
+				writer.Close();
+			}
+
+			writer.Close();
+		}
+
+		writer.Close();
+		writer.Close();
+	}
+
 	private static void ValidateAssignedObjectValue(StringKey name, Type expectedType, object? value)
 	{
 		if (value is null)
@@ -704,6 +765,18 @@ public class Variables
 			throw new InvalidOperationException(
 				$"Cannot {operation} '{name}' with element type {value.GetType()}: array expects values assignable to " +
 				$"{elementType}.");
+		}
+	}
+
+	private static void WriteObject(IStateWriter writer, string name, object? value)
+	{
+		if (value is IForgeEntity entity)
+		{
+			writer.WriteEntity(name, entity);
+		}
+		else
+		{
+			writer.Write(name, value?.GetType().FullName);
 		}
 	}
 

@@ -2,7 +2,9 @@
 
 using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Statescript.Nodes;
+using Gamesmiths.Forge.Statescript.Nodes.State;
 
 namespace Gamesmiths.Forge.Statescript;
 
@@ -30,6 +32,9 @@ public class GraphProcessor
 	private bool _updating;
 
 	private bool _presenting;
+
+	// Whether a restore replaced the run since the last presentation pass.
+	private bool _restored;
 
 	/// <summary>
 	/// Gets the graph that this processor is responsible for executing.
@@ -271,6 +276,10 @@ public class GraphProcessor
 	/// presented start, through <c>OnPresentationActivated</c>. Each group goes in node order. An activation that
 	/// started and ended between two passes is never presented, and a presentation that ends its own activation as it
 	/// starts is ended right away, in the same pass.</para>
+	/// <para>After a restore, the presentations whose activation the restore kept running are told first, through
+	/// <c>OnPresentationRestored</c>, so they can catch up with where the restored activation is, such as an animation
+	/// seeking to its pose. One that can't yet, such as a sound while the game is paused, is told again at each pass
+	/// until it has.</para>
 	/// <para>A presentation that throws keeps neither the others from running nor itself from being ended later, and
 	/// the first exception is rethrown after.</para>
 	/// </remarks>
@@ -303,6 +312,22 @@ public class GraphProcessor
 				if (node.TryGetActivation(GraphContext, out ulong activationId)
 					&& activationId == presented.ActivationId)
 				{
+					if (_restored || presented.CatchingUp)
+					{
+						bool caughtUp = true;
+
+						try
+						{
+							caughtUp = node.RestorePresentation(GraphContext, presented.Presentation);
+						}
+						catch (Exception exception)
+						{
+							failure ??= ExceptionDispatchInfo.Capture(exception);
+						}
+
+						_presented[node] = presented with { CatchingUp = !caughtUp };
+					}
+
 					continue;
 				}
 
@@ -374,6 +399,7 @@ public class GraphProcessor
 		finally
 		{
 			_presenting = false;
+			_restored = false;
 		}
 
 		failure?.Throw();
@@ -431,6 +457,8 @@ public class GraphProcessor
 	/// called, whether the restore starts the run again, ends it or changes it.
 	/// </summary>
 	/// <remarks>
+	/// <para>The persistent cues of running Cue nodes follow the restore: those of activations it ends are removed, as
+	/// interrupted, and those of activations it brings back are applied again.</para>
 	/// <para>Running nodes that the restore replaces let go of what they hold outside the graph, newest activation
 	/// first, and the running nodes it brings back take hold of it again, oldest first, through <c>OnRestoreDetach</c>
 	/// and <c>OnRestoreAttach</c> on <see cref="StateNode{T}"/>. A hook that throws keeps neither the others from
@@ -457,6 +485,7 @@ public class GraphProcessor
 		ThrowIfChanging("restored");
 
 		ExceptionDispatchInfo? failure = null;
+		List<PersistentCue> cuesBefore = PersistentCues();
 
 		// Newest first, so what one node holds on top of what another holds is let go of in reverse.
 		foreach (Node node in RunningNodesByActivation(newestFirst: true))
@@ -483,6 +512,14 @@ public class GraphProcessor
 			{
 				failure ??= ExceptionDispatchInfo.Capture(exception);
 			}
+		}
+
+		List<PersistentCue> cuesAfter = PersistentCues();
+
+		if (cuesBefore.Count > 0 || cuesAfter.Count > 0)
+		{
+			ExceptionDispatchInfo? cueFailure = CuesManager.Reconcile(cuesBefore, cuesAfter);
+			failure ??= cueFailure;
 		}
 
 		failure?.Throw();
@@ -522,6 +559,7 @@ public class GraphProcessor
 		// run the restore replaced.
 		GraphContext.RunStamp++;
 		GraphContext.UpdateStamp++;
+		_restored = true;
 	}
 
 	// Ends the run without running any node code, for an ability instance an entity restore takes away. The running
@@ -572,6 +610,22 @@ public class GraphProcessor
 		GraphContext.InternalNodeActivationStatus.Clear();
 		GraphContext.RemoveAllNodeContext();
 		OnGraphCompleted?.Invoke();
+	}
+
+	// The persistent cues the graph's running Cue nodes hold applied.
+	private List<PersistentCue> PersistentCues()
+	{
+		List<PersistentCue> cues = [];
+
+		foreach (Node node in Graph.Nodes)
+		{
+			if (node is CueNode cueNode && node.TryGetActivation(GraphContext, out _))
+			{
+				cueNode.AddPersistentCues(GraphContext, cues);
+			}
+		}
+
+		return cues;
 	}
 
 	// Snapshots the active nodes before either update walks them, because a node updated part way through can
@@ -652,5 +706,6 @@ public class GraphProcessor
 		return nodes;
 	}
 
-	private readonly record struct Presented(ulong ActivationId, object? Presentation);
+	// CatchingUp: a restore kept the activation running and the presentation hasn't caught up with it yet.
+	private readonly record struct Presented(ulong ActivationId, object? Presentation, bool CatchingUp = false);
 }

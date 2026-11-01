@@ -2,6 +2,7 @@
 
 using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Abilities;
+using Gamesmiths.Forge.Cues;
 
 namespace Gamesmiths.Forge.Core;
 
@@ -132,12 +133,15 @@ public static class EntitySimulation
 
 	/// <summary>
 	/// Puts the entity's simulation back as it was when <see cref="CaptureSnapshot"/> took <paramref name="snapshot"/>,
-	/// silently: no event, cue, callback or graph node runs.
+	/// silently: no event, callback or graph node runs, and no cue executes.
 	/// </summary>
 	/// <remarks>
 	/// <para>Active effects, abilities and ability instances come back as the same objects, so the handles that point
 	/// at them are valid again, and ones added since the snapshot go, with their handles freed and none of their
 	/// removal or end callbacks run. The presentation pass after the restore shows only what changed.</para>
+	/// <para>Persistent cues follow the restore. Those of active effects and running Cue nodes the restore takes away
+	/// are removed, as interrupted, those of ones it brings back are applied with the parameters they were last shown
+	/// with, and those of ones it keeps are updated when their parameters changed.</para>
 	/// <para>The restore happens in three steps. Everything on the entity that holds something outside itself - each
 	/// active effect and its components, each granted ability's trigger, each running state node of its graphs - lets
 	/// go of it, newest first. Then the state is put back. Then everything takes hold again, oldest first, in the order
@@ -167,16 +171,29 @@ public static class EntitySimulation
 	// Puts several entities back as one. Every hold of the detaching entities lets go, newest first across all of them,
 	// each snapshot puts its entity's state back, then every hold of the snapshots' entities takes hold again, oldest
 	// first across all of them, so handlers sharing an event run in the order they first took hold in, whichever entity
-	// they belong to. With no snapshots, the detaching entities only let go. Callers check the entities first with
-	// ThrowIfCannotRestore, and the first exception a hook threw is handed back.
+	// they belong to. With no snapshots, the detaching entities only let go. The persistent cues held then follow what
+	// changed; a forgotten entity's go with it, untouched, since its host object may be gone. Callers check the
+	// entities first with ThrowIfCannotRestore, and the first exception a hook or a cue handler threw is handed back.
 	internal static ExceptionDispatchInfo? RestoreSnapshots(
 		IReadOnlyList<IForgeEntity> detaching,
-		IReadOnlyList<EntitySnapshot> snapshots)
+		IReadOnlyList<EntitySnapshot> snapshots,
+		IReadOnlyCollection<IForgeEntity>? forgotten = null)
 	{
 		ExceptionDispatchInfo? failure = null;
 		List<EntityHold> holds = [];
 
 		foreach (IForgeEntity entity in detaching)
+		{
+			if (forgotten?.Contains(entity) != true)
+			{
+				AddHolds(entity, holds);
+			}
+		}
+
+		holds.Sort(static (x, y) => x.Order.CompareTo(y.Order));
+		List<PersistentCue> cuesBefore = PersistentCues(holds);
+
+		foreach (IForgeEntity entity in forgotten ?? [])
 		{
 			AddHolds(entity, holds);
 		}
@@ -227,6 +244,14 @@ public static class EntitySimulation
 			}
 		}
 
+		List<PersistentCue> cuesAfter = PersistentCues(holds);
+
+		if (cuesBefore.Count > 0 || cuesAfter.Count > 0)
+		{
+			ExceptionDispatchInfo? cueFailure = CuesManager.Reconcile(cuesBefore, cuesAfter);
+			failure ??= cueFailure;
+		}
+
 		return failure;
 	}
 
@@ -273,5 +298,17 @@ public static class EntitySimulation
 	{
 		entity.EffectsManager.AddHolds(holds);
 		entity.Abilities.AddHolds(holds);
+	}
+
+	private static List<PersistentCue> PersistentCues(List<EntityHold> holds)
+	{
+		List<PersistentCue> cues = [];
+
+		foreach (EntityHold hold in holds)
+		{
+			hold.AddPersistentCues(cues);
+		}
+
+		return cues;
 	}
 }

@@ -131,7 +131,7 @@ processor.FixedUpdateGraph(fixedDeltaTime); // The run moves on...
 processor.RestoreSnapshot(snapshot); // ...and is back where the snapshot was taken.
 ```
 
-- **A restore is silent.** No node activates or deactivates, nothing is emitted, and `OnGraphCompleted` isn't called, whether the restore starts the run again, ends it or changes it. The presentation pass then shows only what changed.
+- **A restore is silent.** No node activates or deactivates, nothing is emitted, and `OnGraphCompleted` isn't called, whether the restore starts the run again, ends it or changes it. The presentation pass then shows only what changed, and the cues of running Cue nodes follow the restore: those it ends are removed and those it brings back are applied again.
 - **The same steps run the same way again.** Restored activations keep their ids, and new ones are numbered on from where the snapshot was taken. `GraphContext.UpdateStamp` counts on rather than going back, since values are cached against it.
 - **A snapshot never changes.** It holds copies, and each restore copies them again, so one snapshot can be restored any number of times.
 - **Only the graph comes back.** Entities, effects, attributes and engine objects are referenced, not copied. Shared variables belong to the entity, which every graph it runs shares, so they aren't part of a graph snapshot either; an [entity snapshot](../rollback.md) brings them back with the rest of the entity.

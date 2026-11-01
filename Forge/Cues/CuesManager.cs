@@ -256,6 +256,119 @@ public sealed class CuesManager
 		return true;
 	}
 
+	// What each cue of an effect is sent with, for the magnitudes captured for it.
+	internal static CueParameters[] ParametersOf(
+		in EffectEvaluatedData effectEvaluatedData,
+		ReadOnlySpan<int> magnitudes)
+	{
+		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
+		var parameters = new CueParameters[cues.Length];
+
+		for (int i = 0; i < cues.Length; i++)
+		{
+			parameters[i] = ParametersOf(in effectEvaluatedData, cues[i], magnitudes[i]);
+		}
+
+		return parameters;
+	}
+
+	internal static CueParameters ParametersOf(in EffectEvaluatedData effectEvaluatedData, CueData cue, int magnitude)
+	{
+		return new CueParameters(
+			magnitude,
+			cue.NormalizedMagnitude(magnitude),
+			effectEvaluatedData.Effect.Ownership.Source,
+			effectEvaluatedData.CustomCueParameters);
+	}
+
+	// Whether a handler would be sent the same: an effect evaluates its custom parameters anew each time, so they count
+	// by their entries rather than as the same dictionary.
+	internal static bool SameParameters(CueParameters? x, CueParameters? y)
+	{
+		if (x is not CueParameters first || y is not CueParameters second)
+		{
+			return x is null && y is null;
+		}
+
+		if (first with { CustomParameters = null } != second with { CustomParameters = null })
+		{
+			return false;
+		}
+
+		if (first.CustomParameters is null || second.CustomParameters is null)
+		{
+			return first.CustomParameters == second.CustomParameters;
+		}
+
+		return first.CustomParameters.Count == second.CustomParameters.Count
+			&& first.CustomParameters.All(x => second.CustomParameters.TryGetValue(x.Key, out object? value)
+				&& Equals(x.Value, value));
+	}
+
+	/// <summary>
+	/// Ends the persistent cues held before a restore that the restored state no longer holds, starts the ones it
+	/// holds that weren't held before, and updates the ones held on both sides with different parameters. No cue
+	/// executes.
+	/// </summary>
+	/// <remarks>
+	/// Removals go first, as interruptions, so a cue that ends for one application and starts for another ends before
+	/// it starts again. A handler that throws keeps neither the other handlers nor the rest of the cues from being
+	/// dispatched, and the first exception is handed back.
+	/// </remarks>
+	/// <param name="before">The persistent cues held before the restore.</param>
+	/// <param name="after">The persistent cues held after it.</param>
+	/// <returns>The first exception a handler threw, or <see langword="null"/>.</returns>
+	internal static ExceptionDispatchInfo? Reconcile(List<PersistentCue> before, List<PersistentCue> after)
+	{
+		ExceptionDispatchInfo? failure = null;
+		List<PersistentCue> ended = [.. before];
+		List<PersistentCue> updated = [];
+		List<PersistentCue> started = [];
+
+		foreach (PersistentCue cue in after)
+		{
+			int index = ended.FindIndex(x => x.Application == cue.Application
+				&& x.CueTag == cue.CueTag
+				&& x.Target == cue.Target);
+
+			if (index < 0)
+			{
+				started.Add(cue);
+				continue;
+			}
+
+			if (!SameParameters(ended[index].Parameters, cue.Parameters))
+			{
+				updated.Add(cue);
+			}
+
+			ended.RemoveAt(index);
+		}
+
+		foreach (PersistentCue cue in ended)
+		{
+			cue.Target.CuesManager.Reconcile(
+				new PendingCue(PendingCueKind.Remove, cue.CueTag, cue.Target, null, true, cue.Application),
+				ref failure);
+		}
+
+		foreach (PersistentCue cue in updated)
+		{
+			cue.Target.CuesManager.Reconcile(
+				new PendingCue(PendingCueKind.Update, cue.CueTag, cue.Target, cue.Parameters, false, cue.Application),
+				ref failure);
+		}
+
+		foreach (PersistentCue cue in started)
+		{
+			cue.Target.CuesManager.Reconcile(
+				new PendingCue(PendingCueKind.Apply, cue.CueTag, cue.Target, cue.Parameters, false, cue.Application),
+				ref failure);
+		}
+
+		return failure;
+	}
+
 	// The application is what the cue is applied for - an active effect, a Cue node's activation - so a deferred
 	// removal can tell its own pending apply from another one of the same cue on the same target.
 	internal void ApplyCue(Tag cueTag, IForgeEntity? target, CueParameters? parameters, object? application)
@@ -324,9 +437,17 @@ public sealed class CuesManager
 	/// Applies the cues of an effect that just landed on its target. Nothing runs between an application and its
 	/// cues, so they are read and dispatched here in one go.
 	/// </summary>
+	/// <remarks>
+	/// The active effect keeps what its cues are applied with before any handler runs, so an update a handler causes is
+	/// kept over it.
+	/// </remarks>
+	/// <param name="activeEffect">The active effect the application created.</param>
 	/// <param name="effectEvaluatedData">The evaluated data of the applied effect.</param>
 	/// <param name="changes">The changes the application made to the target's attributes.</param>
-	internal void ApplyCues(in EffectEvaluatedData effectEvaluatedData, AttributeChangeSet changes)
+	internal void ApplyCues(
+		ActiveEffect activeEffect,
+		in EffectEvaluatedData effectEvaluatedData,
+		AttributeChangeSet changes)
 	{
 		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
 		Span<int> magnitudes = cues.Length <= MaxStackCueMagnitudes
@@ -337,6 +458,9 @@ public sealed class CuesManager
 		{
 			return;
 		}
+
+		CueParameters[] parameters = ParametersOf(in effectEvaluatedData, magnitudes);
+		activeEffect.AppliedCues = parameters;
 
 		for (int i = 0; i < cues.Length; i++)
 		{
@@ -349,15 +473,7 @@ public sealed class CuesManager
 
 			foreach (Tag cueTag in cueData.CueTags)
 			{
-				ApplyCue(
-				cueTag,
-				effectEvaluatedData.Target,
-				new CueParameters(
-					magnitudes[i],
-					cueData.NormalizedMagnitude(magnitudes[i]),
-					effectEvaluatedData.Effect.Ownership.Source,
-					effectEvaluatedData.CustomCueParameters),
-				effectEvaluatedData);
+				ApplyCue(cueTag, effectEvaluatedData.Target, parameters[i], effectEvaluatedData);
 			}
 		}
 	}
@@ -414,25 +530,6 @@ public sealed class CuesManager
 	}
 
 	/// <summary>
-	/// Updates the cues of an active effect whose change ran no hooks, reading and dispatching them in one go.
-	/// </summary>
-	/// <param name="effectEvaluatedData">The evaluated data of the changed effect.</param>
-	/// <param name="changes">The changes the operation made to the target's attributes, or <see langword="null"/>
-	/// when it made none.</param>
-	internal void UpdateCues(in EffectEvaluatedData effectEvaluatedData, AttributeChangeSet? changes)
-	{
-		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
-		Span<int> magnitudes = cues.Length <= MaxStackCueMagnitudes
-			? stackalloc int[cues.Length]
-			: new int[cues.Length];
-
-		if (TryCaptureCueMagnitudes(in effectEvaluatedData, CueTriggerRequirement.OnUpdate, changes, magnitudes))
-		{
-			UpdateCues(in effectEvaluatedData, magnitudes);
-		}
-	}
-
-	/// <summary>
 	/// Updates the cues of an active effect that just changed on its target, with the magnitudes
 	/// <see cref="TryCaptureCueMagnitudes"/> read before the change's hooks ran.
 	/// </summary>
@@ -454,14 +551,10 @@ public sealed class CuesManager
 			foreach (Tag cueTag in cueData.CueTags)
 			{
 				UpdateCue(
-				cueTag,
-				effectEvaluatedData.Target,
-				new CueParameters(
-					magnitudes[i],
-					cueData.NormalizedMagnitude(magnitudes[i]),
-					effectEvaluatedData.Effect.Ownership.Source,
-					effectEvaluatedData.CustomCueParameters),
-				effectEvaluatedData);
+					cueTag,
+					effectEvaluatedData.Target,
+					ParametersOf(in effectEvaluatedData, cueData, magnitudes[i]),
+					effectEvaluatedData);
 			}
 		}
 	}
@@ -617,6 +710,39 @@ public sealed class CuesManager
 
 				return (int)effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute]
 					.CalculateMagnitudeUpToChannel(cueData.FinalChannel);
+		}
+	}
+
+	// Dispatches one cue of a reconciliation: queued for the presentation pass when dispatch is deferred, otherwise to
+	// each handler on its own, as the pass does, so one that throws keeps none of the others from getting it.
+	private void Reconcile(in PendingCue pending, ref ExceptionDispatchInfo? failure)
+	{
+		if (!_registeredCues.TryGetValue(pending.CueTag, out HashSet<ICueHandler>? cues))
+		{
+			return;
+		}
+
+		if (DeferDispatch)
+		{
+			if (pending.Kind != PendingCueKind.Remove
+				|| !CancelPendingApply(pending.CueTag, pending.Target, pending.Application))
+			{
+				_pendingCues.Add(pending);
+			}
+
+			return;
+		}
+
+		foreach (ICueHandler cue in cues.ToArray())
+		{
+			try
+			{
+				Dispatch(cue, pending);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 	}
 

@@ -453,17 +453,30 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		OnActiveEffectChanged?.Invoke(removedEffect.Handle);
 	}
 
-	internal void TriggerCuesUpdate_InternalCall(
-		in EffectEvaluatedData effectEvaluatedData,
-		AttributeChangeSet? changes)
+	// Updates the cues of an active effect whose change ran no hooks, reading and dispatching them in one go.
+	internal void TriggerCuesUpdate_InternalCall(ActiveEffect activeEffect, AttributeChangeSet? changes)
 	{
-		_cuesManager.UpdateCues(in effectEvaluatedData, changes);
+		EffectEvaluatedData effectEvaluatedData = activeEffect.EffectEvaluatedData;
+		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
+		Span<int> magnitudes = cues.Length <= CuesManager.MaxStackCueMagnitudes
+			? stackalloc int[cues.Length]
+			: new int[cues.Length];
+
+		if (CuesManager.TryCaptureCueMagnitudes(
+			in effectEvaluatedData,
+			CueTriggerRequirement.OnUpdate,
+			changes,
+			magnitudes))
+		{
+			TriggerCuesUpdate_InternalCall(activeEffect, magnitudes);
+		}
 	}
 
-	internal void TriggerCuesUpdate_InternalCall(
-		in EffectEvaluatedData effectEvaluatedData,
-		ReadOnlySpan<int> magnitudes)
+	internal void TriggerCuesUpdate_InternalCall(ActiveEffect activeEffect, ReadOnlySpan<int> magnitudes)
 	{
+		activeEffect.UpdateAppliedCues(magnitudes);
+
+		EffectEvaluatedData effectEvaluatedData = activeEffect.EffectEvaluatedData;
 		_cuesManager.UpdateCues(in effectEvaluatedData, magnitudes);
 	}
 
@@ -585,8 +598,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 			if (cueMagnitudes[j] is int[] magnitudes)
 			{
-				EffectEvaluatedData effectEvaluatedData = activeEffect.EffectEvaluatedData;
-				effectsManager.TriggerCuesUpdate_InternalCall(in effectEvaluatedData, magnitudes);
+				effectsManager.TriggerCuesUpdate_InternalCall(activeEffect, magnitudes);
 			}
 		}
 
@@ -926,7 +938,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			// Handlers only ever run on a closed set: a handler writing an attribute directly must not tally into the
 			// application it is answering. The set is still empty here and is reopened for the application itself.
 			targetAttributes.EndChanges(changes);
-			_cuesManager.ApplyCues(in effectEvaluatedData, changes);
+			_cuesManager.ApplyCues(activeEffect, in effectEvaluatedData, changes);
 			targetAttributes.BeginChanges(changes);
 		}
 
@@ -936,7 +948,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		if (!triggerApplyCuesEarly)
 		{
-			_cuesManager.ApplyCues(in effectEvaluatedData, changes);
+			_cuesManager.ApplyCues(activeEffect, in effectEvaluatedData, changes);
 		}
 
 		targetAttributes.ReleaseChanges(changes);
