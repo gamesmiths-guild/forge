@@ -5,6 +5,7 @@ using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Effects.Calculator;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
 using Gamesmiths.Forge.Effects.Stacking;
@@ -156,6 +157,33 @@ public class CueReconciliationTests(TagsAndCuesFixture fixture) : IClassFixture<
 
 	[Fact]
 	[Trait("Cues", "Reconciliation")]
+	public void A_restore_leaves_a_cue_alone_when_a_change_since_sent_it_the_same_parameters()
+	{
+		CuesManager cues = Cues(out RecordingCueHandler handler);
+		TestEntity entity = Entity(cues);
+		EffectData stacking = WithCue("Regeneration", CueMagnitudeType.EffectLevel, stacks: 3);
+		var regeneration = new EffectData(
+			"Regeneration",
+			stacking.DurationData,
+			stackingData: stacking.StackingData,
+			customExecutions: [new ConstantCueParameters()],
+			cues: stacking.Cues);
+		Apply(entity, regeneration);
+		EntitySnapshot oneStack = EntitySimulation.CaptureSnapshot(entity);
+		Apply(entity, regeneration);
+		int updates = handler.UpdateCount;
+
+		EntitySimulation.RestoreSnapshot(entity, oneStack);
+
+		updates.Should().BePositive("the second stack updated the cue");
+		handler.UpdateCount
+			.Should().Be(updates, "the cue is sent the same at one stack or two, custom parameters included");
+		handler.ApplyCount.Should().Be(1);
+		handler.RemoveCount.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Cues", "Reconciliation")]
 	public void An_entity_in_limbo_shows_no_cues_until_a_rollback_brings_it_back()
 	{
 		CuesManager cues = Cues(out RecordingCueHandler handler);
@@ -291,5 +319,22 @@ public class CueReconciliationTests(TagsAndCuesFixture fixture) : IClassFixture<
 			node.InputPorts[ActionNode.InputPort]));
 
 		return new AbilityData("Hold Cue", behaviorFactory: () => new GraphAbilityBehavior(graph));
+	}
+
+	// Sends the same custom cue parameter whatever the effect's state.
+	private sealed class ConstantCueParameters : CustomExecution
+	{
+		public ConstantCueParameters()
+		{
+			CustomCueParameters.Add("custom.parameter", 1);
+		}
+
+		public override ModifierEvaluatedData[] EvaluateExecution(
+			Effect effect,
+			IForgeEntity target,
+			EffectEvaluatedData? effectEvaluatedData)
+		{
+			return [];
+		}
 	}
 }

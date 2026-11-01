@@ -466,11 +466,17 @@ internal sealed class ActiveEffect
 			return;
 		}
 
-		CueParameters[] parameters = CuesManager.ParametersOf(EffectEvaluatedData, magnitudes);
+		CueData[] cues = EffectData.Cues;
 
-		if (!parameters.AsSpan().SequenceEqual(AppliedCues))
+		for (int i = 0; i < cues.Length; i++)
 		{
-			AppliedCues = parameters;
+			if (!CuesManager.SameParameters(
+				AppliedCues[i],
+				CuesManager.ParametersOf(EffectEvaluatedData, cues[i], magnitudes[i])))
+			{
+				AppliedCues = CuesManager.ParametersOf(EffectEvaluatedData, magnitudes);
+				return;
+			}
 		}
 	}
 

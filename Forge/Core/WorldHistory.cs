@@ -458,8 +458,17 @@ public sealed class WorldHistory
 			}
 			catch
 			{
-				// The world goes back as the tick was recorded either way.
-				Rollback(tick);
+				// The world goes back as the tick was recorded either way, and the tick's own failure is the one
+				// thrown.
+				try
+				{
+					Rollback(tick);
+				}
+				catch
+				{
+					// A failure putting the world back would hide the one that broke the tick.
+				}
+
 				throw;
 			}
 

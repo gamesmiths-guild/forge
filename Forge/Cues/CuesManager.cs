@@ -266,14 +266,43 @@ public sealed class CuesManager
 
 		for (int i = 0; i < cues.Length; i++)
 		{
-			parameters[i] = new CueParameters(
-				magnitudes[i],
-				cues[i].NormalizedMagnitude(magnitudes[i]),
-				effectEvaluatedData.Effect.Ownership.Source,
-				effectEvaluatedData.CustomCueParameters);
+			parameters[i] = ParametersOf(in effectEvaluatedData, cues[i], magnitudes[i]);
 		}
 
 		return parameters;
+	}
+
+	internal static CueParameters ParametersOf(in EffectEvaluatedData effectEvaluatedData, CueData cue, int magnitude)
+	{
+		return new CueParameters(
+			magnitude,
+			cue.NormalizedMagnitude(magnitude),
+			effectEvaluatedData.Effect.Ownership.Source,
+			effectEvaluatedData.CustomCueParameters);
+	}
+
+	// Whether a handler would be sent the same: an effect evaluates its custom parameters anew each time, so they count
+	// by their entries rather than as the same dictionary.
+	internal static bool SameParameters(CueParameters? x, CueParameters? y)
+	{
+		if (x is not CueParameters first || y is not CueParameters second)
+		{
+			return x is null && y is null;
+		}
+
+		if (first with { CustomParameters = null } != second with { CustomParameters = null })
+		{
+			return false;
+		}
+
+		if (first.CustomParameters is null || second.CustomParameters is null)
+		{
+			return first.CustomParameters == second.CustomParameters;
+		}
+
+		return first.CustomParameters.Count == second.CustomParameters.Count
+			&& first.CustomParameters.All(x => second.CustomParameters.TryGetValue(x.Key, out object? value)
+				&& Equals(x.Value, value));
 	}
 
 	/// <summary>
@@ -308,7 +337,7 @@ public sealed class CuesManager
 				continue;
 			}
 
-			if (ended[index].Parameters != cue.Parameters)
+			if (!SameParameters(ended[index].Parameters, cue.Parameters))
 			{
 				updated.Add(cue);
 			}
@@ -522,14 +551,10 @@ public sealed class CuesManager
 			foreach (Tag cueTag in cueData.CueTags)
 			{
 				UpdateCue(
-				cueTag,
-				effectEvaluatedData.Target,
-				new CueParameters(
-					magnitudes[i],
-					cueData.NormalizedMagnitude(magnitudes[i]),
-					effectEvaluatedData.Effect.Ownership.Source,
-					effectEvaluatedData.CustomCueParameters),
-				effectEvaluatedData);
+					cueTag,
+					effectEvaluatedData.Target,
+					ParametersOf(in effectEvaluatedData, cueData, magnitudes[i]),
+					effectEvaluatedData);
 			}
 		}
 	}
@@ -692,28 +717,19 @@ public sealed class CuesManager
 	// each handler on its own, as the pass does, so one that throws keeps none of the others from getting it.
 	private void Reconcile(in PendingCue pending, ref ExceptionDispatchInfo? failure)
 	{
-		if (DeferDispatch)
+		if (!_registeredCues.TryGetValue(pending.CueTag, out HashSet<ICueHandler>? cues))
 		{
-			switch (pending.Kind)
-			{
-				case PendingCueKind.Apply:
-					ApplyCue(pending.CueTag, pending.Target, pending.Parameters, pending.Application);
-					break;
-
-				case PendingCueKind.Remove:
-					RemoveCue(pending.CueTag, pending.Target, pending.Interrupted, pending.Application);
-					break;
-
-				case PendingCueKind.Update:
-					UpdateCue(pending.CueTag, pending.Target, pending.Parameters, pending.Application);
-					break;
-			}
-
 			return;
 		}
 
-		if (!_registeredCues.TryGetValue(pending.CueTag, out HashSet<ICueHandler>? cues))
+		if (DeferDispatch)
 		{
+			if (pending.Kind != PendingCueKind.Remove
+				|| !CancelPendingApply(pending.CueTag, pending.Target, pending.Application))
+			{
+				_pendingCues.Add(pending);
+			}
+
 			return;
 		}
 
