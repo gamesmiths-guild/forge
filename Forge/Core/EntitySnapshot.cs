@@ -255,8 +255,9 @@ public sealed class EntitySnapshot
 		writer.Close();
 	}
 
+	// Adding zero turns the negative zero a small negative value rounds to into positive zero, which has other bits.
 	private static double Quantized(float value)
 	{
-		return Math.Round(value * 1000.0, MidpointRounding.AwayFromZero) / 1000.0;
+		return (Math.Round(value * 1000.0, MidpointRounding.AwayFromZero) / 1000.0) + 0.0;
 	}
 }

@@ -938,7 +938,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			// Handlers only ever run on a closed set: a handler writing an attribute directly must not tally into the
 			// application it is answering. The set is still empty here and is reopened for the application itself.
 			targetAttributes.EndChanges(changes);
-			activeEffect.AppliedCueMagnitudes = _cuesManager.ApplyCues(in effectEvaluatedData, changes);
+			_cuesManager.ApplyCues(activeEffect, in effectEvaluatedData, changes);
 			targetAttributes.BeginChanges(changes);
 		}
 
@@ -948,7 +948,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		if (!triggerApplyCuesEarly)
 		{
-			activeEffect.AppliedCueMagnitudes = _cuesManager.ApplyCues(in effectEvaluatedData, changes);
+			_cuesManager.ApplyCues(activeEffect, in effectEvaluatedData, changes);
 		}
 
 		targetAttributes.ReleaseChanges(changes);

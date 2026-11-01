@@ -182,6 +182,42 @@ public class WorldReplayTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 
 		At(1.0001f).Should().Be(At(1f), "float noise below the network's precision isn't a difference");
 		At(1.002f).Should().NotBe(At(1f));
+		At(-0.0001f).Should().Be(At(0f), "a value that rounds to zero is zero from either side");
+	}
+
+	[Fact]
+	[Trait("Simulation", "Replay")]
+	public void A_desync_names_each_variable_that_differs_even_one_sharing_its_name_or_an_empty_array()
+	{
+		TestEntity entity = Entity();
+		entity.SharedVariables.DefineVariable("score", 0);
+		entity.SharedVariables.DefineObjectVariable("score", "high");
+		var world = new WorldHistory(16, Step);
+		world.Add(entity);
+
+		for (long tick = 1; tick <= 6; tick++)
+		{
+			// Changed from outside the simulation, which a replay can't do again.
+			if (tick == 3)
+			{
+				entity.SharedVariables.SetVar("score", 5);
+			}
+
+			if (tick == 5)
+			{
+				entity.SharedVariables.DefineArrayVariable("hits", []);
+			}
+
+			EntitySimulation.Tick(world.Entities, tick, Step);
+			world.Record(tick);
+		}
+
+		world.Rollback(1);
+		IReadOnlyList<WorldDesync> desyncs = world.Replay(6);
+
+		desyncs.Select(x => x.Tick).Should().Equal(3, 5);
+		desyncs[0].Describe().Should().Contain("score");
+		desyncs[1].Describe().Should().Contain("hits");
 	}
 
 	[Fact]

@@ -52,9 +52,9 @@ internal sealed class ActiveEffect
 		DurationType.HasDuration &&
 		RemainingDuration <= 0;
 
-	// The magnitude each of the effect's cues was last applied or updated with, or null while its persistent cues
-	// aren't applied: the application didn't fire them. Replaced rather than changed, so a snapshot can share it.
-	internal int[]? AppliedCueMagnitudes { get; set; }
+	// What each of the effect's cues was last applied or updated with, or null while its persistent cues aren't applied:
+	// the application didn't fire them. Replaced rather than changed, so a snapshot can share it.
+	internal CueParameters[]? AppliedCues { get; set; }
 
 	internal EffectData EffectData => EffectEvaluatedData.Effect.EffectData;
 
@@ -422,7 +422,7 @@ internal sealed class ActiveEffect
 			Effect.Level,
 			[.. Effect.DataTag],
 			components,
-			AppliedCueMagnitudes);
+			AppliedCues);
 	}
 
 	// Puts the effect back into this same object, silently, so its handle and its evaluated data are the ones that
@@ -437,7 +437,7 @@ internal sealed class ActiveEffect
 		ExecutionCount = snapshot.ExecutionCount;
 		StackCount = snapshot.StackCount;
 		IsInhibited = snapshot.IsInhibited;
-		AppliedCueMagnitudes = snapshot.AppliedCueMagnitudes;
+		AppliedCues = snapshot.AppliedCues;
 		EffectEvaluatedData.RestoreSnapshot(snapshot.EffectEvaluatedData);
 		Effect.RestoreSnapshot(snapshot.EffectLevel, snapshot.EffectDataTags);
 
@@ -458,19 +458,26 @@ internal sealed class ActiveEffect
 		return failure;
 	}
 
-	// Keeps the magnitudes an update sent to cues the effect holds applied.
+	// Keeps what an update sends to cues the effect holds applied.
 	internal void UpdateAppliedCues(ReadOnlySpan<int> magnitudes)
 	{
-		if (AppliedCueMagnitudes is not null && !magnitudes.SequenceEqual(AppliedCueMagnitudes))
+		if (AppliedCues is null)
 		{
-			AppliedCueMagnitudes = magnitudes.ToArray();
+			return;
+		}
+
+		CueParameters[] parameters = CuesManager.ParametersOf(EffectEvaluatedData, magnitudes);
+
+		if (!parameters.AsSpan().SequenceEqual(AppliedCues))
+		{
+			AppliedCues = parameters;
 		}
 	}
 
 	// The persistent cues the effect holds applied on its target, for a restore to compare.
 	internal void AddPersistentCues(List<PersistentCue> cues)
 	{
-		if (AppliedCueMagnitudes is not int[] magnitudes)
+		if (AppliedCues is not CueParameters[] parameters)
 		{
 			return;
 		}
@@ -484,15 +491,9 @@ internal sealed class ActiveEffect
 				continue;
 			}
 
-			var parameters = new CueParameters(
-				magnitudes[i],
-				cueData[i].NormalizedMagnitude(magnitudes[i]),
-				Effect.Ownership.Source,
-				EffectEvaluatedData.CustomCueParameters);
-
 			foreach (Tag cueTag in cueTags)
 			{
-				cues.Add(new PersistentCue(EffectEvaluatedData, cueTag, EffectEvaluatedData.Target, parameters));
+				cues.Add(new PersistentCue(EffectEvaluatedData, cueTag, EffectEvaluatedData.Target, parameters[i]));
 			}
 		}
 	}

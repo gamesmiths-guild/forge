@@ -89,6 +89,7 @@ public class CueNode(bool restartOnRetrigger = false) : StateNode<CueNodeContext
 	{
 		CueNodeContext nodeContext = graphContext.GetNodeContext<CueNodeContext>(NodeID);
 		nodeContext.AppliedCues.Clear();
+		nodeContext.Application = new object();
 
 		CueApplicationUtilities.ApplyCues(
 			graphContext,

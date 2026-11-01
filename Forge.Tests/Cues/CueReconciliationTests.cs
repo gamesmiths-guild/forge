@@ -115,6 +115,47 @@ public class CueReconciliationTests(TagsAndCuesFixture fixture) : IClassFixture<
 
 	[Fact]
 	[Trait("Cues", "Reconciliation")]
+	public void A_handler_that_throws_as_a_restore_ends_a_cue_keeps_no_other_handler_from_ending_it()
+	{
+		var cues = new CuesManager();
+		var failing = new RecordingCueHandler { Removed = () => throw new InvalidOperationException("Failed.") };
+		var handler = new RecordingCueHandler();
+		cues.RegisterCue(Tag.RequestTag(_tagsManager, "test.cue1"), failing);
+		cues.RegisterCue(Tag.RequestTag(_tagsManager, "test.cue1"), handler);
+		TestEntity entity = Entity(cues);
+		EntitySnapshot before = EntitySimulation.CaptureSnapshot(entity);
+		Apply(entity, WithCue("Shield", CueMagnitudeType.EffectLevel));
+
+		Action restore = () => EntitySimulation.RestoreSnapshot(entity, before);
+
+		restore.Should().Throw<InvalidOperationException>();
+		handler.RemoveCount.Should().Be(1);
+		handler.IsApplied.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Cues", "Reconciliation")]
+	public void A_restore_shows_a_cue_as_a_handler_updated_it_while_it_applied()
+	{
+		CuesManager cues = Cues(out RecordingCueHandler handler);
+		TestEntity entity = Entity(cues);
+		EntitySnapshot before = EntitySimulation.CaptureSnapshot(entity);
+		var effect = new Effect(
+			WithCue("Shield", CueMagnitudeType.EffectLevel, snapshotLevel: false),
+			new EffectOwnership(entity, entity));
+		handler.Applied = () => effect.SetLevel(2);
+		entity.EffectsManager.ApplyEffect(effect);
+		handler.Applied = null;
+		EntitySnapshot leveled = EntitySimulation.CaptureSnapshot(entity);
+
+		EntitySimulation.RestoreSnapshot(entity, before);
+		EntitySimulation.RestoreSnapshot(entity, leveled);
+
+		handler.LastParameters!.Value.Magnitude.Should().Be(2, "the handler raised the level as the cue applied");
+	}
+
+	[Fact]
+	[Trait("Cues", "Reconciliation")]
 	public void An_entity_in_limbo_shows_no_cues_until_a_rollback_brings_it_back()
 	{
 		CuesManager cues = Cues(out RecordingCueHandler handler);
@@ -210,7 +251,7 @@ public class CueReconciliationTests(TagsAndCuesFixture fixture) : IClassFixture<
 		return new TestEntity(_tagsManager, cues);
 	}
 
-	private EffectData WithCue(string name, CueMagnitudeType magnitude, int stacks = 1)
+	private EffectData WithCue(string name, CueMagnitudeType magnitude, int stacks = 1, bool snapshotLevel = true)
 	{
 		var cue = new CueData(
 			new TagContainer(_tagsManager, [Tag.RequestTag(_tagsManager, "test.cue1")]), 0, 3, magnitude);
@@ -228,7 +269,12 @@ public class CueReconciliationTests(TagsAndCuesFixture fixture) : IClassFixture<
 				StackExpirationPolicy.ClearEntireStack);
 		}
 
-		return new EffectData(name, new DurationData(DurationType.Infinite), stackingData: stacking, cues: [cue]);
+		return new EffectData(
+			name,
+			new DurationData(DurationType.Infinite),
+			stackingData: stacking,
+			snapshotLevel: snapshotLevel,
+			cues: [cue]);
 	}
 
 	// Holds the cue on the target for as long as it runs.

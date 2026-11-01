@@ -256,6 +256,26 @@ public sealed class CuesManager
 		return true;
 	}
 
+	// What each cue of an effect is sent with, for the magnitudes captured for it.
+	internal static CueParameters[] ParametersOf(
+		in EffectEvaluatedData effectEvaluatedData,
+		ReadOnlySpan<int> magnitudes)
+	{
+		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
+		var parameters = new CueParameters[cues.Length];
+
+		for (int i = 0; i < cues.Length; i++)
+		{
+			parameters[i] = new CueParameters(
+				magnitudes[i],
+				cues[i].NormalizedMagnitude(magnitudes[i]),
+				effectEvaluatedData.Effect.Ownership.Source,
+				effectEvaluatedData.CustomCueParameters);
+		}
+
+		return parameters;
+	}
+
 	/// <summary>
 	/// Ends the persistent cues held before a restore that the restored state no longer holds, starts the ones it
 	/// holds that weren't held before, and updates the ones held on both sides with different parameters. No cue
@@ -298,38 +318,23 @@ public sealed class CuesManager
 
 		foreach (PersistentCue cue in ended)
 		{
-			try
-			{
-				cue.Target.CuesManager.RemoveCue(cue.CueTag, cue.Target, interrupted: true, cue.Application);
-			}
-			catch (Exception exception)
-			{
-				failure ??= ExceptionDispatchInfo.Capture(exception);
-			}
+			cue.Target.CuesManager.Reconcile(
+				new PendingCue(PendingCueKind.Remove, cue.CueTag, cue.Target, null, true, cue.Application),
+				ref failure);
 		}
 
 		foreach (PersistentCue cue in updated)
 		{
-			try
-			{
-				cue.Target.CuesManager.UpdateCue(cue.CueTag, cue.Target, cue.Parameters, cue.Application);
-			}
-			catch (Exception exception)
-			{
-				failure ??= ExceptionDispatchInfo.Capture(exception);
-			}
+			cue.Target.CuesManager.Reconcile(
+				new PendingCue(PendingCueKind.Update, cue.CueTag, cue.Target, cue.Parameters, false, cue.Application),
+				ref failure);
 		}
 
 		foreach (PersistentCue cue in started)
 		{
-			try
-			{
-				cue.Target.CuesManager.ApplyCue(cue.CueTag, cue.Target, cue.Parameters, cue.Application);
-			}
-			catch (Exception exception)
-			{
-				failure ??= ExceptionDispatchInfo.Capture(exception);
-			}
+			cue.Target.CuesManager.Reconcile(
+				new PendingCue(PendingCueKind.Apply, cue.CueTag, cue.Target, cue.Parameters, false, cue.Application),
+				ref failure);
 		}
 
 		return failure;
@@ -403,11 +408,17 @@ public sealed class CuesManager
 	/// Applies the cues of an effect that just landed on its target. Nothing runs between an application and its
 	/// cues, so they are read and dispatched here in one go.
 	/// </summary>
+	/// <remarks>
+	/// The active effect keeps what its cues are applied with before any handler runs, so an update a handler causes is
+	/// kept over it.
+	/// </remarks>
+	/// <param name="activeEffect">The active effect the application created.</param>
 	/// <param name="effectEvaluatedData">The evaluated data of the applied effect.</param>
 	/// <param name="changes">The changes the application made to the target's attributes.</param>
-	/// <returns>The magnitude each cue was applied with, or <see langword="null"/> when the cues didn't fire.
-	/// </returns>
-	internal int[]? ApplyCues(in EffectEvaluatedData effectEvaluatedData, AttributeChangeSet changes)
+	internal void ApplyCues(
+		ActiveEffect activeEffect,
+		in EffectEvaluatedData effectEvaluatedData,
+		AttributeChangeSet changes)
 	{
 		CueData[] cues = effectEvaluatedData.Effect.EffectData.Cues;
 		Span<int> magnitudes = cues.Length <= MaxStackCueMagnitudes
@@ -416,8 +427,11 @@ public sealed class CuesManager
 
 		if (!TryCaptureCueMagnitudes(in effectEvaluatedData, CueTriggerRequirement.OnApply, changes, magnitudes))
 		{
-			return null;
+			return;
 		}
+
+		CueParameters[] parameters = ParametersOf(in effectEvaluatedData, magnitudes);
+		activeEffect.AppliedCues = parameters;
 
 		for (int i = 0; i < cues.Length; i++)
 		{
@@ -430,19 +444,9 @@ public sealed class CuesManager
 
 			foreach (Tag cueTag in cueData.CueTags)
 			{
-				ApplyCue(
-				cueTag,
-				effectEvaluatedData.Target,
-				new CueParameters(
-					magnitudes[i],
-					cueData.NormalizedMagnitude(magnitudes[i]),
-					effectEvaluatedData.Effect.Ownership.Source,
-					effectEvaluatedData.CustomCueParameters),
-				effectEvaluatedData);
+				ApplyCue(cueTag, effectEvaluatedData.Target, parameters[i], effectEvaluatedData);
 			}
 		}
-
-		return magnitudes.ToArray();
 	}
 
 	internal void RemoveCues(in EffectEvaluatedData effectEvaluatedData, bool interrupted)
@@ -681,6 +685,48 @@ public sealed class CuesManager
 
 				return (int)effectEvaluatedData.Target.Attributes[cueData.MagnitudeAttribute]
 					.CalculateMagnitudeUpToChannel(cueData.FinalChannel);
+		}
+	}
+
+	// Dispatches one cue of a reconciliation: queued for the presentation pass when dispatch is deferred, otherwise to
+	// each handler on its own, as the pass does, so one that throws keeps none of the others from getting it.
+	private void Reconcile(in PendingCue pending, ref ExceptionDispatchInfo? failure)
+	{
+		if (DeferDispatch)
+		{
+			switch (pending.Kind)
+			{
+				case PendingCueKind.Apply:
+					ApplyCue(pending.CueTag, pending.Target, pending.Parameters, pending.Application);
+					break;
+
+				case PendingCueKind.Remove:
+					RemoveCue(pending.CueTag, pending.Target, pending.Interrupted, pending.Application);
+					break;
+
+				case PendingCueKind.Update:
+					UpdateCue(pending.CueTag, pending.Target, pending.Parameters, pending.Application);
+					break;
+			}
+
+			return;
+		}
+
+		if (!_registeredCues.TryGetValue(pending.CueTag, out HashSet<ICueHandler>? cues))
+		{
+			return;
+		}
+
+		foreach (ICueHandler cue in cues.ToArray())
+		{
+			try
+			{
+				Dispatch(cue, pending);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 	}
 
