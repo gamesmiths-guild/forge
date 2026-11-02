@@ -10,6 +10,9 @@ using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
+// Retained memory can only be read after a collection.
+#pragma warning disable S1215
+
 namespace Gamesmiths.Forge.Tests.Performance;
 
 /// <summary>

@@ -12,14 +12,19 @@ using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Effects.Stacking;
 using Gamesmiths.Forge.Tags;
+using Gamesmiths.Forge.Tests.Core;
 using Gamesmiths.Forge.Tests.Helpers;
+
+// A leak test has to collect to prove something was let go of.
+#pragma warning disable S1215
 
 namespace Gamesmiths.Forge.Tests.Performance;
 
 /// <summary>
-/// Nothing an effect holds while it is active may outlive it. An active effect subscribes to its shared
-/// <see cref="Effect"/> and to the attributes it reads; once it ends, those subscriptions must be gone, and an entity
-/// that is dropped must be collectable even though effects it applied, and effects applied to it, are still around.
+/// Nothing an effect holds while it is active may outlive it. An active effect is on its shared
+/// <see cref="Effect"/>'s list of live applications and subscribes to the attributes it reads; once it ends, both
+/// must be gone, and an entity that is dropped must be collectable even though effects it applied, and effects
+/// applied to it, are still around.
 /// </summary>
 /// <param name="fixture">The fixture providing the <see cref="TagsManager"/> and <see cref="CuesManager"/>.</param>
 public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFixture>
@@ -34,7 +39,7 @@ public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAnd
 
 	[Fact]
 	[Trait("Performance", "Leak")]
-	public void Expired_effects_leave_no_subscriptions_on_the_shared_effect()
+	public void Expired_effects_leave_the_shared_effect_with_no_applications()
 	{
 		var source = new TestEntity(_tagsManager, _cuesManager);
 		var target = new TestEntity(_tagsManager, _cuesManager);
@@ -45,16 +50,41 @@ public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAnd
 			target.EffectsManager.ApplyEffect(effect);
 		}
 
-		// A non-snapshot level watches the effect's level; every application watches its set-by-caller values.
-		SubscriberCount(effect, nameof(Effect.OnLevelChanged)).Should().Be(Applications);
-		SubscriberCount(effect, nameof(Effect.OnSetByCallerFloatChanged)).Should().Be(Applications);
+		// Every live application is on the effect's list, so a level or set-by-caller change reaches it.
+		ApplicationCount(effect).Should().Be(Applications);
 		target.EffectsManager.GetActiveEffects().Should().HaveCount(Applications);
 
 		Tick(target, seconds: 1);
 
 		target.EffectsManager.GetActiveEffects().Should().BeEmpty();
-		SubscriberCount(effect, nameof(Effect.OnLevelChanged)).Should().Be(0);
-		SubscriberCount(effect, nameof(Effect.OnSetByCallerFloatChanged)).Should().Be(0);
+		ApplicationCount(effect).Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Performance", "Leak")]
+	public void A_level_change_reaches_every_live_application_and_none_that_ended()
+	{
+		var source = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		var effect = new Effect(LeveledBuff(), new EffectOwnership(source, source));
+
+		var handles = new List<ActiveEffectHandle>();
+
+		for (int i = 0; i < 10; i++)
+		{
+			handles.Add(target.EffectsManager.ApplyEffect(effect)!);
+		}
+
+		// Ten applications of +1 per level.
+		target.PlayerAttributeSet.Attribute1.CurrentValue.Should().Be(1 + 10);
+
+		target.EffectsManager.RemoveEffect(handles[3]);
+		target.EffectsManager.RemoveEffect(handles[7]);
+		effect.LevelUp();
+
+		// Eight live applications of +2; the two removed ones neither count nor were reached.
+		target.PlayerAttributeSet.Attribute1.CurrentValue.Should().Be(1 + (8 * 2));
+		ApplicationCount(effect).Should().Be(8);
 	}
 
 	[Fact]
@@ -101,8 +131,7 @@ public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAnd
 		}
 
 		target.EffectsManager.GetActiveEffects().Should().BeEmpty();
-		SubscriberCount(effect, nameof(Effect.OnLevelChanged)).Should().Be(0);
-		SubscriberCount(effect, nameof(Effect.OnSetByCallerFloatChanged)).Should().Be(0);
+		ApplicationCount(effect).Should().Be(0);
 	}
 
 	[Fact]
@@ -146,41 +175,9 @@ public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAnd
 
 		reference.IsAlive.Should().BeFalse(
 			"an entity whose active effects were removed must not be pinned by the shared effect it was given");
-		SubscriberCount(effect, nameof(Effect.OnSetByCallerFloatChanged)).Should().Be(0);
+		ApplicationCount(effect).Should().Be(0);
 		GC.KeepAlive(effect);
 		GC.KeepAlive(source);
-	}
-
-	// Kept out of line, so the target never lives in the caller's frame where the JIT could keep it reachable.
-	private WeakReference ApplyThenDrop(Effect effect)
-	{
-		var target = new TestEntity(_tagsManager, _cuesManager);
-
-		for (int i = 0; i < 100; i++)
-		{
-			target.EffectsManager.ApplyEffect(effect);
-		}
-
-		Tick(target, seconds: 1);
-		target.EffectsManager.GetActiveEffects().Should().BeEmpty();
-
-		return new WeakReference(target);
-	}
-
-	private WeakReference ApplyRemoveAndDrop(Effect effect)
-	{
-		var target = new TestEntity(_tagsManager, _cuesManager);
-
-		for (int i = 0; i < 100; i++)
-		{
-			target.EffectsManager.ApplyEffect(effect);
-		}
-
-		target.EffectsManager.GetActiveEffects().Should().HaveCount(100);
-		target.EffectsManager.RemoveEffects(new EffectQuery(EffectDefinition: effect.EffectData));
-		target.EffectsManager.GetActiveEffects().Should().BeEmpty();
-
-		return new WeakReference(target);
 	}
 
 	private static void Tick(TestEntity entity, double seconds)
@@ -191,6 +188,18 @@ public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAnd
 		{
 			EntitySimulation.Tick(entity, tick, Step);
 		}
+	}
+
+	// The effect counts the applications on its list in a private field.
+	private static int ApplicationCount(Effect effect)
+	{
+		FieldInfo? field = typeof(Effect).GetField(
+			"_applicationCount",
+			BindingFlags.Instance | BindingFlags.NonPublic);
+
+		field.Should().NotBeNull("Effect should count its live applications in _applicationCount");
+
+		return (int)field!.GetValue(effect)!;
 	}
 
 	// The compiler backs a field-like event with a private field of the same name holding the multicast delegate.
@@ -212,6 +221,23 @@ public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAnd
 			"Haste",
 			Seconds(seconds),
 			[Flat("TestAttributeSet.Attribute1", 1)],
+			snapshotLevel: false);
+	}
+
+	// +1 per level on Attribute1, following the effect's level.
+	private static EffectData LeveledBuff()
+	{
+		return new EffectData(
+			"Leveled Haste",
+			Seconds(1_000),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute1",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.ScalableFloat,
+						new ScalableFloat(1, new Curve([new CurveKey(1, 1), new CurveKey(2, 2)]))))
+			],
 			snapshotLevel: false);
 	}
 
@@ -270,5 +296,37 @@ public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAnd
 			attribute,
 			ModifierOperation.FlatBonus,
 			new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(value)));
+	}
+
+	// Kept out of line, so the target never lives in the caller's frame where the JIT could keep it reachable.
+	private WeakReference ApplyThenDrop(Effect effect)
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		for (int i = 0; i < 100; i++)
+		{
+			target.EffectsManager.ApplyEffect(effect);
+		}
+
+		Tick(target, seconds: 1);
+		target.EffectsManager.GetActiveEffects().Should().BeEmpty();
+
+		return new WeakReference(target);
+	}
+
+	private WeakReference ApplyRemoveAndDrop(Effect effect)
+	{
+		var target = new TestEntity(_tagsManager, _cuesManager);
+
+		for (int i = 0; i < 100; i++)
+		{
+			target.EffectsManager.ApplyEffect(effect);
+		}
+
+		target.EffectsManager.GetActiveEffects().Should().HaveCount(100);
+		target.EffectsManager.RemoveEffects(new EffectQuery(EffectDefinition: effect.EffectData));
+		target.EffectsManager.GetActiveEffects().Should().BeEmpty();
+
+		return new WeakReference(target);
 	}
 }
