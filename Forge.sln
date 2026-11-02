@@ -40,6 +40,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "effects", "effects", "{165A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Forge.AotTests", "Forge.AotTests\Forge.AotTests.csproj", "{6022641A-C453-4020-B566-3FC4BB2D235D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Forge.Benchmarks", "Forge.Benchmarks\Forge.Benchmarks.csproj", "{3B7D2C41-8E5A-4F0B-9C6D-2A1F7E8B9D04}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +60,10 @@ Global
 		{6022641A-C453-4020-B566-3FC4BB2D235D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6022641A-C453-4020-B566-3FC4BB2D235D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6022641A-C453-4020-B566-3FC4BB2D235D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B7D2C41-8E5A-4F0B-9C6D-2A1F7E8B9D04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B7D2C41-8E5A-4F0B-9C6D-2A1F7E8B9D04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B7D2C41-8E5A-4F0B-9C6D-2A1F7E8B9D04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B7D2C41-8E5A-4F0B-9C6D-2A1F7E8B9D04}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

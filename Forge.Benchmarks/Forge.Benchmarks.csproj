@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Performance baselines. These never run on PR CI: hosted runners are too noisy to compare numbers across runs.
+    Run them by hand with "dotnet run -c Release -p Forge.Benchmarks -f net8.0 - -filter *" and record the results
+    in the milestone's explanation. See README.md next to this file.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- BenchmarkDotNet locates the project by the assembly's name, so it can't take the Gamesmiths. prefix. -->
+    <AssemblyName>Forge.Benchmarks</AssemblyName>
+    <RootNamespace>Gamesmiths.Forge.Benchmarks</RootNamespace>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Forge\Forge.csproj" />
+  </ItemGroup>
+
+</Project>
