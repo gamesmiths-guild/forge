@@ -19,13 +19,28 @@ public class Effect
 	private TagContainer? _owningTags;
 	private bool _owningTagsResolved;
 
+	// The live applications of this effect, as an intrusive list threaded through the ActiveEffects themselves, in
+	// application order. They used to subscribe to the events below, but a multicast delegate copies its whole
+	// invocation list on every unsubscribe, which made a crowd of applications ending together quadratic in time
+	// and allocation. The list detaches in constant time, and keeps the order a restore puts the applications back in.
+	private ActiveEffect? _firstApplication;
+	private ActiveEffect? _lastApplication;
+	private int _applicationCount;
+
+	// Applications are notified from a copy, since one updating its evaluation can end itself or another. The copy
+	// is reused across notifications; a notification raised from inside another takes its own.
+	private ActiveEffect[] _notifyBuffer = [];
+	private int _notifyDepth;
+
 	/// <summary>
-	/// Event triggered when the level of this effect changes.
+	/// Event triggered when the level of this effect changes, after the effect's live applications have updated
+	/// their evaluation to the new level.
 	/// </summary>
 	public event Action<int>? OnLevelChanged;
 
 	/// <summary>
-	/// Event triggered when a <see cref="SetByCallerFloat"/> magnitude changes.
+	/// Event triggered when a <see cref="SetByCallerFloat"/> magnitude changes, after the effect's live applications
+	/// have updated their evaluation to the new value.
 	/// </summary>
 	public event Action<Tag, float>? OnSetByCallerFloatChanged;
 
@@ -115,6 +130,7 @@ public class Effect
 	public void LevelUp()
 	{
 		Level++;
+		NotifyApplications(changedSetByCaller: null);
 		OnLevelChanged?.Invoke(Level);
 	}
 
@@ -125,6 +141,7 @@ public class Effect
 	public void SetLevel(int level)
 	{
 		Level = level;
+		NotifyApplications(changedSetByCaller: null);
 		OnLevelChanged?.Invoke(Level);
 	}
 
@@ -135,14 +152,8 @@ public class Effect
 	/// <param name="magnitude">The magnitude to be set for the given tag.</param>
 	public void SetSetByCallerMagnitude(Tag identifierTag, float magnitude)
 	{
-		if (DataTag.ContainsKey(identifierTag))
-		{
-			DataTag[identifierTag] = magnitude;
-			OnSetByCallerFloatChanged?.Invoke(identifierTag, magnitude);
-			return;
-		}
-
-		DataTag.Add(identifierTag, magnitude);
+		DataTag[identifierTag] = magnitude;
+		NotifyApplications(identifierTag);
 		OnSetByCallerFloatChanged?.Invoke(identifierTag, magnitude);
 	}
 
@@ -232,6 +243,60 @@ public class Effect
 
 		targetAttributes.ReleaseChanges(changes);
 		targetAttributes.ApplyPendingValueChanges();
+	}
+
+	// Adds a live application at the end of the list. Each ActiveEffect attaches once per application and detaches
+	// when it ends or lets go for a restore; a restore attaches again in the order the applications first took hold.
+	internal void AttachApplication(ActiveEffect application)
+	{
+		Validation.Assert(!application.IsAttachedToEffect, "The application is already attached.");
+
+		application.PreviousApplication = _lastApplication;
+		application.NextApplication = null;
+		application.IsAttachedToEffect = true;
+
+		if (_lastApplication is null)
+		{
+			_firstApplication = application;
+		}
+		else
+		{
+			_lastApplication.NextApplication = application;
+		}
+
+		_lastApplication = application;
+		_applicationCount++;
+	}
+
+	internal void DetachApplication(ActiveEffect application)
+	{
+		if (!application.IsAttachedToEffect)
+		{
+			return;
+		}
+
+		if (application.PreviousApplication is null)
+		{
+			_firstApplication = application.NextApplication;
+		}
+		else
+		{
+			application.PreviousApplication.NextApplication = application.NextApplication;
+		}
+
+		if (application.NextApplication is null)
+		{
+			_lastApplication = application.PreviousApplication;
+		}
+		else
+		{
+			application.NextApplication.PreviousApplication = application.PreviousApplication;
+		}
+
+		application.PreviousApplication = null;
+		application.NextApplication = null;
+		application.IsAttachedToEffect = false;
+		_applicationCount--;
 	}
 
 	/// <summary>
@@ -351,5 +416,74 @@ public class Effect
 		}
 
 		return true;
+	}
+
+	// Tells each live application the level changed, or the given set-by-caller value did.
+	private void NotifyApplications(Tag? changedSetByCaller)
+	{
+		int count = CopyApplications(out ActiveEffect[] applications);
+
+		try
+		{
+			for (int i = 0; i < count; i++)
+			{
+				ActiveEffect application = applications[i];
+
+				if (application.Effect != this || !application.IsAttachedToEffect)
+				{
+					continue;
+				}
+
+				if (changedSetByCaller is Tag tag)
+				{
+					application.OnEffectSetByCallerFloatChanged(tag);
+				}
+				else
+				{
+					application.OnEffectLevelChanged();
+				}
+			}
+		}
+		finally
+		{
+			ReleaseApplications(applications, count);
+		}
+	}
+
+	private int CopyApplications(out ActiveEffect[] applications)
+	{
+		_notifyDepth++;
+
+		if (_notifyDepth == 1)
+		{
+			if (_notifyBuffer.Length < _applicationCount)
+			{
+				_notifyBuffer = new ActiveEffect[Math.Max(_applicationCount, _notifyBuffer.Length * 2)];
+			}
+
+			applications = _notifyBuffer;
+		}
+		else
+		{
+			applications = new ActiveEffect[_applicationCount];
+		}
+
+		int count = 0;
+
+		for (ActiveEffect? application = _firstApplication;
+			application is not null;
+			application = application.NextApplication)
+		{
+			applications[count++] = application;
+		}
+
+		return count;
+	}
+
+	private void ReleaseApplications(ActiveEffect[] applications, int count)
+	{
+		// Cleared so the buffer doesn't keep ended applications, and their targets, reachable.
+		Array.Clear(applications, 0, count);
+		_notifyDepth--;
 	}
 }

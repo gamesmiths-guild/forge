@@ -29,6 +29,13 @@ internal sealed class ActiveEffect
 
 	internal ActiveEffectHandle Handle { get; }
 
+	// The Effect's list of live applications, threaded through them. See Effect.AttachApplication.
+	internal ActiveEffect? PreviousApplication { get; set; }
+
+	internal ActiveEffect? NextApplication { get; set; }
+
+	internal bool IsAttachedToEffect { get; set; }
+
 	// When the application took hold of what the effect itself holds outside it, after its components did.
 	internal long HoldOrder { get; private set; }
 
@@ -126,11 +133,6 @@ internal sealed class ActiveEffect
 			RemainingDuration = EffectEvaluatedData.Duration;
 			HoldOrder = HoldSequence.Next();
 
-			if (!EffectData.SnapshotLevel)
-			{
-				Effect.OnLevelChanged += Effect_OnLevelChanged;
-			}
-
 			foreach (EntityAttribute attribute in EffectEvaluatedData.AttributesToCapture)
 			{
 				attribute.OnValueChanged += Attribute_OnValueChanged;
@@ -138,7 +140,7 @@ internal sealed class ActiveEffect
 
 			RegisterAttributeDependencies();
 
-			Effect.OnSetByCallerFloatChanged += Effect_OnSetByCallerFloatChanged;
+			Effect.AttachApplication(this);
 		}
 
 		if (EffectData.PeriodicData.HasValue)
@@ -178,12 +180,7 @@ internal sealed class ActiveEffect
 
 			UnregisterAttributeDependencies();
 
-			if (!EffectData.SnapshotLevel)
-			{
-				Effect.OnLevelChanged -= Effect_OnLevelChanged;
-			}
-
-			Effect.OnSetByCallerFloatChanged -= Effect_OnSetByCallerFloatChanged;
+			Effect.DetachApplication(this);
 		}
 	}
 
@@ -534,14 +531,9 @@ internal sealed class ActiveEffect
 			return;
 		}
 
-		Effect.OnSetByCallerFloatChanged -= Effect_OnSetByCallerFloatChanged;
+		Effect.DetachApplication(this);
 		UnregisterAttributeDependencies();
 		DetachAttributeBindings();
-
-		if (!EffectData.SnapshotLevel)
-		{
-			Effect.OnLevelChanged -= Effect_OnLevelChanged;
-		}
 	}
 
 	// Takes hold again, after an entity restore put the effect's state back.
@@ -561,18 +553,13 @@ internal sealed class ActiveEffect
 			return;
 		}
 
-		if (!EffectData.SnapshotLevel)
-		{
-			Effect.OnLevelChanged += Effect_OnLevelChanged;
-		}
-
 		foreach (EntityAttribute attribute in EffectEvaluatedData.AttributesToCapture)
 		{
 			attribute.OnValueChanged += Attribute_OnValueChanged;
 		}
 
 		RegisterAttributeDependencies();
-		Effect.OnSetByCallerFloatChanged += Effect_OnSetByCallerFloatChanged;
+		Effect.AttachApplication(this);
 	}
 
 	internal bool RebuildAfterAttributeChange()
@@ -656,6 +643,28 @@ internal sealed class ActiveEffect
 		EffectEvaluatedData.Target.EffectsManager.OnActiveEffectChanged_InternalCall(this);
 	}
 
+	// Called by the Effect for each live application when its level changes.
+	internal void OnEffectLevelChanged()
+	{
+		if (EffectData.SnapshotLevel)
+		{
+			return;
+		}
+
+		UpdateEffectEvaluation();
+	}
+
+	// Called by the Effect for each live application when one of its set-by-caller values changes.
+	internal void OnEffectSetByCallerFloatChanged(Tag identifierTag)
+	{
+		if (!_nonSnapshotSetByCallerTags.Contains(identifierTag))
+		{
+			return;
+		}
+
+		UpdateEffectEvaluation();
+	}
+
 	private static bool ModifiersChanged(ModifierEvaluatedData[] previous, ModifierEvaluatedData[] current)
 	{
 		if (previous.Length != current.Length)
@@ -736,9 +745,27 @@ internal sealed class ActiveEffect
 		EntityAttributes targetAttributes = EffectEvaluatedData.Target.Attributes;
 		AttributeChangeSet changes = targetAttributes.BeginChanges();
 
+		Effect previousEffect = Effect;
+
 		Unapply(true);
 
 		EffectEvaluatedData.ReEvaluate(effect, StackCount, level);
+
+		// An owner override hands the application over to the new owner's effect, and to the new owner's attributes.
+		if (Effect != previousEffect)
+		{
+			previousEffect.DetachApplication(this);
+			DetachAttributeBindings();
+			EffectEvaluatedData.RefreshAttributesToCapture();
+
+			foreach (EntityAttribute attribute in EffectEvaluatedData.AttributesToCapture)
+			{
+				attribute.OnValueChanged += Attribute_OnValueChanged;
+			}
+
+			RegisterAttributeDependencies();
+			Effect.AttachApplication(this);
+		}
 
 		Apply(reApplication: true);
 
@@ -864,26 +891,6 @@ internal sealed class ActiveEffect
 	private void Attribute_OnValueChanged(EntityAttribute attribute, int change)
 	{
 		if (!EffectEvaluatedData.AttributesToCapture.Contains(attribute))
-		{
-			return;
-		}
-
-		UpdateEffectEvaluation();
-	}
-
-	private void Effect_OnLevelChanged(int newLevel)
-	{
-		if (EffectData.SnapshotLevel)
-		{
-			return;
-		}
-
-		UpdateEffectEvaluation();
-	}
-
-	private void Effect_OnSetByCallerFloatChanged(Tag identifierTag, float magnitude)
-	{
-		if (!_nonSnapshotSetByCallerTags.Contains(identifierTag))
 		{
 			return;
 		}

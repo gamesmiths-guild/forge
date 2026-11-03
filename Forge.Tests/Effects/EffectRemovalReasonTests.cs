@@ -81,6 +81,30 @@ public class EffectRemovalReasonTests(TagsAndCuesFixture tagsAndCuesFixture) : I
 		handler.LastInterrupted.Should().BeTrue();
 	}
 
+	[Theory]
+	[Trait("Removal reason", null)]
+	[InlineData(DurationType.HasDuration)]
+	[InlineData(DurationType.Infinite)]
+	public void An_effect_its_target_s_teardown_ends_reports_destroyed(DurationType durationType)
+	{
+		var handler = new RecordingCueHandler();
+		TestEntity target = CreateEntity(handler, out CuesManager _);
+		var component = new RecordingEffectComponent();
+		var removals = new List<EffectRemovalReason>();
+		target.EffectsManager.OnActiveEffectRemoved += (_, reason) => removals.Add(reason);
+
+		ActiveEffectHandle? handle = ApplyEffect(target, CreateEffectData(durationType, component));
+		RecordingEffectComponent instance = ComponentInstance(handle);
+
+		EntitySimulation.Teardown(target);
+
+		instance.Unapplied.Should().ContainSingle();
+		instance.Unapplied[0].Should().Be((true, EffectRemovalReason.Destroyed));
+		removals.Should().Equal(EffectRemovalReason.Destroyed);
+		handler.RemoveCount.Should().Be(1);
+		handler.LastInterrupted.Should().BeTrue();
+	}
+
 	[Fact]
 	[Trait("Removal reason", null)]
 	public void Stack_removal_reports_the_reason_that_dropped_the_stack()

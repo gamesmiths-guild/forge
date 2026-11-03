@@ -227,9 +227,10 @@ public void OnActiveEffectUnapplied(
 `reason` distinguishes an effect that ended on its own from one that was taken away:
 
 - `EffectRemovalReason.Expired` — the effect ran out of duration. Only `HasDuration` effects can expire.
-- `EffectRemovalReason.Removed` — the effect was removed through one of the `EffectsManager` removal methods before it could expire. Since `Infinite` effects have no natural end, every removal of one reports `Removed`.
+- `EffectRemovalReason.Removed` — the effect was removed through one of the `EffectsManager` removal methods before it could expire. Since `Infinite` effects have no natural end, every removal of one reports `Removed` or `Destroyed`.
+- `EffectRemovalReason.Destroyed` — the effect's target was [torn down](../../simulation.md#ending-an-entity). A component that shouldn't react to its target's end, such as one that pays the caster back when a curse is dispelled, checks for it.
 
-The same value drives the `interrupted` flag that cue handlers receive in `ICueHandler.OnRemove`.
+The same value drives the `interrupted` flag that cue handlers receive in `ICueHandler.OnRemove`: everything but `Expired` is an interruption.
 
 Use cases:
 

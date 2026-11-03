@@ -33,10 +33,18 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private readonly List<IEffectApplicationBlocker> _applicationBlockers = [];
 
+	// Reused by every update, so a tick allocates nothing. Sharing one list is what makes the update non-re-entrant.
+	private readonly List<ActiveEffect> _updateBuffer = [];
+
 	private int _applicationDepth;
 
 	// Removals and updates in progress, which like applications run callbacks part way through.
 	private int _changeDepth;
+
+	private bool _updating;
+
+	// Set once the owner is torn down, after which nothing applies to it.
+	private bool _tornDown;
 
 	/// <summary>
 	/// Event triggered whenever an effect lands on the owner, carrying its evaluated data.
@@ -243,24 +251,50 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <param name="deltaTime">Time passed since the last update call.</param>
 	public void UpdateEffects(double deltaTime)
 	{
+		if (_updating)
+		{
+			Validation.Fail(
+				"An effect update was re-entered while one was already running on this entity, which would corrupt " +
+				"the walk in progress. Drive UpdateEffects from the game loop, never from inside an effect.");
+
+			return;
+		}
+
+		_updating = true;
 		_changeDepth++;
 
 		try
 		{
-			ActiveEffect[] effectsToUpdate = [.. _activeEffects];
-			foreach (ActiveEffect effect in effectsToUpdate)
+			// The effects active as the update starts each advance once, even when an earlier one's update removes
+			// them or applies others.
+			_updateBuffer.AddRange(_activeEffects);
+
+			for (int i = 0; i < _updateBuffer.Count; i++)
 			{
-				effect.Update(deltaTime);
+				_updateBuffer[i].Update(deltaTime);
 			}
 
-			foreach (ActiveEffect expiredEffect in effectsToUpdate.Where(x => x.IsExpired).ToArray())
+			// Every expired one is picked before any is removed, since a removal's callbacks can change the others.
+			int expired = 0;
+
+			for (int i = 0; i < _updateBuffer.Count; i++)
 			{
-				RemoveActiveEffect(expiredEffect, EffectRemovalReason.Expired);
+				if (_updateBuffer[i].IsExpired)
+				{
+					_updateBuffer[expired++] = _updateBuffer[i];
+				}
+			}
+
+			for (int i = 0; i < expired; i++)
+			{
+				RemoveActiveEffect(_updateBuffer[i], EffectRemovalReason.Expired);
 			}
 		}
 		finally
 		{
+			_updateBuffer.Clear();
 			_changeDepth--;
+			_updating = false;
 		}
 	}
 
@@ -421,6 +455,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	internal void OnActiveEffectUnapplied_InternalCall(ActiveEffect removedEffect, EffectRemovalReason reason)
 	{
+		if (_tornDown)
+		{
+			reason = EffectRemovalReason.Destroyed;
+		}
+
 		foreach (IEffectComponent component in removedEffect.ComponentInstances)
 		{
 			component.OnActiveEffectUnapplied(
@@ -483,6 +522,33 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	internal void RemoveActiveEffect_InternalCall(ActiveEffect effect)
 	{
 		RemoveActiveEffect(effect, EffectRemovalReason.Expired);
+	}
+
+	// Ends every active effect for its owner's teardown, the way a removal through the API ends it, and refuses every
+	// effect applied to the owner from then on, so nothing a removal callback applies to it outlives the teardown.
+	internal void Teardown()
+	{
+		_tornDown = true;
+		_changeDepth++;
+
+		try
+		{
+			// Snapshotting is required: removal callbacks can remove further effects.
+			foreach (ActiveEffect effect in _activeEffects.ToArray())
+			{
+				if (!_activeEffects.Contains(effect))
+				{
+					continue;
+				}
+
+				effect.Unapply();
+				RemoveActiveEffect(effect, EffectRemovalReason.Destroyed);
+			}
+		}
+		finally
+		{
+			_changeDepth--;
+		}
 	}
 
 	internal ActiveEffect? FindActiveEffectByData(EffectData effectData)
@@ -781,7 +847,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		applied = false;
 
-		if (!effect.CanApply(Owner))
+		if (_tornDown || !effect.CanApply(Owner))
 		{
 			return null;
 		}
@@ -1053,6 +1119,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			return;
 		}
 
+		// What a removal callback removes during the teardown ends with it.
+		if (_tornDown)
+		{
+			reason = EffectRemovalReason.Destroyed;
+		}
+
 		_changeDepth++;
 
 		try
@@ -1084,7 +1156,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 			effectToRemove.EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 
-			_cuesManager.RemoveCues(in effectEvaluatedData, reason == EffectRemovalReason.Removed);
+			_cuesManager.RemoveCues(in effectEvaluatedData, reason != EffectRemovalReason.Expired);
 		}
 		finally
 		{

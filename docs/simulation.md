@@ -87,6 +87,25 @@ cuesManager.PresentCues();
 
 The pass shows the net change since the previous one. An animation node that started and ended within the frame plays nothing, and one still running is started once, however many ticks it lasts. After a [restore](rollback.md), an animation still running catches up with the pose the restored tick gives it. Nothing the pass runs may change gameplay, so a host with nothing to show, such as a dedicated server, skips it and still simulates the same game. See [Simulation and presentation](statescript/nodes/state/README.md#simulation-and-presentation) for the node side and [Deferred dispatch](cues.md#deferred-dispatch) for cues.
 
+## Ending an entity
+
+When the object hosting an entity is destroyed, end the entity with `EntitySimulation.Teardown`, from the host, between ticks:
+
+```csharp
+// As the enemy's object is destroyed:
+EntitySimulation.Teardown(enemy);
+```
+
+It runs, in order:
+
+1. **Abilities are cleared.** Running instances are cancelled, and every grant goes, so triggers stop listening to the entity's tags and events.
+2. **Effects end.** Every active effect is removed the way a removal through `EffectsManager` removes it, with `EffectRemovalReason.Destroyed`, and so does any effect a removal callback removes meanwhile: its components, `OnActiveEffectRemoved` and its persistent cues, as interrupted, all learn it ended. A handler that shouldn't react to its target's end checks the reason.
+3. **The input lets go** of every action, so another entity reading it sees nothing held.
+
+From then on nothing applies to the entity and nothing is granted to it, so an effect a removal applies or an ability an ending one grants doesn't outlive the teardown; a grant returns an invalid handle. Effects it applied to other entities keep running on them. Its mover and state hook are the host's to drop.
+
+Without a teardown, an entity dropped with effects still on it stays reachable: a shared `Effect` keeps every application of it that is still active, so a level change reaches them all, and each application keeps its target. An entity a [world history keeps in limbo](rollback.md#limbo) has let go of everything already, so its object is freed without a teardown.
+
 ## Deterministic randomness
 
 `DeterministicRandom` is an `IRandom` whose numbers depend only on its seed and on the tick it was last started for:

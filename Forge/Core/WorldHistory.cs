@@ -181,11 +181,39 @@ public sealed class WorldHistory
 	/// the world leaves <see cref="Entities"/> at once and lets go of what it holds on to when the next tick is
 	/// recorded or the world is rolled back.
 	/// </summary>
+	/// <remarks>
+	/// An entity that lives on elsewhere, such as one moved to another world, is forgotten with
+	/// <paramref name="letGo"/> <see langword="false"/>: it keeps holding on to everything, and one in limbo takes hold
+	/// again as it is, after <see cref="LeftLimbo"/> lets the host make its object live again.
+	/// </remarks>
 	/// <param name="entity">The entity to forget.</param>
+	/// <param name="letGo">Whether the entity lets go of what it holds on to, as one whose host object is gone must.
+	/// </param>
 	/// <exception cref="ArgumentException">Thrown when the world doesn't keep the entity.</exception>
-	public void Forget(IForgeEntity entity)
+	/// <exception cref="InvalidOperationException">Thrown when an entity in limbo is forgotten without letting go while
+	/// its abilities, effects or attributes are changing.</exception>
+	public void Forget(IForgeEntity entity, bool letGo = true)
 	{
 		Member member = Find(entity);
+
+		if (!letGo)
+		{
+			// Taken first, so an entity that can't take hold again stays in the world.
+			EntitySnapshot? snapshot = member.State == MemberState.Limbo
+				? EntitySimulation.CaptureSnapshot(entity)
+				: null;
+
+			Drop(member);
+			RefreshEntities();
+
+			if (snapshot is not null)
+			{
+				LeftLimbo?.Invoke(entity);
+				EntitySimulation.RestoreSnapshots([], [snapshot])?.Throw();
+			}
+
+			return;
+		}
 
 		if (member.State == MemberState.Limbo)
 		{

@@ -137,7 +137,9 @@ An entity that leaves the world after it was recorded goes to **limbo** instead 
 - **No tick held has it anymore:** the tick it left in is older than the oldest tick the history holds.
 - **Its ticks were left behind:** the world was rolled back to before it joined, and recording [continued from there](#continuing-after-a-rollback).
 
-`Forget(entity)` drops an entity for good, without `Released`, such as one whose object is already gone. No rollback brings it back.
+`Forget(entity)` drops an entity for good, without `Released`, such as one whose object is already gone. No rollback brings it back. An entity that lives on elsewhere, such as one moved to another world, is forgotten with `letGo: false`: it keeps holding on to everything, and one in limbo takes hold again as it is, after `LeftLimbo`.
+
+Limbo is the opposite of a [teardown](simulation.md#ending-an-entity). A teardown ends an entity for good, running its effects' removal callbacks and ending their cues, while limbo pauses it silently so a rollback can bring it back. An entity in limbo has let go of everything, and its cues ended as it went, so once the world releases it, its object is freed without a teardown. Tear down an entity whose object is freed while it's in the world, after `Forget`.
 
 ### Continuing after a rollback
 
