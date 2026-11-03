@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Numerics;
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
@@ -7,6 +8,7 @@ using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Events;
+using Gamesmiths.Forge.Networking;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Action;
@@ -42,6 +44,7 @@ internal static class Program
 		Check("Entity history rolls an entity back and replays its ticks", () => ReplaysEntityHistory(tagsManager));
 		Check("World history rolls a world back past a death and a spawn", () => RollsWorldBack(tagsManager));
 		Check("World replay reconciles cues and finds a tick that ran differently", () => ReplaysWorld(tagsManager));
+		Check("Network session handshakes and carries input over a loopback", NetworksOverLoopback);
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -322,6 +325,52 @@ internal static class Program
 		return behavior.Processor.GraphContext.GraphVariables.TryGetVar(resolvedVariable, out int resolved)
 			? resolved
 			: -1;
+	}
+
+	// The networking types with generics and collections: the registry's typed lookup, the session's handshake, the
+	// input codec through the conditioner, and clock sync.
+	private static bool NetworksOverLoopback()
+	{
+		var actions = new InputActionSet(["jump"], [new InputVector("l", "r", "u", "d")]);
+		var registry = new NetworkAssetRegistry();
+		registry.Register(AssetKind.Effect, "uid://burning", "Burning");
+		registry.Seal();
+
+		var network = new LoopbackNetwork();
+		var server = new NetworkSession(network.Server, new SimulationClock(60, 100), registry, actions, 7);
+		var link = new ConditionedTransport(network.Connect(), NetworkConditions.Good, new DeterministicRandom(1));
+		var client = new NetworkSession(link, new SimulationClock(60), registry, actions);
+		InputDelivery? delivery = null;
+		InputCommand taken = default;
+
+		for (int step = 0; step < 120; step++)
+		{
+			double time = step / 60.0;
+			link.Update(time);
+			client.Update(time);
+			server.Update(time);
+
+			if (client.State == SessionState.Ready)
+			{
+				InputFrame frame = new InputFrame { Held = 1 }.WithAim(Vector3.One, Vector3.UnitZ);
+				client.SendInput(new InputCommand(client.Clock.Tick + 12, frame));
+				client.Clock.Advance();
+			}
+
+			if (step > 60 && server.Peers.Count == 1 && server.Peers[0].Input.NewestTick >= server.Clock.Tick)
+			{
+				delivery = server.Peers[0].Input.Take(server.Clock.Tick, out taken);
+			}
+
+			server.Clock.Advance();
+		}
+
+		return delivery == InputDelivery.Received
+			&& taken.Frame.Held == 1
+			&& taken.Frame.HasAim
+			&& client.ClockSync.HasEstimate
+			&& client.SessionSeed == 7
+			&& registry.Get<string>(AssetKind.Effect, 0) == "Burning";
 	}
 
 	private sealed record ClassPayload(int Value);
