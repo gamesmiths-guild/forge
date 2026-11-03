@@ -99,10 +99,10 @@ EntitySimulation.Teardown(enemy);
 It runs, in order:
 
 1. **Abilities are cleared.** Running instances are cancelled, and every grant goes, so triggers stop listening to the entity's tags and events.
-2. **Effects end.** Every active effect is removed the way a removal through `EffectsManager` removes it, with `EffectRemovalReason.Destroyed`: its components, `OnActiveEffectRemoved` and its persistent cues, as interrupted, all learn it ended. A handler that shouldn't react to its target's end checks the reason.
+2. **Effects end.** Every active effect is removed the way a removal through `EffectsManager` removes it, with `EffectRemovalReason.Destroyed`, and so does any effect a removal callback removes meanwhile: its components, `OnActiveEffectRemoved` and its persistent cues, as interrupted, all learn it ended. A handler that shouldn't react to its target's end checks the reason.
 3. **The input lets go** of every action, so another entity reading it sees nothing held.
 
-From then on nothing applies to the entity, so an effect a removal applies to it as it ends doesn't outlive the teardown. Effects it applied to other entities keep running on them. Its mover and state hook are the host's to drop.
+From then on nothing applies to the entity and nothing is granted to it, so an effect a removal applies or an ability an ending one grants doesn't outlive the teardown; a grant returns an invalid handle. Effects it applied to other entities keep running on them. Its mover and state hook are the host's to drop.
 
 Without a teardown, an entity dropped with effects still on it stays reachable: a shared `Effect` keeps every application of it that is still active, so a level change reaches them all, and each application keeps its target. An entity a [world history keeps in limbo](rollback.md#limbo) has let go of everything already, so its object is freed without a teardown.
 
