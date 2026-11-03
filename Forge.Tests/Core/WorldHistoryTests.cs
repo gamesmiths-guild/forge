@@ -387,6 +387,42 @@ public class WorldHistoryTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 
 	[Fact]
 	[Trait("Simulation", "World")]
+	public void An_entity_in_limbo_that_cannot_take_hold_again_is_not_forgotten()
+	{
+		TestEntity a = Entity();
+		TestEntity b = Entity();
+		WorldHistory world = World(16, a, b);
+		List<string> changes = Watch(world, a, b);
+		Run(world, 1, 2);
+		world.Remove(b);
+		Run(world, 3, 3);
+		changes.Clear();
+		InvalidOperationException? thrown = null;
+
+		b.EffectsManager.OnEffectApplied += _ =>
+		{
+			try
+			{
+				world.Forget(b, letGo: false);
+			}
+			catch (InvalidOperationException exception)
+			{
+				thrown = exception;
+			}
+		};
+
+		Apply(b, Tagged("Red", "color.red"));
+
+		thrown.Should().NotBeNull();
+		changes.Should().BeEmpty();
+
+		world.Forget(b, letGo: false);
+
+		changes.Should().Equal("left b");
+	}
+
+	[Fact]
+	[Trait("Simulation", "World")]
 	public void A_tick_that_does_not_follow_the_current_one_starts_the_history_over()
 	{
 		TestEntity a = Entity();

@@ -190,19 +190,26 @@ public sealed class WorldHistory
 	/// <param name="letGo">Whether the entity lets go of what it holds on to, as one whose host object is gone must.
 	/// </param>
 	/// <exception cref="ArgumentException">Thrown when the world doesn't keep the entity.</exception>
+	/// <exception cref="InvalidOperationException">Thrown when an entity in limbo is forgotten without letting go while
+	/// its abilities, effects or attributes are changing.</exception>
 	public void Forget(IForgeEntity entity, bool letGo = true)
 	{
 		Member member = Find(entity);
 
 		if (!letGo)
 		{
+			// Taken first, so an entity that can't take hold again stays in the world.
+			EntitySnapshot? snapshot = member.State == MemberState.Limbo
+				? EntitySimulation.CaptureSnapshot(entity)
+				: null;
+
 			Drop(member);
 			RefreshEntities();
 
-			if (member.State == MemberState.Limbo)
+			if (snapshot is not null)
 			{
 				LeftLimbo?.Invoke(entity);
-				EntitySimulation.RestoreSnapshots([], [EntitySimulation.CaptureSnapshot(entity)])?.Throw();
+				EntitySimulation.RestoreSnapshots([], [snapshot])?.Throw();
 			}
 
 			return;
