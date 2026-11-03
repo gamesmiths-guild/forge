@@ -139,6 +139,8 @@ An entity that leaves the world after it was recorded goes to **limbo** instead 
 
 `Forget(entity)` drops an entity for good, without `Released`, such as one whose object is already gone. No rollback brings it back.
 
+Limbo is the opposite of a [teardown](simulation.md#ending-an-entity). A teardown ends an entity for good, running its effects' removal callbacks and ending their cues, while limbo pauses it silently so a rollback can bring it back. An entity in limbo has let go of everything, and its cues ended as it went, so once the world releases it, its object is freed without a teardown. Tear down an entity whose object is freed while it's in the world, after `Forget`.
+
 ### Continuing after a rollback
 
 Recording the tick right after the one the world is at continues the world from there. The ticks after it belong to a future the world left behind, so they go: the entities that joined in them are released, and the ones that left in them are back in the world, for good this time. Rolling back and then recording is how a game resumes from an earlier moment.
