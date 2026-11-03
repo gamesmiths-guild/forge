@@ -177,6 +177,63 @@ public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAnd
 		GC.KeepAlive(source);
 	}
 
+	[Fact]
+	[Trait("Performance", "Leak")]
+	public void An_owner_override_moves_the_application_to_the_new_owner_s_effect()
+	{
+		var first = new TestEntity(_tagsManager, _cuesManager);
+		var second = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		EffectData buff = OverridingBuff(Flat("TestAttributeSet.Attribute1", 1));
+		var firstEffect = new Effect(buff, new EffectOwnership(first, first));
+		var secondEffect = new Effect(buff, new EffectOwnership(second, second));
+
+		ActiveEffectHandle handle = target.EffectsManager.ApplyEffect(firstEffect)!;
+		target.EffectsManager.ApplyEffect(secondEffect);
+
+		handle.Effect.Should().BeSameAs(secondEffect);
+		ApplicationCount(firstEffect).Should().Be(0);
+		ApplicationCount(secondEffect).Should().Be(1);
+
+		secondEffect.LevelUp();
+		handle.Level.Should().Be(2, "the new owner's effect reaches the application it took over");
+
+		target.EffectsManager.RemoveEffect(handle);
+
+		ApplicationCount(firstEffect).Should().Be(0);
+		ApplicationCount(secondEffect).Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Performance", "Leak")]
+	public void An_owner_override_watches_the_new_owner_s_attributes_instead_of_the_old_one_s()
+	{
+		var first = new TestEntity(_tagsManager, _cuesManager);
+		var second = new TestEntity(_tagsManager, _cuesManager);
+		var target = new TestEntity(_tagsManager, _cuesManager);
+		int firstBefore = SubscriberCount(
+			first.PlayerAttributeSet.Attribute5,
+			nameof(EntityAttribute.OnValueChanged));
+		int secondBefore = SubscriberCount(
+			second.PlayerAttributeSet.Attribute5,
+			nameof(EntityAttribute.OnValueChanged));
+		EffectData buff = OverridingBuff(AttributeBasedBuff().Modifiers[0]);
+
+		ActiveEffectHandle handle =
+			target.EffectsManager.ApplyEffect(new Effect(buff, new EffectOwnership(first, first)))!;
+		target.EffectsManager.ApplyEffect(new Effect(buff, new EffectOwnership(second, second)));
+
+		SubscriberCount(first.PlayerAttributeSet.Attribute5, nameof(EntityAttribute.OnValueChanged))
+			.Should().Be(firstBefore, "the old owner's attribute no longer feeds the effect");
+		SubscriberCount(second.PlayerAttributeSet.Attribute5, nameof(EntityAttribute.OnValueChanged))
+			.Should().BeGreaterThan(secondBefore);
+
+		target.EffectsManager.RemoveEffect(handle);
+
+		SubscriberCount(second.PlayerAttributeSet.Attribute5, nameof(EntityAttribute.OnValueChanged))
+			.Should().Be(secondBefore);
+	}
+
 	private static void Tick(TestEntity entity, double seconds)
 	{
 		int ticks = (int)(seconds / Step) + 1;
@@ -259,6 +316,28 @@ public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAnd
 							new ScalableFloat(0),
 							new ScalableFloat(0))))
 			]);
+	}
+
+	private static EffectData OverridingBuff(Modifier modifier)
+	{
+		return new EffectData(
+			"Contested Haste",
+			Seconds(1_000),
+			[modifier],
+			new StackingData(
+				new ScalableInt(3),
+				new ScalableInt(1),
+				StackPolicy.AggregateByTarget,
+				StackLevelPolicy.SegregateLevels,
+				StackMagnitudePolicy.Sum,
+				StackOverflowPolicy.AllowApplication,
+				StackExpirationPolicy.ClearEntireStack,
+				StackOwnerDenialPolicy.AlwaysAllow,
+				StackOwnerOverridePolicy.Override,
+				StackOwnerOverrideStackCountPolicy.IncreaseStacks,
+				ApplicationRefreshPolicy: StackApplicationRefreshPolicy.RefreshOnSuccessfulApplication,
+				ApplicationResetPeriodPolicy: StackApplicationResetPeriodPolicy.NeverReset),
+			snapshotLevel: false);
 	}
 
 	private static EffectData StackingBurn(float seconds)

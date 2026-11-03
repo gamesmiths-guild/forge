@@ -745,9 +745,27 @@ internal sealed class ActiveEffect
 		EntityAttributes targetAttributes = EffectEvaluatedData.Target.Attributes;
 		AttributeChangeSet changes = targetAttributes.BeginChanges();
 
+		Effect previousEffect = Effect;
+
 		Unapply(true);
 
 		EffectEvaluatedData.ReEvaluate(effect, StackCount, level);
+
+		// An owner override hands the application over to the new owner's effect, and to the new owner's attributes.
+		if (Effect != previousEffect)
+		{
+			previousEffect.DetachApplication(this);
+			DetachAttributeBindings();
+			EffectEvaluatedData.RefreshAttributesToCapture();
+
+			foreach (EntityAttribute attribute in EffectEvaluatedData.AttributesToCapture)
+			{
+				attribute.OnValueChanged += Attribute_OnValueChanged;
+			}
+
+			RegisterAttributeDependencies();
+			Effect.AttachApplication(this);
+		}
 
 		Apply(reApplication: true);
 
