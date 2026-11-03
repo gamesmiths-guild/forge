@@ -56,6 +56,12 @@ internal sealed class StateDescription(IReadOnlyList<IForgeEntity> world) : ISta
 	{
 		string value = entity is null ? "none" : "an entity outside the world";
 
+		if (entity?.NetworkId.IsValid == true)
+		{
+			Values[Path(name)] = $"entity {entity.NetworkId}";
+			return;
+		}
+
 		for (int i = 0; entity is not null && i < world.Count; i++)
 		{
 			if (world[i] == entity)

@@ -4,14 +4,16 @@ using Gamesmiths.Forge.Statescript;
 
 namespace Gamesmiths.Forge.Core;
 
-// Hashes snapshots into 64 bits that come out the same on every machine and in every run: numbers bit for bit,
-// strings by their characters rather than the runtime's randomized string hash, entities by their place in the world,
-// and the values of a set in any order.
+// Hashes snapshots into 64 bits that come out the same on every machine and in every run: numbers bit for bit, strings
+// by their characters rather than the runtime's randomized string hash, entities by their network id or else their
+// place in the world, and the values of a set in any order.
 internal sealed class StateChecksum(IReadOnlyList<IForgeEntity> world) : IStateWriter
 {
 	private const ulong Offset = 0xCBF29CE484222325;
 
 	private const ulong Prime = 0x100000001B3;
+
+	private const ulong NetworkedEntity = 0x4E45545F454E5449;
 
 	private readonly List<Frame> _frames = [new Frame(Offset, IsSet: false, 0, 0)];
 
@@ -67,6 +69,14 @@ internal sealed class StateChecksum(IReadOnlyList<IForgeEntity> world) : IStateW
 		if (entity is null)
 		{
 			Add(name, 0);
+			return;
+		}
+
+		// A networked entity counts by its id, the same on every machine; one without counts by its place in the world,
+		// which every machine that built the same world agrees on, or as outside it.
+		if (entity.NetworkId.IsValid)
+		{
+			Add(name, Mix(NetworkedEntity, entity.NetworkId.Value));
 			return;
 		}
 

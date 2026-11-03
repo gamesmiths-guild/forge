@@ -169,6 +169,36 @@ public static class EntitySimulation
 	}
 
 	/// <summary>
+	/// Hashes the entity's simulation into 64 bits that come out the same on every machine whose copy of the entity is
+	/// in the same state: a cheap way for a client and a server to check that they agree about an entity at a tick.
+	/// </summary>
+	/// <remarks>
+	/// <para>It covers what <see cref="CaptureSnapshot"/> captures: attributes, tags, active effects, granted abilities
+	/// with their running graphs, shared variables, input, random, body to a thousandth of a unit, and outside state.
+	/// Another entity that an effect or a variable points at counts by its <see cref="IForgeEntity.NetworkId"/>, or
+	/// as local when it has none, so two machines agree as long as they name entities the same. For a whole world,
+	/// where entities without ids can count by their place, see <see cref="WorldHistory.ChecksumAt"/>.</para>
+	/// <para>Take it from the host, between ticks, like <see cref="CaptureSnapshot"/>.</para>
+	/// </remarks>
+	/// <param name="entity">The entity to hash.</param>
+	/// <returns>The checksum.</returns>
+	/// <exception cref="InvalidOperationException">Thrown while the entity's abilities, effects or attributes are
+	/// changing.</exception>
+	/// <exception cref="NotSupportedException">Thrown while one of the entity's abilities runs a behavior other than a
+	/// Statescript graph.</exception>
+	public static ulong Checksum(IForgeEntity entity)
+	{
+		EntitySnapshot snapshot = CaptureSnapshot(entity);
+		var checksum = new StateChecksum([]);
+
+		checksum.Open("Entity");
+		snapshot.Write(checksum);
+		checksum.Close();
+
+		return checksum.Value;
+	}
+
+	/// <summary>
 	/// Ends the entity for good, as when the object that hosts it is destroyed: it lets go of everything it holds, and
 	/// everything that holds it lets go of it.
 	/// </summary>
