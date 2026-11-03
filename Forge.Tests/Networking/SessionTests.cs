@@ -4,6 +4,7 @@ using System.Numerics;
 using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Networking;
+using Gamesmiths.Forge.Networking.Messages;
 
 namespace Gamesmiths.Forge.Tests.Networking;
 
@@ -56,7 +57,9 @@ public class SessionTests
 		server.PeerRefused += (peer, reason) => refused.Add((peer, reason));
 
 		NetworkAssetRegistry registry = expected == RefusalReason.AssetRegistry ? Registry("other") : Registry();
-		InputActionSet actions = expected == RefusalReason.InputActions ? new InputActionSet(["fire", "jump"]) : _actions;
+		InputActionSet actions = expected == RefusalReason.InputActions
+			? new InputActionSet(["fire", "jump"])
+			: _actions;
 		INetworkTransport transport = network.Connect();
 		var client = new NetworkSession(transport, new SimulationClock(TickRate), registry, actions);
 
@@ -68,6 +71,9 @@ public class SessionTests
 		client.Refusal.Should().Be(expected);
 		refused.Should().Equal((transport.LocalPeer, expected));
 		server.Peers.Should().BeEmpty();
+		network.Server.Peers.Should().ContainSingle("the server lets the refusal reach the client first");
+
+		server.Update(NetworkSession.RefusalLinger);
 		network.Server.Peers.Should().BeEmpty("the server disconnected the client");
 	}
 
@@ -90,6 +96,8 @@ public class SessionTests
 		second.State.Should().Be(SessionState.Refused);
 		second.Refusal.Should().Be(RefusalReason.Full);
 		server.Peers.Should().ContainSingle();
+		server.Update(1);
+		network.Server.Peers.Should().ContainSingle("the refused client was disconnected after the linger");
 	}
 
 	[Fact]
@@ -135,14 +143,22 @@ public class SessionTests
 			server.Clock.Advance();
 		}
 
-		client.State.Should().Be(SessionState.Ready);
-		client.ClockSync.HasEstimate.Should().BeTrue();
-		client.ClockSync.BestRoundTripTime.Should().BeApproximately(0.05, 0.02, "only the client's sends are delayed");
-		client.ClockSync.EstimateServerTick(time).Should().BeApproximately(server.Clock.Tick, 4);
-		client.AckedInputTick.Should().BeGreaterThan(1000, "the server acknowledged input");
-		client.Input.Commands.Count.Should().BeLessThan(InputWindow.DefaultCapacity, "acknowledged ticks left the window");
-		server.Peers[0].Pings.Should().BeGreaterThan(3);
-		server.Peers[0].Input.NewestTick.Should().BeGreaterThanOrEqualTo(client.AckedInputTick, "the ack is a pong old");
+		client.State
+			.Should().Be(SessionState.Ready);
+		client.ClockSync.HasEstimate
+			.Should().BeTrue();
+		client.ClockSync.BestRoundTripTime
+			.Should().BeApproximately(0.05, 0.02, "only the client's sends are delayed");
+		client.ClockSync.EstimateServerTick(time)
+			.Should().BeApproximately(server.Clock.Tick, 4);
+		client.AckedInputTick
+			.Should().BeGreaterThan(1000, "the server acknowledged input");
+		client.Input.Commands.Count
+			.Should().BeLessThan(InputWindow.DefaultCapacity, "acknowledged ticks left the window");
+		server.Peers[0].Pings
+			.Should().BeGreaterThan(3);
+		server.Peers[0].Input.NewestTick
+			.Should().BeGreaterThanOrEqualTo(client.AckedInputTick, "the ack is a pong old");
 	}
 
 	[Fact]
@@ -174,11 +190,11 @@ public class SessionTests
 			}
 
 			// The handshake itself crosses the poor link, so the first command is for a tick well after zero.
-			if (server.Peers.Count == 1 && frames.ContainsKey(serverTick))
+			if (server.Peers.Count == 1 && frames.TryGetValue(serverTick, out InputFrame value))
 			{
 				InputDelivery delivery = server.Peers[0].Input.Take(serverTick, out InputCommand command);
 				deliveries.Add(delivery);
-				command.Frame.Should().Be(frames[serverTick]);
+				command.Frame.Should().Be(value);
 			}
 
 			server.Clock.Advance();
@@ -234,10 +250,26 @@ public class SessionTests
 		server.Update(0);
 		client.Update(0.01);
 
-		raw.Send(PeerId.Server, Protocol.ControlChannel, reliable: true, [0xFF, 0xFF]);
-		raw.Send(PeerId.Server, Protocol.ControlChannel, reliable: true, [(byte)ControlMessage.Hello]);
-		raw.Send(PeerId.Server, Protocol.InputChannel, reliable: false, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
-		raw.Send(PeerId.Server, Protocol.StateChannel, reliable: false, [1, 2, 3]);
+		raw.Send(
+			PeerId.Server,
+			Protocol.ControlChannel,
+			reliable: true,
+			[0xFF, 0xFF]);
+		raw.Send(
+			PeerId.Server,
+			Protocol.ControlChannel,
+			reliable: true,
+			[(byte)ControlMessage.Hello]);
+		raw.Send(
+			PeerId.Server,
+			Protocol.InputChannel,
+			reliable: false,
+			[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+		raw.Send(
+			PeerId.Server,
+			Protocol.StateChannel,
+			reliable: false,
+			[1, 2, 3]);
 		server.Update(0.02);
 
 		server.MalformedPackets.Should().Be(3, "two control packets and one input packet made no sense");
@@ -274,7 +306,11 @@ public class SessionTests
 		return registry;
 	}
 
-	private static NetworkSession Server(LoopbackNetwork network, ulong seed = 1, long startTick = 0, int maxClients = 0)
+	private static NetworkSession Server(
+		LoopbackNetwork network,
+		ulong seed = 1,
+		long startTick = 0,
+		int maxClients = 0)
 	{
 		return new NetworkSession(
 			network.Server,

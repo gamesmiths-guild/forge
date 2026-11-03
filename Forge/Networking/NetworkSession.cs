@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Networking.Messages;
 
 namespace Gamesmiths.Forge.Networking;
 
@@ -56,50 +57,20 @@ public sealed class NetworkSession
 	/// </summary>
 	public const double DefaultPingInterval = 0.1;
 
+	/// <summary>
+	/// How long the server keeps a refused client connected after telling it why, in seconds, so the refusal reaches
+	/// it before the disconnect does on a transport that doesn't flush.
+	/// </summary>
+	public const double RefusalLinger = 0.25;
+
 	private readonly Dictionary<PeerId, NetworkPeer> _peers = [];
 	private readonly List<NetworkPeer> _readyPeers = [];
+	private readonly List<RefusedPeer> _refused = [];
 	private readonly BitWriter _writer = new();
 	private readonly BitReader _reader = new(ReadOnlyMemory<byte>.Empty);
 	private readonly int _maxClients;
 	private double _nextPingAt;
 	private double _localTime;
-
-	/// <summary>
-	/// Initializes a new instance of the <see cref="NetworkSession"/> class over a transport. Whether it's the server
-	/// or a client follows the transport.
-	/// </summary>
-	/// <param name="transport">The transport, connected or connecting.</param>
-	/// <param name="clock">The session clock. On the server it's the session's time; a client's must run at the same
-	/// rate, and is set to the server's tick when the server welcomes it.</param>
-	/// <param name="registry">The sealed asset registry, whose hash the handshake compares.</param>
-	/// <param name="actions">The input action set, whose hash the handshake compares.</param>
-	/// <param name="sessionSeed">On the server, the seed the session's randomness derives from, given to every
-	/// client. Ignored on a client, which learns it from the server.</param>
-	/// <param name="maxClients">On the server, how many clients to accept at most; 0 for no limit.</param>
-	/// <exception cref="ArgumentException">Thrown when the registry isn't sealed.</exception>
-	public NetworkSession(
-		INetworkTransport transport,
-		SimulationClock clock,
-		NetworkAssetRegistry registry,
-		InputActionSet actions,
-		ulong sessionSeed = 0,
-		int maxClients = 0)
-	{
-		if (!registry.IsSealed)
-		{
-			throw new ArgumentException("Seal the registry before starting a session over it.", nameof(registry));
-		}
-
-		Transport = transport;
-		Clock = clock;
-		Registry = registry;
-		Actions = actions;
-		SessionSeed = sessionSeed;
-		_maxClients = maxClients;
-		Input = new InputWindow(actions);
-		ClockSync = new ClockSync(clock);
-		State = transport.IsServer ? SessionState.Ready : SessionState.Connecting;
-	}
 
 	/// <summary>
 	/// Raised on the server when a client's handshake succeeds and it joins the session.
@@ -193,6 +164,43 @@ public sealed class NetworkSession
 	public long MalformedPackets { get; private set; }
 
 	/// <summary>
+	/// Initializes a new instance of the <see cref="NetworkSession"/> class over a transport. Whether it's the server
+	/// or a client follows the transport.
+	/// </summary>
+	/// <param name="transport">The transport, connected or connecting.</param>
+	/// <param name="clock">The session clock. On the server it's the session's time; a client's must run at the same
+	/// rate, and is set to the server's tick when the server welcomes it.</param>
+	/// <param name="registry">The sealed asset registry, whose hash the handshake compares.</param>
+	/// <param name="actions">The input action set, whose hash the handshake compares.</param>
+	/// <param name="sessionSeed">On the server, the seed the session's randomness derives from, given to every
+	/// client. Ignored on a client, which learns it from the server.</param>
+	/// <param name="maxClients">On the server, how many clients to accept at most; 0 for no limit.</param>
+	/// <exception cref="ArgumentException">Thrown when the registry isn't sealed.</exception>
+	public NetworkSession(
+		INetworkTransport transport,
+		SimulationClock clock,
+		NetworkAssetRegistry registry,
+		InputActionSet actions,
+		ulong sessionSeed = 0,
+		int maxClients = 0)
+	{
+		if (!registry.IsSealed)
+		{
+			throw new ArgumentException("Seal the registry before starting a session over it.", nameof(registry));
+		}
+
+		Transport = transport;
+		Clock = clock;
+		Registry = registry;
+		Actions = actions;
+		SessionSeed = sessionSeed;
+		_maxClients = maxClients;
+		Input = new InputWindow(actions);
+		ClockSync = new ClockSync(clock);
+		State = transport.IsServer ? SessionState.Ready : SessionState.Connecting;
+	}
+
+	/// <summary>
 	/// Finds a client by id, on the server.
 	/// </summary>
 	/// <param name="id">The client's id.</param>
@@ -210,6 +218,15 @@ public sealed class NetworkSession
 	public void Update(double localTime)
 	{
 		_localTime = localTime;
+
+		for (int i = _refused.Count - 1; i >= 0; i--)
+		{
+			if (_refused[i].DisconnectAt <= localTime)
+			{
+				Transport.Disconnect(_refused[i].Peer);
+				_refused.RemoveAt(i);
+			}
+		}
 
 		while (Transport.TryReceive(out TransportEvent received))
 		{
@@ -400,7 +417,7 @@ public sealed class NetworkSession
 			Transport.Send(peer.Id, Protocol.ControlChannel, reliable: true, _writer.WrittenBytes);
 			PeerRefused?.Invoke(peer.Id, reason);
 			_peers.Remove(peer.Id);
-			Transport.Disconnect(peer.Id);
+			_refused.Add(new RefusedPeer(peer.Id, _localTime + RefusalLinger));
 			return;
 		}
 
@@ -473,4 +490,6 @@ public sealed class NetworkSession
 			Input.Acknowledge(pong.AckedInputTick);
 		}
 	}
+
+	private readonly record struct RefusedPeer(PeerId Peer, double DisconnectAt);
 }

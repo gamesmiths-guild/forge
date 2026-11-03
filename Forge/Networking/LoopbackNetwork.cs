@@ -17,6 +17,11 @@ public sealed class LoopbackNetwork
 	private int _nextClientId = PeerId.Server.Value + 1;
 
 	/// <summary>
+	/// Gets the server's transport.
+	/// </summary>
+	public INetworkTransport Server { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="LoopbackNetwork"/> class with its server.
 	/// </summary>
 	public LoopbackNetwork()
@@ -25,11 +30,6 @@ public sealed class LoopbackNetwork
 		_endpoints.Add(PeerId.Server, server);
 		Server = server;
 	}
-
-	/// <summary>
-	/// Gets the server's transport.
-	/// </summary>
-	public INetworkTransport Server { get; }
 
 	/// <summary>
 	/// Connects a new client, delivering a connected event to it and to the server.
@@ -79,14 +79,14 @@ public sealed class LoopbackNetwork
 
 		public IReadOnlyCollection<PeerId> Peers => _peers;
 
-		public void Send(PeerId to, byte channel, bool reliable, ReadOnlySpan<byte> payload)
+		public void Send(PeerId peer, byte channel, bool reliable, ReadOnlySpan<byte> payload)
 		{
-			if (!_peers.Contains(to))
+			if (!_peers.Contains(peer))
 			{
 				return;
 			}
 
-			network.Deliver(LocalPeer, to, channel, payload);
+			network.Deliver(LocalPeer, peer, channel, payload);
 		}
 
 		public bool TryReceive(out TransportEvent transportEvent)
