@@ -36,10 +36,12 @@ public enum EffectEventTrigger : byte
 
 	/// <summary>
 	/// Raises when the effect is fully removed before it could expire, from
-	/// <see cref="IEffectComponent.OnActiveEffectUnapplied"/> with <see cref="EffectRemovalReason.Removed"/>. Every
-	/// removal through the <see cref="EffectsManager"/> API lands here — a dispel, a tag- or attribute-driven removal,
-	/// or an outright <see cref="EffectsManager.RemoveEffect(ActiveEffectHandle, bool)"/> — as does every removal of an
-	/// <see cref="Duration.DurationType.Infinite"/> effect, which has no natural end.
+	/// <see cref="IEffectComponent.OnActiveEffectUnapplied"/> with <see cref="EffectRemovalReason.Removed"/> or
+	/// <see cref="EffectRemovalReason.Destroyed"/>. Every removal through the <see cref="EffectsManager"/> API lands
+	/// here — a dispel, a tag- or attribute-driven removal, or an outright
+	/// <see cref="EffectsManager.RemoveEffect(ActiveEffectHandle, bool)"/> — as does every removal of an
+	/// <see cref="Duration.DurationType.Infinite"/> effect, which has no natural end, and every effect its target's
+	/// teardown ends.
 	/// </summary>
 	RemovedPrematurely = 1 << 3,
 

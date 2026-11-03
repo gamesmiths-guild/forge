@@ -21,10 +21,9 @@ using Gamesmiths.Forge.Tests.Helpers;
 namespace Gamesmiths.Forge.Tests.Performance;
 
 /// <summary>
-/// Nothing an effect holds while it is active may outlive it. An active effect is on its shared
-/// <see cref="Effect"/>'s list of live applications and subscribes to the attributes it reads; once it ends, both
-/// must be gone, and an entity that is dropped must be collectable even though effects it applied, and effects
-/// applied to it, are still around.
+/// Nothing an effect holds while it is active may outlive it. An active effect is on its shared <see cref="Effect"/>'s
+/// list of live applications and subscribes to the attributes it reads; once it ends, both must be gone, and an entity
+/// that is dropped must be collectable even though effects it applied, and effects applied to it, are still around.
 /// </summary>
 /// <param name="fixture">The fixture providing the <see cref="TagsManager"/> and <see cref="CuesManager"/>.</param>
 public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFixture>
@@ -154,27 +153,25 @@ public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAnd
 	}
 
 	/// <summary>
-	/// An entity dropped while a shared effect is still active on it stays reachable: each active application
-	/// subscribes to the <see cref="Effect"/>'s events, and the delegate holds the application, which holds its
-	/// target. Removing the entity's effects first is the teardown that frees it. Nothing in the core does that
-	/// teardown yet, so a host freeing an entity mid-effect must do it, or hold its effects through objects that
-	/// die with the entity.
+	/// An entity dropped while a shared effect is still active on it stays reachable: the <see cref="Effect"/>'s list
+	/// of live applications holds the application, which holds its target. <see cref="EntitySimulation.Teardown"/> is
+	/// what frees it, by ending its effects.
 	/// </summary>
 	[Fact]
 	[Trait("Performance", "Leak")]
-	public void A_target_whose_effects_are_removed_before_it_is_dropped_is_collected()
+	public void A_target_torn_down_with_effects_still_active_is_collected()
 	{
 		var source = new TestEntity(_tagsManager, _cuesManager);
 		var effect = new Effect(TimedBuff(1_000), new EffectOwnership(source, source));
 
-		WeakReference reference = ApplyRemoveAndDrop(effect);
+		WeakReference reference = ApplyTearDownAndDrop(effect);
 
 		GC.Collect();
 		GC.WaitForPendingFinalizers();
 		GC.Collect();
 
 		reference.IsAlive.Should().BeFalse(
-			"an entity whose active effects were removed must not be pinned by the shared effect it was given");
+			"a torn-down entity must not be pinned by the shared effect it was given");
 		ApplicationCount(effect).Should().Be(0);
 		GC.KeepAlive(effect);
 		GC.KeepAlive(source);
@@ -314,7 +311,7 @@ public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAnd
 		return new WeakReference(target);
 	}
 
-	private WeakReference ApplyRemoveAndDrop(Effect effect)
+	private WeakReference ApplyTearDownAndDrop(Effect effect)
 	{
 		var target = new TestEntity(_tagsManager, _cuesManager);
 
@@ -324,7 +321,7 @@ public class EffectLeakTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAnd
 		}
 
 		target.EffectsManager.GetActiveEffects().Should().HaveCount(100);
-		target.EffectsManager.RemoveEffects(new EffectQuery(EffectDefinition: effect.EffectData));
+		EntitySimulation.Teardown(target);
 		target.EffectsManager.GetActiveEffects().Should().BeEmpty();
 
 		return new WeakReference(target);

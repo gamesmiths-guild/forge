@@ -395,7 +395,8 @@ public readonly record struct EffectData
 			!Array.Exists(EffectComponents, x => x is RaiseEventEffectComponent { RaisesOnExpiration: true }),
 			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.ExpiredNormally)} never fires on an " +
 			$"{DurationType.Infinite} effect, since it has no duration to run out of and every removal of one is " +
-			$"reported as {nameof(EffectRemovalReason)}.{nameof(EffectRemovalReason.Removed)}. Use " +
+			$"reported as {nameof(EffectRemovalReason)}.{nameof(EffectRemovalReason.Removed)} or " +
+			$"{nameof(EffectRemovalReason)}.{nameof(EffectRemovalReason.Destroyed)}. Use " +
 			$"{nameof(EffectEventTrigger)}.{nameof(EffectEventTrigger.RemovedPrematurely)} instead.");
 
 		Validation.Assert(

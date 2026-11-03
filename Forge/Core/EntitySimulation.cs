@@ -168,6 +168,41 @@ public static class EntitySimulation
 		RestoreSnapshots([entity], [snapshot])?.Throw();
 	}
 
+	/// <summary>
+	/// Ends the entity for good, as when the object that hosts it is destroyed: it lets go of everything it holds, and
+	/// everything that holds it lets go of it.
+	/// </summary>
+	/// <remarks>
+	/// <para>In order: every ability is cleared, its running instances cancelled and its triggers no longer listening;
+	/// every active effect is removed the way a removal through <see cref="Effects.EffectsManager"/> removes it, with
+	/// <see cref="Effects.EffectRemovalReason.Destroyed"/>, so its components, the manager's events and its persistent
+	/// cues, as interrupted, all learn it ended; and its <see cref="IForgeEntity.Input"/> lets go of every action, for
+	/// another entity reading it.</para>
+	/// <para>From then on no effect applies to the entity, so a completion effect a removal applies to it doesn't
+	/// outlive the teardown. Effects it applied to other entities keep running on them. Its mover and state hook are
+	/// the host's to drop.</para>
+	/// <para>A shared <see cref="Effects.Effect"/> holds every application of it that is still active, so an entity
+	/// dropped with effects still on it stays reachable through them unless it's torn down. Don't tear down an entity a
+	/// <see cref="WorldHistory"/> keeps in limbo: it has let go of everything already, and its cues ended then.</para>
+	/// <para>Tear it down from the host, between ticks, like <see cref="CaptureSnapshot"/>.</para>
+	/// </remarks>
+	/// <param name="entity">The entity to tear down.</param>
+	/// <exception cref="InvalidOperationException">Thrown while the entity's abilities, effects or attributes are
+	/// changing.</exception>
+	public static void Teardown(IForgeEntity entity)
+	{
+		if (entity.Abilities.IsChanging || entity.EffectsManager.IsChanging || entity.Attributes.IsChanging)
+		{
+			throw new InvalidOperationException(
+				"An entity cannot be torn down while its abilities, effects or attributes are changing. Tear it down " +
+				"from the host, between ticks.");
+		}
+
+		entity.Abilities.ClearAllAbilities();
+		entity.EffectsManager.Teardown();
+		entity.Input?.Clear();
+	}
+
 	// Puts several entities back as one. Every hold of the detaching entities lets go, newest first across all of them,
 	// each snapshot puts its entity's state back, then every hold of the snapshots' entities takes hold again, oldest
 	// first across all of them, so handlers sharing an event run in the order they first took hold in, whichever entity

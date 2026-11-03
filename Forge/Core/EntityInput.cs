@@ -214,6 +214,14 @@ public sealed class EntityInput(InputActionSet actions)
 		_frameTakenForAdvance = false;
 	}
 
+	// Lets go of every action, for an entity torn down, so another entity reading this input sees nothing held.
+	internal void Clear()
+	{
+		Current = default;
+		_waiting = null;
+		FrameNumber++;
+	}
+
 	// The waiting frame becomes the tick's input; with none waiting, the last one carries on without new edges.
 	private void TakeFrame()
 	{

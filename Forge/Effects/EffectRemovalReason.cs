@@ -13,7 +13,7 @@ public enum EffectRemovalReason : byte
 	/// <remarks>
 	/// Only effects with <see cref="Duration.DurationType.HasDuration"/> can expire. Effects set as
 	/// <see cref="Duration.DurationType.Infinite"/> have no natural end, so every removal of one is reported as
-	/// <see cref="Removed"/>.
+	/// <see cref="Removed"/> or <see cref="Destroyed"/>.
 	/// </remarks>
 	Expired = 0,
 
@@ -22,4 +22,15 @@ public enum EffectRemovalReason : byte
 	/// methods.
 	/// </summary>
 	Removed = 1,
+
+	/// <summary>
+	/// The effect's target was torn down, through <see cref="Core.EntitySimulation.Teardown"/>, before the effect could
+	/// expire.
+	/// </summary>
+	/// <remarks>
+	/// Like <see cref="Removed"/>, it ends the effect early, so its persistent cues are removed as interrupted. A
+	/// handler that shouldn't react to its target's end, such as one that pays the caster back when a curse is
+	/// dispelled, checks for it.
+	/// </remarks>
+	Destroyed = 2,
 }

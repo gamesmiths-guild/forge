@@ -43,6 +43,9 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private bool _updating;
 
+	// Set once the owner is torn down, after which nothing applies to it.
+	private bool _tornDown;
+
 	/// <summary>
 	/// Event triggered whenever an effect lands on the owner, carrying its evaluated data.
 	/// </summary>
@@ -516,6 +519,33 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		RemoveActiveEffect(effect, EffectRemovalReason.Expired);
 	}
 
+	// Ends every active effect for its owner's teardown, the way a removal through the API ends it, and refuses every
+	// effect applied to the owner from then on, so nothing a removal callback applies to it outlives the teardown.
+	internal void Teardown()
+	{
+		_tornDown = true;
+		_changeDepth++;
+
+		try
+		{
+			// Snapshotting is required: removal callbacks can remove further effects.
+			foreach (ActiveEffect effect in _activeEffects.ToArray())
+			{
+				if (!_activeEffects.Contains(effect))
+				{
+					continue;
+				}
+
+				effect.Unapply();
+				RemoveActiveEffect(effect, EffectRemovalReason.Destroyed);
+			}
+		}
+		finally
+		{
+			_changeDepth--;
+		}
+	}
+
 	internal ActiveEffect? FindActiveEffectByData(EffectData effectData)
 	{
 		return FilterEffectsByData(effectData).FirstOrDefault();
@@ -812,7 +842,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		applied = false;
 
-		if (!effect.CanApply(Owner))
+		if (_tornDown || !effect.CanApply(Owner))
 		{
 			return null;
 		}
@@ -1115,7 +1145,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 			effectToRemove.EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 
-			_cuesManager.RemoveCues(in effectEvaluatedData, reason == EffectRemovalReason.Removed);
+			_cuesManager.RemoveCues(in effectEvaluatedData, reason != EffectRemovalReason.Expired);
 		}
 		finally
 		{
