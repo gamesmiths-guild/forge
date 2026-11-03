@@ -18,8 +18,8 @@ namespace Gamesmiths.Forge.Tests.Performance;
 /// <summary>
 /// Guards against regressions in what the steady state costs, not against what it costs today. Ticking an entity
 /// whose effects neither expire nor execute must allocate the same from one second to the next, under a ceiling,
-/// and a history at capacity must not retain more as it keeps recording. The ceilings are deliberately loose:
-/// tighten them once a measured baseline exists, and never loosen one without a change-log entry.
+/// and a history at capacity must not retain more as it keeps recording. A tick may allocate nothing; the retained
+/// ceiling allows for collector slack. Never loosen one without a change-log entry.
 /// </summary>
 /// <remarks>
 /// Allocation is read per thread, so other test classes running in parallel don't count. The suite already runs
@@ -35,11 +35,10 @@ public class SteadyStateAllocationTests(TagsAndCuesFixture fixture) : IClassFixt
 	private const int EffectsPerEntity = 10;
 
 	/// <summary>
-	/// Bytes one entity with <see cref="EffectsPerEntity"/> idle timed effects may allocate per tick. Today's cost
-	/// comes from <c>EffectsManager.UpdateEffects</c> copying its active list twice per tick; an entity that
-	/// allocated nothing per tick would read 0 here.
+	/// Bytes one entity with <see cref="EffectsPerEntity"/> idle timed effects may allocate per tick: none, since
+	/// whatever a tick allocates is allocated again for every tick a reconciliation replays.
 	/// </summary>
-	private const long BytesPerTickCeiling = 4 * 1024;
+	private const long BytesPerTickCeiling = 0;
 
 	/// <summary>
 	/// Bytes a history at capacity may retain more after recording another window of ticks. Each recording

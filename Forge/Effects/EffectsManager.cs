@@ -33,10 +33,15 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private readonly List<IEffectApplicationBlocker> _applicationBlockers = [];
 
+	// Reused by every update, so a tick allocates nothing. Sharing one list is what makes the update non-re-entrant.
+	private readonly List<ActiveEffect> _updateBuffer = [];
+
 	private int _applicationDepth;
 
 	// Removals and updates in progress, which like applications run callbacks part way through.
 	private int _changeDepth;
+
+	private bool _updating;
 
 	/// <summary>
 	/// Event triggered whenever an effect lands on the owner, carrying its evaluated data.
@@ -243,24 +248,50 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <param name="deltaTime">Time passed since the last update call.</param>
 	public void UpdateEffects(double deltaTime)
 	{
+		if (_updating)
+		{
+			Validation.Fail(
+				"An effect update was re-entered while one was already running on this entity, which would corrupt " +
+				"the walk in progress. Drive UpdateEffects from the game loop, never from inside an effect.");
+
+			return;
+		}
+
+		_updating = true;
 		_changeDepth++;
 
 		try
 		{
-			ActiveEffect[] effectsToUpdate = [.. _activeEffects];
-			foreach (ActiveEffect effect in effectsToUpdate)
+			// The effects active as the update starts each advance once, even when an earlier one's update removes
+			// them or applies others.
+			_updateBuffer.AddRange(_activeEffects);
+
+			for (int i = 0; i < _updateBuffer.Count; i++)
 			{
-				effect.Update(deltaTime);
+				_updateBuffer[i].Update(deltaTime);
 			}
 
-			foreach (ActiveEffect expiredEffect in effectsToUpdate.Where(x => x.IsExpired).ToArray())
+			// Every expired one is picked before any is removed, since a removal's callbacks can change the others.
+			int expired = 0;
+
+			for (int i = 0; i < _updateBuffer.Count; i++)
 			{
-				RemoveActiveEffect(expiredEffect, EffectRemovalReason.Expired);
+				if (_updateBuffer[i].IsExpired)
+				{
+					_updateBuffer[expired++] = _updateBuffer[i];
+				}
+			}
+
+			for (int i = 0; i < expired; i++)
+			{
+				RemoveActiveEffect(_updateBuffer[i], EffectRemovalReason.Expired);
 			}
 		}
 		finally
 		{
+			_updateBuffer.Clear();
 			_changeDepth--;
+			_updating = false;
 		}
 	}
 
