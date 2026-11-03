@@ -32,7 +32,7 @@ public class AbilityHandle : IValidatable
 
 	internal Ability? Ability { get; private set; }
 
-	internal AbilityHandle(Ability ability)
+	internal AbilityHandle(Ability? ability)
 	{
 		Ability = ability;
 	}

@@ -455,6 +455,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	internal void OnActiveEffectUnapplied_InternalCall(ActiveEffect removedEffect, EffectRemovalReason reason)
 	{
+		if (_tornDown)
+		{
+			reason = EffectRemovalReason.Destroyed;
+		}
+
 		foreach (IEffectComponent component in removedEffect.ComponentInstances)
 		{
 			component.OnActiveEffectUnapplied(
@@ -1112,6 +1117,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		if (!_activeEffects.Contains(effectToRemove))
 		{
 			return;
+		}
+
+		// What a removal callback removes during the teardown ends with it.
+		if (_tornDown)
+		{
+			reason = EffectRemovalReason.Destroyed;
 		}
 
 		_changeDepth++;

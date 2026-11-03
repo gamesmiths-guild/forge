@@ -34,6 +34,8 @@ public class EntityAbilities(IForgeEntity owner)
 
 	private bool _updating;
 
+	private bool _tornDown;
+
 	// Activations, ends and removals in progress, which raise their notifications part way through.
 	private int _changeDepth;
 
@@ -409,13 +411,19 @@ public class EntityAbilities(IForgeEntity owner)
 	/// <param name="abilityLevel">The level at which to grant the ability.</param>
 	/// <param name="levelOverridePolicy">The policy for overriding the level of an existing granted ability.</param>
 	/// <param name="sourceEntity">The source entity of the granted ability, if any.</param>
-	/// <returns>The handle of the granted ability.</returns>
+	/// <returns>The handle of the granted ability, or an invalid handle once the entity is torn down through
+	/// <see cref="EntitySimulation.Teardown"/>.</returns>
 	public AbilityHandle GrantAbilityPermanently(
 		AbilityData abilityData,
 		int abilityLevel,
 		LevelComparison levelOverridePolicy,
 		IForgeEntity? sourceEntity)
 	{
+		if (_tornDown)
+		{
+			return new AbilityHandle(null);
+		}
+
 		Ability? existingAbility =
 			GrantedAbilities.FirstOrDefault(x => x?.Ability?.AbilityData == abilityData)?.Ability;
 
@@ -711,6 +719,11 @@ public class EntityAbilities(IForgeEntity owner)
 		IAbilityGrantSource grantSource,
 		IForgeEntity? sourceEntity)
 	{
+		if (_tornDown)
+		{
+			return new AbilityHandle(null);
+		}
+
 		Ability? existingAbility =
 			GrantedAbilities.FirstOrDefault(x => x?.Ability?.AbilityData == abilityData)?.Ability;
 
@@ -752,6 +765,14 @@ public class EntityAbilities(IForgeEntity owner)
 		OnAbilityGranted?.Invoke(newAbility.Handle);
 
 		return newAbility.Handle;
+	}
+
+	// Clears every ability and refuses every grant from then on, so nothing an ending ability or effect grants outlives
+	// the owner's teardown.
+	internal void Teardown()
+	{
+		_tornDown = true;
+		ClearAllAbilities();
 	}
 
 	internal void RemoveGrantedAbility(AbilityHandle abilityHandle, IAbilityGrantSource grantSource)

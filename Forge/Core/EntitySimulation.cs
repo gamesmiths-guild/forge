@@ -178,9 +178,10 @@ public static class EntitySimulation
 	/// <see cref="Effects.EffectRemovalReason.Destroyed"/>, so its components, the manager's events and its persistent
 	/// cues, as interrupted, all learn it ended; and its <see cref="IForgeEntity.Input"/> lets go of every action, for
 	/// another entity reading it.</para>
-	/// <para>From then on no effect applies to the entity, so a completion effect a removal applies to it doesn't
-	/// outlive the teardown. Effects it applied to other entities keep running on them. Its mover and state hook are
-	/// the host's to drop.</para>
+	/// <para>From then on no effect applies to the entity and no ability is granted to it, so a completion effect a
+	/// removal applies or an ability an ending one grants doesn't outlive the teardown; a grant returns an invalid
+	/// handle. Every effect a removal callback removes meanwhile ends as destroyed too. Effects it applied to other
+	/// entities keep running on them. Its mover and state hook are the host's to drop.</para>
 	/// <para>A shared <see cref="Effects.Effect"/> holds every application of it that is still active, so an entity
 	/// dropped with effects still on it stays reachable through them unless it's torn down. Don't tear down an entity a
 	/// <see cref="WorldHistory"/> keeps in limbo: it has let go of everything already, and its cues ended then.</para>
@@ -198,7 +199,7 @@ public static class EntitySimulation
 				"from the host, between ticks.");
 		}
 
-		entity.Abilities.ClearAllAbilities();
+		entity.Abilities.Teardown();
 		entity.EffectsManager.Teardown();
 		entity.Input?.Clear();
 	}

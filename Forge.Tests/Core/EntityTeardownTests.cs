@@ -102,6 +102,51 @@ public class EntityTeardownTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 	[Fact]
 	[Trait("Teardown", null)]
+	public void Effects_removed_by_a_removal_callback_during_teardown_end_as_destroyed()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var removals = new List<EffectRemovalReason>();
+
+		Apply(entity, entity, Buff("Haste", DurationType.Infinite));
+		ActiveEffectHandle aura = Apply(entity, entity, Buff("Aura", DurationType.Infinite))!;
+		entity.EffectsManager.OnActiveEffectRemoved += (_, reason) =>
+		{
+			removals.Add(reason);
+			entity.EffectsManager.RemoveEffect(aura);
+		};
+
+		EntitySimulation.Teardown(entity);
+
+		removals.Should().Equal(EffectRemovalReason.Destroyed, EffectRemovalReason.Destroyed);
+	}
+
+	[Fact]
+	[Trait("Teardown", null)]
+	public void Nothing_is_granted_to_a_torn_down_entity_not_even_what_an_ending_ability_grants()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var trigger = Tag.RequestTag(_tagsManager, "color.red");
+		var parting = new AbilityData("Parting");
+		AbilityHandle? granted = null;
+		entity.Abilities.GrantAbilityPermanently(
+			new AbilityData("Triggered", abilityTriggerData: AbilityTriggerData.ForEvent(trigger)),
+			1,
+			LevelComparison.None,
+			entity);
+		entity.Abilities.OnAbilityEnded += _ =>
+			granted = entity.Abilities.GrantAbilityPermanently(parting, 1, LevelComparison.None, entity);
+
+		Raise(entity, trigger);
+
+		EntitySimulation.Teardown(entity);
+
+		granted.Should().NotBeNull();
+		granted!.IsValid.Should().BeFalse();
+		entity.Abilities.GrantedAbilities.Should().BeEmpty("the parting grant would outlive the teardown");
+	}
+
+	[Fact]
+	[Trait("Teardown", null)]
 	public void Effects_a_torn_down_entity_applied_to_others_keep_running()
 	{
 		var caster = new TestEntity(_tagsManager, _cuesManager);
