@@ -34,7 +34,7 @@ Results land in `BenchmarkDotNet.Artifacts/results/` as Markdown, HTML and CSV. 
 
 | Suite | Scenario | Watch for |
 |---|---|---|
-| `EffectBenchmarks` | 1,000 and 10,000 effects on one entity: instant damage, timed buffs, timed buffs expiring together, a stacking effect, and the stack queried | Time growing faster than the count (a linear scan or subscriber list walked per application), and bytes per application |
+| `EffectBenchmarks` | 1,000 and 10,000 effects on one entity: instant damage, timed buffs, timed buffs expiring together, timed buffs that read the source's attribute live expiring together, a stacking effect, and the stack queried | Time growing faster than the count (a linear scan or subscriber list walked per application), and bytes per application |
 | `TickBenchmarks` | 100 and 1,000 entities with 10 effects each, 600 ticks, with and without periods | Bytes allocated divided by `Entities × 600`: the per-entity, per-tick figure. The target is for it to come from the effects' own work, not from the tick itself |
 | `RollbackBenchmarks` | A world of 1 and 50 entities with effects and a running graph: one snapshot, one restore, a 12-tick replay of one entity, a 12-tick replay of the world, and one checksum | The replay figures are what a client pays per server update at 200 ms. The world figures are what a listen host pays |
 
@@ -47,3 +47,5 @@ Results land in `BenchmarkDotNet.Artifacts/results/` as Markdown, HTML and CSV. 
 ## Adding a benchmark
 
 Keep the scenario shaped like a game rather than like the cheapest call: real attribute sets, a few tags, effects with durations. Put shared setup in `BenchmarkWorld`, mark the class `[MemoryDiagnoser]`, and return something the benchmark computed so the work isn't optimized away.
+
+Prefer building what an operation changes inside the benchmark over `[IterationSetup]`. An iteration setup makes BenchmarkDotNet run one operation per iteration, so an operation shorter than its 100 ms minimum gets timings that drift between runs; the allocation column stays exact either way.

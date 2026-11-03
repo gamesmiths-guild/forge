@@ -12,6 +12,11 @@ namespace Gamesmiths.Forge.Benchmarks;
 /// What prediction pays. A snapshot is taken every tick for every predicted entity, and a reconciliation restores
 /// one and replays every tick since: about 12 of them at 200 ms, all inside one frame.
 /// </summary>
+/// <remarks>
+/// Each operation does the same work again on the world the last one left, so the world is built once and
+/// BenchmarkDotNet runs operations back to back. An iteration setup would time one microsecond-long operation per
+/// iteration, too short to measure.
+/// </remarks>
 [MemoryDiagnoser]
 public class RollbackBenchmarks
 {
@@ -22,8 +27,6 @@ public class RollbackBenchmarks
 
 	private const int Capacity = 64;
 
-	private TagsManager _tagsManager = null!;
-	private CuesManager _cuesManager = null!;
 	private BenchmarkEntity _entity = null!;
 	private EntityHistory _history = null!;
 	private WorldHistory _world = null!;
@@ -35,20 +38,15 @@ public class RollbackBenchmarks
 	[GlobalSetup]
 	public void GlobalSetup()
 	{
-		_tagsManager = BenchmarkWorld.CreateTagsManager();
-		_cuesManager = new CuesManager();
-	}
-
-	[IterationSetup]
-	public void IterationSetup()
-	{
-		var source = new BenchmarkEntity(_tagsManager, _cuesManager, seed: 1);
+		TagsManager tagsManager = BenchmarkWorld.CreateTagsManager();
+		var cuesManager = new CuesManager();
+		var source = new BenchmarkEntity(tagsManager, cuesManager, seed: 1);
 
 		_world = new WorldHistory(Capacity, BenchmarkWorld.Step);
 
 		for (int i = 0; i < WorldSize; i++)
 		{
-			BenchmarkEntity entity = Populate(new BenchmarkEntity(_tagsManager, _cuesManager, seed: i + 2), source);
+			BenchmarkEntity entity = Populate(new BenchmarkEntity(tagsManager, cuesManager, seed: i + 2), source);
 			_world.Add(entity);
 
 			if (i == 0)
@@ -73,6 +71,7 @@ public class RollbackBenchmarks
 	/// <summary>
 	/// One tick's snapshot of one entity: the per-tick cost of being predicted, before any rollback.
 	/// </summary>
+	/// <returns>The snapshot of the entity at the current tick.</returns>
 	[Benchmark]
 	public EntitySnapshot CaptureSnapshot()
 	{
@@ -82,6 +81,7 @@ public class RollbackBenchmarks
 	/// <summary>
 	/// Restoring the snapshot taken a round trip ago, without replaying: the fixed cost of every correction.
 	/// </summary>
+	/// <returns>The tick after restoring the snapshot.</returns>
 	[Benchmark]
 	public long RestoreOneEntity()
 	{
@@ -92,6 +92,7 @@ public class RollbackBenchmarks
 	/// <summary>
 	/// A full reconciliation of one entity: restore the tick a round trip ago and replay to the present.
 	/// </summary>
+	/// <returns>The tick after replaying the entity.</returns>
 	[Benchmark]
 	public long ReplayOneEntity()
 	{
@@ -103,6 +104,7 @@ public class RollbackBenchmarks
 	/// <summary>
 	/// The whole world rolled back a round trip and replayed, as a listen host with every entity predicted would.
 	/// </summary>
+	/// <returns>The number of entities replayed.</returns>
 	[Benchmark]
 	public int ReplayWorld()
 	{
@@ -113,6 +115,7 @@ public class RollbackBenchmarks
 	/// <summary>
 	/// The checksum of one tick of the whole world: what a desync check costs per tick.
 	/// </summary>
+	/// <returns>The checksum of the world at the current tick.</returns>
 	[Benchmark]
 	public ulong ChecksumWorld()
 	{

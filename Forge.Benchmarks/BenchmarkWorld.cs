@@ -2,7 +2,6 @@
 
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
-using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Magnitudes;
@@ -56,9 +55,35 @@ internal static class BenchmarkWorld
 	}
 
 	/// <summary>
+	/// A timed buff worth the source's speed, read live rather than when applied, so each application watches the
+	/// source's speed for changes.
+	/// </summary>
+	/// <param name="seconds">The duration of the buff.</param>
+	public static EffectData ScaledBuff(float seconds)
+	{
+		return new EffectData(
+			"Tailwind",
+			Seconds(seconds),
+			[
+				new Modifier(
+					Speed,
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(
+						MagnitudeCalculationType.AttributeBased,
+						attributeBasedFloat: new AttributeBasedFloat(
+							new AttributeCaptureDefinition(Speed, AttributeCaptureSource.Source, Snapshot: false),
+							AttributeCalculationType.CurrentValue,
+							new ScalableFloat(1),
+							new ScalableFloat(0),
+							new ScalableFloat(0))))
+			]);
+	}
+
+	/// <summary>
 	/// A timed effect that also executes every eighth of a second, without stacking, so ten applications are ten
 	/// live effects that each tick a period.
 	/// </summary>
+	/// <param name="seconds">The duration of the effect.</param>
 	public static EffectData Bleeding(float seconds)
 	{
 		return new EffectData(
