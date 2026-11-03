@@ -37,13 +37,13 @@ public interface INetworkTransport
 	/// <summary>
 	/// Sends a packet.
 	/// </summary>
-	/// <param name="to">Who to send it to.</param>
+	/// <param name="peer">Who to send it to.</param>
 	/// <param name="channel">The channel to send it on, which keeps reliable packets in order with each other.
 	/// </param>
 	/// <param name="reliable">Whether to make sure it arrives, in order with other reliable packets on the channel.
 	/// </param>
 	/// <param name="payload">The bytes. The transport copies what it needs before returning.</param>
-	void Send(PeerId to, byte channel, bool reliable, ReadOnlySpan<byte> payload);
+	void Send(PeerId peer, byte channel, bool reliable, ReadOnlySpan<byte> payload);
 
 	/// <summary>
 	/// Takes the next thing that arrived, if anything did.
