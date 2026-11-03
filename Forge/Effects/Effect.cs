@@ -130,7 +130,8 @@ public class Effect
 	public void LevelUp()
 	{
 		Level++;
-		NotifyLevelChanged();
+		NotifyApplications(changedSetByCaller: null);
+		OnLevelChanged?.Invoke(Level);
 	}
 
 	/// <summary>
@@ -140,7 +141,8 @@ public class Effect
 	public void SetLevel(int level)
 	{
 		Level = level;
-		NotifyLevelChanged();
+		NotifyApplications(changedSetByCaller: null);
+		OnLevelChanged?.Invoke(Level);
 	}
 
 	/// <summary>
@@ -151,24 +153,7 @@ public class Effect
 	public void SetSetByCallerMagnitude(Tag identifierTag, float magnitude)
 	{
 		DataTag[identifierTag] = magnitude;
-
-		int count = CopyApplications(out ActiveEffect[] applications);
-
-		try
-		{
-			for (int i = 0; i < count; i++)
-			{
-				if (applications[i].Effect == this && applications[i].IsAttachedToEffect)
-				{
-					applications[i].OnEffectSetByCallerFloatChanged(identifierTag);
-				}
-			}
-		}
-		finally
-		{
-			ReleaseApplications(applications, count);
-		}
-
+		NotifyApplications(identifierTag);
 		OnSetByCallerFloatChanged?.Invoke(identifierTag, magnitude);
 	}
 
@@ -433,7 +418,8 @@ public class Effect
 		return true;
 	}
 
-	private void NotifyLevelChanged()
+	// Tells each live application the level changed, or the given set-by-caller value did.
+	private void NotifyApplications(Tag? changedSetByCaller)
 	{
 		int count = CopyApplications(out ActiveEffect[] applications);
 
@@ -441,9 +427,20 @@ public class Effect
 		{
 			for (int i = 0; i < count; i++)
 			{
-				if (applications[i].Effect == this && applications[i].IsAttachedToEffect)
+				ActiveEffect application = applications[i];
+
+				if (application.Effect != this || !application.IsAttachedToEffect)
 				{
-					applications[i].OnEffectLevelChanged();
+					continue;
+				}
+
+				if (changedSetByCaller is Tag tag)
+				{
+					application.OnEffectSetByCallerFloatChanged(tag);
+				}
+				else
+				{
+					application.OnEffectLevelChanged();
 				}
 			}
 		}
@@ -451,8 +448,6 @@ public class Effect
 		{
 			ReleaseApplications(applications, count);
 		}
-
-		OnLevelChanged?.Invoke(Level);
 	}
 
 	private int CopyApplications(out ActiveEffect[] applications)
