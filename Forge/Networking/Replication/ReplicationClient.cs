@@ -1,0 +1,556 @@
+// Copyright © Gamesmiths Guild.
+
+using System.Runtime.CompilerServices;
+using Gamesmiths.Forge.Attributes;
+using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Networking.Messages;
+using Gamesmiths.Forge.Tags;
+
+namespace Gamesmiths.Forge.Networking.Replication;
+
+/// <summary>
+/// A client's half of replication: it reads the server's state packets and keeps the client's copies of the server's
+/// entities, its mirrors, as the server says they are. A mirror simulates nothing of its own: it's torn down as it's
+/// bound, and from then on its attributes, tags and persistent cues are what the server last sent, its executed cues
+/// play as they arrive, and its body is where the server said it was a moment ago, from <see cref="BodyOf"/>.
+/// </summary>
+/// <remarks>
+/// <para>The engine integration sets <see cref="Host"/> before the client joins, to make and take away the entities the
+/// server spawns and despawns, and binds the entities placed in the scene with <see cref="BindPlaced"/>, with the same
+/// ids the server gives them, before the session is ready.</para>
+/// <para>A state packet older than one already read is dropped and not acknowledged, so the server sends what it
+/// carried again.</para>
+/// </remarks>
+public sealed class ReplicationClient
+{
+	private readonly NetworkSession _session;
+	private readonly Dictionary<NetworkEntityId, Mirror> _mirrors = [];
+	private readonly Dictionary<IForgeEntity, Mirror> _byEntity = new(ReferenceComparer.Instance);
+	private readonly List<IForgeEntity> _entities = [];
+	private readonly List<Tag> _added = [];
+	private readonly List<Tag> _removed = [];
+	private readonly Func<NetworkEntityId, IForgeEntity?> _resolve;
+	private uint _ackMask;
+	private bool _ackPending;
+
+	/// <summary>
+	/// Raised when the server spawned an entity and the host made it, after it was bound.
+	/// </summary>
+	public event Action<IForgeEntity>? Spawned;
+
+	/// <summary>
+	/// Raised when an entity is about to be handed to the host to take away.
+	/// </summary>
+	public event Action<IForgeEntity>? Despawned;
+
+	/// <summary>
+	/// Gets or sets what makes and takes away the server's entities on this machine.
+	/// </summary>
+	public IReplicationHost? Host { get; set; }
+
+	/// <summary>
+	/// Gets the entities the server replicates to this client, in the order they were bound.
+	/// </summary>
+	public IReadOnlyList<IForgeEntity> Entities => _entities;
+
+	/// <summary>
+	/// Gets the newest server tick a state packet was of, or -1 before any.
+	/// </summary>
+	public long LastServerTick { get; private set; } = -1;
+
+	/// <summary>
+	/// Gets the newest state packet sequence received, or 0 before any.
+	/// </summary>
+	public uint LastSequence { get; private set; }
+
+	/// <summary>
+	/// Gets how many state packets arrived.
+	/// </summary>
+	public long PacketsReceived { get; private set; }
+
+	/// <summary>
+	/// Gets how many state packets arrived after a newer one and were dropped.
+	/// </summary>
+	public long PacketsLate { get; private set; }
+
+	/// <summary>
+	/// Gets how many entities the server spawned that the host couldn't make.
+	/// </summary>
+	public long SpawnsRefused { get; private set; }
+
+	internal ReplicationClient(NetworkSession session)
+	{
+		_session = session;
+		_resolve = id => _mirrors.GetValueOrDefault(id)?.Entity;
+	}
+
+	/// <summary>
+	/// Finds the entity the server knows by an id.
+	/// </summary>
+	/// <param name="id">The id.</param>
+	/// <returns>The entity, or <see langword="null"/> if this client has none by that id.</returns>
+	public IForgeEntity? Find(NetworkEntityId id)
+	{
+		return _mirrors.GetValueOrDefault(id)?.Entity;
+	}
+
+	/// <summary>
+	/// Gets the body states the server sent for an entity, to show it between them.
+	/// </summary>
+	/// <param name="entity">The entity.</param>
+	/// <returns>The body, or <see langword="null"/> if the entity isn't replicated to this client or has no body.
+	/// </returns>
+	public RemoteBody? BodyOf(IForgeEntity entity)
+	{
+		return _byEntity.TryGetValue(entity, out Mirror? mirror) && mirror.Body.Count > 0 ? mirror.Body : null;
+	}
+
+	/// <summary>
+	/// Gets the peer whose player an entity is, as the server said.
+	/// </summary>
+	/// <param name="entity">The entity.</param>
+	/// <returns>The owner, or <see cref="PeerId.None"/> for the world's or an entity that isn't replicated here.
+	/// </returns>
+	public PeerId OwnerOf(IForgeEntity entity)
+	{
+		return _byEntity.TryGetValue(entity, out Mirror? mirror) ? mirror.Owner : PeerId.None;
+	}
+
+	/// <summary>
+	/// Binds an entity placed in the scene, which the server replicates under the id every machine gives it: its
+	/// <see cref="IForgeEntity.NetworkId"/>. It's torn down and emptied, to hold only what the server sends.
+	/// </summary>
+	/// <param name="entity">The entity, with its id set.</param>
+	/// <exception cref="ArgumentException">Thrown when the entity has no id or the id is bound already.</exception>
+	public void BindPlaced(IForgeEntity entity)
+	{
+		if (!entity.NetworkId.IsValid)
+		{
+			throw new ArgumentException("Give the entity its network id before binding it.", nameof(entity));
+		}
+
+		if (_mirrors.ContainsKey(entity.NetworkId))
+		{
+			throw new ArgumentException($"{entity.NetworkId} is bound already.", nameof(entity));
+		}
+
+		Bind(entity, PeerId.None, placed: true);
+	}
+
+	/// <summary>
+	/// Lets go of every entity: the ones the server spawned are handed to the host to take away, and the placed ones
+	/// are unbound and left as they are. For leaving a session.
+	/// </summary>
+	public void Clear()
+	{
+		foreach (Mirror mirror in new List<Mirror>(_mirrors.Values))
+		{
+			Unbind(mirror, despawn: !mirror.Placed);
+		}
+
+		LastServerTick = -1;
+		LastSequence = 0;
+		_ackMask = 0;
+		_ackPending = false;
+	}
+
+	internal void Receive(BitReader reader)
+	{
+		ulong sequence = reader.ReadVarUInt();
+
+		if (sequence is 0 or > uint.MaxValue)
+		{
+			throw new MalformedPacketException($"{sequence} is not a packet sequence.");
+		}
+
+		PacketsReceived++;
+
+		if (!Acknowledge((uint)sequence))
+		{
+			PacketsLate++;
+			return;
+		}
+
+		long tick = reader.ReadVarInt();
+		long previousTick = LastServerTick;
+		LastServerTick = Math.Max(LastServerTick, tick);
+
+		while (true)
+		{
+			ulong id = reader.ReadVarUInt();
+
+			if (id == 0)
+			{
+				break;
+			}
+
+			if (id > uint.MaxValue)
+			{
+				throw new MalformedPacketException($"{id} is not an entity id.");
+			}
+
+			ReadEntry(reader, new NetworkEntityId((uint)id), tick, previousTick);
+		}
+	}
+
+	internal bool TryWriteAck(BitWriter writer)
+	{
+		if (!_ackPending)
+		{
+			return false;
+		}
+
+		_ackPending = false;
+		new StateAckMessage(LastSequence, _ackMask).Write(writer);
+		return true;
+	}
+
+	private static void ReadAttributes(BitReader reader, Mirror? mirror)
+	{
+		int count = ReplicationCodec.ReadCount(reader);
+
+		for (int i = 0; i < count; i++)
+		{
+			int index = ReplicationCodec.ReadCount(reader);
+			int value = ReplicationCodec.ReadInt(reader);
+			bool range = reader.ReadBool();
+			int? min = null;
+			int? max = null;
+
+			if (range)
+			{
+				min = ReplicationCodec.ReadInt(reader);
+				max = ReplicationCodec.ReadInt(reader);
+			}
+
+			if (mirror is null || index >= mirror.Attributes.Length)
+			{
+				continue;
+			}
+
+			EntityAttribute attribute = mirror.Attributes[index];
+			attribute.Mirror(value, min ?? attribute.Min, max ?? attribute.Max);
+		}
+	}
+
+	// Records a sequence for the next acknowledgement when it's newer than any read before, and says whether it is.
+	private bool Acknowledge(uint sequence)
+	{
+		if (sequence <= LastSequence)
+		{
+			return false;
+		}
+
+		uint shift = sequence - LastSequence;
+		uint mask = shift < 32 ? _ackMask << (int)shift : 0;
+
+		if (LastSequence != 0 && shift <= 32)
+		{
+			mask |= 1u << (int)(shift - 1);
+		}
+
+		_ackMask = mask;
+		LastSequence = sequence;
+		_ackPending = true;
+		return true;
+	}
+
+	private void ReadEntry(BitReader reader, NetworkEntityId id, long tick, long previousTick)
+	{
+		var kind = (EntryKind)reader.ReadBits(2);
+		_mirrors.TryGetValue(id, out Mirror? mirror);
+
+		switch (kind)
+		{
+			case EntryKind.Despawn:
+				if (mirror is not null)
+				{
+					Unbind(mirror, despawn: true);
+				}
+
+				reader.Align();
+				return;
+
+			case EntryKind.Spawn:
+				mirror = ReadSpawn(reader, id, mirror);
+				break;
+
+			case EntryKind.State:
+				break;
+
+			default:
+				throw new MalformedPacketException($"{kind} is not an entry kind.");
+		}
+
+		ReadState(reader, mirror, tick, previousTick);
+		reader.Align();
+	}
+
+	private Mirror? ReadSpawn(BitReader reader, NetworkEntityId id, Mirror? mirror)
+	{
+		bool placed = reader.ReadBool();
+		int sceneIndex = -1;
+
+		if (!placed)
+		{
+			sceneIndex = (int)reader.ReadBits(_session.Registry.BitsFor(AssetKind.Scene));
+		}
+
+		ulong owner = reader.ReadVarUInt();
+		int attributeCount = ReplicationCodec.ReadCount(reader);
+
+		if (owner > int.MaxValue)
+		{
+			throw new MalformedPacketException($"{owner} is not a peer id.");
+		}
+
+		if (mirror is not null)
+		{
+			// Spawned already, from an earlier copy of the spawn; the state that follows is what matters.
+			return mirror;
+		}
+
+		if (placed)
+		{
+			// A placed entity this machine doesn't have: its state is skipped until it's despawned.
+			return null;
+		}
+
+		if (sceneIndex >= _session.Registry.Count(AssetKind.Scene))
+		{
+			throw new MalformedPacketException($"The registry has no scene {sceneIndex}.");
+		}
+
+		IForgeEntity? entity = Host?.Spawn(id, sceneIndex, new PeerId((int)owner));
+
+		if (entity is null || entity.NetworkId != id || _byEntity.ContainsKey(entity))
+		{
+			SpawnsRefused++;
+			return null;
+		}
+
+		mirror = Bind(entity, new PeerId((int)owner), placed: false);
+
+		if (mirror.Attributes.Length != attributeCount)
+		{
+			Validation.Fail(
+				$"The server's {id} has {attributeCount} attributes and this machine's copy has " +
+				$"{mirror.Attributes.Length}: the two don't play the same scene. Its attributes won't follow.");
+		}
+
+		Spawned?.Invoke(entity);
+		return mirror;
+	}
+
+	private void ReadState(BitReader reader, Mirror? mirror, long tick, long previousTick)
+	{
+		int tagCount = _session.TagsManager.NetIndexCount;
+
+		if (reader.ReadBool())
+		{
+			ReadAttributes(reader, mirror);
+		}
+
+		if (reader.ReadBool())
+		{
+			_added.Clear();
+			_removed.Clear();
+			int added = ReplicationCodec.ReadCount(reader);
+
+			for (int i = 0; i < added; i++)
+			{
+				_added.Add(TagAt(ReplicationCodec.ReadTagIndex(reader, tagCount)));
+			}
+
+			int removed = ReplicationCodec.ReadCount(reader);
+
+			for (int i = 0; i < removed; i++)
+			{
+				_removed.Add(TagAt(ReplicationCodec.ReadTagIndex(reader, tagCount)));
+			}
+
+			mirror?.Entity.Tags.MirrorTags(_added, _removed);
+		}
+
+		if (reader.ReadBool())
+		{
+			ReadCues(reader, mirror, tagCount);
+		}
+
+		if (reader.ReadBool())
+		{
+			ReadEvents(reader, mirror, tagCount);
+		}
+
+		if (!reader.ReadBool())
+		{
+			return;
+		}
+
+		BodyState body = BodyCodec.Dequantize(BodyCodec.Read(reader));
+
+		if (mirror is null)
+		{
+			return;
+		}
+
+		// A body that wasn't in the packet before this one hadn't changed by then, so it moved only after it: held
+		// there, it isn't shown drifting from where it last stood to here all the way from when it stopped.
+		if (mirror.Body.Latest is BodyState held && mirror.Body.LatestTick < previousTick)
+		{
+			mirror.Body.Add(previousTick, held);
+		}
+
+		mirror.Body.Add(tick, body);
+	}
+
+	private void ReadCues(BitReader reader, Mirror? mirror, int tagCount)
+	{
+		int count = ReplicationCodec.ReadCount(reader);
+
+		for (int i = 0; i < count; i++)
+		{
+			ulong instance = reader.ReadVarUInt();
+
+			if (instance is 0 or > uint.MaxValue)
+			{
+				throw new MalformedPacketException($"{instance} is not a cue instance.");
+			}
+
+			if (reader.ReadBool())
+			{
+				mirror?.RemoveCue((uint)instance);
+				continue;
+			}
+
+			Tag cueTag = TagAt(ReplicationCodec.ReadTagIndex(reader, tagCount));
+			CueParameters? parameters = ReplicationCodec.ReadParameters(reader, _resolve);
+			mirror?.ApplyCue((uint)instance, cueTag, parameters);
+		}
+	}
+
+	private void ReadEvents(BitReader reader, Mirror? mirror, int tagCount)
+	{
+		int count = ReplicationCodec.ReadCount(reader);
+
+		for (int i = 0; i < count; i++)
+		{
+			ulong sequence = reader.ReadVarUInt();
+
+			if (sequence > uint.MaxValue)
+			{
+				throw new MalformedPacketException($"{sequence} is not an event sequence.");
+			}
+
+			Tag cueTag = TagAt(ReplicationCodec.ReadTagIndex(reader, tagCount));
+			CueParameters? parameters = ReplicationCodec.ReadParameters(reader, _resolve);
+
+			if (mirror is not null && sequence > mirror.LastEvent)
+			{
+				mirror.LastEvent = (uint)sequence;
+				mirror.Entity.CuesManager.ExecuteCue(cueTag, mirror.Entity, parameters);
+			}
+		}
+	}
+
+	private Tag TagAt(ushort index)
+	{
+		TagsManager tagsManager = _session.TagsManager;
+		return Tag.RequestTag(tagsManager, tagsManager.GetTagKeyFromNetIndex(index));
+	}
+
+	private Mirror Bind(IForgeEntity entity, PeerId owner, bool placed)
+	{
+		EntitySimulation.Teardown(entity);
+		entity.Tags.MirrorClear();
+		var mirror = new Mirror(entity, owner, placed);
+		_mirrors[entity.NetworkId] = mirror;
+		_byEntity[entity] = mirror;
+		_entities.Add(entity);
+		return mirror;
+	}
+
+	private void Unbind(Mirror mirror, bool despawn)
+	{
+		mirror.RemoveAllCues();
+		_mirrors.Remove(mirror.Entity.NetworkId);
+		_byEntity.Remove(mirror.Entity);
+		_entities.Remove(mirror.Entity);
+
+		if (despawn)
+		{
+			Despawned?.Invoke(mirror.Entity);
+			Host?.Despawn(mirror.Entity);
+		}
+	}
+
+	private sealed class Mirror(IForgeEntity entity, PeerId owner, bool placed)
+	{
+		private readonly Dictionary<uint, AppliedCue> _cues = [];
+
+		public IForgeEntity Entity { get; } = entity;
+
+		public PeerId Owner { get; } = owner;
+
+		public bool Placed { get; } = placed;
+
+		public EntityAttribute[] Attributes { get; } = [.. entity.Attributes];
+
+		public RemoteBody Body { get; } = new();
+
+		public uint LastEvent { get; set; }
+
+		public void ApplyCue(uint instance, Tag cueTag, CueParameters? parameters)
+		{
+			if (_cues.TryGetValue(instance, out AppliedCue? applied))
+			{
+				Entity.CuesManager.UpdateCue(cueTag, Entity, parameters, applied);
+				return;
+			}
+
+			applied = new AppliedCue(cueTag);
+			_cues[instance] = applied;
+			Entity.CuesManager.ApplyCue(cueTag, Entity, parameters, applied);
+		}
+
+		public void RemoveCue(uint instance)
+		{
+			if (_cues.Remove(instance, out AppliedCue? applied))
+			{
+				Entity.CuesManager.RemoveCue(applied.CueTag, Entity, interrupted: false, applied);
+			}
+		}
+
+		public void RemoveAllCues()
+		{
+			foreach (AppliedCue applied in _cues.Values)
+			{
+				Entity.CuesManager.RemoveCue(applied.CueTag, Entity, interrupted: true, applied);
+			}
+
+			_cues.Clear();
+		}
+
+		// The application a replicated persistent cue is applied for on this machine: one object per instance.
+		private sealed class AppliedCue(Tag cueTag)
+		{
+			public Tag CueTag { get; } = cueTag;
+		}
+	}
+
+	private sealed class ReferenceComparer : IEqualityComparer<IForgeEntity>
+	{
+		public static readonly ReferenceComparer Instance = new();
+
+		public bool Equals(IForgeEntity? x, IForgeEntity? y)
+		{
+			return ReferenceEquals(x, y);
+		}
+
+		public int GetHashCode(IForgeEntity obj)
+		{
+			return RuntimeHelpers.GetHashCode(obj);
+		}
+	}
+}

@@ -122,6 +122,50 @@ public class EntityTags
 		}
 	}
 
+	// Puts the tags the server sent on a mirror: the ones added since the client last heard and the ones removed, as
+	// base tags, since a mirror holds no effects of its own. Raises OnTagsChanged once when anything changed.
+	internal void MirrorTags(IReadOnlyList<Tag> added, IReadOnlyList<Tag> removed)
+	{
+		bool changed = false;
+
+		foreach (Tag tag in added)
+		{
+			if (!BaseTags.HasTagExact(tag))
+			{
+				BaseTags.AddTagFast(tag);
+				AllTags.AddTagFast(tag);
+				changed = true;
+			}
+		}
+
+		foreach (Tag tag in removed)
+		{
+			bool removedBase = BaseTags.RemoveTagExact(tag);
+			bool removedAll = AllTags.RemoveTagExact(tag);
+			changed = changed || removedBase || removedAll;
+		}
+
+		if (changed)
+		{
+			OnTagsChanged?.Invoke(AllTags);
+		}
+	}
+
+	// Takes every tag off a mirror, so what the server sends is all it has. Raises OnTagsChanged if it had any.
+	internal void MirrorClear()
+	{
+		if (AllTags.IsEmpty && BaseTags.IsEmpty)
+		{
+			return;
+		}
+
+		BaseTags.Reset(0);
+		ModifierTags.Reset(0);
+		AllTags.Reset(0);
+		_modifierTagCounts.Clear();
+		OnTagsChanged?.Invoke(AllTags);
+	}
+
 	internal void AddModifierTag(Tag tag)
 	{
 		if (_modifierTagCounts.TryGetValue(tag, out int modifierTagCount))

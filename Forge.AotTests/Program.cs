@@ -9,6 +9,7 @@ using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Networking;
+using Gamesmiths.Forge.Networking.Replication;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Action;
@@ -45,6 +46,7 @@ internal static class Program
 		Check("World history rolls a world back past a death and a spawn", () => RollsWorldBack(tagsManager));
 		Check("World replay reconciles cues and finds a tick that ran differently", () => ReplaysWorld(tagsManager));
 		Check("Network session handshakes and carries input over a loopback", () => NetworksOverLoopback(tagsManager));
+		Check("Replication spawns a mirror and carries its tags", () => ReplicatesOverLoopback(tagsManager));
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -391,6 +393,39 @@ internal static class Program
 			&& registry.Get<string>(AssetKind.Effect, 0) == "Burning";
 	}
 
+	// Replication's keyed collections: entities by network id on both ends, and tags by net index.
+	private static bool ReplicatesOverLoopback(TagsManager tagsManager)
+	{
+		var actions = new InputActionSet(["jump"]);
+		var registry = new NetworkAssetRegistry();
+		registry.Register(AssetKind.Scene, "uid://creature", "Creature");
+		registry.Seal();
+
+		var network = new LoopbackNetwork();
+		var server = new NetworkSession(network.Server, new SimulationClock(60), registry, tagsManager, actions);
+		var client = new NetworkSession(network.Connect(), new SimulationClock(60), registry, tagsManager, actions);
+		var host = new SmokeHost(tagsManager);
+		client.Mirror!.Host = host;
+
+		var tag = Tag.RequestTag(tagsManager, "status.burning");
+		var entity = new SmokeEntity(tagsManager, tag) { NetworkId = server.Replication!.AllocateId() };
+		server.Replication.Register(entity, 0, PeerId.None);
+
+		for (int step = 0; step < 10; step++)
+		{
+			double time = step / 60.0;
+			client.Update(time);
+			server.Update(time);
+			server.Replication.Send(server.Clock.Tick);
+			server.Clock.Advance();
+		}
+
+		return host.Spawned is SmokeEntity mirror
+			&& mirror.NetworkId == entity.NetworkId
+			&& client.Mirror.Find(entity.NetworkId) == mirror
+			&& mirror.Tags.AllTags.HasTag(tag);
+	}
+
 	private sealed record ClassPayload(int Value);
 
 	private readonly record struct StructPayload(int Value);
@@ -495,13 +530,31 @@ internal static class Program
 
 		public EntityInput? Input { get; init; }
 
-		public SmokeEntity(TagsManager tagsManager)
+		public NetworkEntityId NetworkId { get; init; }
+
+		public SmokeEntity(TagsManager tagsManager, params Tag[] tags)
 		{
 			Attributes = new EntityAttributes(this, []);
-			Tags = new EntityTags(new TagContainer(tagsManager, []));
+			Tags = new EntityTags(new TagContainer(tagsManager, [.. tags]));
 			CuesManager = new CuesManager();
 			EffectsManager = new EffectsManager(this, CuesManager);
 			Abilities = new EntityAbilities(this);
+		}
+	}
+
+	private sealed class SmokeHost(TagsManager tagsManager) : IReplicationHost
+	{
+		public IForgeEntity? Spawned { get; private set; }
+
+		public IForgeEntity? Spawn(NetworkEntityId id, int sceneIndex, PeerId owner)
+		{
+			Spawned = new SmokeEntity(tagsManager) { NetworkId = id };
+			return Spawned;
+		}
+
+		public void Despawn(IForgeEntity entity)
+		{
+			Spawned = null;
 		}
 	}
 }

@@ -428,6 +428,26 @@ public sealed class EntityAttribute
 		}
 	}
 
+	// Puts the values the server sent on a mirror: the current value stands as the base value, with no modifiers, since
+	// a mirror holds no effects of its own. Raises OnValueChanged with the change, as a change made here would.
+	internal void Mirror(int currentValue, int min, int max)
+	{
+		int previous = CurrentValue;
+
+		Array.Clear(_channels, 0, _channels.Length);
+		_attributeOverrides.Clear();
+		Min = min;
+		Max = max;
+		BaseValue = currentValue;
+		UpdateCachedValues();
+		PendingValueChange = 0;
+
+		if (CurrentValue != previous)
+		{
+			OnValueChanged?.Invoke(this, CurrentValue - previous);
+		}
+	}
+
 	// Takes every modifier away without raising OnValueChanged, for an entity restore that takes the attribute's set
 	// away. Only active effects add modifiers, so this is where removing the set would leave it.
 	internal void DropModifiers()
