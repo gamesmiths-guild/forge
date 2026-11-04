@@ -18,15 +18,15 @@ namespace Gamesmiths.Forge.Core;
 /// </remarks>
 public readonly record struct InputFrame
 {
+	// Farther than any world, and near enough that a component's steps convert to an integer the same way on every
+	// platform.
+	internal const float MaxAimComponent = 1e9f;
+
 	private const float VectorSteps = 127f;
 
 	private const double AimPointSteps = 1000;
 
 	private const double AimDirectionSteps = 32767;
-
-	// Farther than any world, and near enough that a component's steps convert to an integer the same way on every
-	// platform.
-	private const float MaxAimComponent = 1e9f;
 
 	/// <summary>
 	/// Gets the actions held when the tick's input was collected, one bit per action slot.

@@ -100,7 +100,8 @@ public static class InputCodec
 	/// <param name="previous">The frame read before it, or <see langword="default"/> for the first.</param>
 	/// <param name="actions">The action set, for how many vectors a frame carries.</param>
 	/// <returns>The frame.</returns>
-	/// <exception cref="MalformedPacketException">Thrown when the data ends first.</exception>
+	/// <exception cref="MalformedPacketException">Thrown when the data ends first, or the aim moved further than any
+	/// aim can.</exception>
 	public static InputFrame ReadFrame(BitReader reader, in InputFrame previous, InputActionSet actions)
 	{
 		if (reader.ReadBool())
@@ -219,9 +220,23 @@ public static class InputCodec
 	private static Vector3 ReadSteps(BitReader reader, Vector3 baseline, double steps)
 	{
 		return new Vector3(
-			(float)((Step(baseline.X, steps) + reader.ReadVarInt()) / steps),
-			(float)((Step(baseline.Y, steps) + reader.ReadVarInt()) / steps),
-			(float)((Step(baseline.Z, steps) + reader.ReadVarInt()) / steps));
+			(float)((Step(baseline.X, steps) + ReadDelta(reader, steps)) / steps),
+			(float)((Step(baseline.Y, steps) + ReadDelta(reader, steps)) / steps),
+			(float)((Step(baseline.Z, steps) + ReadDelta(reader, steps)) / steps));
+	}
+
+	// Two aim components, each clamped by the frame, are at most twice the clamp apart.
+	private static long ReadDelta(BitReader reader, double steps)
+	{
+		long delta = reader.ReadVarInt();
+		double max = 2 * InputFrame.MaxAimComponent * steps;
+
+		if (delta < -max || delta > max)
+		{
+			throw new MalformedPacketException($"An aim moved by {delta} steps, more than any aim can.");
+		}
+
+		return delta;
 	}
 
 	// A frame's aim is already on the step grid, so this is exact.

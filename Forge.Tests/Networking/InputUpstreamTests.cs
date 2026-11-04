@@ -122,6 +122,36 @@ public class InputUpstreamTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 
 	[Fact]
 	[Trait("Networking", "Input")]
+	public void An_aim_moving_further_than_any_aim_can_is_malformed()
+	{
+		InputFrame low = default(InputFrame).WithAim(new Vector3(-1e9f), -Vector3.One);
+		InputFrame high = default(InputFrame).WithAim(new Vector3(1e9f), Vector3.One);
+		var writer = new BitWriter();
+		InputCodec.WriteFrame(writer, high, low, _actions);
+
+		InputCodec.ReadFrame(new BitReader(writer.ToArray()), low, _actions)
+			.Should().Be(high, "the furthest an aim can move reads back");
+
+		var forged = new BitWriter();
+		forged.WriteBool(false);
+		forged.WriteVarUInt(0);
+		forged.WriteBool(false);
+
+		for (int i = 0; i < _actions.Vectors.Count; i++)
+		{
+			forged.WriteBool(false);
+		}
+
+		forged.WriteBool(true);
+		forged.WriteBool(false);
+		forged.WriteVarInt(long.MaxValue);
+
+		new BitReader(forged.ToArray()).Invoking(x => InputCodec.ReadFrame(x, low, _actions))
+			.Should().Throw<MalformedPacketException>();
+	}
+
+	[Fact]
+	[Trait("Networking", "Input")]
 	public void The_window_keeps_the_newest_ticks_and_drops_acknowledged_ones()
 	{
 		var window = new InputWindow(_actions, capacity: 3);
