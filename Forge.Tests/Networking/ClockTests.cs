@@ -108,6 +108,21 @@ public class ClockTests
 
 	[Fact]
 	[Trait("Networking", "Clock")]
+	public void A_stale_pong_leaves_newer_pings_waiting()
+	{
+		var sync = new ClockSync(new SimulationClock(TickRate));
+
+		ushort first = sync.PingSent(1.0);
+		ushort second = sync.PingSent(1.1);
+		ushort third = sync.PingSent(1.2);
+
+		sync.PongReceived(second, ServerTickAt(1.15), 1.2).Should().BeTrue();
+		sync.PongReceived(first, ServerTickAt(1.05), 1.25).Should().BeFalse("an answer to an older ping is stale");
+		sync.PongReceived(third, ServerTickAt(1.25), 1.3).Should().BeTrue("the stale pong left it waiting");
+	}
+
+	[Fact]
+	[Trait("Networking", "Clock")]
 	public void The_target_client_tick_leads_the_server_by_a_round_trip_and_the_margin()
 	{
 		var sync = new ClockSync(new SimulationClock(TickRate));

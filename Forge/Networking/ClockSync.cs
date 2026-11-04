@@ -97,20 +97,23 @@ public sealed class ClockSync
 	/// stale or unknown and ignored.</returns>
 	public bool PongReceived(ushort sequence, long serverTick, double localTime)
 	{
-		double sentAt = double.NaN;
-
-		// Pings before this one that never got an answer are given up on; an answer to one of them later is stale.
-		while (_pending.Count > 0)
+		if (!IsPending(sequence))
 		{
-			PendingPing pending = _pending.Dequeue();
-			if (pending.Sequence == sequence)
-			{
-				sentAt = pending.SentAt;
-				break;
-			}
+			return false;
 		}
 
-		if (double.IsNaN(sentAt) || localTime < sentAt)
+		// Pings before this one that never got an answer are given up on; an answer to one of them later is stale.
+		PendingPing pending;
+
+		do
+		{
+			pending = _pending.Dequeue();
+		}
+		while (pending.Sequence != sequence);
+
+		double sentAt = pending.SentAt;
+
+		if (localTime < sentAt)
 		{
 			return false;
 		}
@@ -167,6 +170,19 @@ public sealed class ClockSync
 		}
 
 		return best.OffsetTicks;
+	}
+
+	private bool IsPending(ushort sequence)
+	{
+		foreach (PendingPing pending in _pending)
+		{
+			if (pending.Sequence == sequence)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private void Recompute()
