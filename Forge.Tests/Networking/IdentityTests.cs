@@ -139,6 +139,8 @@ public class IdentityTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCu
 
 		var zero = new BitWriter();
 		zero.WriteVarUInt(0);
+		zero.WriteVarInt(5);
+		zero.WriteUInt64(1);
 		new BitReader(zero.ToArray()).Invoking(WelcomeMessage.Read).Should().Throw<MalformedPacketException>();
 	}
 
@@ -181,6 +183,8 @@ public class IdentityTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCu
 
 		var badRate = new BitWriter();
 		badRate.WriteVarUInt(0);
+		badRate.WriteVarInt(5);
+		badRate.WriteUInt64(1);
 		new BitReader(badRate.ToArray()).Invoking(WelcomeMessage.Read).Should().Throw<MalformedPacketException>();
 	}
 
