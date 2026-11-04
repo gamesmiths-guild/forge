@@ -138,6 +138,13 @@ public sealed class BitReader(ReadOnlyMemory<byte> data)
 		for (int i = 0; i < MaxVarIntBytes; i++)
 		{
 			ulong chunk = ReadBits(8);
+
+			// The last byte has room for only the 64th bit, and no byte after it.
+			if (i == MaxVarIntBytes - 1 && chunk > 1)
+			{
+				throw new MalformedPacketException("A variable-width integer ran past 64 bits.");
+			}
+
 			value |= (chunk & 0x7F) << (7 * i);
 
 			if ((chunk & 0x80) == 0)
@@ -201,7 +208,7 @@ public sealed class BitReader(ReadOnlyMemory<byte> data)
 
 		ulong levels = (1UL << bits) - 1;
 
-		return (float)(min + (ReadBits(bits) / (double)levels * (max - min)));
+		return (float)(min + (ReadBits(bits) / (double)levels * ((double)max - min)));
 	}
 
 	/// <summary>

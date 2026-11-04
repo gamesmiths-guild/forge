@@ -43,7 +43,9 @@ public class InputUpstreamTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 		default(InputFrame).WithAim(new Vector3(1.2345f, -6.789f, 100.001f), new Vector3(0.577f, -0.577f, 0.577f)),
 		new InputFrame { Held = 0b1000 }
 			.WithVector(1, new Vector2(-1f, 0f))
-			.WithAim(new Vector3(-1234.567f, 0f, 0.0004f), Vector3.UnitZ));
+			.WithAim(new Vector3(-1234.567f, 0f, 0.0004f), Vector3.UnitZ),
+		new InputFrame { Held = 1 }
+			.WithAim(new Vector3(float.PositiveInfinity, float.NaN, -1e9f), new Vector3(float.NegativeInfinity, 0f, 1f)));
 
 	[Theory]
 	[Trait("Networking", "Input")]

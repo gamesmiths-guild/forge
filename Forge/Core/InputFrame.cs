@@ -24,6 +24,10 @@ public readonly record struct InputFrame
 
 	private const double AimDirectionSteps = 32767;
 
+	// Farther than any world, and near enough that a component's steps convert to an integer the same way on every
+	// platform.
+	private const float MaxAimComponent = 1e9f;
+
 	/// <summary>
 	/// Gets the actions held when the tick's input was collected, one bit per action slot.
 	/// </summary>
@@ -117,7 +121,7 @@ public readonly record struct InputFrame
 
 	/// <summary>
 	/// Returns a copy of this frame with an aim, quantized: the point to thousandths of a unit, the direction to steps
-	/// of 1/32767.
+	/// of 1/32767. A component that is NaN becomes zero, and one past a billion units, infinity included, is clamped.
 	/// </summary>
 	/// <param name="point">The point the entity aims at, in world space.</param>
 	/// <param name="direction">The direction the entity aims in, in world space.</param>
@@ -189,6 +193,11 @@ public readonly record struct InputFrame
 
 	private static float Quantize(float value, double steps)
 	{
-		return (float)(Math.Round(value * steps) / steps);
+		if (float.IsNaN(value))
+		{
+			return 0;
+		}
+
+		return (float)(Math.Round(Math.Clamp(value, -MaxAimComponent, MaxAimComponent) * steps) / steps);
 	}
 }

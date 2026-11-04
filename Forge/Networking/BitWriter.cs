@@ -28,6 +28,9 @@ public sealed class BitWriter(int capacity = BitWriter.DefaultCapacity)
 {
 	private const int DefaultCapacity = 256;
 
+	// The largest double below 2^63, so a clamped step count always fits a long.
+	private const double MaxSteps = long.MaxValue - 1023;
+
 	private byte[] _buffer = new byte[Math.Max(capacity, 1)];
 
 	/// <summary>
@@ -239,8 +242,15 @@ public sealed class BitWriter(int capacity = BitWriter.DefaultCapacity)
 			throw new ArgumentOutOfRangeException(nameof(max), max, "The range's maximum must be above its minimum.");
 		}
 
+		if (float.IsNaN(value))
+		{
+			// NaN rounds to an integer differently on each platform, so it's written as the minimum.
+			WriteBits(0, bits);
+			return;
+		}
+
 		ulong levels = (1UL << bits) - 1;
-		double normalized = Math.Clamp((value - min) / (double)(max - min), 0, 1);
+		double normalized = Math.Clamp(((double)value - min) / ((double)max - min), 0, 1);
 
 		WriteBits((ulong)Math.Round(normalized * levels), bits);
 	}
@@ -299,8 +309,9 @@ public sealed class BitWriter(int capacity = BitWriter.DefaultCapacity)
 			throw new ArgumentOutOfRangeException(nameof(step), step, "A quantization step is positive.");
 		}
 
-		// NaN rounds to an integer differently on each platform, so it's sent as zero.
-		return float.IsNaN(value) ? 0 : (long)Math.Round(value / (double)step);
+		// NaN, and a step count outside the long range, convert to an integer differently on each platform, so NaN is
+		// sent as zero and the count is clamped first.
+		return float.IsNaN(value) ? 0 : (long)Math.Clamp(Math.Round(value / (double)step), -MaxSteps, MaxSteps);
 	}
 
 	private void EnsureBits(int bits)

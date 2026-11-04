@@ -180,6 +180,19 @@ public class BitStreamTests
 
 	[Theory]
 	[Trait("Networking", "Encoding")]
+	[InlineData(float.PositiveInfinity, long.MaxValue - 1023)]
+	[InlineData(float.NegativeInfinity, -(long.MaxValue - 1023))]
+	[InlineData(float.MaxValue, long.MaxValue - 1023)]
+	public void A_stepped_float_past_the_step_range_is_clamped(float value, long expectedSteps)
+	{
+		var writer = new BitWriter();
+		writer.WriteQuantized(value, 0.001f);
+
+		new BitReader(writer.ToArray()).ReadVarInt().Should().Be(expectedSteps);
+	}
+
+	[Theory]
+	[Trait("Networking", "Encoding")]
 	[InlineData(0f, 8)]
 	[InlineData(1f, 8)]
 	[InlineData(0.5f, 8)]
@@ -212,6 +225,30 @@ public class BitStreamTests
 
 		reader.ReadQuantized(0f, 1f, 8).Should().Be(1f);
 		reader.ReadQuantized(0f, 1f, 8).Should().Be(0f);
+	}
+
+	[Fact]
+	[Trait("Networking", "Encoding")]
+	public void A_ranged_nan_is_written_as_the_minimum()
+	{
+		var writer = new BitWriter();
+		writer.WriteQuantized(float.NaN, -1f, 1f, 8);
+
+		new BitReader(writer.ToArray()).ReadQuantized(-1f, 1f, 8).Should().Be(-1f);
+	}
+
+	[Fact]
+	[Trait("Networking", "Encoding")]
+	public void A_ranged_float_keeps_its_endpoints_and_full_precision()
+	{
+		var writer = new BitWriter();
+		writer.WriteQuantized(0.1f, -1f, 0.1f, 32);
+		writer.WriteQuantized(0.1f, -1f, 1f, 32);
+
+		var reader = new BitReader(writer.ToArray());
+
+		reader.ReadQuantized(-1f, 0.1f, 32).Should().Be(0.1f, "the maximum reads back as itself, not past it");
+		reader.ReadQuantized(-1f, 1f, 32).Should().Be(0.1f);
 	}
 
 	[Theory]
@@ -300,6 +337,17 @@ public class BitStreamTests
 		Array.Fill(endless, (byte)0xFF);
 
 		new BitReader(endless).Invoking(x => x.ReadVarUInt()).Should().Throw<MalformedPacketException>();
+	}
+
+	[Fact]
+	[Trait("Networking", "Encoding")]
+	public void A_variable_width_integer_past_64_bits_is_malformed()
+	{
+		byte[] highest = [0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01];
+		byte[] overflowing = [0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x02];
+
+		new BitReader(highest).ReadVarUInt().Should().Be(1UL << 63);
+		new BitReader(overflowing).Invoking(x => x.ReadVarUInt()).Should().Throw<MalformedPacketException>();
 	}
 
 	[Fact]
