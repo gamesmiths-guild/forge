@@ -278,8 +278,8 @@ public class InputUpstreamTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 
 		buffer.Take(4, out _).Should().Be(InputDelivery.Lost);
 		buffer.Depth.Should().Be(1, "ticks 1 and 2 were skipped over");
-		buffer.Add(new InputCommand(4 + InputPlayoutBuffer.MaxTicksAhead + 1, default)).Should().BeFalse();
-		buffer.Add(new InputCommand(4 + InputPlayoutBuffer.MaxTicksAhead, default)).Should().BeTrue();
+		buffer.Add(new InputCommand(4 + InputPlayoutBuffer.DefaultMaxTicksAhead + 1, default)).Should().BeFalse();
+		buffer.Add(new InputCommand(4 + InputPlayoutBuffer.DefaultMaxTicksAhead, default)).Should().BeTrue();
 	}
 
 	[Fact]

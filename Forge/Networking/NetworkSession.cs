@@ -68,6 +68,12 @@ public sealed class NetworkSession
 	/// </summary>
 	public const double HandshakeTimeout = 5;
 
+	/// <summary>
+	/// How far ahead of the server a client's input may run, in seconds, before the server drops it. In ticks it
+	/// follows the tick rate, so a faster session allows as long a lead.
+	/// </summary>
+	public const double MaxInputLead = 2;
+
 	private readonly Dictionary<PeerId, NetworkPeer> _peers = [];
 	private readonly List<NetworkPeer> _readyPeers = [];
 	private readonly List<RefusedPeer> _refused = [];
@@ -331,7 +337,8 @@ public sealed class NetworkSession
 	{
 		if (IsServer)
 		{
-			_peers[peer] = new NetworkPeer(peer, Actions, _localTime);
+			int maxTicksAhead = (int)Math.Min(int.MaxValue, Math.Ceiling(Clock.TicksIn(MaxInputLead)));
+			_peers[peer] = new NetworkPeer(peer, Actions, maxTicksAhead, _localTime);
 			return;
 		}
 

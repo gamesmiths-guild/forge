@@ -44,13 +44,15 @@ public enum InputDelivery : byte
 /// Initializes a new instance of the <see cref="InputPlayoutBuffer"/> class.
 /// </remarks>
 /// <param name="actions">The action set the frames belong to.</param>
-public sealed class InputPlayoutBuffer(InputActionSet actions)
+/// <param name="maxTicksAhead">How far ahead a command may be, in ticks; see <see cref="MaxTicksAhead"/>.</param>
+public sealed class InputPlayoutBuffer(
+	InputActionSet actions,
+	int maxTicksAhead = InputPlayoutBuffer.DefaultMaxTicksAhead)
 {
 	/// <summary>
-	/// How far ahead of the tick last taken, or of the tick before the one the client joined at, a command may be.
-	/// Further is a malformed or absurd packet and is dropped.
+	/// The default <see cref="MaxTicksAhead"/>, about two seconds at 60 ticks a second.
 	/// </summary>
-	public const int MaxTicksAhead = 128;
+	public const int DefaultMaxTicksAhead = 128;
 
 	private readonly SortedDictionary<long, InputCommand> _commands = [];
 	private readonly List<InputCommand> _read = [];
@@ -63,6 +65,12 @@ public sealed class InputPlayoutBuffer(InputActionSet actions)
 	/// Gets the action set the frames belong to.
 	/// </summary>
 	public InputActionSet Actions { get; } = actions;
+
+	/// <summary>
+	/// Gets how far ahead of the tick last taken, or of the tick before the one the client joined at, a command may
+	/// be. Further is a malformed or absurd packet and is dropped.
+	/// </summary>
+	public int MaxTicksAhead { get; } = maxTicksAhead;
 
 	/// <summary>
 	/// Gets how many ticks after the one last taken have arrived.

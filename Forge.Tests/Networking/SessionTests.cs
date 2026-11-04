@@ -248,11 +248,30 @@ public class SessionTests
 		server.Update(0);
 		client.Update(0.01);
 
-		client.SendInput(new InputCommand(100 + InputPlayoutBuffer.MaxTicksAhead + 1, default));
+		client.SendInput(new InputCommand(100 + (2 * TickRate) + 1, default));
 		server.Update(0.02);
 
+		server.Peers[0].Input.MaxTicksAhead.Should().Be(2 * TickRate, "the lead is two seconds of ticks");
 		server.Peers[0].Input.Depth.Should().Be(0, "nothing has been taken yet, but the join tick bounds it");
 		server.Peers[0].Input.NewestTick.Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Networking", "Session")]
+	public void A_faster_session_allows_as_long_an_input_lead()
+	{
+		var network = new LoopbackNetwork();
+		var server = new NetworkSession(network.Server, new SimulationClock(2000), Registry(), _tags, _actions);
+		var client = new NetworkSession(network.Connect(), new SimulationClock(2000), Registry(), _tags, _actions);
+		client.Update(0);
+		server.Update(0);
+		client.Update(0.01);
+
+		client.SendInput(new InputCommand(400, default));
+		server.Update(0.02);
+
+		server.Peers[0].Input.MaxTicksAhead.Should().Be(4000);
+		server.Peers[0].Input.NewestTick.Should().Be(400, "a 200 ms lead at 2000 ticks a second is accepted");
 	}
 
 	[Fact]

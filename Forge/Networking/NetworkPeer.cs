@@ -45,10 +45,10 @@ public sealed class NetworkPeer
 	/// </summary>
 	public long MalformedPackets { get; internal set; }
 
-	internal NetworkPeer(PeerId id, InputActionSet actions, double connectedAt)
+	internal NetworkPeer(PeerId id, InputActionSet actions, int maxTicksAhead, double connectedAt)
 	{
 		Id = id;
-		Input = new InputPlayoutBuffer(actions);
+		Input = new InputPlayoutBuffer(actions, maxTicksAhead);
 		ConnectedAt = connectedAt;
 		LastHeardAt = connectedAt;
 	}
