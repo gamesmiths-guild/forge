@@ -32,7 +32,7 @@ Two machines must mean the same thing by every index they exchange.
 
 - **Assets.** `NetworkAssetRegistry` numbers every effect, ability, graph and networked scene the game can send. Each is registered under a key the host chooses, the keys of each kind are sorted and numbered, and the kinds and keys are hashed. An engine integration keys on its own stable asset ids (Godot's resource UIDs, Unity's asset GUIDs), so renaming or moving a file changes nothing on the wire; a bare host keys on names. The registry is sealed before the first handshake and never changes after.
 - **Entities.** `NetworkEntityId` is the id an entity is known by on every machine. The server assigns it as the entity spawns and sends it with the spawn. `IForgeEntity.NetworkId` returns `None` by default, which every entity is offline; a host that networks its entities overrides it with the id it was given.
-- **Tags** already have net indices from the `TagsManager`. Discrete input events travel as them.
+- **Tags** already have net indices from the `TagsManager`. Discrete input events travel as them. `Protocol.HashOf(tagsManager)` is what the handshake compares.
 - **Input actions** travel as slots of the `InputActionSet`, so both ends must list the same actions in the same order. `Protocol.HashOf(actions)` is what the handshake compares.
 
 ### Checksums
@@ -50,8 +50,9 @@ registry.Register(AssetKind.Effect, "uid://b3k2...", burningData);
 registry.Seal();
 
 var clock = new SimulationClock(tickRate: 60);
-var server = new NetworkSession(serverTransport, clock, registry, actions, sessionSeed: seed, maxClients: 4);
+var server = new NetworkSession(serverTransport, clock, registry, tagsManager, actions, sessionSeed: seed, maxClients: 4);
 server.PeerJoined += peer => SpawnPlayerFor(peer);
+var inputEvents = new TagContainer(tagsManager, [Tag.RequestTag(tagsManager, "input")]);
 
 // Every tick:
 server.Update(localTime);
@@ -59,7 +60,7 @@ foreach (NetworkPeer peer in server.Peers)
 {
     peer.Input.Take(clock.Tick, out InputCommand command);
     PlayerOf(peer).Input!.Submit(command.Frame);
-    command.RaiseEvents(PlayerOf(peer), tagsManager);
+    command.RaiseEvents(PlayerOf(peer), inputEvents);
 }
 EntitySimulation.Tick(entities, clock.Tick, clock.FixedDeltaTime);
 clock.Advance();
@@ -67,7 +68,7 @@ clock.Advance();
 
 ```csharp
 // Client.
-var client = new NetworkSession(clientTransport, new SimulationClock(60), registry, actions);
+var client = new NetworkSession(clientTransport, new SimulationClock(60), registry, tagsManager, actions);
 
 // Every tick:
 client.Update(localTime);
@@ -81,7 +82,7 @@ if (client.State == SessionState.Ready)
 
 ### Handshake
 
-A client connects and sends `Hello`: its protocol version, its registry's hash and its input action set's hash. The server answers `Welcome`, with the tick rate, its current tick and the session seed, or `Refused`, with why (`RefusalReason`: protocol version, asset registry, input actions, or a full session), and disconnects it. A client whose clock runs at another rate than the server's leaves too. `SessionState` says where a client stands: connecting, handshaking, ready, refused or disconnected.
+A client connects and sends `Hello`: its protocol version and the hashes of its registry, its tags and its input action set. The server answers `Welcome`, with the tick rate, its current tick and the session seed, or `Refused`, with why (`RefusalReason`: protocol version, asset registry, tags, input actions, or a full session). A refused client leaves once it knows why; the server disconnects one that hasn't after `RefusalLinger` (2 s). A client that never sends `Hello` is disconnected after `HandshakeTimeout` (5 s). A client whose clock runs at another rate than the server's leaves too. Being welcomed sets the client's clock to the server's tick and drops any input it recorded before. `SessionState` says where a client stands: connecting, handshaking, ready, refused or disconnected.
 
 ### Clock sync
 
@@ -95,9 +96,9 @@ Once welcomed, a client pings every `PingInterval` (100 ms). The server answers 
 
 Each tick, a client adds its `InputCommand` to its `InputWindow` and sends the whole window, the last 8 ticks, in one unreliable packet. A lost packet costs nothing: the next one carries the same ticks again. The `Pong`'s acknowledgement drops the ticks the server already has from the window. Frames are written against the one before them (`InputCodec`), so a tick in which nothing changed costs a bit, and a tick in which only the aim moved costs the aim's movement; a frame read back is bit for bit the frame written.
 
-On the server, each client's `InputPlayoutBuffer` keeps the first copy of each tick and hands the simulation that tick's command in order. A tick that never arrived runs with the previous frame's held actions and no presses or releases, the same rule `EntityInput` applies to a tick nothing was submitted for. The buffer reports whether the gap was a loss (a later tick had arrived) or lateness (nothing had), since the first is the link's fault and the second means the client's lead is too short. Its `Depth`, how many ticks ahead have arrived, goes back in the pongs: zero means late, a steady few is right, growing means the client runs too far ahead.
+On the server, each client's `InputPlayoutBuffer` keeps the first copy of each tick and hands the simulation that tick's command in order. A tick that never arrived runs with the previous frame's held actions and no presses or releases, the same rule `EntityInput` applies to a tick nothing was submitted for. The buffer reports whether the gap was a loss (a later tick had arrived) or lateness (nothing had), since the first is the link's fault and the second means the client's lead is too short. Its `Depth`, how many ticks ahead have arrived, goes back in the pongs: zero means late, a steady few is right, growing means the client runs too far ahead. A command more than `MaxTicksAhead` (128) ticks past the tick last taken, or past the tick the client joined at, is dropped.
 
-A command's **events** are discrete input events, identified by tags, for things like a menu choice that aren't held buttons. The server raises each as a Forge event on the client's entity, with the entity as source and target, so an ability triggered by the tag activates from it. `InputCommand.EventIndex` gives the index a tag travels as.
+A command's **events** are discrete input events, identified by tags, for things like a menu choice that aren't held buttons. The server raises each as a Forge event on the client's entity, with the entity as source and target, so an ability triggered by the tag activates from it. `InputCommand.EventIndex` gives the index a tag travels as. A client can send any index, so `RaiseEvents` takes the tags clients may raise and skips the rest, along with indices that name no tag: a client can't trigger an ability meant for a server event.
 
 ## What's next
 
