@@ -90,4 +90,15 @@ public interface IForgeEntity
 	/// <see cref="EntitySimulation.RestoreSnapshot"/> puts it back.
 	/// </remarks>
 	IEntityStateHook? StateHook => null;
+
+	/// <summary>
+	/// Gets the id this entity is known by across a networked session, or <see cref="NetworkEntityId.None"/> for an
+	/// entity that exists only on this machine, which every entity is offline.
+	/// </summary>
+	/// <remarks>
+	/// The server assigns the id as the entity spawns and sends it with the spawn, so a host that networks its
+	/// entities overrides this with the id it was given. Checksums name an entity by it, so a server's and a client's
+	/// checksum of the same tick agree, and an entity without one is named as local.
+	/// </remarks>
+	NetworkEntityId NetworkId => NetworkEntityId.None;
 }

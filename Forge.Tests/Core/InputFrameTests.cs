@@ -46,6 +46,18 @@ public class InputFrameTests
 
 	[Fact]
 	[Trait("Input", "Frame")]
+	public void An_aim_that_is_not_finite_is_stored_as_zero_or_clamped()
+	{
+		InputFrame frame = default(InputFrame).WithAim(
+			new Vector3(float.NaN, float.PositiveInfinity, float.MinValue),
+			new Vector3(float.NegativeInfinity, 0f, 0f));
+
+		frame.AimPoint.Should().Be(new Vector3(0f, 1e9f, -1e9f));
+		frame.AimDirection.Should().Be(new Vector3(-1e9f, 0f, 0f));
+	}
+
+	[Fact]
+	[Trait("Input", "Frame")]
 	public void Each_vector_keeps_its_own_slot()
 	{
 		InputFrame frame = default(InputFrame)

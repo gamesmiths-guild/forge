@@ -51,7 +51,7 @@ Going deeper into effects: [Stacking](effects/stacking.md), [Periodic effects](e
 
 Going deeper into Statescript: the [node library](statescript/nodes/README.md), [resolvers](statescript/resolvers/README.md), [variables and data](statescript/variables.md), [ability integration](statescript/ability-integration.md) and [custom resolvers](statescript/custom-resolvers.md).
 
-Going deeper into the simulation: the [simulation tick](simulation.md) and [rollback](rollback.md).
+Going deeper into the simulation: the [simulation tick](simulation.md), [rollback](rollback.md) and [networking](networking/README.md).
 
 ## Guides
 
