@@ -126,6 +126,22 @@ public class IdentityTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCu
 			.Should().NotBe(Protocol.HashOf(new TagsManager(["input.menu", "event.hit"])));
 	}
 
+	[Fact]
+	[Trait("Networking", "Identity")]
+	public void A_welcome_carries_any_positive_tick_rate_and_no_zero_one()
+	{
+		var writer = new BitWriter();
+		new WelcomeMessage(2000, 5, 1).Write(writer);
+		var reader = new BitReader(writer.ToArray());
+		reader.ReadByte();
+
+		WelcomeMessage.Read(reader).TickRate.Should().Be(2000);
+
+		var zero = new BitWriter();
+		zero.WriteVarUInt(0);
+		new BitReader(zero.ToArray()).Invoking(WelcomeMessage.Read).Should().Throw<MalformedPacketException>();
+	}
+
 	[Theory]
 	[Trait("Networking", "Identity")]
 	[InlineData(0)]

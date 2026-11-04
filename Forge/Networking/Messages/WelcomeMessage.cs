@@ -32,7 +32,7 @@ public readonly record struct WelcomeMessage(int TickRate, long ServerTick, ulon
 	{
 		ulong tickRate = reader.ReadVarUInt();
 
-		if (tickRate is 0 or > 1000)
+		if (tickRate is 0 or > int.MaxValue)
 		{
 			throw new MalformedPacketException($"{tickRate} is not a tick rate.");
 		}
