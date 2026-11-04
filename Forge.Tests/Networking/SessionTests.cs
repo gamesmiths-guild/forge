@@ -120,6 +120,21 @@ public class SessionTests
 
 	[Fact]
 	[Trait("Networking", "Session")]
+	public void A_hello_that_waited_out_a_stall_on_the_server_is_still_read()
+	{
+		var network = new LoopbackNetwork();
+		NetworkSession server = Server(network);
+		NetworkSession client = Client(network.Connect());
+		server.Update(0);
+		client.Update(0);
+
+		server.Update(NetworkSession.HandshakeTimeout + 1);
+
+		server.Peers.Should().ContainSingle("the hello was waiting when the server came back");
+	}
+
+	[Fact]
+	[Trait("Networking", "Session")]
 	public void A_full_session_refuses_the_next_client()
 	{
 		var network = new LoopbackNetwork();

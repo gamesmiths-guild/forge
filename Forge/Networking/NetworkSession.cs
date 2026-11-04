@@ -239,11 +239,6 @@ public sealed class NetworkSession
 			}
 		}
 
-		if (IsServer)
-		{
-			DisconnectSilentPeers();
-		}
-
 		while (Transport.TryReceive(out TransportEvent received))
 		{
 			switch (received.Kind)
@@ -258,6 +253,12 @@ public sealed class NetworkSession
 					OnPacket(received);
 					break;
 			}
+		}
+
+		// After the packets, so a hello that waited out a stall on the host is read first.
+		if (IsServer)
+		{
+			DisconnectSilentPeers();
 		}
 
 		if (!IsServer && State == SessionState.Ready && localTime >= _nextPingAt)
