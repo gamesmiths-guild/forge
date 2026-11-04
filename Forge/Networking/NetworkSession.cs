@@ -39,8 +39,8 @@ public enum SessionState : byte
 
 /// <summary>
 /// One end of a session: the server that every client talks to, or a client. It runs the handshake, answers or sends
-/// pings for the clock, and moves input commands up from clients into per-client playout buffers. Everything above
-/// it, what the ticks do with the input and what goes back down, comes with the later milestones.
+/// pings for the clock, and moves input commands up from clients into per-client playout buffers. What the ticks do with
+/// the input is the host's.
 /// </summary>
 /// <remarks>
 /// <para>The host calls <see cref="Update"/> once per tick, before simulating it, with a local time in seconds. The

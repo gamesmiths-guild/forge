@@ -29,7 +29,7 @@ public static class Protocol
 	public const byte InputChannel = 1;
 
 	/// <summary>
-	/// The channel the server's state goes down on, unreliable, from milestone 8.
+	/// The channel the server's state goes down on, unreliable.
 	/// </summary>
 	public const byte StateChannel = 2;
 

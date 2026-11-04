@@ -6,8 +6,8 @@ namespace Gamesmiths.Forge.Networking;
 
 /// <summary>
 /// Wraps a transport and treats what it sends the way a real link would: holds each packet for the latency plus some
-/// jitter, loses a share of the unreliable ones, and keeps reliable ones in order. The network conditioner the plan
-/// calls for, usable in tests and in a running game alike.
+/// jitter, loses a share of the unreliable ones, and keeps reliable ones in order. Usable in tests and in a running
+/// game alike.
 /// </summary>
 /// <remarks>
 /// <para>Time comes from the host, through <see cref="Update"/>, so a test can step it tick by tick and a game can
