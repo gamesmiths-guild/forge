@@ -146,7 +146,12 @@ public class InputUpstreamTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 		forged.WriteBool(false);
 		forged.WriteVarInt(long.MaxValue);
 
-		new BitReader(forged.ToArray()).Invoking(x => InputCodec.ReadFrame(x, low, _actions))
+		for (int i = 0; i < 5; i++)
+		{
+			forged.WriteVarInt(0);
+		}
+
+		new BitReader(forged.ToArray()).Invoking(x => InputCodec.ReadFrame(x, high, _actions))
 			.Should().Throw<MalformedPacketException>();
 	}
 
