@@ -208,11 +208,7 @@ public sealed class InputPlayoutBuffer(InputActionSet actions)
 
 	private long FirstKey()
 	{
-		if (_commands.Count == 0)
-		{
-			return long.MaxValue;
-		}
-
-		return _commands.Keys.First();
+		using SortedDictionary<long, InputCommand>.KeyCollection.Enumerator keys = _commands.Keys.GetEnumerator();
+		return keys.MoveNext() ? keys.Current : long.MaxValue;
 	}
 }

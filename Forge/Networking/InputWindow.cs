@@ -80,12 +80,6 @@ public sealed class InputWindow
 		commands.Clear();
 		long newestTick = reader.ReadVarInt();
 		int count = (int)reader.ReadBits(4);
-
-		if (count > MaxCapacity)
-		{
-			throw new MalformedPacketException($"A window carries at most {MaxCapacity} ticks, not {count}.");
-		}
-
 		InputFrame previous = default;
 
 		for (int i = 0; i < count; i++)
