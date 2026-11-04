@@ -5,6 +5,7 @@ using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Networking;
 using Gamesmiths.Forge.Networking.Messages;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Tests.Networking;
 
@@ -18,6 +19,8 @@ public class SessionTests
 	private const int TickRate = 60;
 
 	private static readonly InputActionSet _actions = new(["jump", "fire"], [new InputVector("l", "r", "u", "d")]);
+
+	private static readonly TagsManager _tags = new(["input.menu", "event.hit"]);
 
 	[Fact]
 	[Trait("Networking", "Session")]
@@ -48,8 +51,9 @@ public class SessionTests
 	[Theory]
 	[Trait("Networking", "Session")]
 	[InlineData(RefusalReason.AssetRegistry)]
+	[InlineData(RefusalReason.Tags)]
 	[InlineData(RefusalReason.InputActions)]
-	public void A_mismatched_client_is_refused_and_disconnected(RefusalReason expected)
+	public void A_mismatched_client_is_refused_and_leaves(RefusalReason expected)
 	{
 		var network = new LoopbackNetwork();
 		NetworkSession server = Server(network);
@@ -60,21 +64,58 @@ public class SessionTests
 		InputActionSet actions = expected == RefusalReason.InputActions
 			? new InputActionSet(["fire", "jump"])
 			: _actions;
+		TagsManager tags = expected == RefusalReason.Tags ? new TagsManager(["input.menu", "event.hurt"]) : _tags;
 		INetworkTransport transport = network.Connect();
-		var client = new NetworkSession(transport, new SimulationClock(TickRate), registry, actions);
+		var client = new NetworkSession(transport, new SimulationClock(TickRate), registry, tags, actions);
 
 		client.Update(0);
 		server.Update(0);
-		client.Update(0.01);
 
-		client.State.Should().Be(SessionState.Refused);
-		client.Refusal.Should().Be(expected);
 		refused.Should().Equal((transport.LocalPeer, expected));
 		server.Peers.Should().BeEmpty();
 		network.Server.Peers.Should().ContainSingle("the server lets the refusal reach the client first");
 
+		client.Update(0.01);
+		server.Update(0.02);
+
+		client.State.Should().Be(SessionState.Refused);
+		client.Refusal.Should().Be(expected);
+		network.Server.Peers.Should().BeEmpty("the client left once it knew why");
+	}
+
+	[Fact]
+	[Trait("Networking", "Session")]
+	public void A_refused_client_that_stays_is_disconnected_after_the_linger()
+	{
+		var network = new LoopbackNetwork();
+		NetworkSession server = Server(network);
+		INetworkTransport raw = network.Connect();
+		var writer = new BitWriter();
+		new HelloMessage(Protocol.Version + 1, 0, 0, 0).Write(writer);
+		raw.Send(PeerId.Server, Protocol.ControlChannel, reliable: true, writer.WrittenBytes);
+
+		server.Update(0);
+		server.Update(NetworkSession.RefusalLinger - 0.01);
+		network.Server.Peers.Should().ContainSingle();
+
 		server.Update(NetworkSession.RefusalLinger);
-		network.Server.Peers.Should().BeEmpty("the server disconnected the client");
+		network.Server.Peers.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Networking", "Session")]
+	public void A_client_that_never_says_hello_is_disconnected_after_the_timeout()
+	{
+		var network = new LoopbackNetwork();
+		NetworkSession server = Server(network);
+		network.Connect();
+
+		server.Update(0);
+		server.Update(NetworkSession.HandshakeTimeout - 0.01);
+		network.Server.Peers.Should().ContainSingle();
+
+		server.Update(NetworkSession.HandshakeTimeout);
+		network.Server.Peers.Should().BeEmpty();
 	}
 
 	[Fact]
@@ -96,8 +137,8 @@ public class SessionTests
 		second.State.Should().Be(SessionState.Refused);
 		second.Refusal.Should().Be(RefusalReason.Full);
 		server.Peers.Should().ContainSingle();
-		server.Update(1);
-		network.Server.Peers.Should().ContainSingle("the refused client was disconnected after the linger");
+		server.Update(0.02);
+		network.Server.Peers.Should().ContainSingle("the refused client left");
 	}
 
 	[Fact]
@@ -106,7 +147,7 @@ public class SessionTests
 	{
 		var network = new LoopbackNetwork();
 		NetworkSession server = Server(network);
-		var client = new NetworkSession(network.Connect(), new SimulationClock(30), Registry(), _actions);
+		var client = new NetworkSession(network.Connect(), new SimulationClock(30), Registry(), _tags, _actions);
 
 		client.Update(0);
 		server.Update(0);
@@ -159,6 +200,44 @@ public class SessionTests
 			.Should().BeGreaterThan(3);
 		server.Peers[0].Input.NewestTick
 			.Should().BeGreaterThanOrEqualTo(client.AckedInputTick, "the ack is a pong old");
+	}
+
+	[Fact]
+	[Trait("Networking", "Session")]
+	public void Input_recorded_before_the_welcome_is_dropped_when_the_clock_moves()
+	{
+		var network = new LoopbackNetwork();
+		NetworkSession server = Server(network, startTick: 100);
+		NetworkSession client = Client(network.Connect());
+		client.Clock.Set(500);
+		client.SendInput(new InputCommand(500, default));
+
+		client.Update(0);
+		server.Update(0);
+		client.Update(0.01);
+		client.Clock.Tick.Should().Be(100);
+
+		client.Invoking(x => x.SendInput(new InputCommand(100, default))).Should().NotThrow();
+		client.Input.Commands.Should().ContainSingle().Which.Tick.Should().Be(100);
+		client.AckedInputTick.Should().Be(-1);
+	}
+
+	[Fact]
+	[Trait("Networking", "Session")]
+	public void A_client_that_just_joined_can_t_send_input_far_ahead_of_the_server()
+	{
+		var network = new LoopbackNetwork();
+		NetworkSession server = Server(network, startTick: 100);
+		NetworkSession client = Client(network.Connect());
+		client.Update(0);
+		server.Update(0);
+		client.Update(0.01);
+
+		client.SendInput(new InputCommand(100 + InputPlayoutBuffer.MaxTicksAhead + 1, default));
+		server.Update(0.02);
+
+		server.Peers[0].Input.Depth.Should().Be(0, "nothing has been taken yet, but the join tick bounds it");
+		server.Peers[0].Input.NewestTick.Should().BeNull();
 	}
 
 	[Fact]
@@ -240,6 +319,24 @@ public class SessionTests
 
 	[Fact]
 	[Trait("Networking", "Session")]
+	public void A_server_leaving_disconnects_clients_it_hasn_t_welcomed()
+	{
+		var network = new LoopbackNetwork();
+		NetworkSession server = Server(network);
+		INetworkTransport refused = network.Connect();
+		var writer = new BitWriter();
+		new HelloMessage(Protocol.Version + 1, 0, 0, 0).Write(writer);
+		refused.Send(PeerId.Server, Protocol.ControlChannel, reliable: true, writer.WrittenBytes);
+		server.Update(0);
+		network.Connect();
+
+		server.Disconnect();
+
+		network.Server.Peers.Should().BeEmpty("a refused client and one the session hadn't seen yet are gone too");
+	}
+
+	[Fact]
+	[Trait("Networking", "Session")]
 	public void Packets_that_can_t_be_read_are_dropped_and_counted()
 	{
 		var network = new LoopbackNetwork();
@@ -288,6 +385,7 @@ public class SessionTests
 			network.Server,
 			new SimulationClock(TickRate),
 			new NetworkAssetRegistry(),
+			_tags,
 			_actions)).Should().Throw<ArgumentException>();
 	}
 
@@ -316,6 +414,7 @@ public class SessionTests
 			network.Server,
 			new SimulationClock(TickRate, startTick),
 			Registry(),
+			_tags,
 			_actions,
 			seed,
 			maxClients);
@@ -323,6 +422,6 @@ public class SessionTests
 
 	private static NetworkSession Client(INetworkTransport transport)
 	{
-		return new NetworkSession(transport, new SimulationClock(TickRate), Registry(), _actions);
+		return new NetworkSession(transport, new SimulationClock(TickRate), Registry(), _tags, _actions);
 	}
 }

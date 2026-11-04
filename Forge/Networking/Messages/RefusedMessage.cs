@@ -26,6 +26,11 @@ public enum RefusalReason : byte
 	/// The session has no room.
 	/// </summary>
 	Full = 4,
+
+	/// <summary>
+	/// The client's tags differ from the server's, so an input event would raise another tag.
+	/// </summary>
+	Tags = 5,
 }
 
 /// <summary>
@@ -49,8 +54,16 @@ public readonly record struct RefusedMessage(RefusalReason Reason)
 	/// </summary>
 	/// <param name="reader">Where to read.</param>
 	/// <returns>The message.</returns>
+	/// <exception cref="MalformedPacketException">Thrown when the reason isn't one.</exception>
 	public static RefusedMessage Read(BitReader reader)
 	{
-		return new RefusedMessage((RefusalReason)reader.ReadByte());
+		byte reason = reader.ReadByte();
+
+		if (reason is < (byte)RefusalReason.ProtocolVersion or > (byte)RefusalReason.Tags)
+		{
+			throw new MalformedPacketException($"{reason} is not a refusal reason.");
+		}
+
+		return new RefusedMessage((RefusalReason)reason);
 	}
 }

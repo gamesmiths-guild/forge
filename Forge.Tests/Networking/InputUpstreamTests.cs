@@ -249,7 +249,7 @@ public class InputUpstreamTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 
 	[Fact]
 	[Trait("Networking", "Input")]
-	public void A_command_s_events_are_raised_on_the_entity_as_forge_events()
+	public void A_command_s_input_events_are_raised_on_the_entity_as_forge_events()
 	{
 		var entity = new TestEntity(_tagsManager, fixture.CuesManager);
 		var tag = Tag.RequestTag(_tagsManager, "simple.tag");
@@ -260,13 +260,12 @@ public class InputUpstreamTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 
 		ushort tagIndex = InputCommand.EventIndex(_tagsManager, tag);
 		ushort otherIndex = InputCommand.EventIndex(_tagsManager, other);
-		var command = new InputCommand(1, default, [tagIndex, otherIndex, tagIndex]);
+		var command = new InputCommand(1, default, [tagIndex, otherIndex, ushort.MaxValue, tagIndex]);
 
-		command.RaiseEvents(entity, _tagsManager);
+		command.RaiseEvents(entity, new TagContainer(_tagsManager, [Tag.RequestTag(_tagsManager, "simple")]));
 
-		raised.Should().HaveCount(3);
-		raised[0].EventTags.HasTag(tag).Should().BeTrue();
-		raised[1].EventTags.HasTag(other).Should().BeTrue();
+		raised.Should().HaveCount(2, "a tag that isn't an input event, and an index that names no tag, are skipped");
+		raised.Should().OnlyContain(x => x.EventTags.HasTag(tag));
 		raised[0].Source.Should().BeSameAs(entity);
 		raised[0].Target.Should().BeSameAs(entity);
 	}

@@ -40,6 +40,15 @@ public sealed class TagsManager
 	/// </summary>
 	public TagNode RootNode { get; }
 
+	internal int NetIndexCount
+	{
+		get
+		{
+			VerifyNetworkIndex();
+			return _networkTagNodeIndex.Count;
+		}
+	}
+
 	/// <summary>
 	/// Initializes a new instance of the <see cref="TagsManager"/> class from a list of strings.
 	/// </summary>

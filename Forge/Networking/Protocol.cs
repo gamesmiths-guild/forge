@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Networking;
 
@@ -14,7 +15,7 @@ public static class Protocol
 	/// The version of the wire protocol. Bumped whenever a message's layout changes, so an old build is refused
 	/// instead of misreading a new one.
 	/// </summary>
-	public const ushort Version = 1;
+	public const ushort Version = 2;
 
 	/// <summary>
 	/// The channel for connection control: the handshake, pings, and later the disconnect. Its messages are
@@ -31,6 +32,25 @@ public static class Protocol
 	/// The channel the server's state goes down on, unreliable, from milestone 8.
 	/// </summary>
 	public const byte StateChannel = 2;
+
+	/// <summary>
+	/// Hashes the tags in the order of their net indices, so a client whose project has other tags is refused rather
+	/// than having its input events read as other tags.
+	/// </summary>
+	/// <param name="tagsManager">The tags.</param>
+	/// <returns>A hash the same on every machine with the same tags.</returns>
+	public static ulong HashOf(TagsManager tagsManager)
+	{
+		int count = tagsManager.NetIndexCount;
+		ulong hash = Fnv64.Add(Fnv64.Offset, (ulong)count);
+
+		for (int i = 0; i < count; i++)
+		{
+			hash = Fnv64.Add(hash, tagsManager.GetTagKeyFromNetIndex((ushort)i).ToString());
+		}
+
+		return hash;
+	}
 
 	/// <summary>
 	/// Hashes an input action set, so a client whose project lists the actions in another order, or lists other

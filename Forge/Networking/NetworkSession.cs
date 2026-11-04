@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Networking.Messages;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Networking;
 
@@ -47,8 +48,8 @@ public enum SessionState : byte
 /// happens between updates, so the simulation never sees the network change under it.</para>
 /// <para>The server is <see cref="PeerId.Server"/> on its own transport. A listen host is a server whose own player
 /// needs no connection: it reads that player's input locally. A dedicated server is a server with no viewer.</para>
-/// <para>A client that is refused learns why through <see cref="Refusal"/>; the server disconnects it after telling
-/// it. A packet that can't be read is dropped and counted, never acted on.</para>
+/// <para>A client that is refused learns why through <see cref="Refusal"/> and leaves; the server disconnects it if it
+/// hasn't after <see cref="RefusalLinger"/>. A packet that can't be read is dropped and counted, never acted on.</para>
 /// </remarks>
 public sealed class NetworkSession
 {
@@ -58,16 +59,22 @@ public sealed class NetworkSession
 	public const double DefaultPingInterval = 0.1;
 
 	/// <summary>
-	/// How long the server keeps a refused client connected after telling it why, in seconds, so the refusal reaches
-	/// it before the disconnect does on a transport that doesn't flush.
+	/// How long the server waits for a refused client to read why and leave, in seconds, before disconnecting it.
 	/// </summary>
-	public const double RefusalLinger = 0.25;
+	public const double RefusalLinger = 2;
+
+	/// <summary>
+	/// How long the server waits for a connected client's hello, in seconds, before disconnecting it.
+	/// </summary>
+	public const double HandshakeTimeout = 5;
 
 	private readonly Dictionary<PeerId, NetworkPeer> _peers = [];
 	private readonly List<NetworkPeer> _readyPeers = [];
 	private readonly List<RefusedPeer> _refused = [];
+	private readonly List<PeerId> _silent = [];
 	private readonly BitWriter _writer = new();
 	private readonly BitReader _reader = new(ReadOnlyMemory<byte>.Empty);
+	private readonly TagsManager _tagsManager;
 	private readonly int _maxClients;
 	private double _nextPingAt;
 	private double _localTime;
@@ -171,6 +178,8 @@ public sealed class NetworkSession
 	/// <param name="clock">The session clock. On the server it's the session's time; a client's must run at the same
 	/// rate, and is set to the server's tick when the server welcomes it.</param>
 	/// <param name="registry">The sealed asset registry, whose hash the handshake compares.</param>
+	/// <param name="tagsManager">The tags, whose hash the handshake compares, since input events travel as their net
+	/// indices.</param>
 	/// <param name="actions">The input action set, whose hash the handshake compares.</param>
 	/// <param name="sessionSeed">On the server, the seed the session's randomness derives from, given to every
 	/// client. Ignored on a client, which learns it from the server.</param>
@@ -180,6 +189,7 @@ public sealed class NetworkSession
 		INetworkTransport transport,
 		SimulationClock clock,
 		NetworkAssetRegistry registry,
+		TagsManager tagsManager,
 		InputActionSet actions,
 		ulong sessionSeed = 0,
 		int maxClients = 0)
@@ -192,6 +202,7 @@ public sealed class NetworkSession
 		Transport = transport;
 		Clock = clock;
 		Registry = registry;
+		_tagsManager = tagsManager;
 		Actions = actions;
 		SessionSeed = sessionSeed;
 		_maxClients = maxClients;
@@ -226,6 +237,11 @@ public sealed class NetworkSession
 				Transport.Disconnect(_refused[i].Peer);
 				_refused.RemoveAt(i);
 			}
+		}
+
+		if (IsServer)
+		{
+			DisconnectSilentPeers();
 		}
 
 		while (Transport.TryReceive(out TransportEvent received))
@@ -278,15 +294,36 @@ public sealed class NetworkSession
 	{
 		if (IsServer)
 		{
-			foreach (PeerId id in new List<PeerId>(_peers.Keys))
+			// Refused clients, and ones whose connection the session hasn't taken yet, are connected too.
+			foreach (PeerId id in new List<PeerId>(Transport.Peers))
 			{
 				Transport.Disconnect(id);
 			}
 
+			_refused.Clear();
 			return;
 		}
 
 		Transport.Disconnect(PeerId.Server);
+	}
+
+	private void DisconnectSilentPeers()
+	{
+		foreach (NetworkPeer peer in _peers.Values)
+		{
+			if (!peer.IsReady && peer.ConnectedAt + HandshakeTimeout <= _localTime)
+			{
+				_silent.Add(peer.Id);
+			}
+		}
+
+		foreach (PeerId id in _silent)
+		{
+			_peers.Remove(id);
+			Transport.Disconnect(id);
+		}
+
+		_silent.Clear();
 	}
 
 	private void OnConnected(PeerId peer)
@@ -299,7 +336,8 @@ public sealed class NetworkSession
 
 		State = SessionState.Handshaking;
 		_writer.Clear();
-		new HelloMessage(Protocol.Version, Registry.Hash, Protocol.HashOf(Actions)).Write(_writer);
+		new HelloMessage(Protocol.Version, Registry.Hash, Protocol.HashOf(_tagsManager), Protocol.HashOf(Actions))
+			.Write(_writer);
 		Transport.Send(PeerId.Server, Protocol.ControlChannel, reliable: true, _writer.WrittenBytes);
 	}
 
@@ -307,6 +345,8 @@ public sealed class NetworkSession
 	{
 		if (IsServer)
 		{
+			_refused.RemoveAll(refused => refused.Peer == peer);
+
 			if (_peers.Remove(peer, out NetworkPeer? left) && left.IsReady)
 			{
 				left.IsReady = false;
@@ -400,6 +440,10 @@ public sealed class NetworkSession
 		{
 			refusal = RefusalReason.AssetRegistry;
 		}
+		else if (hello.TagsHash != Protocol.HashOf(_tagsManager))
+		{
+			refusal = RefusalReason.Tags;
+		}
 		else if (hello.InputHash != Protocol.HashOf(Actions))
 		{
 			refusal = RefusalReason.InputActions;
@@ -423,6 +467,7 @@ public sealed class NetworkSession
 
 		new WelcomeMessage(Clock.TickRate, Clock.Tick, SessionSeed).Write(_writer);
 		Transport.Send(peer.Id, Protocol.ControlChannel, reliable: true, _writer.WrittenBytes);
+		peer.Input.StartAt(Clock.Tick);
 		peer.IsReady = true;
 		_readyPeers.Add(peer);
 		PeerJoined?.Invoke(peer);
@@ -453,6 +498,7 @@ public sealed class NetworkSession
 			case ControlMessage.Refused when State == SessionState.Handshaking:
 				Refusal = RefusedMessage.Read(_reader).Reason;
 				State = SessionState.Refused;
+				Transport.Disconnect(PeerId.Server);
 				break;
 			case ControlMessage.Pong when State == SessionState.Ready:
 				OnPong(PongMessage.Read(_reader));
@@ -475,6 +521,10 @@ public sealed class NetworkSession
 
 		SessionSeed = welcome.SessionSeed;
 		Clock.Set(welcome.ServerTick);
+
+		// What was recorded before is for ticks on the old clock.
+		Input.Clear();
+		AckedInputTick = -1;
 		State = SessionState.Ready;
 		_nextPingAt = _localTime;
 	}

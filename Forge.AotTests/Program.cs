@@ -44,7 +44,7 @@ internal static class Program
 		Check("Entity history rolls an entity back and replays its ticks", () => ReplaysEntityHistory(tagsManager));
 		Check("World history rolls a world back past a death and a spawn", () => RollsWorldBack(tagsManager));
 		Check("World replay reconciles cues and finds a tick that ran differently", () => ReplaysWorld(tagsManager));
-		Check("Network session handshakes and carries input over a loopback", NetworksOverLoopback);
+		Check("Network session handshakes and carries input over a loopback", () => NetworksOverLoopback(tagsManager));
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -329,7 +329,7 @@ internal static class Program
 
 	// The networking types with generics and collections: the registry's typed lookup, the session's handshake, the
 	// input codec through the conditioner, and clock sync.
-	private static bool NetworksOverLoopback()
+	private static bool NetworksOverLoopback(TagsManager tagsManager)
 	{
 		var actions = new InputActionSet(["jump"], [new InputVector("l", "r", "u", "d")]);
 		var registry = new NetworkAssetRegistry();
@@ -337,9 +337,27 @@ internal static class Program
 		registry.Seal();
 
 		var network = new LoopbackNetwork();
-		var server = new NetworkSession(network.Server, new SimulationClock(60, 100), registry, actions, 7);
-		var link = new ConditionedTransport(network.Connect(), NetworkConditions.Good, new DeterministicRandom(1));
-		var client = new NetworkSession(link, new SimulationClock(60), registry, actions);
+
+		var server = new NetworkSession(
+			network.Server,
+			new SimulationClock(60, 100),
+			registry,
+			tagsManager,
+			actions,
+			7);
+
+		var link = new ConditionedTransport(
+			network.Connect(),
+			NetworkConditions.Good,
+			new DeterministicRandom(1));
+
+		var client = new NetworkSession(
+			link,
+			new SimulationClock(60),
+			registry,
+			tagsManager,
+			actions);
+
 		InputDelivery? delivery = null;
 		InputCommand taken = default;
 

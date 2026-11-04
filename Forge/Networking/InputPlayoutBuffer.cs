@@ -47,13 +47,17 @@ public enum InputDelivery : byte
 public sealed class InputPlayoutBuffer(InputActionSet actions)
 {
 	/// <summary>
-	/// How far ahead of the tick last taken a command may be. Further is a malformed or absurd packet and is dropped.
+	/// How far ahead of the tick last taken, or of the tick before the one the client joined at, a command may be.
+	/// Further is a malformed or absurd packet and is dropped.
 	/// </summary>
 	public const int MaxTicksAhead = 128;
 
 	private readonly SortedDictionary<long, InputCommand> _commands = [];
 	private readonly List<InputCommand> _read = [];
 	private InputFrame _lastFrame;
+
+	// A command must be for a tick after this one, and at most MaxTicksAhead after it.
+	private long? _floor;
 
 	/// <summary>
 	/// Gets the action set the frames belong to.
@@ -117,9 +121,7 @@ public sealed class InputPlayoutBuffer(InputActionSet actions)
 	/// taken, or too far ahead.</returns>
 	public bool Add(in InputCommand command)
 	{
-		long floor = LastTakenTick ?? long.MinValue;
-
-		if (command.Tick <= floor || (LastTakenTick is long taken && command.Tick > taken + MaxTicksAhead))
+		if (_floor is long floor && (command.Tick <= floor || command.Tick > floor + MaxTicksAhead))
 		{
 			return false;
 		}
@@ -160,6 +162,7 @@ public sealed class InputPlayoutBuffer(InputActionSet actions)
 		}
 
 		LastTakenTick = tick;
+		_floor = tick;
 
 		if (_commands.Remove(tick, out command))
 		{
@@ -190,6 +193,17 @@ public sealed class InputPlayoutBuffer(InputActionSet actions)
 		_lastFrame = default;
 		LastTakenTick = null;
 		NewestTick = null;
+		_floor = null;
+	}
+
+	/// <summary>
+	/// Accepts commands from a tick on, before any is taken, so a client that just joined can't fill the buffer with
+	/// ticks far ahead of the server.
+	/// </summary>
+	/// <param name="tick">The first tick the server may take.</param>
+	internal void StartAt(long tick)
+	{
+		_floor = tick - 1;
 	}
 
 	private long FirstKey()

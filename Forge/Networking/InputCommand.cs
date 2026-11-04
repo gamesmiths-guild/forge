@@ -43,14 +43,32 @@ public readonly record struct InputCommand(long Tick, InputFrame Frame, ushort[]
 	/// source and target, so abilities triggered by the tag activate from them. The server does this for the owning
 	/// entity as it simulates the tick.
 	/// </summary>
+	/// <remarks>
+	/// A client can send any index, so only tags that match one of <paramref name="inputEvents"/> are raised: a client
+	/// can't trigger an ability meant for a server event. An index that names no tag, or a tag that doesn't match, is
+	/// skipped.
+	/// </remarks>
 	/// <param name="entity">The entity the input belongs to.</param>
-	/// <param name="tagsManager">The tags manager the indices come from.</param>
-	/// <exception cref="InvalidTagNetIndexException">Thrown when an index names no tag.</exception>
-	public void RaiseEvents(IForgeEntity entity, TagsManager tagsManager)
+	/// <param name="inputEvents">The tags a client may raise, children included, from the tags manager the indices
+	/// come from.</param>
+	public void RaiseEvents(IForgeEntity entity, TagContainer inputEvents)
 	{
+		TagsManager tagsManager = inputEvents.TagsManager;
+
 		foreach (ushort index in Events)
 		{
+			if (index >= tagsManager.NetIndexCount)
+			{
+				continue;
+			}
+
 			var tag = Tag.RequestTag(tagsManager, tagsManager.GetTagKeyFromNetIndex(index));
+
+			if (!tag.MatchesAny(inputEvents))
+			{
+				continue;
+			}
+
 			var data = new EventData
 			{
 				EventTags = new TagContainer(tagsManager, [tag]),
