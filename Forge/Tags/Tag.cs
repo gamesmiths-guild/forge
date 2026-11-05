@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Networking;
 
 namespace Gamesmiths.Forge.Tags;
 
@@ -55,9 +56,6 @@ public readonly struct Tag : IEquatable<Tag>, IValidatable
 	/// <summary>
 	/// Serializes the given <see cref="Tag"/> into a <see cref="ushort"/> net index.
 	/// </summary>
-	/// <remarks>
-	/// TODO: Use a proper BitStream or similar solution in the future.
-	/// </remarks>
 	/// <param name="tagsManager">The manager responsible for tag lookup and net index handling.</param>
 	/// <param name="tag">The <see cref="Tag"/> to be serialized.</param>
 	/// <param name="netIndex">The serialized index for this tag.</param>
@@ -86,28 +84,59 @@ public readonly struct Tag : IEquatable<Tag>, IValidatable
 	}
 
 	/// <summary>
+	/// Writes the given <see cref="Tag"/> to a packet as its net index, as a varint.
+	/// </summary>
+	/// <param name="tagsManager">The manager responsible for tag lookup and net index handling.</param>
+	/// <param name="tag">The <see cref="Tag"/> to be written.</param>
+	/// <param name="writer">The writer of the packet.</param>
+	/// <returns><see langword="true"/> if written successfully; <see langword="false"/> if the tag belongs to another
+	/// manager, in which case the invalid index is written.</returns>
+	public static bool NetSerialize(TagsManager tagsManager, Tag tag, BitWriter writer)
+	{
+		bool serialized = NetSerialize(tagsManager, tag, out ushort netIndex);
+		writer.WriteVarUInt(netIndex);
+		return serialized;
+	}
+
+	/// <summary>
 	/// Deserializes a <see cref="Tag"/> from a given <see cref="ushort"/> net index value.
 	/// </summary>
-	/// <remarks>
-	/// TODO: Use a proper BitStream or similar solution in the future.
-	/// </remarks>
 	/// <param name="tagsManager">The manager responsible for tag lookup and net index handling.</param>
-	/// <param name="stream">The data stream to be deserialized.</param>
-	/// <param name="tag">The resulting <see cref="Tag"/> from deserialization.</param>
+	/// <param name="netIndex">The net index to be deserialized.</param>
+	/// <param name="tag">The resulting <see cref="Tag"/> from deserialization, <see cref="Empty"/> for the invalid
+	/// index.</param>
 	/// <returns><see langword="true"/> if deserialized successfully.</returns>
 	/// <exception cref="InvalidTagNetIndexException">Thrown if tried to deserialize a value that is not a valid tag net
 	/// index.</exception>
-	public static bool NetDeserialize(TagsManager tagsManager, byte[] stream, out Tag tag)
+	public static bool NetDeserialize(TagsManager tagsManager, ushort netIndex, out Tag tag)
 	{
-		// Read netIndex from buffer. This is just a practical example, use a BitStream reader here instead.
-		ushort[] netIndex = new ushort[stream.Length / 2];
-		Buffer.BlockCopy(stream, 0, netIndex, 0, stream.Length);
-
-		StringKey tagKey = tagsManager.GetTagKeyFromNetIndex(netIndex[0]);
+		StringKey tagKey = tagsManager.GetTagKeyFromNetIndex(netIndex);
 
 		tag = tagsManager.RequestTag(tagKey, false);
 
 		return true;
+	}
+
+	/// <summary>
+	/// Reads a <see cref="Tag"/> from a packet, written by <see cref="NetSerialize(TagsManager, Tag, BitWriter)"/>.
+	/// </summary>
+	/// <param name="tagsManager">The manager responsible for tag lookup and net index handling.</param>
+	/// <param name="reader">The reader of the packet.</param>
+	/// <param name="tag">The resulting <see cref="Tag"/> from deserialization, <see cref="Empty"/> for the invalid
+	/// index.</param>
+	/// <returns><see langword="true"/> if deserialized successfully.</returns>
+	/// <exception cref="MalformedPacketException">Thrown when the packet holds a value that is not a tag net index.
+	/// </exception>
+	public static bool NetDeserialize(TagsManager tagsManager, BitReader reader, out Tag tag)
+	{
+		ulong netIndex = reader.ReadVarUInt();
+
+		if (netIndex >= (ulong)tagsManager.NetIndexCount && netIndex != tagsManager.InvalidTagNetIndex)
+		{
+			throw new MalformedPacketException($"{netIndex} is not a tag net index.");
+		}
+
+		return NetDeserialize(tagsManager, (ushort)netIndex, out tag);
 	}
 
 	/// <summary>

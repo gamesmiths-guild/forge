@@ -403,10 +403,14 @@ public class SessionTests
 			[1, 2, 3]);
 		server.Update(0.02);
 
-		server.MalformedPackets.Should().Be(3, "two control packets and one input packet made no sense");
-		server.Peers[0].MalformedPackets.Should().Be(3);
-		server.Peers.Should().ContainSingle("a bad packet doesn't end the connection");
-		client.State.Should().Be(SessionState.Ready);
+		server.MalformedPackets
+			.Should().Be(4, "two control packets, an input packet and a state acknowledgement made no sense");
+		server.Peers[0].MalformedPackets
+			.Should().Be(4);
+		server.Peers
+			.Should().ContainSingle("a bad packet doesn't end the connection");
+		client.State
+			.Should().Be(SessionState.Ready);
 	}
 
 	[Fact]

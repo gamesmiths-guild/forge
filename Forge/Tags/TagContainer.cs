@@ -8,6 +8,7 @@ using System.Text;
 using Gamesmiths.Forge.Compatibility;
 #endif
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Networking;
 
 namespace Gamesmiths.Forge.Tags;
 
@@ -113,34 +114,19 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 	}
 
 	/// <summary>
-	/// Efficient network serialization, leveraging the dictionary for optimized performance.
+	/// Writes the container's explicit tags to a packet: how many, then each as its net index, all as varints.
 	/// </summary>
 	/// <param name="tagsManager">The manager responsible for tag lookup and net index handling.</param>
 	/// <param name="container">The <see cref="TagContainer"/> to be serialized.</param>
-	/// <param name="serializedContainerStream">The serialized stream for this container.</param>
-	/// <returns><see langword="true"/> if successfully serialized; <see langword="false"/> otherwise.</returns>
+	/// <param name="writer">The writer of the packet.</param>
+	/// <returns><see langword="true"/> if successfully serialized; <see langword="false"/> if the container belongs to
+	/// another manager, in which case nothing is written.</returns>
 	/// <exception cref="SerializationException">Throws if there are more tags than the configured max size.</exception>
-	public static bool NetSerialize(
-		TagsManager tagsManager,
-		TagContainer container,
-		out byte[] serializedContainerStream)
+	public static bool NetSerialize(TagsManager tagsManager, TagContainer container, BitWriter writer)
 	{
-		var containerStream = new List<byte>();
-
-		// The first bit indicates an empty container, which is often replicated.
-		byte isEmpty = (container.InternalTags.Count == 0) ? (byte)1 : (byte)0;
-		containerStream.Add(isEmpty);
-
-		// Early return if it's empty.
-		if (isEmpty == 1)
+		if (container.InternalTags.Count == 0)
 		{
-			if (container.InternalTags.Count > 0)
-			{
-				container.Reset(container.InternalTags.Count);
-			}
-
-			serializedContainerStream = [.. containerStream];
-
+			writer.WriteVarUInt(0);
 			return true;
 		}
 
@@ -151,11 +137,10 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 
 		if (tagsManager != container.TagsManager)
 		{
-			serializedContainerStream = [];
 			return false;
 		}
 
-		byte numTags = (byte)container.InternalTags.Count;
+		int numTags = container.InternalTags.Count;
 		int maxSize = (1 << tagsManager.NumBitsForContainerSize) - 1;
 
 		if (numTags > maxSize)
@@ -164,57 +149,48 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 				$"{container}");
 		}
 
-		containerStream.Add(numTags);
+		writer.WriteVarUInt((ulong)numTags);
 
 		foreach (Tag tag in container.InternalTags)
 		{
-			Tag.NetSerialize(tagsManager, tag, out ushort index);
-
-			// Read net index from buffer. This is just a practical example, use a BitStream reader here instead.
-			ushort[] netIndex = [index];
-			byte[] netIndexStream = new byte[2];
-			Buffer.BlockCopy(netIndex, 0, netIndexStream, 0, 2);
-
-			containerStream.AddRange(netIndexStream);
-
-			// TODO: Make tag replication statistics for replication optimization.
+			// TODO: Count how often each tag is sent, to order the net indices by frequency so the common ones cost a
+			// byte.
+			Tag.NetSerialize(tagsManager, tag, writer);
 		}
-
-		serializedContainerStream = [.. containerStream];
 
 		return true;
 	}
 
 	/// <summary>
-	/// Efficient network deserialization, leveraging the dictionary for optimized performance.
+	/// Reads a container from a packet, written by <see cref="NetSerialize(TagsManager, TagContainer, BitWriter)"/>.
+	/// An invalid index is skipped.
 	/// </summary>
 	/// <param name="tagsManager">The manager responsible for tag lookup and net index handling.</param>
-	/// <param name="stream">The data stream to be deserialized.</param>
+	/// <param name="reader">The reader of the packet.</param>
 	/// <param name="deserializedContainer">The resulting <see cref="TagContainer"/> from deserialization.
 	/// </param>
 	/// <returns><see langword="true"/> if successfully deserialized; <see langword="false"/> otherwise.</returns>
+	/// <exception cref="MalformedPacketException">Thrown when the packet holds more tags than the configured max
+	/// size, or a value that is not a tag net index.</exception>
 	public static bool NetDeserialize(
 		TagsManager tagsManager,
-		byte[] stream,
+		BitReader reader,
 		out TagContainer deserializedContainer)
 	{
 		deserializedContainer = new TagContainer(tagsManager);
+		ulong numTags = reader.ReadVarUInt();
+		int maxSize = (1 << tagsManager.NumBitsForContainerSize) - 1;
 
-		// Empty container.
-		if (stream[0] == 1)
+		if (numTags > (ulong)maxSize)
 		{
-			return true;
+			throw new MalformedPacketException($"A tag container holds at most {maxSize} tags, not {numTags}.");
 		}
 
-		byte numTags = stream[1];
-		deserializedContainer.InternalTags.EnsureCapacity(numTags);
+		deserializedContainer.InternalTags.EnsureCapacity((int)numTags);
 
-		for (int i = 0; i < numTags; i++)
+		for (ulong i = 0; i < numTags; i++)
 		{
-			byte[] tagStream = new byte[2];
-			Array.Copy(stream, 2 + (2 * i), tagStream, 0, 2);
-
-			if (Tag.NetDeserialize(tagsManager, tagStream, out Tag deserializedTag))
+			if (Tag.NetDeserialize(tagsManager, reader, out Tag deserializedTag) && deserializedTag.IsValid)
 			{
 				deserializedContainer.AddTag(deserializedTag);
 			}

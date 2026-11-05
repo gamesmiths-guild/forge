@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
+using Gamesmiths.Forge.Networking;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
@@ -70,78 +71,79 @@ public class TagContainerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 
 	[Theory]
 	[Trait("Serialization", "Serialize")]
-	[InlineData(
-		new string[] { "tag" },
-		new byte[] { 0, 1, 39, 0 })]
-	[InlineData(
-		new string[] { "tag", "simple.tag", "other.tag" },
-		new byte[] { 0, 3, 39, 0, 38, 0, 36, 0 })]
-	[InlineData(
-		new string[] { "color", "color.blue", "color.dark.blue" },
-		new byte[] { 0, 3, 0, 0, 1, 0, 3, 0 })]
+	[InlineData(new string[] { "tag" }, new byte[] { 1, 39 })]
+	[InlineData(new string[] { "color", "color.blue", "color.dark.blue" }, new byte[] { 3, 0, 1, 3 })]
 	[InlineData(
 		new string[] { "item.equipment.weapon.sword", "item.equipment.weapon", "item.equipment", "item" },
-		new byte[] { 0, 4, 34, 0, 31, 0, 30, 0, 21, 0 })]
-	[InlineData(
-		new string[] { "item.consumable.potion.health", "color.red" },
-		new byte[] { 0, 2, 27, 0, 7, 0 })]
-	public void Container_with_registered_tags_serializes_successfully_with_valid_net_index(
+		new byte[] { 4, 34, 31, 30, 21 })]
+	[InlineData(new string[] { "item.consumable.potion.health", "color.red" }, new byte[] { 2, 27, 7 })]
+	public void Container_with_registered_tags_serializes_as_its_count_and_net_indices(
 		string[] tagKeys, byte[] netIndexStream)
 	{
 		TagContainer container = _tagsManager.RequestTagContainer(tagKeys);
+		var writer = new BitWriter();
 
-		TagContainer.NetSerialize(_tagsManager, container, out byte[]? containerStream);
+		TagContainer.NetSerialize(_tagsManager, container, writer).Should().BeTrue();
 
-		containerStream[0].Should().Be(0);
-		containerStream.Should().HaveCount((tagKeys.Length * 2) + 2);
-
-		containerStream.Should().BeEquivalentTo(netIndexStream);
+		writer.ByteLength.Should().Be(tagKeys.Length + 1, "a small net index costs a byte, and so does the count");
+		writer.ToArray().Should().BeEquivalentTo(netIndexStream, "the set has no order of its own");
+		writer.ToArray()[0].Should().Be((byte)tagKeys.Length);
 	}
 
 	[Fact]
 	[Trait("Serialization", "Serialize")]
-	public void Empty_container_serializes_successfully()
+	public void Empty_container_serializes_as_a_zero_count()
 	{
 		var tagContainer = new TagContainer(_tagsManager);
+		var writer = new BitWriter();
 
-		TagContainer.NetSerialize(_tagsManager, tagContainer, out byte[]? containerStream)
-			.Should()
-			.BeTrue();
+		TagContainer.NetSerialize(_tagsManager, tagContainer, writer).Should().BeTrue();
 
-		containerStream[0].Should().Be(1);
-		containerStream.Should().ContainSingle();
+		writer.ToArray().Should().Equal(0);
 	}
 
 	[Theory]
 	[Trait("Serialization", "Deserialize")]
+	[InlineData(new byte[] { 1, 39 }, new string[] { "tag" })]
+	[InlineData(new byte[] { 3, 39, 38, 36 }, new string[] { "tag", "simple.tag", "other.tag" })]
+	[InlineData(new byte[] { 3, 0, 1, 3 }, new string[] { "color", "color.blue", "color.dark.blue" })]
 	[InlineData(
-		new byte[] { 0, 1, 39, 0 },
-		new string[] { "tag" })]
-	[InlineData(
-		new byte[] { 0, 3, 39, 0, 38, 0, 36, 0 },
-		new string[] { "tag", "simple.tag", "other.tag" })]
-	[InlineData(
-		new byte[] { 0, 3, 0, 0, 1, 0, 3, 0 },
-		new string[] { "color", "color.blue", "color.dark.blue" })]
-	[InlineData(
-		new byte[] { 0, 4, 34, 0, 31, 0, 30, 0, 21, 0 },
+		new byte[] { 4, 34, 31, 30, 21 },
 		new string[] { "item.equipment.weapon.sword", "item.equipment.weapon", "item.equipment", "item" })]
-	[InlineData(
-		new byte[] { 0, 2, 27, 0, 7, 0 },
-		new string[] { "item.consumable.potion.health", "color.red" })]
-	[InlineData(
-		new byte[] { 0, 2, 45, 0, 39, 0 }, // 45 is invalid tag net index
-		new string[] { "tag" })]
+	[InlineData(new byte[] { 2, 27, 7 }, new string[] { "item.consumable.potion.health", "color.red" })]
+	[InlineData(new byte[] { 2, 45, 39 }, new string[] { "tag" })] // 45 is the invalid tag net index.
 	public void Container_deserializes_successfully(byte[] netIndexStream, string[] tagKeys)
 	{
 		TagContainer.NetDeserialize(
 			_tagsManager,
-			netIndexStream,
+			new BitReader(netIndexStream),
 			out TagContainer deserializedContainer).Should().BeTrue();
 
 		TagContainer tagContainerCheck = _tagsManager.RequestTagContainer(tagKeys);
 
 		deserializedContainer.Should().BeEquivalentTo(tagContainerCheck);
+	}
+
+	[Theory]
+	[Trait("Serialization", "Deserialize")]
+	[InlineData(new string[] { "tag", "simple.tag", "other.tag" }, 3)]
+	[InlineData(new string[] { "item.equipment.weapon.sword", "color.red" }, 2)]
+	[InlineData(new string[] { }, 0)]
+	public void Container_read_from_a_packet_is_the_container_written(string[] tagKeys, int count)
+	{
+		TagContainer container = _tagsManager.RequestTagContainer(tagKeys);
+		var writer = new BitWriter();
+		writer.WriteBool(true);
+		TagContainer.NetSerialize(_tagsManager, container, writer);
+		writer.WriteBool(true);
+
+		var reader = new BitReader(writer.ToArray());
+		reader.ReadBool().Should().BeTrue();
+		TagContainer.NetDeserialize(_tagsManager, reader, out TagContainer read).Should().BeTrue();
+		reader.ReadBool().Should().BeTrue("the container reads exactly what it wrote, mid-packet");
+
+		read.Should().BeEquivalentTo(container);
+		read.Count.Should().Be(count);
 	}
 
 	[Fact]
@@ -150,7 +152,7 @@ public class TagContainerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 	{
 		TagContainer.NetDeserialize(
 			_tagsManager,
-			[1],
+			new BitReader(new byte[] { 0 }),
 			out TagContainer deserializedContainer).Should().BeTrue();
 
 		deserializedContainer.Should().BeEquivalentTo(new TagContainer(_tagsManager));
@@ -162,7 +164,7 @@ public class TagContainerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 	{
 		TagContainer.NetDeserialize(
 			_tagsManager,
-			[0, 2, (byte)_tagsManager.InvalidTagNetIndex, 0, 39, 0],
+			new BitReader(new byte[] { 2, (byte)_tagsManager.InvalidTagNetIndex, 39 }),
 			out TagContainer deserializedContainer).Should().BeTrue();
 
 		var tagContainerCheck = new TagContainer(Tag.RequestTag(_tagsManager, "tag"));
@@ -178,11 +180,23 @@ public class TagContainerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 		{
 			TagContainer.NetDeserialize(
 				_tagsManager,
-				[0, 2, (byte)(_tagsManager.InvalidTagNetIndex + 1), 0, 39, 0],
+				new BitReader(new byte[] { 2, (byte)(_tagsManager.InvalidTagNetIndex + 1), 39 }),
 				out TagContainer _);
 		};
 
-		act.Should().Throw<InvalidTagNetIndexException>().WithMessage("Received invalid tag net index*");
+		act.Should().Throw<MalformedPacketException>();
+	}
+
+	[Fact]
+	[Trait("Serialization", "Deserialize")]
+	public void Container_throws_exception_when_a_packet_claims_too_many_tags()
+	{
+		Action act = () =>
+		{
+			TagContainer.NetDeserialize(_tagsManager, new BitReader(new byte[] { 200, 1 }), out TagContainer _);
+		};
+
+		act.Should().Throw<MalformedPacketException>();
 	}
 
 	[Theory]

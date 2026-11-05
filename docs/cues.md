@@ -230,6 +230,8 @@ Deferred handlers see only net change:
 
 An effect applied and removed within one frame then shows no cue at all, instead of flickering for a frame. See [Simulation Tick](simulation.md#presentation-pass) for where the pass fits.
 
+A host with nothing to show, such as a dedicated server, sets `CuesManager.Presents` to `false`: no handler runs and nothing waits for a pass. A networked server still [replicates](networking/replication.md) every cue to its clients, which show them.
+
 ### Cues after a restore
 
 A [restore](rollback.md) puts an entity back as it was, and its persistent cues follow, so what handlers show matches the state they show it for:

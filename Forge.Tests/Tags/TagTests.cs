@@ -2,6 +2,7 @@
 
 using FluentAssertions;
 using Gamesmiths.Forge.Core;
+using Gamesmiths.Forge.Networking;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
@@ -116,31 +117,52 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 
 	[Theory]
 	[Trait("Serialization", "Deserialize")]
-	[InlineData(new byte[] { 35, 0 }, "other")]
-	[InlineData(new byte[] { 36, 0 }, "other.tag")]
-	[InlineData(new byte[] { 11, 0 }, "enemy.beast.wolf")]
-	[InlineData(new byte[] { 12, 0 }, "enemy.beast.wolf.gray")]
-	[InlineData(new byte[] { 34, 0 }, "item.equipment.weapon.sword")]
-	[InlineData(new byte[] { 0, 0 }, "color")]
-	public void Tag_deserializes_successfully_with_propper_net_index(byte[] stream, string tagKey)
+	[InlineData((ushort)35, "other")]
+	[InlineData((ushort)36, "other.tag")]
+	[InlineData((ushort)11, "enemy.beast.wolf")]
+	[InlineData((ushort)12, "enemy.beast.wolf.gray")]
+	[InlineData((ushort)34, "item.equipment.weapon.sword")]
+	[InlineData((ushort)0, "color")]
+	public void Tag_deserializes_successfully_with_propper_net_index(ushort netIndex, string tagKey)
 	{
-		Tag.NetDeserialize(_tagsManager, stream, out Tag tag).Should().BeTrue();
+		Tag.NetDeserialize(_tagsManager, netIndex, out Tag tag).Should().BeTrue();
 
 		var tagToCheck = Tag.RequestTag(_tagsManager, tagKey);
 
 		tag.Should().Be(tagToCheck);
 	}
 
+	[Theory]
+	[Trait("Serialization", "Deserialize")]
+	[InlineData("other")]
+	[InlineData("enemy.beast.wolf.gray")]
+	[InlineData("color")]
+	public void Tag_read_from_a_packet_is_the_tag_written(string tagKey)
+	{
+		var tag = Tag.RequestTag(_tagsManager, tagKey);
+		var writer = new BitWriter();
+
+		Tag.NetSerialize(_tagsManager, tag, writer).Should().BeTrue();
+		writer.ByteLength.Should().Be(1, "a small net index costs a byte");
+
+		Tag.NetDeserialize(_tagsManager, new BitReader(writer.ToArray()), out Tag read).Should().BeTrue();
+
+		read.Should().Be(tag);
+	}
+
 	[Fact]
 	[Trait("Serialization", "Deserialize")]
 	public void InvalidTagNetIndex_deserializes_successfully_as_Empty_Tag()
 	{
-		Tag.NetDeserialize(
-			_tagsManager,
-			[(byte)_tagsManager.InvalidTagNetIndex, 0],
-			out Tag tag).Should().BeTrue();
+		Tag.NetDeserialize(_tagsManager, _tagsManager.InvalidTagNetIndex, out Tag tag).Should().BeTrue();
 
 		tag.Should().Be(Tag.Empty);
+
+		var writer = new BitWriter();
+		Tag.NetSerialize(_tagsManager, Tag.Empty, writer).Should().BeTrue();
+		Tag.NetDeserialize(_tagsManager, new BitReader(writer.ToArray()), out Tag read).Should().BeTrue();
+
+		read.Should().Be(Tag.Empty);
 	}
 
 	[Fact]
@@ -149,13 +171,25 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 	{
 		Action act = () =>
 		{
-			Tag.NetDeserialize(
-				_tagsManager,
-				[(byte)(_tagsManager.InvalidTagNetIndex + 1), 0],
-				out Tag _);
+			Tag.NetDeserialize(_tagsManager, (ushort)(_tagsManager.InvalidTagNetIndex + 1), out Tag _);
 		};
 
 		act.Should().Throw<InvalidTagNetIndexException>().WithMessage("Received invalid tag net index*");
+
+		var writer = new BitWriter();
+		writer.WriteVarUInt((ulong)_tagsManager.InvalidTagNetIndex + 1);
+
+		Action read = () =>
+		{
+			Tag.NetDeserialize(_tagsManager, new BitReader(writer.ToArray()), out Tag _);
+		};
+
+		read.Should().Throw<MalformedPacketException>("a packet is untrusted, so a bad index is a bad packet");
+
+		writer.Clear();
+		writer.WriteVarUInt((ulong)_tagsManager.InvalidTagNetIndex - 1);
+
+		read.Should().Throw<MalformedPacketException>("the invalid index leaves a hole just under it, no tag's either");
 	}
 
 	[Theory]

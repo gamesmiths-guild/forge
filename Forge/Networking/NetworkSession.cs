@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Networking.Messages;
+using Gamesmiths.Forge.Networking.Replication;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Networking;
@@ -39,8 +40,9 @@ public enum SessionState : byte
 
 /// <summary>
 /// One end of a session: the server that every client talks to, or a client. It runs the handshake, answers or sends
-/// pings for the clock, and moves input commands up from clients into per-client playout buffers. Everything above
-/// it, what the ticks do with the input and what goes back down, comes with the later milestones.
+/// pings for the clock, moves input commands up from clients into per-client playout buffers, and moves the world's
+/// state down: the server's <see cref="Replication"/> sends what the host registers, and a client's
+/// <see cref="Mirror"/> keeps the copies. What the ticks do with the input is the host's.
 /// </summary>
 /// <remarks>
 /// <para>The host calls <see cref="Update"/> once per tick, before simulating it, with a local time in seconds. The
@@ -80,7 +82,6 @@ public sealed class NetworkSession
 	private readonly List<PeerId> _silent = [];
 	private readonly BitWriter _writer = new();
 	private readonly BitReader _reader = new(ReadOnlyMemory<byte>.Empty);
-	private readonly TagsManager _tagsManager;
 	private readonly int _maxClients;
 	private double _nextPingAt;
 	private double _localTime;
@@ -101,6 +102,12 @@ public sealed class NetworkSession
 	public event Action<PeerId, RefusalReason>? PeerRefused;
 
 	/// <summary>
+	/// Raised on the server by <see cref="TakeInput"/> for every joined client, with the command the tick runs for it
+	/// and how it arrived, after the command was handed to the client's entities.
+	/// </summary>
+	public event Action<NetworkPeer, InputCommand, InputDelivery>? InputTaken;
+
+	/// <summary>
 	/// Gets the transport.
 	/// </summary>
 	public INetworkTransport Transport { get; }
@@ -119,6 +126,26 @@ public sealed class NetworkSession
 	/// Gets the input action set.
 	/// </summary>
 	public InputActionSet Actions { get; }
+
+	/// <summary>
+	/// Gets the tags, whose net indices tags and input events travel as.
+	/// </summary>
+	public TagsManager TagsManager { get; }
+
+	/// <summary>
+	/// Gets this end's id on the transport: <see cref="PeerId.Server"/> on the server.
+	/// </summary>
+	public PeerId LocalPeer => Transport.LocalPeer;
+
+	/// <summary>
+	/// Gets the server's replication: the entities it sends down. <see langword="null"/> on a client.
+	/// </summary>
+	public ReplicationServer? Replication { get; }
+
+	/// <summary>
+	/// Gets a client's mirror of the server's entities. <see langword="null"/> on the server.
+	/// </summary>
+	public ReplicationClient? Mirror { get; }
 
 	/// <summary>
 	/// Gets a value indicating whether this end is the server.
@@ -208,13 +235,22 @@ public sealed class NetworkSession
 		Transport = transport;
 		Clock = clock;
 		Registry = registry;
-		_tagsManager = tagsManager;
+		TagsManager = tagsManager;
 		Actions = actions;
 		SessionSeed = sessionSeed;
 		_maxClients = maxClients;
 		Input = new InputWindow(actions);
 		ClockSync = new ClockSync(clock);
 		State = transport.IsServer ? SessionState.Ready : SessionState.Connecting;
+
+		if (transport.IsServer)
+		{
+			Replication = new ReplicationServer(this);
+		}
+		else
+		{
+			Mirror = new ReplicationClient(this);
+		}
 	}
 
 	/// <summary>
@@ -267,12 +303,25 @@ public sealed class NetworkSession
 			DisconnectSilentPeers();
 		}
 
-		if (!IsServer && State == SessionState.Ready && localTime >= _nextPingAt)
+		if (IsServer || State != SessionState.Ready)
+		{
+			return;
+		}
+
+		if (localTime >= _nextPingAt)
 		{
 			_nextPingAt = localTime + PingInterval;
 			_writer.Clear();
 			new PingMessage(ClockSync.PingSent(localTime)).Write(_writer);
 			Transport.Send(PeerId.Server, Protocol.ControlChannel, reliable: false, _writer.WrittenBytes);
+		}
+
+		// One acknowledgement per update, however many state packets arrived in it.
+		_writer.Clear();
+
+		if (Mirror!.TryWriteAck(_writer))
+		{
+			Transport.Send(PeerId.Server, Protocol.StateChannel, reliable: false, _writer.WrittenBytes);
 		}
 	}
 
@@ -295,12 +344,38 @@ public sealed class NetworkSession
 	}
 
 	/// <summary>
+	/// On the server, takes every joined client's command for a tick and hands it to the input of every entity the
+	/// client owns (<see cref="ReplicatedEntity.Owner"/>) that has one, raising the command's events on it when
+	/// <paramref name="raisableEvents"/> lists them. Call it once per tick, before beginning the tick.
+	/// </summary>
+	/// <param name="tick">The tick about to be simulated.</param>
+	/// <param name="raisableEvents">The input events clients may raise, or <see langword="null"/> to raise none.
+	/// </param>
+	/// <exception cref="InvalidOperationException">Thrown on a client.</exception>
+	public void TakeInput(long tick, TagContainer? raisableEvents = null)
+	{
+		if (Replication is null)
+		{
+			throw new InvalidOperationException("Only the server takes input.");
+		}
+
+		foreach (NetworkPeer peer in _readyPeers)
+		{
+			InputDelivery delivery = peer.Input.Take(tick, out InputCommand command);
+			Replication.DeliverInput(peer.Id, command, raisableEvents);
+			InputTaken?.Invoke(peer, command, delivery);
+		}
+	}
+
+	/// <summary>
 	/// Leaves the session: a client disconnects from the server, a server disconnects every client.
 	/// </summary>
 	public void Disconnect()
 	{
 		if (IsServer)
 		{
+			Replication!.StopObserving();
+
 			// Refused clients, and ones whose connection the session hasn't taken yet, are connected too.
 			foreach (PeerId id in new List<PeerId>(Transport.Peers))
 			{
@@ -344,7 +419,7 @@ public sealed class NetworkSession
 
 		State = SessionState.Handshaking;
 		_writer.Clear();
-		new HelloMessage(Protocol.Version, Registry.Hash, Protocol.HashOf(_tagsManager), Protocol.HashOf(Actions))
+		new HelloMessage(Protocol.Version, Registry.Hash, Protocol.HashOf(TagsManager), Protocol.HashOf(Actions))
 			.Write(_writer);
 		Transport.Send(PeerId.Server, Protocol.ControlChannel, reliable: true, _writer.WrittenBytes);
 	}
@@ -359,6 +434,7 @@ public sealed class NetworkSession
 			{
 				left.IsReady = false;
 				_readyPeers.Remove(left);
+				Replication!.RemoveClient(left);
 				PeerLeft?.Invoke(left);
 			}
 
@@ -416,6 +492,16 @@ public sealed class NetworkSession
 			return;
 		}
 
+		if (channel == Protocol.StateChannel)
+		{
+			if (peer.IsReady)
+			{
+				Replication!.ReceiveAck(peer, _reader);
+			}
+
+			return;
+		}
+
 		if (channel != Protocol.ControlChannel)
 		{
 			return;
@@ -448,7 +534,7 @@ public sealed class NetworkSession
 		{
 			refusal = RefusalReason.AssetRegistry;
 		}
-		else if (hello.TagsHash != Protocol.HashOf(_tagsManager))
+		else if (hello.TagsHash != Protocol.HashOf(TagsManager))
 		{
 			refusal = RefusalReason.Tags;
 		}
@@ -478,6 +564,7 @@ public sealed class NetworkSession
 		peer.Input.StartAt(Clock.Tick);
 		peer.IsReady = true;
 		_readyPeers.Add(peer);
+		Replication!.AddClient(peer);
 		PeerJoined?.Invoke(peer);
 	}
 
@@ -491,6 +578,16 @@ public sealed class NetworkSession
 
 	private void OnClientPacket(byte channel)
 	{
+		if (channel == Protocol.StateChannel)
+		{
+			if (State == SessionState.Ready)
+			{
+				Mirror!.Receive(_reader);
+			}
+
+			return;
+		}
+
 		if (channel != Protocol.ControlChannel)
 		{
 			return;

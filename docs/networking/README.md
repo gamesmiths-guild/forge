@@ -1,6 +1,6 @@
 # Networking
 
-Forge's networking puts one server in charge of a game that several machines play. The server simulates every entity from the players' input and sends the result down; each client sends only what its player pressed. This page covers the foundation that milestone 7 lays in `Gamesmiths.Forge.Networking`: how bytes travel, how a session starts, how clocks agree and how input gets to the server. What the server sends down, and how a client predicts its own player, come with the milestones after it.
+Forge's networking puts one server in charge of a game that several machines play. The server simulates every entity from the players' input and sends the result down; each client sends only what its player pressed. This page covers the foundation in `Gamesmiths.Forge.Networking`: how bytes travel, how a session starts, how clocks agree and how input gets to the server. [Replication](replication.md) covers how the world gets back down to every client.
 
 Nothing here depends on an engine. An engine integration provides a transport over its own sockets and drives the session from its loop; Forge for Godot does that with a session node.
 
@@ -16,9 +16,9 @@ Time is a fixed tick, the same rate on every machine. The server's clock is the 
 - **Reliable or unreliable, per send.** Reliable sends arrive in order with the other reliable sends on the same channel. Unreliable sends arrive at most once, possibly late, out of order, or never. Connection control is reliable; everything else is unreliable on purpose, since a late packet about a tick that has passed is worthless and nothing should wait for it.
 - **Peers.** The server is always `PeerId.Server`. A client talks only to the server.
 
-Channels (`Protocol`): `ControlChannel` for the handshake and pings, `InputChannel` for clients' input, `StateChannel` for the server's state from milestone 8.
+Channels (`Protocol`): `ControlChannel` for the handshake and pings, `InputChannel` for clients' input, `StateChannel` for the server's state.
 
-`LoopbackNetwork` is a whole session in one process, for tests and for a listen host's own connection. `ConditionedTransport` wraps any transport and treats what it sends the way a real link would: it holds packets for a latency plus jitter, loses a share of the unreliable ones, and keeps reliable ones in order. It takes time from the host and draws from an `IRandom`, so a run under loss repeats with a seed. `NetworkConditions.Poor` is 200 ms each way, 50 ms of jitter and 5% loss, the conditions the plan tests prediction under.
+`LoopbackNetwork` is a whole session in one process, for tests and for a listen host's own connection. `ConditionedTransport` wraps any transport and treats what it sends the way a real link would: it holds packets for a latency plus jitter, loses a share of the unreliable ones, and keeps reliable ones in order. It takes time from the host and draws from an `IRandom`, so a run under loss repeats with a seed. `NetworkConditions.Poor` is 200 ms each way, 50 ms of jitter and 5% loss.
 
 ## Encoding
 
@@ -51,18 +51,14 @@ registry.Seal();
 
 var clock = new SimulationClock(tickRate: 60);
 var server = new NetworkSession(serverTransport, clock, registry, tagsManager, actions, sessionSeed: seed, maxClients: 4);
-server.PeerJoined += peer => SpawnPlayerFor(peer);
+server.PeerJoined += peer => SpawnPlayerFor(peer);   // registers the player with peer.Id as its owner
 var inputEvents = new TagContainer(tagsManager, [Tag.RequestTag(tagsManager, "input")]);
 
 // Every tick:
 server.Update(localTime);
-foreach (NetworkPeer peer in server.Peers)
-{
-    peer.Input.Take(clock.Tick, out InputCommand command);
-    PlayerOf(peer).Input!.Submit(command.Frame);
-    command.RaiseEvents(PlayerOf(peer), inputEvents);
-}
+server.TakeInput(clock.Tick, inputEvents);           // each client's command, to the entities it owns
 EntitySimulation.Tick(entities, clock.Tick, clock.FixedDeltaTime);
+server.Replication!.Send(clock.Tick);
 clock.Advance();
 ```
 
@@ -75,7 +71,6 @@ client.Update(localTime);
 if (client.State == SessionState.Ready)
 {
     client.SendInput(new InputCommand(client.Clock.Tick, collectedFrame));
-    // ...simulate the local player's tick, from milestone 11...
     client.Clock.Advance();
 }
 ```
@@ -90,19 +85,12 @@ Once welcomed, a client pings every `PingInterval` (100 ms). The server answers 
 
 - A ping that left at local time `t` and was answered when the server was at tick `s` says the server was at `s` at about `t + rtt / 2`. The server's tick at any later local time follows from that.
 - Samples are noisy, since a packet held up by jitter reports a round trip it didn't have. The estimate keeps the last few samples and uses the one with the shortest round trip, the one least delayed by anything but the wire. `RoundTripTime` is the smoothed figure for display, `BestRoundTripTime` the one the estimate stands on, and `Jitter` how far the samples spread.
-- `TargetClientTick(localTime, marginTicks)` is the tick a client's clock should be at: the server's estimated tick plus a round trip plus the margin. The host moves its clock toward it; milestone 11 does so smoothly, by dilating time.
+- `TargetClientTick(localTime, marginTicks)` is the tick a client's clock should be at: the server's estimated tick plus a round trip plus the margin. The host moves its clock toward it.
 
 ### Input upstream
 
 Each tick, a client adds its `InputCommand` to its `InputWindow` and sends the whole window, the last 8 ticks, in one unreliable packet. A lost packet costs nothing: the next one carries the same ticks again. The `Pong`'s acknowledgement drops the ticks the server already has from the window. Frames are written against the one before them (`InputCodec`), so a tick in which nothing changed costs a bit, and a tick in which only the aim moved costs the aim's movement; a frame read back is bit for bit the frame written.
 
-On the server, each client's `InputPlayoutBuffer` keeps the first copy of each tick and hands the simulation that tick's command in order. A tick that never arrived runs with the previous frame's held actions and no presses or releases, the same rule `EntityInput` applies to a tick nothing was submitted for. The buffer reports whether the gap was a loss (a later tick had arrived) or lateness (nothing had), since the first is the link's fault and the second means the client's lead is too short. Its `Depth`, how many ticks ahead have arrived, goes back in the pongs: zero means late, a steady few is right, growing means the client runs too far ahead. A command more than `NetworkSession.MaxInputLead` (2 s, in ticks at the session's rate) past the tick last taken, or past the tick the client joined at, is dropped.
+On the server, each client's `InputPlayoutBuffer` keeps the first copy of each tick and hands the simulation that tick's command in order. `NetworkSession.TakeInput` takes every client's command for a tick and submits it to the input of each entity the client owns; a host that maps clients to entities itself takes from `NetworkPeer.Input` directly. A tick that never arrived runs with the previous frame's held actions and no presses or releases, the same rule `EntityInput` applies to a tick nothing was submitted for. The buffer reports whether the gap was a loss (a later tick had arrived) or lateness (nothing had), since the first is the link's fault and the second means the client's lead is too short. Its `Depth`, how many ticks ahead have arrived, goes back in the pongs: zero means late, a steady few is right, growing means the client runs too far ahead. A command more than `NetworkSession.MaxInputLead` (2 s, in ticks at the session's rate) past the tick last taken, or past the tick the client joined at, is dropped.
 
 A command's **events** are discrete input events, identified by tags, for things like a menu choice that aren't held buttons. The server raises each as a Forge event on the client's entity, with the entity as source and target, so an ability triggered by the tag activates from it. `InputCommand.EventIndex` gives the index a tag travels as. A client can send any index, so `RaiseEvents` takes the tags clients may raise and skips the rest, along with indices that name no tag: a client can't trigger an ability meant for a server event.
-
-## What's next
-
-- **Milestone 8** sends the world down: attributes, tags, cues and bodies as deltas against what each client acknowledged, with spawns and despawns as state.
-- **Milestone 11** makes the client run its own player ahead of the server and reconcile it against what the server sends back.
-
-See the [plan](https://github.com/gamesmiths-guild/forge/tree/task/networking-plan/plans/networking) for the whole design and its decisions.

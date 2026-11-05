@@ -28,7 +28,7 @@ public readonly record struct NetworkConditions(double LatencySeconds, double Ji
 	public static readonly NetworkConditions Far = new(0.1, 0.02, 0.02f);
 
 	/// <summary>
-	/// A poor connection: 200 ms each way, heavy jitter, 5% loss. The conditions the plan tests prediction under.
+	/// A poor connection: 200 ms each way, heavy jitter, 5% loss.
 	/// </summary>
 	public static readonly NetworkConditions Poor = new(0.2, 0.05, 0.05f);
 }

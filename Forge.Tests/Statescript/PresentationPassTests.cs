@@ -40,6 +40,20 @@ public class PresentationPassTests
 
 	[Fact]
 	[Trait("Graph", "Presentation")]
+	public void Without_a_pass_nothing_is_presented_so_an_ended_ability_has_nothing_to_wait_for()
+	{
+		var node = new PresentingNode("a", []);
+		GraphProcessor processor = Start([node], node);
+
+		processor.IsPresenting.Should().BeFalse();
+
+		Abort(node, processor);
+
+		processor.IsPresenting.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Graph", "Presentation")]
 	public void An_activation_that_ends_before_the_pass_is_never_presented()
 	{
 		var log = new List<string>();

@@ -38,6 +38,10 @@ public sealed class CuesManager
 
 	private readonly List<ICueHandler> _handlerBuffer = [];
 
+	private readonly List<ICueObserver> _observers = [];
+
+	private bool _presents = true;
+
 	private bool _presenting;
 
 	/// <summary>
@@ -52,6 +56,26 @@ public sealed class CuesManager
 	/// presents once per frame turns this on, so a cue that comes and goes within one frame never flickers.
 	/// </remarks>
 	public bool DeferDispatch { get; set; }
+
+	/// <summary>
+	/// Gets or sets a value indicating whether cues are presented at all. A host with nothing to show, such as a
+	/// dedicated server, sets it to <see langword="false"/>: no handler runs, what waited for a presentation pass is
+	/// dropped and nothing is queued for one, while what the cues say still reaches whoever observes them, such as a
+	/// network session replicating them.
+	/// </summary>
+	public bool Presents
+	{
+		get => _presents;
+		set
+		{
+			_presents = value;
+
+			if (!value)
+			{
+				_pendingCues.Clear();
+			}
+		}
+	}
 
 	/// <summary>
 	/// Registers a cue that can be triggered later.
@@ -97,7 +121,12 @@ public sealed class CuesManager
 	/// <param name="parameters">The optional parameters for the cue.</param>>
 	public void ExecuteCue(Tag cueTag, IForgeEntity? target, CueParameters? parameters)
 	{
-		if (!_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
+		foreach (ICueObserver observer in _observers)
+		{
+			observer.CueExecuted(cueTag, target, parameters);
+		}
+
+		if (!Presents || !_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
 		{
 			return;
 		}
@@ -369,11 +398,31 @@ public sealed class CuesManager
 		return failure;
 	}
 
+	// Observers see every cue as it's applied, updated, removed or executed, before any handler and whether or not the
+	// cues are presented here: a network session replicates them from that.
+	internal void AddObserver(ICueObserver observer)
+	{
+		if (!_observers.Contains(observer))
+		{
+			_observers.Add(observer);
+		}
+	}
+
+	internal void RemoveObserver(ICueObserver observer)
+	{
+		_observers.Remove(observer);
+	}
+
 	// The application is what the cue is applied for - an active effect, a Cue node's activation - so a deferred
 	// removal can tell its own pending apply from another one of the same cue on the same target.
 	internal void ApplyCue(Tag cueTag, IForgeEntity? target, CueParameters? parameters, object? application)
 	{
-		if (!_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
+		foreach (ICueObserver observer in _observers)
+		{
+			observer.CueApplied(cueTag, target, parameters, application);
+		}
+
+		if (!Presents || !_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
 		{
 			return;
 		}
@@ -392,7 +441,12 @@ public sealed class CuesManager
 
 	internal void RemoveCue(Tag cueTag, IForgeEntity? target, bool interrupted, object? application)
 	{
-		if (!_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
+		foreach (ICueObserver observer in _observers)
+		{
+			observer.CueRemoved(cueTag, target, interrupted, application);
+		}
+
+		if (!Presents || !_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
 		{
 			return;
 		}
@@ -416,7 +470,12 @@ public sealed class CuesManager
 
 	internal void UpdateCue(Tag cueTag, IForgeEntity? target, CueParameters? parameters, object? application)
 	{
-		if (!_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
+		foreach (ICueObserver observer in _observers)
+		{
+			observer.CueUpdated(cueTag, target, parameters, application);
+		}
+
+		if (!Presents || !_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
 		{
 			return;
 		}
@@ -717,7 +776,25 @@ public sealed class CuesManager
 	// each handler on its own, as the pass does, so one that throws keeps none of the others from getting it.
 	private void Reconcile(in PendingCue pending, ref ExceptionDispatchInfo? failure)
 	{
-		if (!_registeredCues.TryGetValue(pending.CueTag, out HashSet<ICueHandler>? cues))
+		foreach (ICueObserver observer in _observers)
+		{
+			switch (pending.Kind)
+			{
+				case PendingCueKind.Apply:
+					observer.CueApplied(pending.CueTag, pending.Target, pending.Parameters, pending.Application);
+					break;
+
+				case PendingCueKind.Update:
+					observer.CueUpdated(pending.CueTag, pending.Target, pending.Parameters, pending.Application);
+					break;
+
+				case PendingCueKind.Remove:
+					observer.CueRemoved(pending.CueTag, pending.Target, pending.Interrupted, pending.Application);
+					break;
+			}
+		}
+
+		if (!Presents || !_registeredCues.TryGetValue(pending.CueTag, out HashSet<ICueHandler>? cues))
 		{
 			return;
 		}

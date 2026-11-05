@@ -54,6 +54,23 @@ public class CueDeferralTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 
 	[Fact]
 	[Trait("Cues", "Deferral")]
+	public void Turning_presentation_off_drops_what_waited_for_the_pass()
+	{
+		var log = new List<string>();
+		CuesManager cues = CreateCues(log, out Tag cue);
+		cues.DeferDispatch = true;
+		cues.ExecuteCue(cue, null, null);
+
+		cues.Presents = false;
+		cues.ApplyCue(cue, null, null);
+		cues.Presents = true;
+		cues.PresentCues();
+
+		log.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Cues", "Deferral")]
 	public void A_cue_applied_and_removed_before_the_pass_is_never_shown()
 	{
 		var log = new List<string>();
