@@ -131,7 +131,7 @@ public readonly struct Tag : IEquatable<Tag>, IValidatable
 	{
 		ulong netIndex = reader.ReadVarUInt();
 
-		if (netIndex > tagsManager.InvalidTagNetIndex)
+		if (netIndex >= (ulong)tagsManager.NetIndexCount && netIndex != tagsManager.InvalidTagNetIndex)
 		{
 			throw new MalformedPacketException($"{netIndex} is not a tag net index.");
 		}

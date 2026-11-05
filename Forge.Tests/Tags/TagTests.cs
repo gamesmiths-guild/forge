@@ -185,6 +185,11 @@ public class TagTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCuesFix
 		};
 
 		read.Should().Throw<MalformedPacketException>("a packet is untrusted, so a bad index is a bad packet");
+
+		writer.Clear();
+		writer.WriteVarUInt((ulong)_tagsManager.InvalidTagNetIndex - 1);
+
+		read.Should().Throw<MalformedPacketException>("the invalid index leaves a hole just under it, no tag's either");
 	}
 
 	[Theory]
