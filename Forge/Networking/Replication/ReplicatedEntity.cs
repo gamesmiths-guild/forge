@@ -101,8 +101,6 @@ public sealed class ReplicatedEntity
 
 	internal long BodyStamp { get; private set; } = -1;
 
-	internal long DespawnStamp { get; set; } = -1;
-
 	internal ReplicatedEntity(
 		IForgeEntity entity,
 		int sceneIndex,

@@ -101,11 +101,86 @@ public class ReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Replication")]
+	public void A_cue_sent_again_until_it_s_acknowledged_is_no_update_on_the_client()
+	{
+		var rig = new Rig();
+		Client client = rig.Join(up: new NetworkConditions(0.1));
+		Entity entity = rig.Spawn();
+		rig.Step(20);
+
+		rig.ServerCues.ApplyCue(rig.ServerTag("cue.fire"), entity, new CueParameters(5, 0.5f, null));
+		rig.Step(20);
+		client.Fire.ApplyCount.Should().Be(1);
+		client.Fire.UpdateCount.Should().Be(0);
+
+		rig.ServerCues.UpdateCue(rig.ServerTag("cue.fire"), entity, new CueParameters(6, 0.5f, null));
+		rig.Step(20);
+		client.Fire.UpdateCount.Should().Be(1);
+		client.Fire.LastParameters!.Value.Magnitude.Should().Be(6);
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void State_seen_before_the_first_tick_still_reaches_a_client()
+	{
+		var rig = new Rig();
+		Entity placed = rig.Place(new NetworkEntityId(1000));
+		Rig.Apply(placed, rig.Soaked());
+		rig.Server.Replication!.Send(-1);
+
+		Client client = rig.Join(null, new NetworkEntityId(1000));
+		rig.Step(6);
+
+		IForgeEntity mirror = client.Session.Mirror!.Find(new NetworkEntityId(1000))!;
+		mirror.Tags.AllTags.HasTag(client.Tag("state.wet")).Should().BeTrue();
+		client.Regen.IsApplied.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_mirror_with_other_attributes_is_still_announced()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		var spawned = new List<IForgeEntity>();
+		client.Session.Mirror!.Spawned += spawned.Add;
+
+		var writer = new BitWriter();
+		writer.WriteVarUInt(100_000);
+		writer.WriteVarInt(100);
+		writer.WriteVarUInt(50);
+		writer.WriteBits(1, 2);
+		writer.WriteBool(false);
+		writer.WriteBits(0, rig.Server.Registry.BitsFor(AssetKind.Scene));
+		writer.WriteVarUInt(0);
+		writer.WriteVarUInt(1);
+		rig.Network.Server.Send(client.Peer, Protocol.StateChannel, reliable: false, writer.ToArray());
+
+		Validation.Enabled = true;
+
+		try
+		{
+			Action step = () => rig.Step();
+
+			step.Should().Throw<ValidationException>();
+			spawned.Should().ContainSingle();
+		}
+		finally
+		{
+			Validation.Enabled = false;
+		}
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
 	public void A_cue_applied_before_registering_reaches_the_client_and_its_end_too()
 	{
 		var rig = new Rig();
 		Client client = rig.Join();
-		var entity = new Entity(rig.ServerTagsManager, rig.ServerCues) { NetworkId = rig.Server.Replication!.AllocateId() };
+		var entity = new Entity(rig.ServerTagsManager, rig.ServerCues)
+		{
+			NetworkId = rig.Server.Replication!.AllocateId(),
+		};
 		ActiveEffectHandle handle = Rig.Apply(entity, rig.Burning())!;
 
 		rig.Server.Replication.Register(entity, 0, PeerId.None);

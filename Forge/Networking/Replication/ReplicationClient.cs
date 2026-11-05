@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Runtime.CompilerServices;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
@@ -26,7 +25,7 @@ public sealed class ReplicationClient
 {
 	private readonly NetworkSession _session;
 	private readonly Dictionary<NetworkEntityId, Mirror> _mirrors = [];
-	private readonly Dictionary<IForgeEntity, Mirror> _byEntity = new(ReferenceComparer.Instance);
+	private readonly Dictionary<IForgeEntity, Mirror> _byEntity = new(EntityReferenceComparer.Instance);
 	private readonly List<IForgeEntity> _entities = [];
 	private readonly List<Tag> _added = [];
 	private readonly List<Tag> _removed = [];
@@ -315,7 +314,8 @@ public sealed class ReplicationClient
 
 		if (mirror is not null)
 		{
-			// Placed and bound before the server said whose it is, or spawned already, from an earlier copy of the spawn.
+			// Placed and bound before the server said whose it is, or spawned already, from an earlier copy of the
+			// spawn.
 			mirror.Owner = new PeerId((int)owner);
 			return mirror;
 		}
@@ -340,6 +340,7 @@ public sealed class ReplicationClient
 		}
 
 		mirror = Bind(entity, new PeerId((int)owner), placed: false);
+		Spawned?.Invoke(entity);
 
 		if (mirror.Attributes.Length != attributeCount)
 		{
@@ -348,7 +349,6 @@ public sealed class ReplicationClient
 				$"{mirror.Attributes.Length}: the two don't play the same scene. Its attributes won't follow.");
 		}
 
-		Spawned?.Invoke(entity);
 		return mirror;
 	}
 
@@ -524,11 +524,17 @@ public sealed class ReplicationClient
 		{
 			if (_cues.TryGetValue(instance, out AppliedCue? applied))
 			{
-				Entity.CuesManager.UpdateCue(cueTag, Entity, parameters, applied);
+				// The server sends a cue again until it's acknowledged, which is no update unless it changed.
+				if (!CuesManager.SameParameters(applied.Parameters, parameters))
+				{
+					applied.Parameters = parameters;
+					Entity.CuesManager.UpdateCue(cueTag, Entity, parameters, applied);
+				}
+
 				return;
 			}
 
-			applied = new AppliedCue(cueTag);
+			applied = new AppliedCue(cueTag, parameters);
 			_cues[instance] = applied;
 			Entity.CuesManager.ApplyCue(cueTag, Entity, parameters, applied);
 		}
@@ -552,24 +558,11 @@ public sealed class ReplicationClient
 		}
 
 		// The application a replicated persistent cue is applied for on this machine: one object per instance.
-		private sealed class AppliedCue(Tag cueTag)
+		private sealed class AppliedCue(Tag cueTag, CueParameters? parameters)
 		{
 			public Tag CueTag { get; } = cueTag;
-		}
-	}
 
-	private sealed class ReferenceComparer : IEqualityComparer<IForgeEntity>
-	{
-		public static readonly ReferenceComparer Instance = new();
-
-		public bool Equals(IForgeEntity? x, IForgeEntity? y)
-		{
-			return ReferenceEquals(x, y);
-		}
-
-		public int GetHashCode(IForgeEntity obj)
-		{
-			return RuntimeHelpers.GetHashCode(obj);
+			public CueParameters? Parameters { get; set; } = parameters;
 		}
 	}
 }

@@ -12,7 +12,7 @@ Under the hood every value the server sends is stamped with the send it changed 
 
 | What | How |
 |---|---|
-| Attributes | Each attribute's current value, modifiers included, and its minimum and maximum when they change. A mirror holds the value as its base value, with no modifiers. |
+| Attributes | Each attribute's current value, modifiers included, and its minimum and maximum when they change. A mirror holds the value as its base value, with no modifiers. The attributes are the ones the entity has when it's registered, or bound on a client: a set added later doesn't replicate. |
 | Tags | The final set, as the net indices added and removed since the client last heard. Removals the client can't have seen are never sent. |
 | Persistent cues | As state: each one applied on the entity is numbered, and the client applies, updates and removes its own copy as the server's does. |
 | Executed cues | As events, numbered per entity and sent until the client acknowledges them or they're `EventExpirySeconds` (0.2 s) old. A cue arriving later than that is never played. |

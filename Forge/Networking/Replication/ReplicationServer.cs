@@ -1,6 +1,5 @@
 // Copyright © Gamesmiths Guild.
 
-using System.Runtime.CompilerServices;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Networking.Messages;
@@ -49,9 +48,8 @@ public sealed class ReplicationServer
 
 	private readonly NetworkSession _session;
 	private readonly Dictionary<NetworkEntityId, ReplicatedEntity> _entities = [];
-	private readonly Dictionary<IForgeEntity, ReplicatedEntity> _byEntity = new(ReferenceComparer.Instance);
+	private readonly Dictionary<IForgeEntity, ReplicatedEntity> _byEntity = new(EntityReferenceComparer.Instance);
 	private readonly List<ReplicatedEntity> _entityList = [];
-	private readonly List<ReplicatedEntity> _departed = [];
 	private readonly List<ReplicatedEntity> _departedPlaced = [];
 	private readonly Dictionary<PeerId, ClientState> _clients = [];
 	private readonly List<ReplicatedEntity> _inputBuffer = [];
@@ -190,7 +188,6 @@ public sealed class ReplicationServer
 		_entities.Remove(replicated.Id);
 		_entityList.Remove(replicated);
 		replicated.DespawnedAtTick = _session.Clock.Tick;
-		replicated.DespawnStamp = ReplicatedEntity.Pending;
 		replicated.Cues.Clear();
 		replicated.Events.Clear();
 
@@ -204,20 +201,12 @@ public sealed class ReplicationServer
 			_departedPlaced.Add(replicated);
 		}
 
-		bool anyView = false;
-
 		foreach (ClientState client in _clients.Values)
 		{
 			if (client.Views.TryGetValue(replicated.Id, out EntityView? view))
 			{
-				anyView = true;
 				view.Leaving = true;
 			}
-		}
-
-		if (anyView)
-		{
-			_departed.Add(replicated);
 		}
 
 		return true;
@@ -247,28 +236,25 @@ public sealed class ReplicationServer
 	/// Looks at every entity and, when a send is due, sends each client what it hasn't acknowledged. Call it once per
 	/// tick, after simulating the tick.
 	/// </summary>
-	/// <param name="tick">The tick just simulated, which the state is of.</param>
+	/// <param name="tick">The tick just simulated, which the state is of. Before the first one, nothing is sent.
+	/// </param>
 	public void Send(long tick)
 	{
-		if (LastSendTick >= 0 && tick - LastSendTick < SendInterval)
+		if (tick < 0 || (LastSendTick >= 0 && tick - LastSendTick < SendInterval))
 		{
 			return;
 		}
 
 		LastSendTick = tick;
-		long expiry = (long)Math.Ceiling(_session.Clock.TicksIn(EventExpirySeconds));
+		long oldestEvent = tick - (long)Math.Ceiling(_session.Clock.TicksIn(EventExpirySeconds));
 
 		foreach (ReplicatedEntity entity in _entityList)
 		{
 			entity.Capture(tick, BodySource);
-			entity.Events.RemoveAll(x => tick - x.CreatedAtTick > expiry);
-		}
 
-		foreach (ReplicatedEntity entity in _departed)
-		{
-			if (entity.DespawnStamp == ReplicatedEntity.Pending)
+			while (entity.Events.Count > 0 && entity.Events[0].CreatedAtTick < oldestEvent)
 			{
-				entity.DespawnStamp = tick;
+				entity.Events.RemoveAt(0);
 			}
 		}
 
@@ -370,7 +356,7 @@ public sealed class ReplicationServer
 		{
 			if (sent.Despawn)
 			{
-				// A late copy of the acknowledgement's despawn mustn't take the view of the entity coming back.
+				// An older copy of the despawn, acknowledged late, mustn't take the view of the entity that came back.
 				if (client.Views.GetValueOrDefault(sent.View.Entity.Id) == sent.View)
 				{
 					client.Views.Remove(sent.View.Entity.Id);
@@ -501,13 +487,21 @@ public sealed class ReplicationServer
 		_packet.Clear();
 		_packet.WriteVarUInt(sequence);
 		_packet.WriteVarInt(tick);
+		bool full = false;
 
 		foreach (EntityView view in _candidates)
 		{
+			if (full)
+			{
+				view.LeftOut = true;
+				continue;
+			}
+
 			uint maxEvent = WriteEntry(view);
 
 			if (packet.Entries.Count > 0 && _packet.ByteLength + _entry.ByteLength + TerminatorBytes > BudgetBytes)
 			{
+				full = true;
 				view.LeftOut = true;
 				continue;
 			}
@@ -763,21 +757,16 @@ public sealed class ReplicationServer
 		return maxEvent;
 	}
 
-	// Drops what no client needs any more: tombstones every client that could have seen the tag or cue has heard about,
-	// and departed entities every client has despawned.
+	// Drops the tombstones every client that could have seen the tag or cue has heard about.
 	private void Prune()
 	{
 		foreach (ReplicatedEntity entity in _entityList)
 		{
-			PruneTombstones(entity);
+			if (entity.RemovedTags.Count > 0 || entity.RemovedCues.Count > 0)
+			{
+				PruneTombstones(entity);
+			}
 		}
-
-		_departed.RemoveAll(x => !AnyViewOf(x.Id));
-	}
-
-	private bool AnyViewOf(NetworkEntityId id)
-	{
-		return _clients.Values.Any(x => x.Views.ContainsKey(id));
 	}
 
 	private void PruneTombstones(ReplicatedEntity entity)
@@ -897,7 +886,8 @@ public sealed class ReplicationServer
 			}
 
 			entity.Cues.Remove(cue);
-			entity.RemovedCues.Add(new ReplicatedEntity.CueTombstone(cue.Instance, ReplicatedEntity.Pending, interrupted));
+			entity.RemovedCues
+				.Add(new ReplicatedEntity.CueTombstone(cue.Instance, ReplicatedEntity.Pending, interrupted));
 		}
 
 		public void CueExecuted(Tag cueTag, IForgeEntity? target, CueParameters? parameters)
@@ -971,19 +961,4 @@ public sealed class ReplicationServer
 	}
 
 	private readonly record struct SentEntry(EntityView View, long Stamp, uint MaxEventSequence, bool Despawn);
-
-	private sealed class ReferenceComparer : IEqualityComparer<IForgeEntity>
-	{
-		public static readonly ReferenceComparer Instance = new();
-
-		public bool Equals(IForgeEntity? x, IForgeEntity? y)
-		{
-			return ReferenceEquals(x, y);
-		}
-
-		public int GetHashCode(IForgeEntity obj)
-		{
-			return RuntimeHelpers.GetHashCode(obj);
-		}
-	}
 }
