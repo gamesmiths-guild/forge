@@ -338,6 +338,14 @@ public static class EntitySimulation
 		}
 	}
 
+	// The persistent cues the entity's effects and running Cue nodes hold applied.
+	internal static List<PersistentCue> PersistentCues(IForgeEntity entity)
+	{
+		List<EntityHold> holds = [];
+		AddHolds(entity, holds);
+		return PersistentCues(holds);
+	}
+
 	private static void ThrowIfChanging(IForgeEntity entity, string action)
 	{
 		if (entity.Abilities.IsChanging || entity.EffectsManager.IsChanging || entity.Attributes.IsChanging)

@@ -12,6 +12,11 @@ namespace Gamesmiths.Forge.Networking.Replication;
 /// <param name="radius">The radius, in units.</param>
 public sealed class DistanceRelevancy(float radius) : IRelevancy
 {
+	// Where the peer's owned bodies were at the last send: a send asks about every entity for each client in turn.
+	private readonly List<Vector3> _viewpoints = [];
+	private PeerId _viewpointsPeer;
+	private long _viewpointsTick = -1;
+
 	/// <summary>
 	/// Gets or sets the radius, in units.
 	/// </summary>
@@ -25,23 +30,34 @@ public sealed class DistanceRelevancy(float radius) : IRelevancy
 			return true;
 		}
 
-		bool ownsABody = false;
-
-		foreach (ReplicatedEntity other in server.Entities)
+		if (peer != _viewpointsPeer || server.LastSendTick != _viewpointsTick)
 		{
-			if (other.Owner != peer || other.Body is not BodyState viewpoint)
-			{
-				continue;
-			}
+			CollectViewpoints(peer, server);
+		}
 
-			ownsABody = true;
-
-			if (Vector3.DistanceSquared(viewpoint.Position, body.Position) <= Radius * Radius)
+		foreach (Vector3 viewpoint in _viewpoints)
+		{
+			if (Vector3.DistanceSquared(viewpoint, body.Position) <= Radius * Radius)
 			{
 				return true;
 			}
 		}
 
-		return !ownsABody;
+		return _viewpoints.Count == 0;
+	}
+
+	private void CollectViewpoints(PeerId peer, ReplicationServer server)
+	{
+		_viewpoints.Clear();
+		_viewpointsPeer = peer;
+		_viewpointsTick = server.LastSendTick;
+
+		foreach (ReplicatedEntity other in server.Entities)
+		{
+			if (other.Owner == peer && other.Body is BodyState viewpoint)
+			{
+				_viewpoints.Add(viewpoint.Position);
+			}
+		}
 	}
 }

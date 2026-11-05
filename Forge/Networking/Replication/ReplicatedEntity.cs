@@ -243,7 +243,7 @@ public sealed class ReplicatedEntity
 		public long Stamp { get; set; } = Pending;
 	}
 
-	internal readonly record struct CueTombstone(uint Instance, long Stamp);
+	internal readonly record struct CueTombstone(uint Instance, long Stamp, bool Interrupted);
 
 	// A cue executed on the entity: one-shot, numbered in order, and forgotten once it's too old to be worth showing.
 	internal readonly record struct CueEvent(uint Sequence, Tag CueTag, CueParameters? Parameters, long CreatedAtTick);

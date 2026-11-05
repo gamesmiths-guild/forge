@@ -54,7 +54,7 @@ public sealed class ReplicationServer
 	private readonly List<ReplicatedEntity> _departed = [];
 	private readonly List<ReplicatedEntity> _departedPlaced = [];
 	private readonly Dictionary<PeerId, ClientState> _clients = [];
-	private readonly HashSet<CuesManager> _observed = [];
+	private readonly List<ReplicatedEntity> _inputBuffer = [];
 	private readonly BitWriter _packet = new();
 	private readonly BitWriter _entry = new();
 	private readonly List<EntityView> _candidates = [];
@@ -164,9 +164,11 @@ public sealed class ReplicationServer
 		_entityList.Add(replicated);
 		_nextId = Math.Max(_nextId, entity.NetworkId.Value + 1);
 
-		if (_observed.Add(entity.CuesManager))
+		entity.CuesManager.AddObserver(_cueObserver);
+
+		foreach (PersistentCue cue in EntitySimulation.PersistentCues(entity))
 		{
-			entity.CuesManager.AddObserver(_cueObserver);
+			_cueObserver.CueApplied(cue.CueTag, cue.Target, cue.Parameters, cue.Application);
 		}
 
 		return replicated;
@@ -191,6 +193,11 @@ public sealed class ReplicationServer
 		replicated.DespawnStamp = ReplicatedEntity.Pending;
 		replicated.Cues.Clear();
 		replicated.Events.Clear();
+
+		if (!_entityList.Exists(x => x.Entity.CuesManager == entity.CuesManager))
+		{
+			entity.CuesManager.RemoveObserver(_cueObserver);
+		}
 
 		if (replicated.IsPlaced)
 		{
@@ -274,6 +281,15 @@ public sealed class ReplicationServer
 		Prune();
 	}
 
+	// The session is over: the entities live on, and their cues are no longer anything to this server.
+	internal void StopObserving()
+	{
+		foreach (ReplicatedEntity entity in _entityList)
+		{
+			entity.Entity.CuesManager.RemoveObserver(_cueObserver);
+		}
+	}
+
 	internal void AddClient(NetworkPeer peer)
 	{
 		var client = new ClientState(peer);
@@ -313,12 +329,18 @@ public sealed class ReplicationServer
 		}
 	}
 
-	// Hands a client's command to the input of every entity the client owns that has one.
+	// Hands a client's command to the input of every entity the client owns that has one. Walks a copy, since what an
+	// event sets off can spawn or despawn entities.
 	internal void DeliverInput(PeerId owner, InputCommand command, TagContainer? raisableEvents)
 	{
-		foreach (ReplicatedEntity entity in _entityList)
+		_inputBuffer.Clear();
+		_inputBuffer.AddRange(_entityList);
+
+		foreach (ReplicatedEntity entity in _inputBuffer)
 		{
-			if (entity.Owner != owner || entity.Entity.Input is not EntityInput input)
+			if (entity.DespawnedAtTick is not null
+				|| entity.Owner != owner
+				|| entity.Entity.Input is not EntityInput input)
 			{
 				continue;
 			}
@@ -348,7 +370,8 @@ public sealed class ReplicationServer
 		{
 			if (sent.Despawn)
 			{
-				if (sent.View.Leaving)
+				// A late copy of the acknowledgement's despawn mustn't take the view of the entity coming back.
+				if (client.Views.GetValueOrDefault(sent.View.Entity.Id) == sent.View)
 				{
 					client.Views.Remove(sent.View.Entity.Id);
 				}
@@ -485,11 +508,13 @@ public sealed class ReplicationServer
 
 			if (packet.Entries.Count > 0 && _packet.ByteLength + _entry.ByteLength + TerminatorBytes > BudgetBytes)
 			{
+				view.LeftOut = true;
 				continue;
 			}
 
 			_packet.WriteBytes(_entry.WrittenBytes);
 			view.Accumulated = 0;
+			view.LeftOut = false;
 			view.Sent = true;
 			packet.Entries.Add(new SentEntry(view, tick, maxEvent, view.Leaving));
 		}
@@ -537,12 +562,18 @@ public sealed class ReplicationServer
 		WriteCues(entity, acked, seen);
 		uint maxEvent = WriteEvents(entity, view.EventsAcked);
 
-		bool body = entity.BodyStamp > acked && entity.ShadowBody is not null;
-		_entry.WriteBool(body);
+		bool bodyChanged = entity.BodyStamp > acked;
+		_entry.WriteBool(bodyChanged);
 
-		if (body)
+		if (bodyChanged)
 		{
-			BodyCodec.Write(_entry, entity.ShadowBody!.Value);
+			_entry.WriteBool(view.LeftOut);
+			_entry.WriteBool(entity.ShadowBody is not null);
+
+			if (entity.ShadowBody is QuantizedBody body)
+			{
+				BodyCodec.Write(_entry, body);
+			}
 		}
 
 		_entry.Align();
@@ -690,6 +721,7 @@ public sealed class ReplicationServer
 
 			_entry.WriteVarUInt(tombstone.Instance);
 			_entry.WriteBool(true);
+			_entry.WriteBool(tombstone.Interrupted);
 		}
 	}
 
@@ -797,6 +829,9 @@ public sealed class ReplicationServer
 
 		public float Accumulated { get; set; }
 
+		// The budget left the entity out of the last send, so its absence there says nothing about what changed.
+		public bool LeftOut { get; set; }
+
 		public bool Sent { get; set; }
 
 		// The client is to despawn the entity: it left, or stopped being relevant.
@@ -862,7 +897,7 @@ public sealed class ReplicationServer
 			}
 
 			entity.Cues.Remove(cue);
-			entity.RemovedCues.Add(new ReplicatedEntity.CueTombstone(cue.Instance, ReplicatedEntity.Pending));
+			entity.RemovedCues.Add(new ReplicatedEntity.CueTombstone(cue.Instance, ReplicatedEntity.Pending, interrupted));
 		}
 
 		public void CueExecuted(Tag cueTag, IForgeEntity? target, CueParameters? parameters)

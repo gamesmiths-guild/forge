@@ -374,6 +374,8 @@ public sealed class NetworkSession
 	{
 		if (IsServer)
 		{
+			Replication!.StopObserving();
+
 			// Refused clients, and ones whose connection the session hasn't taken yet, are connected too.
 			foreach (PeerId id in new List<PeerId>(Transport.Peers))
 			{

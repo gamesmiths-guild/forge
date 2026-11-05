@@ -166,15 +166,20 @@ public sealed class ReplicationClient
 
 		PacketsReceived++;
 
-		if (!Acknowledge((uint)sequence))
+		if (sequence <= LastSequence)
 		{
 			PacketsLate++;
 			return;
 		}
 
 		long tick = reader.ReadVarInt();
+
+		if (tick < 0)
+		{
+			throw new MalformedPacketException($"{tick} is not a server tick.");
+		}
+
 		long previousTick = LastServerTick;
-		LastServerTick = Math.Max(LastServerTick, tick);
 
 		while (true)
 		{
@@ -192,6 +197,10 @@ public sealed class ReplicationClient
 
 			ReadEntry(reader, new NetworkEntityId((uint)id), tick, previousTick);
 		}
+
+		// Only a packet read to its end counts: one that isn't is never acknowledged, so the server sends it all again.
+		LastServerTick = Math.Max(LastServerTick, tick);
+		Acknowledge((uint)sequence);
 	}
 
 	internal bool TryWriteAck(BitWriter writer)
@@ -222,6 +231,11 @@ public sealed class ReplicationClient
 			{
 				min = ReplicationCodec.ReadInt(reader);
 				max = ReplicationCodec.ReadInt(reader);
+
+				if (min > max)
+				{
+					throw new MalformedPacketException($"{min} to {max} is not an attribute's range.");
+				}
 			}
 
 			if (mirror is null || index >= mirror.Attributes.Length)
@@ -234,14 +248,9 @@ public sealed class ReplicationClient
 		}
 	}
 
-	// Records a sequence for the next acknowledgement when it's newer than any read before, and says whether it is.
-	private bool Acknowledge(uint sequence)
+	// Records a sequence newer than any read before for the next acknowledgement.
+	private void Acknowledge(uint sequence)
 	{
-		if (sequence <= LastSequence)
-		{
-			return false;
-		}
-
 		uint shift = sequence - LastSequence;
 		uint mask = shift < 32 ? _ackMask << (int)shift : 0;
 
@@ -253,7 +262,6 @@ public sealed class ReplicationClient
 		_ackMask = mask;
 		LastSequence = sequence;
 		_ackPending = true;
-		return true;
 	}
 
 	private void ReadEntry(BitReader reader, NetworkEntityId id, long tick, long previousTick)
@@ -307,7 +315,8 @@ public sealed class ReplicationClient
 
 		if (mirror is not null)
 		{
-			// Spawned already, from an earlier copy of the spawn; the state that follows is what matters.
+			// Placed and bound before the server said whose it is, or spawned already, from an earlier copy of the spawn.
+			mirror.Owner = new PeerId((int)owner);
 			return mirror;
 		}
 
@@ -388,6 +397,14 @@ public sealed class ReplicationClient
 			return;
 		}
 
+		bool leftOut = reader.ReadBool();
+
+		if (!reader.ReadBool())
+		{
+			mirror?.Body.Clear();
+			return;
+		}
+
 		BodyState body = BodyCodec.Dequantize(BodyCodec.Read(reader));
 
 		if (mirror is null)
@@ -395,9 +412,10 @@ public sealed class ReplicationClient
 			return;
 		}
 
-		// A body that wasn't in the packet before this one hadn't changed by then, so it moved only after it: held
-		// there, it isn't shown drifting from where it last stood to here all the way from when it stopped.
-		if (mirror.Body.Latest is BodyState held && mirror.Body.LatestTick < previousTick)
+		// A body missing from the packet before this one hadn't changed by then, unless the budget left it out, so it
+		// moved only after it: held there, it isn't shown drifting from where it last stood all the way from when it
+		// stopped.
+		if (!leftOut && mirror.Body.Latest is BodyState held && mirror.Body.LatestTick < previousTick)
 		{
 			mirror.Body.Add(previousTick, held);
 		}
@@ -420,7 +438,8 @@ public sealed class ReplicationClient
 
 			if (reader.ReadBool())
 			{
-				mirror?.RemoveCue((uint)instance);
+				bool interrupted = reader.ReadBool();
+				mirror?.RemoveCue((uint)instance, interrupted);
 				continue;
 			}
 
@@ -491,7 +510,7 @@ public sealed class ReplicationClient
 
 		public IForgeEntity Entity { get; } = entity;
 
-		public PeerId Owner { get; } = owner;
+		public PeerId Owner { get; set; } = owner;
 
 		public bool Placed { get; } = placed;
 
@@ -514,11 +533,11 @@ public sealed class ReplicationClient
 			Entity.CuesManager.ApplyCue(cueTag, Entity, parameters, applied);
 		}
 
-		public void RemoveCue(uint instance)
+		public void RemoveCue(uint instance, bool interrupted)
 		{
 			if (_cues.Remove(instance, out AppliedCue? applied))
 			{
-				Entity.CuesManager.RemoveCue(applied.CueTag, Entity, interrupted: false, applied);
+				Entity.CuesManager.RemoveCue(applied.CueTag, Entity, interrupted, applied);
 			}
 		}
 

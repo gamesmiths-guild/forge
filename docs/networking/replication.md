@@ -20,6 +20,8 @@ Under the hood every value the server sends is stamped with the send it changed 
 
 Effects, abilities, graphs, shared variables and input don't replicate: a mirror holds what they produced, not what produced it. Because a mirror's attributes and tags are what the server sends, queries on them, UI bound to them and cue handlers work on a client as they do on the server.
 
+A cue's parameters reach a client as its magnitude, its normalized magnitude and its source, with these limits: `CustomParameters` is always `null`, and `Source` is `null` when the client has no mirror of the source at the moment the cue arrives, and stays so until the server next updates the cue.
+
 ## The server
 
 ```csharp
@@ -70,8 +72,8 @@ foreach (IForgeEntity entity in mirror.Entities)
 
 - **Spawning and despawning.** The host's `IReplicationHost.Spawn` makes the entity the server spawned, from the scene index, and gives it the id; `Despawn` takes one away. Entities placed in the scene are bound with `BindPlaced`, under the same id the server gives them, before the session is ready.
 - **Mirrors.** A mirror is torn down as it's bound (see [teardown](../simulation.md#ending-an-entity)): it runs no abilities and refuses every effect. From then on its attributes, tags and persistent cues are what the server last sent, and executed cues play once as they arrive. A host doesn't advance its mirrors.
-- **Bodies.** `BodyOf` gives the `RemoteBody`: the states the server sent, by server tick. `TrySample` interpolates between the two around a tick, which may fall between ticks. The newest state arrives about half a round trip after the server's tick it's of, so showing bodies a little behind that, by more than the send interval, keeps a state on either side of the moment shown. A body that rested and then moved is held where it stood until the send before it moved, so it isn't shown drifting there all along.
-- **Late packets.** A packet older than one already read is dropped and not acknowledged, so the server sends what it carried again. `PacketsLate` counts them.
+- **Bodies.** `BodyOf` gives the `RemoteBody`: the states the server sent, by server tick. `TrySample` interpolates between the two around a tick, which may fall between ticks. The newest state arrives about half a round trip after the server's tick it's of, so showing bodies a little behind that, by more than the send interval, keeps a state on either side of the moment shown. A body that rested and then moved is held where it stood until the send before it moved, so it isn't shown drifting there all along. A body that goes away on the server, when `BodySource` stops giving one, goes here too.
+- **Late packets.** A packet older than one already read is dropped and not acknowledged, so the server sends what it carried again. `PacketsLate` counts them. So is a packet that can't be read to its end, though what came before the bad part stays applied, as the same values arrive again.
 
 ## The wire
 
@@ -81,4 +83,4 @@ A packet a client can't read is dropped and counted, as every packet is (see [th
 
 ## A server with nothing to show
 
-A dedicated server sets `CuesManager.Presents` to `false`: no cue handler runs and nothing is queued for presentation, while replication still sees every cue and sends it.
+A dedicated server sets `CuesManager.Presents` to `false`: no cue handler runs and nothing is queued for presentation, even from a restore, while replication still sees every cue and sends it. It never runs `PresentAbilities`, and that keeps nothing waiting either: only a pass starts presenting a node, so an ability that ends with no pass behind it has nothing left to end.

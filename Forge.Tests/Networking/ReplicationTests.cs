@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using System.Numerics;
+using System.Reflection;
 using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
@@ -78,7 +79,87 @@ public class ReplicationTests
 		mirror.Tags.AllTags.HasTag(client.Tag("state.burning")).Should().BeFalse();
 		mirror.Set.Attribute1.CurrentValue.Should().Be(entity.Set.Attribute1.CurrentValue);
 		client.Fire.IsApplied.Should().BeFalse();
-		client.Fire.LastInterrupted.Should().BeFalse("the server's cue ended, the mirror didn't go");
+		client.Fire.LastInterrupted.Should().BeTrue("the server took the effect away before its time");
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_cue_that_ended_on_its_own_ends_uninterrupted_on_the_client()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		rig.ServerCues.ApplyCue(rig.ServerTag("cue.fire"), entity, null);
+		rig.Step(6);
+
+		rig.ServerCues.RemoveCue(rig.ServerTag("cue.fire"), entity, interrupted: false);
+		rig.Step(6);
+
+		client.Fire.IsApplied.Should().BeFalse();
+		client.Fire.LastInterrupted.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_cue_applied_before_registering_reaches_the_client_and_its_end_too()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		var entity = new Entity(rig.ServerTagsManager, rig.ServerCues) { NetworkId = rig.Server.Replication!.AllocateId() };
+		ActiveEffectHandle handle = Rig.Apply(entity, rig.Burning())!;
+
+		rig.Server.Replication.Register(entity, 0, PeerId.None);
+		rig.Step(6);
+		client.Fire.IsApplied.Should().BeTrue();
+
+		entity.EffectsManager.RemoveEffect(handle);
+		rig.Step(6);
+		client.Fire.IsApplied.Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_restore_on_the_server_reaches_the_client()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		EntitySnapshot before = EntitySimulation.CaptureSnapshot(entity);
+		Rig.Apply(entity, rig.Burning());
+		EntitySnapshot burning = EntitySimulation.CaptureSnapshot(entity);
+		rig.Step(6);
+		client.Fire.IsApplied.Should().BeTrue();
+
+		EntitySimulation.RestoreSnapshot(entity, before);
+		rig.Step(6);
+		client.Fire.IsApplied.Should().BeFalse("the restore took the effect and its cue away");
+
+		EntitySimulation.RestoreSnapshot(entity, burning);
+		rig.Step(6);
+		client.Fire.IsApplied.Should().BeTrue("the restore brought them back");
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_server_stops_observing_cues_when_nothing_of_it_needs_them()
+	{
+		var rig = new Rig();
+		var shared = new CuesManager();
+		var first = new Entity(rig.ServerTagsManager, shared) { NetworkId = rig.Server.Replication!.AllocateId() };
+		var second = new Entity(rig.ServerTagsManager, shared) { NetworkId = rig.Server.Replication.AllocateId() };
+		rig.Server.Replication.Register(first, 0, PeerId.None);
+		rig.Server.Replication.Register(second, 0, PeerId.None);
+		ObserverCount(shared).Should().Be(1);
+
+		rig.Server.Replication.Unregister(first);
+		ObserverCount(shared).Should().Be(1, "the other entity still uses it");
+
+		rig.Server.Replication.Unregister(second);
+		ObserverCount(shared).Should().Be(0);
+
+		rig.Server.Replication.Register(first, 0, PeerId.None);
+		rig.Server.Disconnect();
+		ObserverCount(shared).Should().Be(0, "the entity outlives the session");
 	}
 
 	[Fact]
@@ -184,6 +265,51 @@ public class ReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Replication")]
+	public void Distance_is_from_what_each_client_owns()
+	{
+		var rig = new Rig();
+		Client near = rig.Join();
+		Client far = rig.Join();
+		rig.Server.Replication!.Relevancy = new DistanceRelevancy(10);
+		rig.Spawn(near.Peer).Body = new BodyState(Vector3.Zero, Quaternion.Identity, default, true);
+		rig.Spawn(far.Peer).Body = new BodyState(new Vector3(100, 0, 0), Quaternion.Identity, default, true);
+		rig.Spawn().Body = new BodyState(new Vector3(5, 0, 0), Quaternion.Identity, default, true);
+
+		rig.Step(6);
+
+		near.Spawned.Should().HaveCount(2);
+		far.Spawned.Should().ContainSingle();
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_late_acknowledgement_of_a_despawn_leaves_the_entity_that_came_back_alone()
+	{
+		// Each round takes the tag away at a different moment after the entity comes back. The acknowledgements of the
+		// despawn's copies are still on their way, and none may cost the client that removal.
+		for (int round = 0; round < 24; round++)
+		{
+			var rig = new Rig();
+			Client client = rig.Join(up: new NetworkConditions(0.1));
+			var relevancy = new SwitchedRelevancy();
+			rig.Server.Replication!.Relevancy = relevancy;
+			Entity entity = rig.Spawn();
+			ActiveEffectHandle handle = Rig.Apply(entity, rig.Soaked())!;
+			rig.Step(20);
+
+			relevancy.Relevant = false;
+			rig.Step(8);
+			relevancy.Relevant = true;
+			rig.Step(round);
+			entity.EffectsManager.RemoveEffect(handle);
+			rig.Step(40);
+
+			client.Find(entity).Tags.AllTags.HasTag(client.Tag("state.wet")).Should().BeFalse($"round {round}");
+		}
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
 	public void An_executed_cue_plays_once_and_one_too_old_never_plays()
 	{
 		var rig = new Rig(down: new NetworkConditions(0.01), seed: 5);
@@ -229,6 +355,20 @@ public class ReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Replication")]
+	public void A_placed_entity_learns_its_owner_from_the_server()
+	{
+		var rig = new Rig();
+		rig.Place(new NetworkEntityId(1000), new PeerId(7));
+		Client client = rig.Join(null, new NetworkEntityId(1000));
+
+		rig.Step(6);
+
+		IForgeEntity mirror = client.Session.Mirror!.Find(new NetworkEntityId(1000))!;
+		client.Session.Mirror.OwnerOf(mirror).Should().Be(new PeerId(7));
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
 	public void A_packet_over_budget_carries_what_fits_and_the_rest_follows_by_priority()
 	{
 		var rig = new Rig();
@@ -269,6 +409,58 @@ public class ReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Replication")]
+	public void A_body_the_budget_keeps_leaving_out_is_never_shown_stopping()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		rig.Server.Replication!.BudgetBytes = 1;
+		var entities = new List<Entity>();
+
+		for (int i = 0; i < 3; i++)
+		{
+			entities.Add(rig.Spawn());
+		}
+
+		for (int step = 0; step < 120; step++)
+		{
+			foreach (Entity entity in entities)
+			{
+				entity.Body = new BodyState(new Vector3(step * 0.1f, 0, 0), Quaternion.Identity, default, true);
+			}
+
+			rig.Step();
+		}
+
+		RemoteBody body = client.Session.Mirror!.BodyOf(client.Find(entities[0]))!;
+		long newest = body.LatestTick;
+
+		for (long tick = newest - 60; tick < newest; tick++)
+		{
+			body.TrySample(tick, out BodyState earlier);
+			body.TrySample(tick + 1, out BodyState later);
+			later.Position.X.Should().BeGreaterThan(earlier.Position.X, $"it never stopped, and at {tick} it did");
+		}
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_body_that_went_away_is_gone_from_the_client_too()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		entity.Body = new BodyState(Vector3.Zero, Quaternion.Identity, default, true);
+		rig.Step(6);
+		client.Session.Mirror!.BodyOf(client.Only()).Should().NotBeNull();
+
+		entity.Body = null;
+		rig.Step(6);
+
+		client.Session.Mirror.BodyOf(client.Only()).Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
 	public void A_client_s_input_drives_what_it_owns_on_the_server()
 	{
 		var rig = new Rig();
@@ -302,6 +494,37 @@ public class ReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Replication")]
+	public void An_input_event_can_spawn_and_despawn_entities()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity mine = rig.Spawn(client.Peer);
+		Entity gone = rig.Spawn(client.Peer);
+		mine.Input = new EntityInput(_actions);
+		gone.Input = new EntityInput(_actions);
+		var events = new TagContainer(rig.ServerTagsManager, [rig.ServerTag("input.menu")]);
+		mine.Events.Subscribe(rig.ServerTag("input.menu"), _ =>
+		{
+			rig.Spawn(client.Peer);
+			rig.Server.Replication!.Unregister(gone);
+		});
+
+		long tick = rig.Server.Clock.Tick + 3;
+		client.Session.SendInput(
+			new InputCommand(
+				tick,
+				new InputFrame { Held = 1 },
+				[InputCommand.EventIndex(client.Tags, client.Tag("input.menu"))]));
+		rig.Step(3);
+		rig.Server.TakeInput(tick, events);
+		EntitySimulation.BeginTick(gone, tick);
+
+		rig.Server.Replication!.Entities.Should().HaveCount(2);
+		gone.Input.Current.Held.Should().Be(0, "it was gone by the time its turn came");
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
 	public void A_state_packet_that_makes_no_sense_is_dropped_and_counted()
 	{
 		var rig = new Rig();
@@ -313,6 +536,80 @@ public class ReplicationTests
 
 		client.Session.MalformedPackets.Should().Be(1);
 		client.Session.State.Should().Be(SessionState.Ready);
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_state_packet_that_cannot_be_read_counts_for_nothing()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		rig.Step(4);
+		uint sequence = client.Session.Mirror!.LastSequence;
+		long tick = client.Session.Mirror.LastServerTick;
+
+		// A far newer sequence and tick, then a truncated entry.
+		var writer = new BitWriter();
+		writer.WriteVarUInt(100_000);
+		writer.WriteVarInt(100_000);
+		writer.WriteVarUInt(entity.NetworkId.Value);
+		rig.Network.Server.Send(client.Peer, Protocol.StateChannel, reliable: false, writer.ToArray());
+		rig.Step();
+
+		client.Session.MalformedPackets.Should().Be(1);
+		client.Session.Mirror.LastSequence.Should().BeLessThan(100_000);
+		client.Session.Mirror.LastServerTick.Should().BeLessThan(100_000);
+		client.Session.Mirror.LastSequence.Should().BeGreaterThanOrEqualTo(sequence);
+		client.Session.Mirror.LastServerTick.Should().BeGreaterThanOrEqualTo(tick);
+
+		Rig.Apply(entity, rig.Soaked());
+		rig.Step(6);
+		client.Only().Tags.AllTags.HasTag(client.Tag("state.wet")).Should().BeTrue("later packets still count");
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_state_packet_with_a_negative_tick_is_dropped_and_counted()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		rig.Step(2);
+
+		var writer = new BitWriter();
+		writer.WriteVarUInt(100_000);
+		writer.WriteVarInt(-1);
+		writer.WriteVarUInt(0);
+		rig.Network.Server.Send(client.Peer, Protocol.StateChannel, reliable: false, writer.ToArray());
+		rig.Step();
+
+		client.Session.MalformedPackets.Should().Be(1);
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void An_attribute_range_upside_down_is_dropped_and_counted()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		rig.Step(2);
+
+		var writer = new BitWriter();
+		writer.WriteVarUInt(100_000);
+		writer.WriteVarInt(100);
+		writer.WriteVarUInt(999);
+		writer.WriteBits(0, 2);
+		writer.WriteBool(true);
+		writer.WriteVarUInt(1);
+		writer.WriteVarUInt(0);
+		writer.WriteVarInt(1);
+		writer.WriteBool(true);
+		writer.WriteVarInt(5);
+		writer.WriteVarInt(1);
+		rig.Network.Server.Send(client.Peer, Protocol.StateChannel, reliable: false, writer.ToArray());
+		rig.Step();
+
+		client.Session.MalformedPackets.Should().Be(1);
 	}
 
 	[Fact]
@@ -369,6 +666,12 @@ public class ReplicationTests
 		ack.Acknowledges(37).Should().BeTrue();
 		ack.Acknowledges(41).Should().BeFalse();
 		ack.Acknowledges(7).Should().BeFalse();
+	}
+
+	private static int ObserverCount(CuesManager cues)
+	{
+		FieldInfo field = typeof(CuesManager).GetField("_observers", BindingFlags.NonPublic | BindingFlags.Instance)!;
+		return ((System.Collections.ICollection)field.GetValue(cues)!).Count;
 	}
 
 	private static void ToggleSoaked(Entity entity, Dictionary<Entity, ActiveEffectHandle> soaked, Rig rig, bool on)
@@ -506,10 +809,10 @@ public class ReplicationTests
 			return entity;
 		}
 
-		public Entity Place(NetworkEntityId id)
+		public Entity Place(NetworkEntityId id, PeerId? owner = null)
 		{
 			var entity = new Entity(ServerTagsManager, ServerCues) { NetworkId = id };
-			Server.Replication!.Register(entity, -1, PeerId.None);
+			Server.Replication!.Register(entity, -1, owner ?? PeerId.None);
 			return entity;
 		}
 
@@ -681,6 +984,16 @@ public class ReplicationTests
 			EffectsManager = new EffectsManager(this, cues);
 			CuesManager = cues;
 			Abilities = new EntityAbilities(this);
+		}
+	}
+
+	private sealed class SwitchedRelevancy : IRelevancy
+	{
+		public bool Relevant { get; set; } = true;
+
+		public bool IsRelevant(PeerId peer, ReplicatedEntity entity, ReplicationServer server)
+		{
+			return Relevant;
 		}
 	}
 
