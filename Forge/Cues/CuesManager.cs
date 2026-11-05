@@ -40,6 +40,8 @@ public sealed class CuesManager
 
 	private readonly List<ICueObserver> _observers = [];
 
+	private bool _presents = true;
+
 	private bool _presenting;
 
 	/// <summary>
@@ -57,10 +59,23 @@ public sealed class CuesManager
 
 	/// <summary>
 	/// Gets or sets a value indicating whether cues are presented at all. A host with nothing to show, such as a
-	/// dedicated server, sets it to <see langword="false"/>: no handler runs and nothing is queued for a presentation
-	/// pass, while what the cues say still reaches whoever observes them, such as a network session replicating them.
+	/// dedicated server, sets it to <see langword="false"/>: no handler runs, what waited for a presentation pass is
+	/// dropped and nothing is queued for one, while what the cues say still reaches whoever observes them, such as a
+	/// network session replicating them.
 	/// </summary>
-	public bool Presents { get; set; } = true;
+	public bool Presents
+	{
+		get => _presents;
+		set
+		{
+			_presents = value;
+
+			if (!value)
+			{
+				_pendingCues.Clear();
+			}
+		}
+	}
 
 	/// <summary>
 	/// Registers a cue that can be triggered later.
@@ -761,7 +776,25 @@ public sealed class CuesManager
 	// each handler on its own, as the pass does, so one that throws keeps none of the others from getting it.
 	private void Reconcile(in PendingCue pending, ref ExceptionDispatchInfo? failure)
 	{
-		if (!_registeredCues.TryGetValue(pending.CueTag, out HashSet<ICueHandler>? cues))
+		foreach (ICueObserver observer in _observers)
+		{
+			switch (pending.Kind)
+			{
+				case PendingCueKind.Apply:
+					observer.CueApplied(pending.CueTag, pending.Target, pending.Parameters, pending.Application);
+					break;
+
+				case PendingCueKind.Update:
+					observer.CueUpdated(pending.CueTag, pending.Target, pending.Parameters, pending.Application);
+					break;
+
+				case PendingCueKind.Remove:
+					observer.CueRemoved(pending.CueTag, pending.Target, pending.Interrupted, pending.Application);
+					break;
+			}
+		}
+
+		if (!Presents || !_registeredCues.TryGetValue(pending.CueTag, out HashSet<ICueHandler>? cues))
 		{
 			return;
 		}

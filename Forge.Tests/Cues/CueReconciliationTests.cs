@@ -53,6 +53,30 @@ public class CueReconciliationTests(TagsAndCuesFixture fixture) : IClassFixture<
 		handler.ExecuteCount.Should().Be(0);
 	}
 
+	[Theory]
+	[Trait("Cues", "Reconciliation")]
+	[InlineData(false)]
+	[InlineData(true)]
+	public void A_restore_presents_nothing_on_a_host_that_doesn_t_present(bool deferred)
+	{
+		CuesManager cues = Cues(out RecordingCueHandler handler);
+		cues.Presents = false;
+		cues.DeferDispatch = deferred;
+		TestEntity entity = Entity(cues);
+		var world = new WorldHistory(16, Step);
+		world.Add(entity);
+		Run(world, 1, 2);
+		Apply(entity, WithCue("Shield", CueMagnitudeType.EffectLevel));
+		Run(world, 3, 4);
+
+		world.Rollback(2);
+		cues.Presents = true;
+		cues.PresentCues();
+
+		handler.ApplyCount.Should().Be(0);
+		handler.RemoveCount.Should().Be(0);
+	}
+
 	[Fact]
 	[Trait("Cues", "Reconciliation")]
 	public void A_replayed_tick_shows_the_cues_of_the_effects_it_applied_once()
