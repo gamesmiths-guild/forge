@@ -26,4 +26,10 @@ public enum AssetKind : byte
 	/// A scene a networked entity spawns from.
 	/// </summary>
 	Scene = 3,
+
+	/// <summary>
+	/// How the custom data of a type effects are applied with travels: a
+	/// <see cref="Replication.EffectContextCodec"/>.
+	/// </summary>
+	EffectContext = 4,
 }

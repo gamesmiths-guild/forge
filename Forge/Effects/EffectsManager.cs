@@ -13,6 +13,13 @@ namespace Gamesmiths.Forge.Effects;
 /// <summary>
 /// Manages the <see cref="Effect"/> application and instances of an entity.
 /// </summary>
+/// <remarks>
+/// On a client's mirror of a networked entity it holds what the server says is active: the queries answer as they do on
+/// the server, and <see cref="OnActiveEffectAdded"/>, <see cref="OnActiveEffectChanged"/> and
+/// <see cref="OnActiveEffectRemoved"/> follow those effects. Nothing else runs: no modifiers, periodic executions,
+/// components or cues, nothing applies or removes, and instant effects never reach it, since what they do arrives as
+/// attribute values and cues.
+/// </remarks>
 /// <param name="owner">The owner of this manager.</param>
 /// <param name="cuesManager">The cues manager to be used to trigger cues by this effects manager.</param>
 public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
@@ -151,6 +158,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	internal bool IsChanging => _applicationDepth > 0 || _changeDepth > 0;
 
+	internal IReadOnlyList<ActiveEffect> ActiveEffects => _activeEffects;
+
 	/// <summary>
 	/// Applies an effect to the owner of this manager.
 	/// </summary>
@@ -251,6 +260,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <param name="deltaTime">Time passed since the last update call.</param>
 	public void UpdateEffects(double deltaTime)
 	{
+		// All that can be left on a torn-down entity is a mirror's effects, which end when the server says.
+		if (_tornDown)
+		{
+			return;
+		}
+
 		if (_updating)
 		{
 			Validation.Fail(
@@ -556,6 +571,41 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return FilterEffectsByData(effectData).FirstOrDefault();
 	}
 
+	// Takes in an effect the server says is active on this mirror, with what a handler reading it should find.
+	internal ActiveEffect AddMirrorEffect(
+		Effect effect,
+		EffectApplicationContext? applicationContext,
+		int level,
+		int stackCount,
+		float duration,
+		bool isInhibited,
+		double remainingDuration,
+		int executionCount)
+	{
+		var activeEffect =
+			new ActiveEffect(effect, Owner, applicationContext, level, stackCount, duration, isInhibited)
+			{
+				RemainingDuration = remainingDuration,
+			};
+
+		activeEffect.SetMirroredExecutionCount(executionCount);
+		_activeEffects.Add(activeEffect);
+		OnActiveEffectAdded?.Invoke(activeEffect.Handle);
+		return activeEffect;
+	}
+
+	// Lets go of an effect the server says ended on this mirror. One that ended with the entity's teardown is gone.
+	internal void RemoveMirrorEffect(ActiveEffect activeEffect, EffectRemovalReason reason)
+	{
+		if (!_activeEffects.Remove(activeEffect))
+		{
+			return;
+		}
+
+		OnActiveEffectRemoved?.Invoke(activeEffect.Handle, reason);
+		activeEffect.Handle.Free();
+	}
+
 	/// <summary>
 	/// Unwinds every active effect's modifiers, runs a change to the entity's attribute set membership, then
 	/// re-evaluates and re-applies them. The unwind has to precede the detach, or a departing attribute keeps this
@@ -573,7 +623,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	/// <param name="applyChange">The action that applies the attribute set membership change.</param>
 	internal void RebuildAroundAttributeChange(Action applyChange)
 	{
-		ActiveEffect[] activeEffects = [.. _activeEffects, .. Owner.Attributes.DependentEffects];
+		ActiveEffect[] activeEffects =
+			[.. _activeEffects.Where(x => !x.IsMirror), .. Owner.Attributes.DependentEffects];
 
 		// Each effect's writes are tallied across its unapply here and its rebuild below, so its update cues report
 		// the net change the membership change made through it — nothing for an attribute it modified before and
@@ -1045,7 +1096,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private void RemoveStackOrUnapply(ActiveEffect? effectToRemove, bool forceRemoval)
 	{
-		if (effectToRemove is null)
+		if (effectToRemove?.IsMirror != false)
 		{
 			return;
 		}
@@ -1084,6 +1135,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private void RemoveStacks(ActiveEffect effectToRemove, int stacksToRemove)
 	{
+		if (effectToRemove.IsMirror)
+		{
+			return;
+		}
+
 		_changeDepth++;
 
 		try
@@ -1156,7 +1212,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 			effectToRemove.EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 
-			_cuesManager.RemoveCues(in effectEvaluatedData, reason != EffectRemovalReason.Expired);
+			// A mirror's cues aren't its effects': they come and go as the server's do.
+			if (!effectToRemove.IsMirror)
+			{
+				_cuesManager.RemoveCues(in effectEvaluatedData, reason != EffectRemovalReason.Expired);
+			}
 		}
 		finally
 		{

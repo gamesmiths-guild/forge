@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Networking.Messages;
 using Gamesmiths.Forge.Tags;
 
@@ -14,9 +15,10 @@ namespace Gamesmiths.Forge.Networking.Replication;
 /// joining late and coming back into relevancy cost nothing special.
 /// </summary>
 /// <remarks>
-/// <para>What replicates: attributes as current values with their range, tags as the final set with what was added and
-/// removed, persistent cues as state, executed cues as events that expire, and the body for interpolation. Effects,
-/// abilities and graphs don't: a client's copy holds the results, not what produced them.</para>
+/// <para>What replicates: attributes as current values with their range, and base values to the owner, tags as the
+/// final set with what was added and removed, active effects as records of what they are, as far as each effect's
+/// <see cref="EffectVisibility"/> allows, persistent cues as state, executed cues as events that expire, and the body
+/// for interpolation. Abilities and graphs don't: a client's copy holds the results, not what produced them.</para>
 /// <para>The host calls <see cref="Send"/> once per tick after simulating it; the server sends every
 /// <see cref="SendInterval"/> ticks, a packet with no entries when nothing changed, so a client knows the ticks in
 /// which nothing did. The host registers an entity when it spawns, with the id from <see cref="AllocateId"/> set on it
@@ -57,8 +59,16 @@ public sealed class ReplicationServer
 	private readonly BitWriter _entry = new();
 	private readonly List<EntityView> _candidates = [];
 	private readonly List<ushort> _tagScratch = [];
+	private readonly Dictionary<Type, int> _contextCodecs = [];
+	private readonly HashSet<EffectData> _effectsNotListed = [];
 	private readonly CueObserver _cueObserver;
 	private uint _nextId = 1;
+
+	/// <summary>
+	/// Raised the first time an effect the registry doesn't list goes active on a replicated entity, unless it's
+	/// <see cref="EffectVisibility.ServerOnly"/>: no client can be told about it, so it stays on the server.
+	/// </summary>
+	public event Action<EffectData>? EffectNotListed;
 
 	/// <summary>
 	/// Gets or sets how many bytes a state packet aims to stay under. An entity whose entry alone is over it still
@@ -81,6 +91,12 @@ public sealed class ReplicationServer
 	/// without movers reads them here.
 	/// </summary>
 	public Func<IForgeEntity, BodyState?> BodySource { get; set; } = entity => entity.Mover?.CaptureState();
+
+	/// <summary>
+	/// Gets or sets who hears about an effect whose data says <see cref="EffectVisibility.Default"/>. Read as an effect
+	/// first goes active.
+	/// </summary>
+	public EffectVisibility DefaultEffectVisibility { get; set; } = EffectVisibility.Public;
 
 	/// <summary>
 	/// Gets the entities being replicated, in the order they were registered.
@@ -111,6 +127,14 @@ public sealed class ReplicationServer
 	{
 		_session = session;
 		_cueObserver = new CueObserver(this);
+
+		for (int i = 0; i < session.Registry.Count(AssetKind.EffectContext); i++)
+		{
+			if (session.Registry.TryGet(AssetKind.EffectContext, i, out EffectContextCodec codec))
+			{
+				_contextCodecs[codec.ContextType] = i;
+			}
+		}
 	}
 
 	/// <summary>
@@ -190,6 +214,8 @@ public sealed class ReplicationServer
 		replicated.DespawnedAtTick = _session.Clock.Tick;
 		replicated.Cues.Clear();
 		replicated.Events.Clear();
+		replicated.Effects.Clear();
+		replicated.RemovedEffects.Clear();
 
 		if (!_entityList.Exists(x => x.Entity.CuesManager == entity.CuesManager))
 		{
@@ -251,6 +277,7 @@ public sealed class ReplicationServer
 		foreach (ReplicatedEntity entity in _entityList)
 		{
 			entity.Capture(tick, BodySource);
+			entity.CaptureEffects(tick, this, _session.Clock);
 
 			while (entity.Events.Count > 0 && entity.Events[0].CreatedAtTick < oldestEvent)
 			{
@@ -265,6 +292,38 @@ public sealed class ReplicationServer
 		}
 
 		Prune();
+	}
+
+	// What an effect seen for the first time is on the wire, and who hears about it.
+	internal ReplicatedEffect DescribeEffect(uint instance, ActiveEffect activeEffect)
+	{
+		EffectData data = activeEffect.EffectData;
+		EffectVisibility visibility = data.Visibility == EffectVisibility.Default
+			? DefaultEffectVisibility
+			: data.Visibility;
+		int assetIndex = -1;
+
+		if (visibility != EffectVisibility.ServerOnly)
+		{
+			assetIndex = _session.Registry.IndexOfAsset(AssetKind.Effect, data);
+
+			if (assetIndex < 0)
+			{
+				visibility = EffectVisibility.ServerOnly;
+
+				if (_effectsNotListed.Add(data))
+				{
+					EffectNotListed?.Invoke(data);
+				}
+			}
+		}
+
+		int contextCodec = activeEffect.EffectEvaluatedData.ApplicationContext is EffectApplicationContext context
+			&& _contextCodecs.TryGetValue(context.GetType(), out int codec)
+			? codec
+			: -1;
+
+		return new ReplicatedEffect(instance, activeEffect, assetIndex, visibility, contextCodec);
 	}
 
 	// The session is over: the entities live on, and their cues are no longer anything to this server.
@@ -284,7 +343,11 @@ public sealed class ReplicationServer
 		// The client has every entity placed in the scene, including the ones gone here before it joined.
 		foreach (ReplicatedEntity entity in _departedPlaced)
 		{
-			client.Views[entity.Id] = new EntityView(entity, _session.Clock.Tick) { Sent = true, Leaving = true };
+			client.Views[entity.Id] = new EntityView(entity, _session.Clock.Tick, isOwner: false)
+			{
+				Sent = true,
+				Leaving = true,
+			};
 		}
 	}
 
@@ -385,7 +448,7 @@ public sealed class ReplicationServer
 
 		for (int i = 0; i < entity.Attributes.Length; i++)
 		{
-			if (entity.ValueStamps[i] > acked || entity.RangeStamps[i] > acked)
+			if (AttributeChanged(view, i))
 			{
 				return true;
 			}
@@ -431,7 +494,33 @@ public sealed class ReplicationServer
 			}
 		}
 
+		foreach (ReplicatedEffect effect in entity.Effects)
+		{
+			if (view.Hears(effect.Visibility) && effect.LastChange > acked)
+			{
+				return true;
+			}
+		}
+
+		foreach (ReplicatedEntity.EffectTombstone tombstone in entity.RemovedEffects)
+		{
+			if (view.Hears(tombstone.Visibility) && tombstone.Stamp > seen)
+			{
+				return true;
+			}
+		}
+
 		return entity.BodyStamp > acked;
+	}
+
+	private static bool AttributeChanged(EntityView view, int attribute)
+	{
+		ReplicatedEntity entity = view.Entity;
+		long acked = view.Acked;
+
+		return entity.ValueStamps[attribute] > acked
+			|| entity.RangeStamps[attribute] > acked
+			|| (view.IsOwner && entity.BaseStamps[attribute] > acked);
 	}
 
 	private void UpdateViews(ClientState client, long tick)
@@ -443,7 +532,10 @@ public sealed class ReplicationServer
 
 			if (relevant && view is null)
 			{
-				client.Views[entity.Id] = new EntityView(entity, tick) { EventsAcked = entity.LastEventSequence };
+				client.Views[entity.Id] = new EntityView(entity, tick, entity.Owner == client.Peer.Id)
+				{
+					EventsAcked = entity.LastEventSequence,
+				};
 			}
 			else if (!relevant && view?.Leaving == false)
 			{
@@ -497,7 +589,7 @@ public sealed class ReplicationServer
 				continue;
 			}
 
-			uint maxEvent = WriteEntry(view);
+			uint maxEvent = WriteEntry(view, tick);
 
 			if (packet.Entries.Count > 0 && _packet.ByteLength + _entry.ByteLength + TerminatorBytes > BudgetBytes)
 			{
@@ -521,7 +613,7 @@ public sealed class ReplicationServer
 
 	// Writes the view's entry into the entry writer, byte aligned so it can be copied whole, and returns the newest
 	// event sequence it carries.
-	private uint WriteEntry(EntityView view)
+	private uint WriteEntry(EntityView view, long tick)
 	{
 		ReplicatedEntity entity = view.Entity;
 		_entry.Clear();
@@ -551,10 +643,11 @@ public sealed class ReplicationServer
 			_entry.WriteVarUInt((ulong)entity.Attributes.Length);
 		}
 
-		WriteAttributes(entity, acked);
+		WriteAttributes(view);
 		WriteTags(entity, acked, seen);
 		WriteCues(entity, acked, seen);
 		uint maxEvent = WriteEvents(entity, view.EventsAcked);
+		WriteEffects(view, tick);
 
 		bool bodyChanged = entity.BodyStamp > acked;
 		_entry.WriteBool(bodyChanged);
@@ -574,13 +667,15 @@ public sealed class ReplicationServer
 		return maxEvent;
 	}
 
-	private void WriteAttributes(ReplicatedEntity entity, long acked)
+	private void WriteAttributes(EntityView view)
 	{
+		ReplicatedEntity entity = view.Entity;
+		long acked = view.Acked;
 		int changed = 0;
 
 		for (int i = 0; i < entity.Attributes.Length; i++)
 		{
-			if (entity.ValueStamps[i] > acked || entity.RangeStamps[i] > acked)
+			if (AttributeChanged(view, i))
 			{
 				changed++;
 			}
@@ -597,13 +692,13 @@ public sealed class ReplicationServer
 
 		for (int i = 0; i < entity.Attributes.Length; i++)
 		{
-			bool range = entity.RangeStamps[i] > acked;
-
-			if (entity.ValueStamps[i] <= acked && !range)
+			if (!AttributeChanged(view, i))
 			{
 				continue;
 			}
 
+			bool range = entity.RangeStamps[i] > acked;
+			bool baseValue = view.IsOwner && entity.BaseStamps[i] > acked;
 			_entry.WriteVarUInt((ulong)i);
 			_entry.WriteVarInt(entity.ShadowValues[i]);
 			_entry.WriteBool(range);
@@ -612,6 +707,13 @@ public sealed class ReplicationServer
 			{
 				_entry.WriteVarInt(entity.ShadowMins[i]);
 				_entry.WriteVarInt(entity.ShadowMaxes[i]);
+			}
+
+			_entry.WriteBool(baseValue);
+
+			if (baseValue)
+			{
+				_entry.WriteVarInt(entity.ShadowBases[i]);
 			}
 		}
 	}
@@ -757,12 +859,123 @@ public sealed class ReplicationServer
 		return maxEvent;
 	}
 
-	// Drops the tombstones every client that could have seen the tag or cue has heard about.
+	private void WriteEffects(EntityView view, long tick)
+	{
+		ReplicatedEntity entity = view.Entity;
+		long acked = view.Acked;
+		long seen = view.Seen;
+		int effects = 0;
+
+		foreach (ReplicatedEffect effect in entity.Effects)
+		{
+			if (view.Hears(effect.Visibility) && effect.LastChange > acked)
+			{
+				effects++;
+			}
+		}
+
+		foreach (ReplicatedEntity.EffectTombstone tombstone in entity.RemovedEffects)
+		{
+			if (view.Hears(tombstone.Visibility) && tombstone.Stamp > seen)
+			{
+				effects++;
+			}
+		}
+
+		_entry.WriteBool(effects > 0);
+
+		if (effects == 0)
+		{
+			return;
+		}
+
+		_entry.WriteVarUInt((ulong)effects);
+
+		foreach (ReplicatedEffect effect in entity.Effects)
+		{
+			if (view.Hears(effect.Visibility) && effect.LastChange > acked)
+			{
+				WriteEffect(effect, acked, tick);
+			}
+		}
+
+		foreach (ReplicatedEntity.EffectTombstone tombstone in entity.RemovedEffects)
+		{
+			if (view.Hears(tombstone.Visibility) && tombstone.Stamp > seen)
+			{
+				_entry.WriteVarUInt(tombstone.Instance);
+				_entry.WriteBool(true);
+				_entry.WriteBool(tombstone.Expired);
+			}
+		}
+	}
+
+	// What the effect is goes until the client has it, what it's like now whenever that changes, and how often it
+	// executed on its own, since that changes the most.
+	private void WriteEffect(ReplicatedEffect effect, long acked, long tick)
+	{
+		NetworkAssetRegistry registry = _session.Registry;
+		_entry.WriteVarUInt(effect.Instance);
+		_entry.WriteBool(false);
+
+		bool created = effect.CreatedStamp > acked;
+		_entry.WriteBool(created);
+
+		if (created)
+		{
+			_entry.WriteBits((ulong)effect.AssetIndex, registry.BitsFor(AssetKind.Effect));
+			_entry.WriteBool(effect.ContextCodec >= 0);
+
+			if (effect.ContextCodec >= 0)
+			{
+				_entry.WriteBits((ulong)effect.ContextCodec, registry.BitsFor(AssetKind.EffectContext));
+				registry.Get<EffectContextCodec>(AssetKind.EffectContext, effect.ContextCodec)
+					.Write(_entry, effect.Active.EffectEvaluatedData.ApplicationContext!);
+			}
+		}
+
+		bool state = effect.StateStamp > acked;
+		_entry.WriteBool(state);
+
+		if (state)
+		{
+			_entry.WriteVarInt(effect.Level);
+			_entry.WriteVarUInt((ulong)effect.StackCount);
+			_entry.WriteBool(effect.IsInhibited);
+			_entry.WriteBool(effect.IsTimed);
+
+			if (effect.IsTimed)
+			{
+				_entry.WriteFloat(effect.Duration);
+				_entry.WriteVarInt(effect.EndTick - tick);
+			}
+
+			_entry.WriteVarUInt(effect.OwnerId);
+			_entry.WriteVarUInt(effect.SourceId);
+			_entry.WriteVarUInt((ulong)effect.SetByCallers.Count);
+
+			for (int i = 0; i < effect.SetByCallers.Count; i++)
+			{
+				_entry.WriteVarUInt(effect.SetByCallers[i].Key);
+				_entry.WriteFloat(effect.SetByCallers[i].Value);
+			}
+		}
+
+		bool executions = effect.ExecutionStamp > acked;
+		_entry.WriteBool(executions);
+
+		if (executions)
+		{
+			_entry.WriteVarUInt((ulong)effect.ExecutionCount);
+		}
+	}
+
+	// Drops the tombstones every client that could have seen the tag, cue or effect has heard about.
 	private void Prune()
 	{
 		foreach (ReplicatedEntity entity in _entityList)
 		{
-			if (entity.RemovedTags.Count > 0 || entity.RemovedCues.Count > 0)
+			if (entity.RemovedTags.Count > 0 || entity.RemovedCues.Count > 0 || entity.RemovedEffects.Count > 0)
 			{
 				PruneTombstones(entity);
 			}
@@ -797,12 +1010,16 @@ public sealed class ReplicationServer
 		}
 
 		entity.RemovedCues.RemoveAll(x => x.Stamp != ReplicatedEntity.Pending && x.Stamp <= needed);
+		entity.RemovedEffects.RemoveAll(x => x.Stamp <= needed);
 	}
 
 	// What one client knows of one entity.
-	private sealed class EntityView(ReplicatedEntity entity, long baseTick)
+	private sealed class EntityView(ReplicatedEntity entity, long baseTick, bool isOwner)
 	{
 		public ReplicatedEntity Entity { get; } = entity;
+
+		// The entity is the client's own, so it hears of owner-only effects and of base values.
+		public bool IsOwner { get; } = isOwner;
 
 		// The send the client first heard of the entity at: anything that went before it never reached the client.
 		public long Base { get; } = baseTick;
@@ -825,6 +1042,11 @@ public sealed class ReplicationServer
 
 		// The client is to despawn the entity: it left, or stopped being relevant.
 		public bool Leaving { get; set; }
+
+		public bool Hears(EffectVisibility visibility)
+		{
+			return visibility == EffectVisibility.Public || (visibility == EffectVisibility.OwnerOnly && IsOwner);
+		}
 	}
 
 	// Keeps each replicated entity's persistent cues and executed cues as the cues manager is told about them.

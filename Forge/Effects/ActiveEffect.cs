@@ -76,6 +76,28 @@ internal sealed class ActiveEffect
 	/// </remarks>
 	internal IEffectComponent[] ComponentInstances { get; }
 
+	// A client's copy of an effect active on the server: it holds what the server says and runs nothing.
+	internal bool IsMirror { get; }
+
+	internal ActiveEffect(
+		Effect effect,
+		IForgeEntity target,
+		EffectApplicationContext? applicationContext,
+		int level,
+		int stackCount,
+		float duration,
+		bool isInhibited)
+	{
+		IsMirror = true;
+		Handle = new ActiveEffectHandle(this);
+		ComponentInstances = [];
+		ComponentHoldOrders = [];
+		_nonSnapshotSetByCallerTags = [];
+		StackCount = stackCount;
+		IsInhibited = isInhibited;
+		EffectEvaluatedData = new EffectEvaluatedData(effect, target, stackCount, level, duration, applicationContext);
+	}
+
 	internal ActiveEffect(Effect effect, IForgeEntity target, EffectApplicationContext? applicationContext)
 	{
 		Handle = new ActiveEffectHandle(this);
@@ -391,6 +413,18 @@ internal sealed class ActiveEffect
 		EffectEvaluatedData.Target.Attributes.ApplyPendingValueChanges();
 	}
 
+	internal void SetMirrored(int level, int stackCount, float duration, bool isInhibited)
+	{
+		StackCount = stackCount;
+		IsInhibited = isInhibited;
+		EffectEvaluatedData.SetMirrored(stackCount, level, duration);
+	}
+
+	internal void SetMirroredExecutionCount(int executionCount)
+	{
+		ExecutionCount = executionCount;
+	}
+
 	internal void DetachAttributeBindings()
 	{
 		foreach (EntityAttribute attribute in EffectEvaluatedData.AttributesToCapture)
@@ -505,6 +539,11 @@ internal sealed class ActiveEffect
 	// let go and take hold again across the entity.
 	internal void AddHolds(List<EntityHold> holds)
 	{
+		if (IsMirror)
+		{
+			return;
+		}
+
 		holds.Add(new EntityHold(HoldOrder, this));
 
 		for (int i = 0; i < ComponentInstances.Length; i++)
@@ -609,7 +648,7 @@ internal sealed class ActiveEffect
 
 	internal void SetInhibit(bool value)
 	{
-		if (IsInhibited == value)
+		if (IsInhibited == value || IsMirror)
 		{
 			return;
 		}

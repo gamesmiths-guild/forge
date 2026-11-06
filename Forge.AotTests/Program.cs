@@ -42,11 +42,16 @@ internal static class Program
 		Check("Input binding activates a typed ability with data built from the tick's input", () =>
 			ActivateFromInput(tagsManager) == new StructPayload(5));
 		Check("Graph snapshot copies a node context and restores it", RestoresGraphSnapshot);
-		Check("Entity history rolls an entity back and replays its ticks", () => ReplaysEntityHistory(tagsManager));
-		Check("World history rolls a world back past a death and a spawn", () => RollsWorldBack(tagsManager));
-		Check("World replay reconciles cues and finds a tick that ran differently", () => ReplaysWorld(tagsManager));
-		Check("Network session handshakes and carries input over a loopback", () => NetworksOverLoopback(tagsManager));
-		Check("Replication spawns a mirror and carries its tags", () => ReplicatesOverLoopback(tagsManager));
+		Check("Entity history rolls an entity back and replays its ticks", () =>
+			ReplaysEntityHistory(tagsManager));
+		Check("World history rolls a world back past a death and a spawn", () =>
+			RollsWorldBack(tagsManager));
+		Check("World replay reconciles cues and finds a tick that ran differently", () =>
+			ReplaysWorld(tagsManager));
+		Check("Network session handshakes and carries input over a loopback", () =>
+			NetworksOverLoopback(tagsManager));
+		Check("Replication spawns a mirror and carries its tags and effects", () =>
+			ReplicatesOverLoopback(tagsManager));
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -397,8 +402,16 @@ internal static class Program
 	private static bool ReplicatesOverLoopback(TagsManager tagsManager)
 	{
 		var actions = new InputActionSet(["jump"]);
+		var effectData = new EffectData("Burning", new DurationData(DurationType.Infinite));
 		var registry = new NetworkAssetRegistry();
 		registry.Register(AssetKind.Scene, "uid://creature", "Creature");
+		registry.Register(AssetKind.Effect, "uid://burning", effectData);
+		registry.Register(
+			AssetKind.EffectContext,
+			"payload",
+			EffectContextCodec.For(
+				static (writer, payload) => writer.WriteVarInt(payload.Value),
+				static reader => new StructPayload((int)reader.ReadVarInt())));
 		registry.Seal();
 
 		var network = new LoopbackNetwork();
@@ -410,6 +423,7 @@ internal static class Program
 		var tag = Tag.RequestTag(tagsManager, "status.burning");
 		var entity = new SmokeEntity(tagsManager, tag) { NetworkId = server.Replication!.AllocateId() };
 		server.Replication.Register(entity, 0, PeerId.None);
+		entity.EffectsManager.ApplyEffect(new Effect(effectData, default), new StructPayload(7));
 
 		for (int step = 0; step < 10; step++)
 		{
@@ -423,7 +437,10 @@ internal static class Program
 		return host.Spawned is SmokeEntity mirror
 			&& mirror.NetworkId == entity.NetworkId
 			&& client.Mirror.Find(entity.NetworkId) == mirror
-			&& mirror.Tags.AllTags.HasTag(tag);
+			&& mirror.Tags.AllTags.HasTag(tag)
+			&& mirror.EffectsManager.HasAnyActiveEffect(new EffectQuery(EffectDefinition: effectData))
+			&& mirror.EffectsManager.GetActiveEffects().First().TryGetContextData(out StructPayload context)
+			&& context.Value == 7;
 	}
 
 	private sealed record ClassPayload(int Value);

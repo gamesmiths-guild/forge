@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Diagnostics.CodeAnalysis;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
@@ -138,13 +139,30 @@ public class ActiveEffectHandle : IValidatable
 	/// </remarks>
 	public void RefreshDuration()
 	{
-		if (ActiveEffect is null
+		if (ActiveEffect?.IsMirror != false
 			|| ActiveEffect.EffectData.DurationData.DurationType != DurationType.HasDuration)
 		{
 			return;
 		}
 
 		ActiveEffect.RemainingDuration = ActiveEffect.EffectEvaluatedData.Duration;
+	}
+
+	/// <summary>
+	/// Gets the custom data the effect was applied with, as a specific type.
+	/// </summary>
+	/// <typeparam name="TData">The type it was applied with.</typeparam>
+	/// <param name="data">The data, if the effect has data of that type.</param>
+	/// <returns><see langword="true"/> if it has.</returns>
+	public bool TryGetContextData<TData>([NotNullWhen(true)] out TData? data)
+	{
+		if (ActiveEffect is not null)
+		{
+			return ActiveEffect.EffectEvaluatedData.TryGetContextData(out data);
+		}
+
+		data = default;
+		return false;
 	}
 
 	/// <summary>

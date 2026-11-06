@@ -3,6 +3,7 @@
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Networking.Messages;
 using Gamesmiths.Forge.Tags;
 
@@ -11,8 +12,9 @@ namespace Gamesmiths.Forge.Networking.Replication;
 /// <summary>
 /// A client's half of replication: it reads the server's state packets and keeps the client's copies of the server's
 /// entities, its mirrors, as the server says they are. A mirror simulates nothing of its own: it's torn down as it's
-/// bound, and from then on its attributes, tags and persistent cues are what the server last sent, its executed cues
-/// play as they arrive, and its body is where the server said it was a moment ago, from <see cref="BodyOf"/>.
+/// bound, and from then on its attributes, tags, active effects and persistent cues are what the server last sent, its
+/// executed cues play as they arrive, and its body is where the server said it was a moment ago, from
+/// <see cref="BodyOf"/>.
 /// </summary>
 /// <remarks>
 /// <para>The engine integration sets <see cref="Host"/> before the client joins, to make and take away the entities the
@@ -29,9 +31,11 @@ public sealed class ReplicationClient
 	private readonly List<IForgeEntity> _entities = [];
 	private readonly List<Tag> _added = [];
 	private readonly List<Tag> _removed = [];
+	private readonly List<KeyValuePair<Tag, float>> _setByCallers = [];
 	private readonly Func<NetworkEntityId, IForgeEntity?> _resolve;
 	private uint _ackMask;
 	private bool _ackPending;
+	private bool _effectOwnersStale;
 
 	/// <summary>
 	/// Raised when the server spawned an entity and the host made it, after it was bound.
@@ -200,6 +204,7 @@ public sealed class ReplicationClient
 		// Only a packet read to its end counts: one that isn't is never acknowledged, so the server sends it all again.
 		LastServerTick = Math.Max(LastServerTick, tick);
 		Acknowledge((uint)sequence);
+		FollowEffects();
 	}
 
 	internal bool TryWriteAck(BitWriter writer)
@@ -214,7 +219,7 @@ public sealed class ReplicationClient
 		return true;
 	}
 
-	private static void ReadAttributes(BitReader reader, Mirror? mirror)
+	private static void ReadAttributes(BitReader reader, Mirror? mirror, PeerId localPeer)
 	{
 		int count = ReplicationCodec.ReadCount(reader);
 
@@ -237,13 +242,19 @@ public sealed class ReplicationClient
 				}
 			}
 
+			int? baseValue = reader.ReadBool() ? ReplicationCodec.ReadInt(reader) : null;
+
 			if (mirror is null || index >= mirror.Attributes.Length)
 			{
 				continue;
 			}
 
 			EntityAttribute attribute = mirror.Attributes[index];
-			attribute.Mirror(value, min ?? attribute.Min, max ?? attribute.Max);
+			attribute.Mirror(
+				value,
+				min ?? attribute.Min,
+				max ?? attribute.Max,
+				baseValue ?? (mirror.Owner == localPeer ? attribute.BaseValue : value));
 		}
 	}
 
@@ -358,7 +369,7 @@ public sealed class ReplicationClient
 
 		if (reader.ReadBool())
 		{
-			ReadAttributes(reader, mirror);
+			ReadAttributes(reader, mirror, _session.LocalPeer);
 		}
 
 		if (reader.ReadBool())
@@ -390,6 +401,11 @@ public sealed class ReplicationClient
 		if (reader.ReadBool())
 		{
 			ReadEvents(reader, mirror, tagCount);
+		}
+
+		if (reader.ReadBool())
+		{
+			ReadEffects(reader, mirror, tagCount, tick);
 		}
 
 		if (!reader.ReadBool())
@@ -473,6 +489,195 @@ public sealed class ReplicationClient
 		}
 	}
 
+	private void ReadEffects(BitReader reader, Mirror? mirror, int tagCount, long tick)
+	{
+		int count = ReplicationCodec.ReadCount(reader);
+
+		for (int i = 0; i < count; i++)
+		{
+			ulong instance = reader.ReadVarUInt();
+
+			if (instance is 0 or > uint.MaxValue)
+			{
+				throw new MalformedPacketException($"{instance} is not an effect instance.");
+			}
+
+			if (reader.ReadBool())
+			{
+				bool expired = reader.ReadBool();
+				mirror?.RemoveEffect(
+					(uint)instance,
+					expired ? EffectRemovalReason.Expired : EffectRemovalReason.Removed);
+				continue;
+			}
+
+			EffectData? data = null;
+			EffectApplicationContext? context = null;
+
+			if (reader.ReadBool())
+			{
+				data = ReadEffectData(reader);
+				context = ReadEffectContext(reader);
+			}
+
+			EffectState? state = reader.ReadBool() ? ReadEffectState(reader, tagCount, tick) : null;
+			int? executionCount = reader.ReadBool() ? ReplicationCodec.ReadCount(reader, int.MaxValue) : null;
+
+			if (mirror is not null)
+			{
+				ApplyEffect(mirror, (uint)instance, data, context, state, executionCount, tick);
+			}
+		}
+	}
+
+	private EffectData ReadEffectData(BitReader reader)
+	{
+		NetworkAssetRegistry registry = _session.Registry;
+		int index = (int)reader.ReadBits(registry.BitsFor(AssetKind.Effect));
+
+		return registry.TryGet(AssetKind.Effect, index, out EffectData data)
+			? data
+			: throw new MalformedPacketException($"The registry has no effect {index}.");
+	}
+
+	private EffectApplicationContext? ReadEffectContext(BitReader reader)
+	{
+		if (!reader.ReadBool())
+		{
+			return null;
+		}
+
+		NetworkAssetRegistry registry = _session.Registry;
+		int index = (int)reader.ReadBits(registry.BitsFor(AssetKind.EffectContext));
+
+		return registry.TryGet(AssetKind.EffectContext, index, out EffectContextCodec codec)
+			? codec.Read(reader)
+			: throw new MalformedPacketException($"The registry has no effect context {index}.");
+	}
+
+	private EffectState ReadEffectState(BitReader reader, int tagCount, long tick)
+	{
+		int level = ReplicationCodec.ReadInt(reader);
+		int stackCount = ReplicationCodec.ReadCount(reader, int.MaxValue);
+		bool isInhibited = reader.ReadBool();
+		bool isTimed = reader.ReadBool();
+		float duration = isTimed ? reader.ReadFloat() : 0;
+		long endTick = isTimed ? tick + reader.ReadVarInt() : 0;
+		uint ownerId = ReplicationCodec.ReadEntityId(reader);
+		uint sourceId = ReplicationCodec.ReadEntityId(reader);
+		int setByCallers = ReplicationCodec.ReadCount(reader);
+
+		_setByCallers.Clear();
+
+		for (int i = 0; i < setByCallers; i++)
+		{
+			Tag tag = TagAt(ReplicationCodec.ReadTagIndex(reader, tagCount));
+			_setByCallers.Add(new KeyValuePair<Tag, float>(tag, reader.ReadFloat()));
+		}
+
+		return new EffectState(level, stackCount, isInhibited, duration, isTimed, endTick, ownerId, sourceId);
+	}
+
+	private void ApplyEffect(
+		Mirror mirror,
+		uint instance,
+		EffectData? data,
+		EffectApplicationContext? context,
+		EffectState? state,
+		int? executionCount,
+		long tick)
+	{
+		if (!mirror.Effects.TryGetValue(instance, out MirroredEffect? effect))
+		{
+			if (data is EffectData effectData && state is EffectState first)
+			{
+				var created = new Effect(effectData, Ownership(first), first.Level);
+				created.RestoreSnapshot(first.Level, [.. _setByCallers]);
+				mirror.Effects[instance] = new MirroredEffect(
+					mirror.Entity.EffectsManager.AddMirrorEffect(
+						created,
+						context,
+						first.Level,
+						first.StackCount,
+						first.Duration,
+						first.IsInhibited,
+						RemainingDuration(first, tick),
+						executionCount ?? 0),
+					first);
+			}
+
+			return;
+		}
+
+		if (executionCount is int count)
+		{
+			effect.Active.SetMirroredExecutionCount(count);
+		}
+
+		if (state is not EffectState changed || (effect.State == changed && SameSetByCallers(effect.Active.Effect)))
+		{
+			return;
+		}
+
+		effect.State = changed;
+		effect.Active.Effect.Ownership = Ownership(changed);
+		effect.Active.Effect.RestoreSnapshot(changed.Level, [.. _setByCallers]);
+		effect.Active.SetMirrored(changed.Level, changed.StackCount, changed.Duration, changed.IsInhibited);
+		effect.Active.RemainingDuration = RemainingDuration(changed, tick);
+		mirror.Entity.EffectsManager.OnActiveEffectChanged_InternalCall(effect.Active);
+	}
+
+	private bool SameSetByCallers(Effect effect)
+	{
+		if (effect.DataTag.Count != _setByCallers.Count)
+		{
+			return false;
+		}
+
+		foreach (KeyValuePair<Tag, float> setByCaller in _setByCallers)
+		{
+			if (!effect.DataTag.TryGetValue(setByCaller.Key, out float value)
+				|| !value.Equals(setByCaller.Value))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private EffectOwnership Ownership(EffectState state)
+	{
+		return new EffectOwnership(
+			_resolve(new NetworkEntityId(state.OwnerId)),
+			_resolve(new NetworkEntityId(state.SourceId)));
+	}
+
+	private double RemainingDuration(EffectState state, long tick)
+	{
+		return state.IsTimed ? Math.Max(state.EndTick - tick, 0) * _session.Clock.FixedDeltaTime : 0;
+	}
+
+	// After every packet: what's left of each effect follows the newest state, so it hears nothing to count down, and
+	// an effect's owner and source are whatever this client has of them now.
+	private void FollowEffects()
+	{
+		foreach (Mirror mirror in _mirrors.Values)
+		{
+			foreach (MirroredEffect effect in mirror.Effects.Values)
+			{
+				effect.Active.RemainingDuration = RemainingDuration(effect.State, LastServerTick);
+
+				if (_effectOwnersStale)
+				{
+					effect.Active.Effect.Ownership = Ownership(effect.State);
+				}
+			}
+		}
+
+		_effectOwnersStale = false;
+	}
+
 	private Tag TagAt(ushort index)
 	{
 		TagsManager tagsManager = _session.TagsManager;
@@ -487,15 +692,18 @@ public sealed class ReplicationClient
 		_mirrors[entity.NetworkId] = mirror;
 		_byEntity[entity] = mirror;
 		_entities.Add(entity);
+		_effectOwnersStale = true;
 		return mirror;
 	}
 
 	private void Unbind(Mirror mirror, bool despawn)
 	{
 		mirror.RemoveAllCues();
+		mirror.RemoveAllEffects();
 		_mirrors.Remove(mirror.Entity.NetworkId);
 		_byEntity.Remove(mirror.Entity);
 		_entities.Remove(mirror.Entity);
+		_effectOwnersStale = true;
 
 		if (despawn)
 		{
@@ -519,6 +727,26 @@ public sealed class ReplicationClient
 		public RemoteBody Body { get; } = new();
 
 		public uint LastEvent { get; set; }
+
+		public Dictionary<uint, MirroredEffect> Effects { get; } = [];
+
+		public void RemoveEffect(uint instance, EffectRemovalReason reason)
+		{
+			if (Effects.Remove(instance, out MirroredEffect? effect))
+			{
+				Entity.EffectsManager.RemoveMirrorEffect(effect.Active, reason);
+			}
+		}
+
+		public void RemoveAllEffects()
+		{
+			foreach (MirroredEffect effect in Effects.Values)
+			{
+				Entity.EffectsManager.RemoveMirrorEffect(effect.Active, EffectRemovalReason.Destroyed);
+			}
+
+			Effects.Clear();
+		}
 
 		public void ApplyCue(uint instance, Tag cueTag, CueParameters? parameters)
 		{
@@ -565,4 +793,22 @@ public sealed class ReplicationClient
 			public CueParameters? Parameters { get; set; } = parameters;
 		}
 	}
+
+	// An effect the server says is active on a mirror, with what the server last said of it.
+	private sealed class MirroredEffect(ActiveEffect active, EffectState state)
+	{
+		public ActiveEffect Active { get; } = active;
+
+		public EffectState State { get; set; } = state;
+	}
+
+	private readonly record struct EffectState(
+		int Level,
+		int StackCount,
+		bool IsInhibited,
+		float Duration,
+		bool IsTimed,
+		long EndTick,
+		uint OwnerId,
+		uint SourceId);
 }
