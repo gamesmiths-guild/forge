@@ -2,7 +2,7 @@
 
 The Effects system in Forge provides a powerful framework for implementing gameplay mechanics such as damage, healing, buffs, debuffs, and other status effects. It offers a data-driven approach to modifying [attributes](../attributes.md) and applying status changes to game entities.
 
-For a first walkthrough, see the [Quick Start](../quick-start.md); for more examples, the [Effect Recipes](../guides/effect-recipes.md) guide.
+For a first walkthrough, see the [Quick Start](../quick-start.md); for more examples, the [Effect Recipes](../guides/effect-recipes.md) guide. In a networked game, the server simulates effects and clients hold copies of them to read: see [Effects on the network](../networking/effects.md).
 
 ## Core Concepts
 
@@ -898,6 +898,8 @@ if (effectEvaluatedData.TryGetContextData(out DamageContext? data))
     // Use data.Damage, data.IsCritical, etc.
 }
 ```
+
+An `ActiveEffectHandle` has the same method, for reading the data of an effect that's active, and in a networked game [it can travel to clients](../networking/effects.md#custom-data).
 
 Custom context data is most commonly consumed by [custom calculators and custom executions](calculators.md) for advanced behaviors. For thorough documentation and best practices on using effect activation context data, see the [Custom Calculators documentation](calculators.md#effect-activation-context).
 

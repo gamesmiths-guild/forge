@@ -1,6 +1,6 @@
 # Networking
 
-Forge's networking puts one server in charge of a game that several machines play. The server simulates every entity from the players' input and sends the result down; each client sends only what its player pressed. This page covers the foundation in `Gamesmiths.Forge.Networking`: how bytes travel, how a session starts, how clocks agree and how input gets to the server. [Replication](replication.md) covers how the world gets back down to every client.
+Forge's networking puts one server in charge of a game that several machines play. The server simulates every entity from the players' input and sends the result down; each client sends only what its player pressed. This page covers the foundation in `Gamesmiths.Forge.Networking`: how bytes travel, how a session starts, how clocks agree and how input gets to the server. [Replication](replication.md) covers how the world gets back down to every client, and [Effects on the network](effects.md) what a client knows of the effects on an entity.
 
 Nothing here depends on an engine. An engine integration provides a transport over its own sockets and drives the session from its loop; Forge for Godot does that with a session node.
 
@@ -30,7 +30,7 @@ A reader that runs out of data, or meets a value no writer produces, throws `Mal
 
 Two machines must mean the same thing by every index they exchange.
 
-- **Assets.** `NetworkAssetRegistry` numbers every effect, ability, graph and networked scene the game can send. Each is registered under a key the host chooses, the keys of each kind are sorted and numbered, and the kinds and keys are hashed. An engine integration keys on its own stable asset ids (Godot's resource UIDs, Unity's asset GUIDs), so renaming or moving a file changes nothing on the wire; a bare host keys on names. The registry is sealed before the first handshake and never changes after.
+- **Assets.** `NetworkAssetRegistry` numbers every effect, ability, graph and networked scene the game can send, and the [codecs of custom effect data](effects.md#custom-data). Each is registered under a key the host chooses, the keys of each kind are sorted and numbered, and the kinds and keys are hashed. An engine integration keys on its own stable asset ids (Godot's resource UIDs, Unity's asset GUIDs), so renaming or moving a file changes nothing on the wire; a bare host keys on names. The registry is sealed before the first handshake and never changes after.
 - **Entities.** `NetworkEntityId` is the id an entity is known by on every machine. The server assigns it as the entity spawns and sends it with the spawn. `IForgeEntity.NetworkId` returns `None` by default, which every entity is offline; a host that networks its entities overrides it with the id it was given.
 - **Tags** already have net indices from the `TagsManager`. Discrete input events travel as them. `Protocol.HashOf(tagsManager)` is what the handshake compares.
 - **Input actions** travel as slots of the `InputActionSet`, so both ends must list the same actions in the same order. `Protocol.HashOf(actions)` is what the handshake compares.
