@@ -240,8 +240,20 @@ public sealed class ReplicatedEntity
 
 			Effects.RemoveAt(i);
 			_effectsByActive.Remove(effect.Active);
-			RemovedEffects.Add(new EffectTombstone(effect.Instance, effect.Visibility, tick, effect.Active.IsExpired));
+
+			if (effect.Visibility != EffectVisibility.ServerOnly)
+			{
+				RemovedEffects
+					.Add(new EffectTombstone(effect.Instance, effect.Visibility, tick, effect.Active.IsExpired));
+			}
 		}
+	}
+
+	internal void ClearEffects()
+	{
+		_effectsByActive.Clear();
+		Effects.Clear();
+		RemovedEffects.Clear();
 	}
 
 	private void CaptureTags(long tick)

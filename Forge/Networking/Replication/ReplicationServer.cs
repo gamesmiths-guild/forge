@@ -214,8 +214,7 @@ public sealed class ReplicationServer
 		replicated.DespawnedAtTick = _session.Clock.Tick;
 		replicated.Cues.Clear();
 		replicated.Events.Clear();
-		replicated.Effects.Clear();
-		replicated.RemovedEffects.Clear();
+		replicated.ClearEffects();
 
 		if (!_entityList.Exists(x => x.Entity.CuesManager == entity.CuesManager))
 		{
@@ -985,12 +984,18 @@ public sealed class ReplicationServer
 	private void PruneTombstones(ReplicatedEntity entity)
 	{
 		long needed = long.MaxValue;
+		long neededByOwner = long.MaxValue;
 
 		foreach (ClientState client in _clients.Values)
 		{
 			if (client.Views.TryGetValue(entity.Id, out EntityView? view) && !view.Leaving)
 			{
 				needed = Math.Min(needed, view.Seen);
+
+				if (view.IsOwner)
+				{
+					neededByOwner = view.Seen;
+				}
 			}
 		}
 
@@ -1010,7 +1015,11 @@ public sealed class ReplicationServer
 		}
 
 		entity.RemovedCues.RemoveAll(x => x.Stamp != ReplicatedEntity.Pending && x.Stamp <= needed);
-		entity.RemovedEffects.RemoveAll(x => x.Stamp <= needed);
+
+		// Everyone else never hears of an owner-only effect, so what they acknowledged says nothing about it, and an
+		// idle entity may never give them anything to acknowledge.
+		entity.RemovedEffects.RemoveAll(
+			x => x.Stamp <= (x.Visibility == EffectVisibility.OwnerOnly ? neededByOwner : needed));
 	}
 
 	// What one client knows of one entity.

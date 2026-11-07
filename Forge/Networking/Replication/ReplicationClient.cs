@@ -31,7 +31,7 @@ public sealed class ReplicationClient
 	private readonly List<IForgeEntity> _entities = [];
 	private readonly List<Tag> _added = [];
 	private readonly List<Tag> _removed = [];
-	private readonly List<KeyValuePair<Tag, float>> _setByCallers = [];
+	private readonly Dictionary<Tag, float> _setByCallers = [];
 	private readonly Func<NetworkEntityId, IForgeEntity?> _resolve;
 	private uint _ackMask;
 	private bool _ackPending;
@@ -572,7 +572,11 @@ public sealed class ReplicationClient
 		for (int i = 0; i < setByCallers; i++)
 		{
 			Tag tag = TagAt(ReplicationCodec.ReadTagIndex(reader, tagCount));
-			_setByCallers.Add(new KeyValuePair<Tag, float>(tag, reader.ReadFloat()));
+
+			if (!_setByCallers.TryAdd(tag, reader.ReadFloat()))
+			{
+				throw new MalformedPacketException($"An effect's state names {tag} twice.");
+			}
 		}
 
 		return new EffectState(level, stackCount, isInhibited, duration, isTimed, endTick, ownerId, sourceId);
@@ -593,19 +597,25 @@ public sealed class ReplicationClient
 			{
 				var created = new Effect(effectData, Ownership(first), first.Level);
 				created.RestoreSnapshot(first.Level, [.. _setByCallers]);
-				mirror.Effects[instance] = new MirroredEffect(
-					mirror.Entity.EffectsManager.AddMirrorEffect(
-						created,
-						context,
-						first.Level,
-						first.StackCount,
-						first.Duration,
-						first.IsInhibited,
-						RemainingDuration(first, tick),
-						executionCount ?? 0),
-					first);
+				ActiveEffect active = mirror.Entity.EffectsManager.AddMirrorEffect(
+					created,
+					context,
+					first.Level,
+					first.StackCount,
+					first.Duration,
+					first.IsInhibited,
+					RemainingDuration(first, tick),
+					executionCount ?? 0);
+				mirror.Effects[instance] = new MirroredEffect(active, first);
+				mirror.Entity.EffectsManager.RaiseMirrorEffectAdded(active);
 			}
 
+			return;
+		}
+
+		// The entity's teardown ended it here, and nothing the server says brings it back.
+		if (!effect.Active.Handle.IsValid)
+		{
 			return;
 		}
 
@@ -624,7 +634,7 @@ public sealed class ReplicationClient
 		effect.Active.Effect.RestoreSnapshot(changed.Level, [.. _setByCallers]);
 		effect.Active.SetMirrored(changed.Level, changed.StackCount, changed.Duration, changed.IsInhibited);
 		effect.Active.RemainingDuration = RemainingDuration(changed, tick);
-		mirror.Entity.EffectsManager.OnActiveEffectChanged_InternalCall(effect.Active);
+		mirror.Entity.EffectsManager.RaiseMirrorEffectChanged(effect.Active);
 	}
 
 	private bool SameSetByCallers(Effect effect)

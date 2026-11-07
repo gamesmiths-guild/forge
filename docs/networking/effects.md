@@ -10,7 +10,7 @@ A client's mirror of an entity holds the server's active effects in its `Effects
 |---|---|
 | `GetActiveEffects`, `HasAnyActiveEffect`, `GetEffectStackData`, every `EffectQuery` | The effects are there, built from the same `EffectData`, with their level, stacks and owner. |
 | `ActiveEffectHandle`: `IsValid`, `Effect`, `Target`, `Level`, `StackCount`, `TotalDuration`, `RemainingDuration`, `Period`, `ExecutionCount`, `IsInhibited`, `TryGetContextData` | What the server last said. `RemainingDuration` counts down with the server's ticks, as of the newest state this client holds. |
-| `Effect.DataTag` | The server's set-by-caller values. |
+| `Effect.DataTag` | The server's set-by-caller values. A mirror's `Effect` is this client's copy: changing its `DataTag` or level changes nothing else, and lasts until the server next changes that effect. |
 | `OnActiveEffectAdded`, `OnActiveEffectChanged`, `OnActiveEffectRemoved` | Raised as the server's word arrives, once per change however many copies of it arrive. The removal says whether the effect expired or was removed, or `Destroyed` when the entity itself went. |
 | The Statescript resolvers that read effects | They read the same queries. |
 

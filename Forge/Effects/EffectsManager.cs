@@ -571,7 +571,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return FilterEffectsByData(effectData).FirstOrDefault();
 	}
 
-	// Takes in an effect the server says is active on this mirror, with what a handler reading it should find.
+	// Takes in an effect the server says is active on this mirror. The caller records it and then raises the event, so
+	// whatever a handler does finds the effect already known.
 	internal ActiveEffect AddMirrorEffect(
 		Effect effect,
 		EffectApplicationContext? applicationContext,
@@ -590,8 +591,35 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		activeEffect.SetMirroredExecutionCount(executionCount);
 		_activeEffects.Add(activeEffect);
-		OnActiveEffectAdded?.Invoke(activeEffect.Handle);
 		return activeEffect;
+	}
+
+	internal void RaiseMirrorEffectAdded(ActiveEffect activeEffect)
+	{
+		_changeDepth++;
+
+		try
+		{
+			OnActiveEffectAdded?.Invoke(activeEffect.Handle);
+		}
+		finally
+		{
+			_changeDepth--;
+		}
+	}
+
+	internal void RaiseMirrorEffectChanged(ActiveEffect activeEffect)
+	{
+		_changeDepth++;
+
+		try
+		{
+			OnActiveEffectChanged?.Invoke(activeEffect.Handle);
+		}
+		finally
+		{
+			_changeDepth--;
+		}
 	}
 
 	// Lets go of an effect the server says ended on this mirror. One that ended with the entity's teardown is gone.
@@ -602,8 +630,17 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			return;
 		}
 
-		OnActiveEffectRemoved?.Invoke(activeEffect.Handle, reason);
-		activeEffect.Handle.Free();
+		_changeDepth++;
+
+		try
+		{
+			OnActiveEffectRemoved?.Invoke(activeEffect.Handle, reason);
+		}
+		finally
+		{
+			_changeDepth--;
+			activeEffect.Handle.Free();
+		}
 	}
 
 	/// <summary>

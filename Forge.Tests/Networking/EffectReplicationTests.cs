@@ -1,5 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Collections;
+using System.Reflection;
 using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
@@ -323,6 +325,93 @@ public class EffectReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Effects")]
+	public void An_effect_a_teardown_ended_stays_ended_whatever_the_server_says()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		Effect effect = Rig.Effect(rig.Assets.Burning, entity);
+		entity.EffectsManager.ApplyEffect(effect);
+		rig.Step(6);
+		Entity mirror = client.Only();
+		int changed = 0;
+		mirror.EffectsManager.OnActiveEffectChanged += _ => changed++;
+
+		EntitySimulation.Teardown(mirror);
+		entity.EffectsManager.ApplyEffect(effect);
+		rig.Step(6);
+
+		changed.Should().Be(0, "its handle is freed, and the removal was the last anyone heard of it");
+		mirror.EffectsManager.GetActiveEffects().Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Networking", "Effects")]
+	public void A_mirror_can_t_be_torn_down_from_inside_what_follows_its_effects()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		rig.Step(6);
+		Entity mirror = client.Only();
+		int raised = 0;
+
+		void Refuses()
+		{
+			raised++;
+			FluentActions.Invoking(() => EntitySimulation.Teardown(mirror))
+				.Should().Throw<InvalidOperationException>();
+		}
+
+		mirror.EffectsManager.OnActiveEffectAdded += _ => Refuses();
+		mirror.EffectsManager.OnActiveEffectChanged += _ => Refuses();
+		mirror.EffectsManager.OnActiveEffectRemoved += (_, _) => Refuses();
+
+		Effect effect = Rig.Effect(rig.Assets.Burning, entity);
+		ActiveEffectHandle handle = entity.EffectsManager.ApplyEffect(effect)!;
+		rig.Step(6);
+		entity.EffectsManager.ApplyEffect(effect);
+		rig.Step(6);
+		entity.EffectsManager.RemoveEffect(handle, forceRemoval: true);
+		rig.Step(6);
+
+		raised.Should().Be(3);
+		FluentActions.Invoking(() => EntitySimulation.Teardown(mirror)).Should().NotThrow("nothing is changing now");
+	}
+
+	[Fact]
+	[Trait("Networking", "Effects")]
+	public void A_handler_that_throws_on_a_new_effect_leaves_no_copy_behind()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		rig.Step(6);
+		Entity mirror = client.Only();
+		bool thrown = false;
+
+		mirror.EffectsManager.OnActiveEffectAdded += _ =>
+		{
+			if (!thrown)
+			{
+				thrown = true;
+				throw new InvalidOperationException("A handler failed.");
+			}
+		};
+
+		ActiveEffectHandle handle = Rig.Apply(entity, rig.Assets.Blessed)!;
+		FluentActions.Invoking(() => rig.Step(6)).Should().Throw<InvalidOperationException>();
+		rig.Step(6);
+
+		mirror.EffectsManager.GetActiveEffects().Should().ContainSingle("the packet read again doesn't add it twice");
+
+		entity.EffectsManager.RemoveEffect(handle);
+		rig.Step(6);
+		mirror.EffectsManager.GetActiveEffects().Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Networking", "Effects")]
 	public void A_despawned_mirror_lets_its_effects_go()
 	{
 		var rig = new Rig();
@@ -371,6 +460,33 @@ public class EffectReplicationTests
 		seen.Tags.AllTags.HasTag(other.Tag("state.secret")).Should().BeFalse();
 		owner.Session.MalformedPackets.Should().Be(0);
 		other.Session.MalformedPackets.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Networking", "Effects")]
+	public void Removals_nobody_else_can_hear_of_are_not_kept_for_them_on_an_idle_entity()
+	{
+		var rig = new Rig();
+		Client owner = rig.Join();
+		rig.Join();
+		Entity entity = rig.Spawn(owner.Peer);
+		rig.Step(6);
+
+		for (int i = 0; i < 3; i++)
+		{
+			ActiveEffectHandle hidden = Rig.Apply(entity, rig.Assets.Silent)!;
+			ActiveEffectHandle ownerOnly = Rig.Apply(entity, rig.Assets.Noted)!;
+			rig.Step(6);
+			entity.EffectsManager.RemoveEffect(hidden);
+			entity.EffectsManager.RemoveEffect(ownerOnly);
+			rig.Step(6);
+		}
+
+		// Nothing on the wire shows what the server still keeps.
+		object removals = typeof(ReplicatedEntity)
+			.GetProperty("RemovedEffects", BindingFlags.Instance | BindingFlags.NonPublic)!
+			.GetValue(rig.Server.Replication!.Find(entity))!;
+		((ICollection)removals).Count.Should().Be(0);
 	}
 
 	[Fact]
@@ -718,6 +834,48 @@ public class EffectReplicationTests
 		}
 	}
 
+	[Fact]
+	[Trait("Networking", "Effects")]
+	public void An_effect_state_that_names_a_set_by_caller_twice_is_dropped_and_counted()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		rig.Step(4);
+
+		var writer = new BitWriter();
+		writer.WriteVarUInt(100_000);
+		writer.WriteVarInt(100);
+		writer.WriteVarUInt(entity.NetworkId.Value);
+		writer.WriteBits(0, 2);
+		writer.WriteBool(false);
+		writer.WriteBool(false);
+		writer.WriteBool(false);
+		writer.WriteBool(false);
+		writer.WriteBool(true);
+		writer.WriteVarUInt(1);
+		writer.WriteVarUInt(1);
+		writer.WriteBool(false);
+		writer.WriteBool(false);
+		writer.WriteBool(true);
+		writer.WriteVarInt(1);
+		writer.WriteVarUInt(1);
+		writer.WriteBool(false);
+		writer.WriteBool(false);
+		writer.WriteVarUInt(0);
+		writer.WriteVarUInt(0);
+		writer.WriteVarUInt(2);
+		writer.WriteVarUInt(1);
+		writer.WriteFloat(1);
+		writer.WriteVarUInt(1);
+		writer.WriteFloat(2);
+		rig.Network.Server.Send(client.Peer, Protocol.StateChannel, false, writer.ToArray());
+
+		rig.Step();
+
+		client.Session.MalformedPackets.Should().Be(1);
+	}
+
 	private static IEnumerable<ActiveEffectHandle> EntityEffects(Entity entity, EffectQuery query)
 	{
 		return entity.EffectsManager.GetActiveEffects(query);
@@ -770,6 +928,12 @@ public class EffectReplicationTests
 
 		// Forever: Attribute1 reads 50 whatever its base value.
 		public EffectData Pinned { get; }
+
+		// Forever, for nobody, and changing nothing anyone can see.
+		public EffectData Silent { get; }
+
+		// Forever, for the owner only, and changing nothing anyone can see.
+		public EffectData Noted { get; }
 
 		// Instant: +1 to Attribute1's base value.
 		public EffectData Raise { get; }
@@ -857,6 +1021,16 @@ public class EffectReplicationTests
 						new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(50))),
 				]);
 
+			Silent = new EffectData(
+				"Silent",
+				new DurationData(DurationType.Infinite),
+				visibility: EffectVisibility.ServerOnly);
+
+			Noted = new EffectData(
+				"Noted",
+				new DurationData(DurationType.Infinite),
+				visibility: EffectVisibility.OwnerOnly);
+
 			Raise = new EffectData(
 				"Raise",
 				new DurationData(DurationType.Instant),
@@ -875,6 +1049,8 @@ public class EffectReplicationTests
 			Registry.Register(AssetKind.Effect, "uid://hidden", Hidden);
 			Registry.Register(AssetKind.Effect, "uid://scaled", Scaled);
 			Registry.Register(AssetKind.Effect, "uid://pinned", Pinned);
+			Registry.Register(AssetKind.Effect, "uid://silent", Silent);
+			Registry.Register(AssetKind.Effect, "uid://noted", Noted);
 			Registry.Register(
 				AssetKind.EffectContext,
 				"hit",
