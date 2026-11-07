@@ -241,7 +241,7 @@ public sealed class ReplicatedEntity
 			Effects.RemoveAt(i);
 			_effectsByActive.Remove(effect.Active);
 
-			if (effect.Visibility != EffectVisibility.ServerOnly)
+			if (effect.Visibility is EffectVisibility.Public or EffectVisibility.OwnerOnly)
 			{
 				RemovedEffects
 					.Add(new EffectTombstone(effect.Instance, effect.Visibility, tick, effect.Active.IsExpired));

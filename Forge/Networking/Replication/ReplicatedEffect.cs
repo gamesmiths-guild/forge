@@ -68,6 +68,12 @@ internal sealed class ReplicatedEffect(
 	public void Capture(long tick, SimulationClock clock, TagsManager tagsManager)
 	{
 		SeenAt = tick;
+
+		if (Visibility == EffectVisibility.ServerOnly)
+		{
+			return;
+		}
+
 		EffectEvaluatedData evaluated = Active.EffectEvaluatedData;
 		EffectOwnership ownership = evaluated.Effect.Ownership;
 		uint ownerId = ownership.Owner?.NetworkId.Value ?? 0;

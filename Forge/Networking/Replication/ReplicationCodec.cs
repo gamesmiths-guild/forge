@@ -46,18 +46,12 @@ internal static class ReplicationCodec
 			return null;
 		}
 
-		long magnitude = reader.ReadVarInt();
-
-		if (magnitude is < int.MinValue or > int.MaxValue)
-		{
-			throw new MalformedPacketException($"{magnitude} is not a cue magnitude.");
-		}
-
+		int magnitude = ReadInt(reader);
 		float normalized = reader.ReadBits(NormalizedBits) / NormalizedLevels;
 		uint source = ReadEntityId(reader);
 
 		return new CueParameters(
-			(int)magnitude,
+			magnitude,
 			normalized,
 			source == 0 ? null : entities(new NetworkEntityId(source)));
 	}

@@ -594,27 +594,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return activeEffect;
 	}
 
-	internal void RaiseMirrorEffectAdded(ActiveEffect activeEffect)
+	internal void RaiseMirrorEffect(ActiveEffect activeEffect, bool added)
 	{
 		_changeDepth++;
 
 		try
 		{
-			OnActiveEffectAdded?.Invoke(activeEffect.Handle);
-		}
-		finally
-		{
-			_changeDepth--;
-		}
-	}
-
-	internal void RaiseMirrorEffectChanged(ActiveEffect activeEffect)
-	{
-		_changeDepth++;
-
-		try
-		{
-			OnActiveEffectChanged?.Invoke(activeEffect.Handle);
+			(added ? OnActiveEffectAdded : OnActiveEffectChanged)?.Invoke(activeEffect.Handle);
 		}
 		finally
 		{

@@ -186,19 +186,14 @@ public sealed class ReplicationClient
 
 		while (true)
 		{
-			ulong id = reader.ReadVarUInt();
+			uint id = ReplicationCodec.ReadEntityId(reader);
 
 			if (id == 0)
 			{
 				break;
 			}
 
-			if (id > uint.MaxValue)
-			{
-				throw new MalformedPacketException($"{id} is not an entity id.");
-			}
-
-			ReadEntry(reader, new NetworkEntityId((uint)id), tick, previousTick);
+			ReadEntry(reader, new NetworkEntityId(id), tick, previousTick);
 		}
 
 		// Only a packet read to its end counts: one that isn't is never acknowledged, so the server sends it all again.
@@ -607,7 +602,7 @@ public sealed class ReplicationClient
 					RemainingDuration(first, tick),
 					executionCount ?? 0);
 				mirror.Effects[instance] = new MirroredEffect(active, first);
-				mirror.Entity.EffectsManager.RaiseMirrorEffectAdded(active);
+				mirror.Entity.EffectsManager.RaiseMirrorEffect(active, added: true);
 			}
 
 			return;
@@ -634,7 +629,7 @@ public sealed class ReplicationClient
 		effect.Active.Effect.RestoreSnapshot(changed.Level, [.. _setByCallers]);
 		effect.Active.SetMirrored(changed.Level, changed.StackCount, changed.Duration, changed.IsInhibited);
 		effect.Active.RemainingDuration = RemainingDuration(changed, tick);
-		mirror.Entity.EffectsManager.RaiseMirrorEffectChanged(effect.Active);
+		mirror.Entity.EffectsManager.RaiseMirrorEffect(effect.Active, added: false);
 	}
 
 	private bool SameSetByCallers(Effect effect)
