@@ -37,6 +37,10 @@ public class ExitNode : Node
 	/// <inheritdoc/>
 	protected override void HandleMessage(InputPort receiverPort, GraphContext graphContext)
 	{
-		graphContext.Processor?.StopGraph();
+		// A client's copy of the server's graph ends when the server's run does.
+		if (!graphContext.IsRemote)
+		{
+			graphContext.Processor?.StopGraph();
+		}
 	}
 }

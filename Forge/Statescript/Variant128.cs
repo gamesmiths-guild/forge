@@ -248,6 +248,14 @@ public readonly struct Variant128
 		_quaternion = value;
 	}
 
+	// A value of any type from the raw bits AsULong and AsUpperULong give, which is how one travels.
+	internal Variant128(ulong lower, ulong upper)
+		: this()
+	{
+		_ulong = lower;
+		_upper = upper;
+	}
+
 	/// <summary>
 	/// Creates a <see cref="Variant128"/> instance from a byte array.
 	/// </summary>

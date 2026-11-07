@@ -50,7 +50,7 @@ internal static class Program
 			ReplaysWorld(tagsManager));
 		Check("Network session handshakes and carries input over a loopback", () =>
 			NetworksOverLoopback(tagsManager));
-		Check("Replication spawns a mirror and carries its tags and effects", () =>
+		Check("Replication spawns a mirror and carries its tags, effects and graphs", () =>
 			ReplicatesOverLoopback(tagsManager));
 
 		return _failures == 0 ? 0 : 1;
@@ -398,14 +398,19 @@ internal static class Program
 			&& registry.Get<string>(AssetKind.Effect, 0) == "Burning";
 	}
 
-	// Replication's keyed collections: entities by network id on both ends, and tags by net index.
+	// Replication's keyed collections: entities by network id on both ends, and tags by net index. A graph's run, with
+	// the variable its presentation state reads.
 	private static bool ReplicatesOverLoopback(TagsManager tagsManager)
 	{
 		var actions = new InputActionSet(["jump"]);
 		var effectData = new EffectData("Burning", new DurationData(DurationType.Infinite));
+		var shown = new ShownNode();
+		Graph graph = ShowLevel(shown);
+		var ability = new AbilityData("Show", behaviorFactory: () => new GraphAbilityBehavior(graph));
 		var registry = new NetworkAssetRegistry();
 		registry.Register(AssetKind.Scene, "uid://creature", "Creature");
 		registry.Register(AssetKind.Effect, "uid://burning", effectData);
+		registry.Register(AssetKind.Ability, "uid://show", ability);
 		registry.Register(
 			AssetKind.EffectContext,
 			"payload",
@@ -424,6 +429,7 @@ internal static class Program
 		var entity = new SmokeEntity(tagsManager, tag) { NetworkId = server.Replication!.AllocateId() };
 		server.Replication.Register(entity, 0, PeerId.None);
 		entity.EffectsManager.ApplyEffect(new Effect(effectData, default), new StructPayload(7));
+		entity.Abilities.GrantAbilityPermanently(ability, 1, LevelComparison.Higher, null).TryActivate(out _);
 
 		for (int step = 0; step < 10; step++)
 		{
@@ -440,12 +446,37 @@ internal static class Program
 			&& mirror.Tags.AllTags.HasTag(tag)
 			&& mirror.EffectsManager.HasAnyActiveEffect(new EffectQuery(EffectDefinition: effectData))
 			&& mirror.EffectsManager.GetActiveEffects().First().TryGetContextData(out StructPayload context)
-			&& context.Value == 7;
+			&& context.Value == 7
+			&& shown.Seen.Contains(new Showing(NodeActivationReason.Link, 3))
+			&& shown.Seen.Contains(new Showing(NodeActivationReason.Replication, 3));
+	}
+
+	// Sets the level variable to 3, then shows it.
+	private static Graph ShowLevel(ShownNode shown)
+	{
+		var graph = new Graph();
+		var level = new SetVariableNode();
+		graph.AddNode(level);
+		graph.AddNode(shown);
+		graph.VariableDefinitions.DefineVariable("level", 0);
+		graph.VariableDefinitions.DefineProperty("three", new VariantResolver(new Variant128(3), typeof(int)));
+		level.BindInput(SetVariableNode.SourceInput, "three");
+		level.BindOutput(SetVariableNode.TargetOutput, "level");
+		shown.BindInput(0, "level");
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			level.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			level.OutputPorts[ActionNode.OutputPort],
+			shown.InputPorts[StateNode<StateNodeContext>.InputPort]));
+		return graph;
 	}
 
 	private sealed record ClassPayload(int Value);
 
 	private readonly record struct StructPayload(int Value);
+
+	private readonly record struct Showing(NodeActivationReason Reason, int Level);
 
 	private readonly record struct ProviderPayload(int Value);
 
@@ -501,6 +532,31 @@ internal static class Program
 		protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
 		{
 			graphContext.GetNodeContext<CountingNodeContext>(NodeID).Updates.Add(deltaTime);
+		}
+	}
+
+	// A presentation state that notes why it started and the level it read, on every machine that runs it.
+	private sealed class ShownNode : StateNode<StateNodeContext>
+	{
+		public List<Showing> Seen { get; } = [];
+
+		public override NodeNetworkKind NetworkKind => NodeNetworkKind.Presentation;
+
+		protected override void DefineParameters(
+			List<InputProperty> inputProperties,
+			List<OutputVariable> outputVariables)
+		{
+			inputProperties.Add(new InputProperty("Level", typeof(int)));
+		}
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+			graphContext.TryResolve(InputProperties[0].BoundName, out int level);
+			Seen.Add(new Showing(graphContext.GetNodeContext<StateNodeContext>(NodeID).ActivationReason, level));
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
 		}
 	}
 

@@ -25,6 +25,8 @@ public class Graph
 	/// </summary>
 	private const byte DisableSubgraphEntry = byte.MaxValue;
 
+	private GraphNetworkTable? _networkTable;
+
 	/// <summary>
 	/// Gets the entry node of the graph.
 	/// </summary>
@@ -47,6 +49,9 @@ public class Graph
 	/// </summary>
 	public GraphVariableDefinitions VariableDefinitions { get; }
 
+	// Worked out from the finished graph the first time a networked game or an editor asks.
+	internal GraphNetworkTable NetworkTable => _networkTable ??= new GraphNetworkTable(this);
+
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Graph"/> class.
 	/// </summary>
@@ -65,6 +70,24 @@ public class Graph
 	public virtual void AddNode(Node node)
 	{
 		Nodes.Add(node);
+	}
+
+	/// <summary>
+	/// Gets the network kind a node has in this graph: its own <see cref="Node.NetworkKind"/>, or
+	/// <see cref="NodeNetworkKind.Presentation"/> for a simulation node that acts on something a presentation node
+	/// made, such as a Move To on the instance a cosmetic scene node spawned. Ask once the graph is built.
+	/// </summary>
+	/// <remarks>
+	/// A node acts on what another made when one of its inputs is bound to a graph variable the other writes as an
+	/// output, directly or through a property that reads the variable as it is. Presentation spreads that way along a
+	/// chain of nodes, and stops at authority nodes, at a variable read deeper inside a property, and at nodes in a
+	/// <see cref="NodeRegion.ServerOnly"/> region, whose work never reaches a client.
+	/// </remarks>
+	/// <param name="node">A node of this graph.</param>
+	/// <returns>The node's kind in this graph.</returns>
+	public NodeNetworkKind NetworkKindOf(Node node)
+	{
+		return NetworkTable.KindOf(node);
 	}
 
 	/// <summary>

@@ -33,6 +33,12 @@ public abstract class Node
 	public virtual NodeNetworkKind NetworkKind => NodeNetworkKind.Simulation;
 
 	/// <summary>
+	/// Gets or sets the region the node's graph puts it in, which changes where it runs in a networked game. Set it
+	/// while building the graph, before the graph first runs.
+	/// </summary>
+	public NodeRegion Region { get; set; }
+
+	/// <summary>
 	/// Gets or sets the unique identifier for this node.
 	/// </summary>
 	public Guid NodeID { get; set; }
@@ -74,6 +80,8 @@ public abstract class Node
 	/// only <see cref="SubgraphPort"/> instances, built once during construction to avoid runtime type checks.
 	/// </summary>
 	internal SubgraphPort[] SubgraphPorts { get; }
+
+	internal virtual bool IsStateNode => false;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Node"/> class.
@@ -280,6 +288,21 @@ public abstract class Node
 	/// <param name="deltaTime">The length of the fixed step, in seconds.</param>
 	/// <param name="graphContext">The graph context.</param>
 	internal virtual void FixedUpdate(double deltaTime, GraphContext graphContext)
+	{
+	}
+
+	// Starts the node on a client's copy of the server's graph, because the server said so rather than because a
+	// message arrived. Only state nodes run that way.
+	internal virtual void ActivateRemotely(GraphContext graphContext)
+	{
+	}
+
+	internal virtual void DeactivateRemotely(GraphContext graphContext)
+	{
+	}
+
+	// Advances an activation a client heard of late by the time it had already run on the server.
+	internal virtual void CatchUp(double elapsed, GraphContext graphContext)
 	{
 	}
 

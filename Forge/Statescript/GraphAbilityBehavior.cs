@@ -60,6 +60,14 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior, ISnapshotAbil
 		Processor.Present();
 	}
 
+	// Starts the graph as a client's copy of the one the server runs for an activation of the entity's ability, with
+	// the variables the server sent instead of the ones the graph starts with.
+	internal void StartRemote(AbilityBehaviorContext context, Action<Variables> variables)
+	{
+		Processor.GraphContext.IsRemote = true;
+		StartGraph(context, variables);
+	}
+
 	/// <summary>
 	/// Starts the graph processor, wiring up the <see cref="GraphProcessor.OnGraphCompleted"/> callback to
 	/// automatically end the ability instance when the graph finishes.

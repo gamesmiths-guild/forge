@@ -17,7 +17,7 @@ namespace Gamesmiths.Forge.Abilities;
 /// </summary>
 internal sealed class Ability
 {
-	private record struct BehaviorBinding(IAbilityBehavior Behavior, AbilityBehaviorContext Context);
+	internal record struct BehaviorBinding(IAbilityBehavior Behavior, AbilityBehaviorContext Context);
 
 	/// <summary>
 	/// What applying the cost effect would do to one attribute: the net change it produces, and whether every step of
@@ -355,6 +355,21 @@ internal sealed class Ability
 			{
 				behaviors.Add(binding.Behavior);
 				((ISnapshotAbilityBehavior)binding.Behavior).AddHolds(holds);
+			}
+		}
+	}
+
+	// The behaviors the running instances run, in the order the instances started, each with the context it was started
+	// with. A behavior two instances share counts once, with the first one's.
+	internal void AddRunningBehaviors(List<BehaviorBinding> behaviors)
+	{
+		int added = behaviors.Count;
+
+		foreach (AbilityInstance instance in _activeInstances)
+		{
+			if (_behaviors.TryGetValue(instance, out BehaviorBinding binding) && !Lists(behaviors, added, binding))
+			{
+				behaviors.Add(binding);
 			}
 		}
 	}
@@ -741,6 +756,19 @@ internal sealed class Ability
 		}
 
 		return new CostProjection(attribute.Key, value - attribute.BaseValue, appliesInFull);
+	}
+
+	private static bool Lists(List<BehaviorBinding> behaviors, int from, BehaviorBinding binding)
+	{
+		for (int i = from; i < behaviors.Count; i++)
+		{
+			if (behaviors[i].Behavior == binding.Behavior)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private static bool FailsRequiredTags(TagContainer? required, TagContainer? present)

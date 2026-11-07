@@ -1,9 +1,11 @@
 // Copyright © Gamesmiths Guild.
 
+using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Networking.Replication;
@@ -21,6 +23,8 @@ public sealed class ReplicatedEntity
 	private readonly HashSet<ushort> _currentTags = [];
 	private readonly List<ushort> _scratch = [];
 	private readonly Dictionary<ActiveEffect, ReplicatedEffect> _effectsByActive = [];
+	private readonly Dictionary<GraphProcessor, ReplicatedGraph> _graphsByProcessor = [];
+	private readonly List<Ability.BehaviorBinding> _behaviors = [];
 
 	/// <summary>
 	/// Gets the id the entity is known by on every machine.
@@ -105,11 +109,37 @@ public sealed class ReplicatedEntity
 
 	internal List<EffectTombstone> RemovedEffects { get; } = [];
 
+	// The graphs the entity's abilities run that clients run something of, in the order they were first seen, with the
+	// ones that ended kept until every client that could have them has heard.
+	internal List<ReplicatedGraph> Graphs { get; } = [];
+
 	internal uint NextCueInstance { get; set; } = 1;
 
 	internal uint NextEffectInstance { get; set; } = 1;
 
+	internal uint NextGraphInstance { get; set; } = 1;
+
+	internal bool HasRemovedGraphs
+	{
+		get
+		{
+			foreach (ReplicatedGraph graph in Graphs)
+			{
+				if (graph.Removed)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+	}
+
 	internal uint LastEventSequence { get; set; }
+
+	// The newest event the last send could have carried. A client that hears of the entity later never gets those, but
+	// gets the ones since, such as what it did in the tick it spawned.
+	internal uint SentEventSequence { get; set; }
 
 	internal QuantizedBody? ShadowBody { get; private set; }
 
@@ -254,6 +284,48 @@ public sealed class ReplicatedEntity
 		_effectsByActive.Clear();
 		Effects.Clear();
 		RemovedEffects.Clear();
+	}
+
+	// Looks at the graphs the entity's abilities run: one seen for the first time gets a record, and one that was there
+	// and isn't any more is marked ended.
+	internal void CaptureGraphs(long tick, ReplicationServer server)
+	{
+		_behaviors.Clear();
+		Entity.Abilities.AddRunningBehaviors(_behaviors);
+
+		foreach (Ability.BehaviorBinding binding in _behaviors)
+		{
+			if (binding.Behavior is GraphAbilityBehavior behavior
+				&& behavior.Processor.Graph.NetworkTable.RunsOnClients)
+			{
+				GraphFor(behavior.Processor, binding.Context, server).Capture(tick);
+			}
+		}
+
+		foreach (ReplicatedGraph graph in Graphs)
+		{
+			if (!graph.Removed && graph.SeenAt != tick)
+			{
+				graph.Remove(tick);
+				_graphsByProcessor.Remove(graph.Processor);
+			}
+		}
+	}
+
+	// The record of a graph run, made the first time a send or an action executed in it shows it.
+	internal ReplicatedGraph GraphFor(
+		GraphProcessor processor,
+		AbilityBehaviorContext context,
+		ReplicationServer server)
+	{
+		if (!_graphsByProcessor.TryGetValue(processor, out ReplicatedGraph? graph))
+		{
+			graph = server.DescribeGraph(NextGraphInstance++, processor, context);
+			_graphsByProcessor[processor] = graph;
+			Graphs.Add(graph);
+		}
+
+		return graph;
 	}
 
 	private void CaptureTags(long tick)

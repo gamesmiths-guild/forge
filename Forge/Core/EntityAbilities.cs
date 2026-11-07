@@ -3,6 +3,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Abilities;
+using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Core;
@@ -31,6 +32,9 @@ public class EntityAbilities(IForgeEntity owner)
 	private readonly List<IAbilityBehavior> _retiredBehaviors = [];
 
 	private readonly List<IAbilityBehavior> _retiredBuffer = [];
+
+	// On a client, the copies of the graphs the server's entity runs, which run as the server says.
+	private readonly List<IAbilityBehavior> _remoteBehaviors = [];
 
 	private bool _updating;
 
@@ -118,6 +122,9 @@ public class EntityAbilities(IForgeEntity owner)
 	/// Gets the tags that block abilities from being used.
 	/// </summary>
 	public EntityTags BlockedAbilityTags { get; } = new EntityTags(new TagContainer(owner.Tags.BaseTags.TagsManager));
+
+	// Hears of the actions the entity's graphs execute, for a server to tell clients.
+	internal IGraphObserver? GraphObserver { get; set; }
 
 	internal bool IsChanging
 	{
@@ -552,6 +559,11 @@ public class EntityAbilities(IForgeEntity owner)
 					handle.Ability?.UpdateBehaviors(deltaTime);
 				}
 			}
+
+			for (int i = 0; i < _remoteBehaviors.Count; i++)
+			{
+				_remoteBehaviors[i].OnUpdate(deltaTime);
+			}
 		}
 		finally
 		{
@@ -589,6 +601,11 @@ public class EntityAbilities(IForgeEntity owner)
 				{
 					handle.Ability?.FixedUpdateBehaviors(deltaTime);
 				}
+			}
+
+			for (int i = 0; i < _remoteBehaviors.Count; i++)
+			{
+				_remoteBehaviors[i].OnFixedUpdate(deltaTime);
 			}
 		}
 		finally
@@ -650,6 +667,18 @@ public class EntityAbilities(IForgeEntity owner)
 				}
 			}
 
+			for (int i = 0; i < _remoteBehaviors.Count; i++)
+			{
+				try
+				{
+					_remoteBehaviors[i].OnPresent();
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
+			}
+
 			_updating = false;
 		}
 
@@ -659,6 +688,29 @@ public class EntityAbilities(IForgeEntity owner)
 	internal void RetireBehavior(IAbilityBehavior behavior)
 	{
 		_retiredBehaviors.Add(behavior);
+	}
+
+	// The behaviors the abilities' running instances run, in grant order and then start order, with their contexts.
+	internal void AddRunningBehaviors(List<Ability.BehaviorBinding> behaviors)
+	{
+		foreach (AbilityHandle handle in _grantOrder)
+		{
+			handle.Ability?.AddRunningBehaviors(behaviors);
+		}
+	}
+
+	internal void AddRemoteBehavior(IAbilityBehavior behavior)
+	{
+		_remoteBehaviors.Add(behavior);
+	}
+
+	// The server's run ended. What it still shows ends in the next presentation pass.
+	internal void RemoveRemoteBehavior(IAbilityBehavior behavior)
+	{
+		if (_remoteBehaviors.Remove(behavior) && behavior.IsPresenting)
+		{
+			_retiredBehaviors.Add(behavior);
+		}
 	}
 
 	// A restore brought the behavior's instance back, so the active walk presents it again.

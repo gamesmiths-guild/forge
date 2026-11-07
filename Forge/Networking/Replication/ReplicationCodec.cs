@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Statescript;
 
 namespace Gamesmiths.Forge.Networking.Replication;
 
@@ -54,6 +55,19 @@ internal static class ReplicationCodec
 			magnitude,
 			normalized,
 			source == 0 ? null : entities(new NetworkEntityId(source)));
+	}
+
+	// A variable's value as its raw bits, so it arrives exactly as it was, whatever its type.
+	internal static void WriteVariant(BitWriter writer, Variant128 value)
+	{
+		writer.WriteVarUInt(value.AsULong());
+		writer.WriteVarUInt(value.AsUpperULong());
+	}
+
+	internal static Variant128 ReadVariant(BitReader reader)
+	{
+		ulong lower = reader.ReadVarUInt();
+		return new Variant128(lower, reader.ReadVarUInt());
 	}
 
 	internal static uint ReadEntityId(BitReader reader)
