@@ -85,7 +85,7 @@ if (handle.TryGetContextData(out HitData? hit))
 }
 ```
 
-The codecs are part of the registry, so a client with other ones is refused. Data of a type nothing is registered for stays on the server: `TryGetContextData` finds nothing on a client. A packet is untrusted, so a `read` that meets something that can't be right throws `MalformedPacketException`. A `write` that throws costs that effect its data on every client that hasn't got it yet: the send finishes for everything else, `ReplicationServer.Send` then rethrows the exception, once, and the effect goes on without the data.
+The codecs are part of the registry, so a client with other ones is refused. Data of a type nothing is registered for stays on the server: `TryGetContextData` finds nothing on a client. A packet is untrusted, so a `read` that meets something that can't be right throws `MalformedPacketException`. A `write` that throws costs that effect its data on every client that hasn't got it yet: the send finishes for everything else, the effect goes on without the data, and `ReplicationServer.Send` then rethrows the exception. That happens once per effect, and if several writes fail in the same send, only the first exception comes out.
 
 The data goes once, as the effect first reaches a client. It never changes on the server either.
 

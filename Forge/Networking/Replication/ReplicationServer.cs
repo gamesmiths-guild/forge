@@ -274,8 +274,8 @@ public sealed class ReplicationServer
 	/// <param name="tick">The tick just simulated, which the state is of. Before the first one, nothing is sent.
 	/// </param>
 	/// <remarks>
-	/// An exception from an <see cref="EffectContextCodec"/>'s write comes out of here once the send is done:
-	/// everything else went, and that effect goes on without its custom data.
+	/// An exception from an <see cref="EffectContextCodec"/>'s write comes out of here once the send is done, the first
+	/// one if several failed: everything else went, and each of those effects goes on without its custom data.
 	/// </remarks>
 	public void Send(long tick)
 	{
