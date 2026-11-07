@@ -46,6 +46,8 @@ public class IdentityTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCu
 		first.IndexOf(AssetKind.Effect, "uid://burning").Should().Be(1);
 		first.IndexOf(AssetKind.Ability, "uid://dash").Should().Be(0);
 		first.IndexOf(AssetKind.Effect, "uid://dash").Should().Be(-1, "the key is an ability's");
+		first.IndexOfAsset(AssetKind.Effect, "Burning").Should().Be(1);
+		first.IndexOfAsset(AssetKind.Effect, "Dash").Should().Be(-1, "the asset is an ability");
 		first.Count(AssetKind.Effect).Should().Be(2);
 		first.Count(AssetKind.Scene).Should().Be(0);
 		first.KeyAt(AssetKind.Effect, 1).Should().Be("uid://burning");

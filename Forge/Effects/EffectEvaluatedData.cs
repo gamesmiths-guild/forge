@@ -128,6 +128,24 @@ public sealed class EffectEvaluatedData
 		AttributesToCapture = EvaluateAttributesToCapture();
 	}
 
+	// What a client's mirror of an active effect holds: what the server evaluated. Nothing evaluates here, since what
+	// an evaluation reads may not be on this machine, and a mirror's period only follows its level.
+	internal EffectEvaluatedData(
+		Effect effect,
+		IForgeEntity target,
+		int stack,
+		int level,
+		float duration,
+		EffectApplicationContext? applicationContext)
+	{
+		Effect = effect;
+		Target = target;
+		ApplicationContext = applicationContext;
+		ModifiersEvaluatedData = [];
+		AttributesToCapture = [];
+		SetMirrored(stack, level, duration);
+	}
+
 	/// <summary>
 	/// Gets the application context data as a specific type, if available.
 	/// </summary>
@@ -166,6 +184,14 @@ public sealed class EffectEvaluatedData
 		ModifiersEvaluatedData = EvaluateModifiers();
 
 		CustomCueParameters = EvaluateCustomCueParameters();
+	}
+
+	internal void SetMirrored(int stack, int level, float duration)
+	{
+		Stack = stack;
+		Level = level;
+		Duration = duration;
+		Period = Effect.EffectData.PeriodicData?.Period.GetValue(level) ?? 1;
 	}
 
 	internal void RefreshCustomCueParameters()

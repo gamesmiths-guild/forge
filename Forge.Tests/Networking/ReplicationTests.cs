@@ -52,7 +52,7 @@ public class ReplicationTests
 		mirror.NetworkId.Should().Be(entity.NetworkId);
 		mirror.Set.Attribute1.CurrentValue.Should().Be(expected, "the current value arrives, modifiers included");
 		mirror.Tags.AllTags.HasTag(client.Tag("state.burning")).Should().BeTrue();
-		mirror.EffectsManager.GetActiveEffects().Should().BeEmpty("a mirror holds results, not effects");
+		mirror.EffectsManager.GetActiveEffects().Should().BeEmpty("the registry doesn't list the effect");
 		client.Fire.IsApplied.Should().BeTrue("the persistent cue is state");
 		client.Session.Mirror!.OwnerOf(mirror).Should().Be(new PeerId(7));
 		client.Session.Mirror.BodyOf(mirror)!.Latest!.Value.Position.Should().Be(new Vector3(1.25f, 0, -3.5f));

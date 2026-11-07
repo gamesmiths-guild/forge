@@ -22,10 +22,11 @@ namespace Gamesmiths.Forge.Networking;
 public sealed class NetworkAssetRegistry
 {
 	// The kinds, counted by hand: Enum.GetValues isn't AOT-safe, and a new kind is a protocol change anyway.
-	private const int KindCount = 4;
+	private const int KindCount = 5;
 
 	private readonly SortedDictionary<string, object>[] _pending = new SortedDictionary<string, object>[KindCount];
 	private readonly Dictionary<string, int>[] _indices = new Dictionary<string, int>[KindCount];
+	private readonly Dictionary<object, int>?[] _indicesByAsset = new Dictionary<object, int>?[KindCount];
 	private readonly string[][] _keys = new string[KindCount][];
 	private readonly object[][] _assets = new object[KindCount][];
 
@@ -150,6 +151,33 @@ public sealed class NetworkAssetRegistry
 	{
 		ThrowIfNotSealed();
 		return _indices[(int)kind].TryGetValue(key, out int index) ? index : -1;
+	}
+
+	/// <summary>
+	/// Gets the index an asset travels as.
+	/// </summary>
+	/// <param name="kind">The kind.</param>
+	/// <param name="asset">The asset, equal to the one registered.</param>
+	/// <returns>The index, or -1 when no such asset is registered.</returns>
+	public int IndexOfAsset(AssetKind kind, object asset)
+	{
+		ThrowIfNotSealed();
+		Dictionary<object, int>? indices = _indicesByAsset[(int)kind];
+
+		if (indices is null)
+		{
+			indices = [];
+			object[] assets = _assets[(int)kind];
+
+			for (int i = 0; i < assets.Length; i++)
+			{
+				indices.TryAdd(assets[i], i);
+			}
+
+			_indicesByAsset[(int)kind] = indices;
+		}
+
+		return indices.TryGetValue(asset, out int index) ? index : -1;
 	}
 
 	/// <summary>

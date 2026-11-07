@@ -46,25 +46,26 @@ internal static class ReplicationCodec
 			return null;
 		}
 
-		long magnitude = reader.ReadVarInt();
-
-		if (magnitude is < int.MinValue or > int.MaxValue)
-		{
-			throw new MalformedPacketException($"{magnitude} is not a cue magnitude.");
-		}
-
+		int magnitude = ReadInt(reader);
 		float normalized = reader.ReadBits(NormalizedBits) / NormalizedLevels;
-		ulong source = reader.ReadVarUInt();
-
-		if (source > uint.MaxValue)
-		{
-			throw new MalformedPacketException($"{source} is not an entity id.");
-		}
+		uint source = ReadEntityId(reader);
 
 		return new CueParameters(
-			(int)magnitude,
+			magnitude,
 			normalized,
-			source == 0 ? null : entities(new NetworkEntityId((uint)source)));
+			source == 0 ? null : entities(new NetworkEntityId(source)));
+	}
+
+	internal static uint ReadEntityId(BitReader reader)
+	{
+		ulong id = reader.ReadVarUInt();
+
+		if (id > uint.MaxValue)
+		{
+			throw new MalformedPacketException($"{id} is not an entity id.");
+		}
+
+		return (uint)id;
 	}
 
 	internal static int ReadCount(BitReader reader, int max = MaxCount)
@@ -85,7 +86,7 @@ internal static class ReplicationCodec
 
 		if (value is < int.MinValue or > int.MaxValue)
 		{
-			throw new MalformedPacketException($"{value} is out of an attribute's range.");
+			throw new MalformedPacketException($"{value} doesn't fit an integer.");
 		}
 
 		return (int)value;

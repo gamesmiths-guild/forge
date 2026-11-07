@@ -12,13 +12,14 @@ Under the hood every value the server sends is stamped with the send it changed 
 
 | What | How |
 |---|---|
-| Attributes | Each attribute's current value, modifiers included, and its minimum and maximum when they change. A mirror holds the value as its base value, with no modifiers. The attributes are the ones the entity has when it's registered, or bound on a client: a set added later doesn't replicate. |
+| Attributes | Each attribute's current value, modifiers included, and its minimum and maximum when they change. A mirror holds the value as its base value, with no modifiers, except on the entity the client owns, which is sent its base value too. The attributes are the ones the entity has when it's registered, or bound on a client: a set added later doesn't replicate. |
 | Tags | The final set, as the net indices added and removed since the client last heard. Removals the client can't have seen are never sent. |
+| Active effects | As records of what they are, as far as each effect's visibility allows. A mirror holds them to answer queries, and runs nothing of them. See [Effects on the network](effects.md). |
 | Persistent cues | As state: each one applied on the entity is numbered, and the client applies, updates and removes its own copy as the server's does. |
 | Executed cues | As events, numbered per entity and sent until the client acknowledges them or they're `EventExpirySeconds` (0.2 s) old. A cue arriving later than that is never played. |
 | The body | Position in thousandths of a unit, rotation as its three smallest components in 9 bits each, velocity in hundredths, and whether it stands on the ground (`BodyCodec`). A client shows it between the states the server sent. |
 
-Effects, abilities, graphs, shared variables and input don't replicate: a mirror holds what they produced, not what produced it. Because a mirror's attributes and tags are what the server sends, queries on them, UI bound to them and cue handlers work on a client as they do on the server.
+Abilities, graphs, shared variables and input don't replicate: a mirror holds what they produced, not what produced it. Because a mirror's attributes, tags and effects are what the server sends, queries on them, UI bound to them and cue handlers work on a client as they do on the server.
 
 A cue's parameters reach a client as its magnitude, its normalized magnitude and its source, with these limits: `CustomParameters` is always `null`, and `Source` is `null` when the client has no mirror of the source at the moment the cue arrives, and stays so until the server next updates the cue.
 
@@ -71,13 +72,13 @@ foreach (IForgeEntity entity in mirror.Entities)
 ```
 
 - **Spawning and despawning.** The host's `IReplicationHost.Spawn` makes the entity the server spawned, from the scene index, and gives it the id; `Despawn` takes one away. Entities placed in the scene are bound with `BindPlaced`, under the same id the server gives them, before the session is ready.
-- **Mirrors.** A mirror is torn down as it's bound (see [teardown](../simulation.md#ending-an-entity)): it runs no abilities and refuses every effect. From then on its attributes, tags and persistent cues are what the server last sent, and executed cues play once as they arrive. A host doesn't advance its mirrors.
+- **Mirrors.** A mirror is torn down as it's bound (see [teardown](../simulation.md#ending-an-entity)): it runs no abilities and refuses every effect applied to it. From then on its attributes, tags, active effects and persistent cues are what the server last sent, and executed cues play once as they arrive. A host doesn't advance its mirrors.
 - **Bodies.** `BodyOf` gives the `RemoteBody`: the states the server sent, by server tick. `TrySample` interpolates between the two around a tick, which may fall between ticks. The newest state arrives about half a round trip after the server's tick it's of, so showing bodies a little behind that, by more than the send interval, keeps a state on either side of the moment shown. A body that rested and then moved is held where it stood until the send before it moved, so it isn't shown drifting there all along. A body that goes away on the server, when `BodySource` stops giving one, goes here too.
 - **Late packets.** A packet older than one already read is dropped and not acknowledged, so the server sends what it carried again. `PacketsLate` counts them. So is a packet that can't be read to its end, though what came before the bad part stays applied, as the same values arrive again.
 
 ## The wire
 
-A state packet is the send's sequence and tick, then one entry per entity, then a zero. An entry is the entity's id, its kind (state, spawn or despawn) in 2 bits, for a spawn whether it's placed, its scene index, its owner and its attribute count, then a flag and the data for each of attributes, tags, persistent cues, executed cues and the body, padded to a whole byte. A client's acknowledgement goes up on the state channel once per update: the newest sequence it read and a bit for each of the 32 before it, so a lost acknowledgement costs nothing.
+A state packet is the send's sequence and tick, then one entry per entity, then a zero. An entry is the entity's id, its kind (state, spawn or despawn) in 2 bits, for a spawn whether it's placed, its scene index, its owner and its attribute count, then a flag and the data for each of attributes, tags, persistent cues, executed cues, [effects](effects.md#the-wire) and the body, padded to a whole byte. A client's acknowledgement goes up on the state channel once per update: the newest sequence it read and a bit for each of the 32 before it, so a lost acknowledgement costs nothing.
 
 A packet a client can't read is dropped and counted, as every packet is (see [the session](README.md#session)).
 

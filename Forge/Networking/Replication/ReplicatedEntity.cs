@@ -3,6 +3,7 @@
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Networking.Replication;
@@ -19,6 +20,7 @@ public sealed class ReplicatedEntity
 	private readonly TagsManager _tagsManager;
 	private readonly HashSet<ushort> _currentTags = [];
 	private readonly List<ushort> _scratch = [];
+	private readonly Dictionary<ActiveEffect, ReplicatedEffect> _effectsByActive = [];
 
 	/// <summary>
 	/// Gets the id the entity is known by on every machine.
@@ -76,9 +78,14 @@ public sealed class ReplicatedEntity
 
 	internal int[] ShadowMaxes { get; }
 
+	internal int[] ShadowBases { get; }
+
 	internal long[] ValueStamps { get; }
 
 	internal long[] RangeStamps { get; }
+
+	// Only the owner hears of base values: everyone else's mirror has its current value for a base value.
+	internal long[] BaseStamps { get; }
 
 	// The tags the entity has, by net index, with the send each was first seen at.
 	internal Dictionary<ushort, long> LiveTags { get; } = [];
@@ -93,7 +100,14 @@ public sealed class ReplicatedEntity
 
 	internal List<CueEvent> Events { get; } = [];
 
+	// The effects active on the entity, in the order they were first seen, which is the order they were applied in.
+	internal List<ReplicatedEffect> Effects { get; } = [];
+
+	internal List<EffectTombstone> RemovedEffects { get; } = [];
+
 	internal uint NextCueInstance { get; set; } = 1;
+
+	internal uint NextEffectInstance { get; set; } = 1;
 
 	internal uint LastEventSequence { get; set; }
 
@@ -117,14 +131,17 @@ public sealed class ReplicatedEntity
 		ShadowValues = new int[Attributes.Length];
 		ShadowMins = new int[Attributes.Length];
 		ShadowMaxes = new int[Attributes.Length];
+		ShadowBases = new int[Attributes.Length];
 		ValueStamps = new long[Attributes.Length];
 		RangeStamps = new long[Attributes.Length];
+		BaseStamps = new long[Attributes.Length];
 		SpawnedAtTick = spawnedAtTick;
 
 		// Nothing has been seen yet, so the first capture stamps everything.
 		Array.Fill(ShadowValues, int.MinValue);
 		Array.Fill(ShadowMins, int.MinValue);
 		Array.Fill(ShadowMaxes, int.MinValue);
+		Array.Fill(ShadowBases, int.MinValue);
 	}
 
 	// Looks at the entity and stamps what changed since the last look with this send's tick.
@@ -145,6 +162,12 @@ public sealed class ReplicatedEntity
 				ShadowMins[i] = attribute.Min;
 				ShadowMaxes[i] = attribute.Max;
 				RangeStamps[i] = tick;
+			}
+
+			if (attribute.BaseValue != ShadowBases[i])
+			{
+				ShadowBases[i] = attribute.BaseValue;
+				BaseStamps[i] = tick;
 			}
 		}
 
@@ -184,6 +207,53 @@ public sealed class ReplicatedEntity
 			ShadowBody = null;
 			BodyStamp = tick;
 		}
+	}
+
+	// Looks at the effects active on the entity: one seen for the first time gets a record, and one that was there and
+	// isn't any more leaves a tombstone.
+	internal void CaptureEffects(long tick, ReplicationServer server, SimulationClock clock)
+	{
+		IReadOnlyList<ActiveEffect> activeEffects = Entity.EffectsManager.ActiveEffects;
+
+		for (int i = 0; i < activeEffects.Count; i++)
+		{
+			ActiveEffect activeEffect = activeEffects[i];
+
+			if (!_effectsByActive.TryGetValue(activeEffect, out ReplicatedEffect? effect))
+			{
+				effect = server.DescribeEffect(NextEffectInstance++, activeEffect);
+				_effectsByActive[activeEffect] = effect;
+				Effects.Add(effect);
+			}
+
+			effect.Capture(tick, clock, _tagsManager);
+		}
+
+		for (int i = Effects.Count - 1; i >= 0; i--)
+		{
+			ReplicatedEffect effect = Effects[i];
+
+			if (effect.SeenAt == tick)
+			{
+				continue;
+			}
+
+			Effects.RemoveAt(i);
+			_effectsByActive.Remove(effect.Active);
+
+			if (effect.Visibility is EffectVisibility.Public or EffectVisibility.OwnerOnly)
+			{
+				RemovedEffects
+					.Add(new EffectTombstone(effect.Instance, effect.Visibility, tick, effect.Active.IsExpired));
+			}
+		}
+	}
+
+	internal void ClearEffects()
+	{
+		_effectsByActive.Clear();
+		Effects.Clear();
+		RemovedEffects.Clear();
 	}
 
 	private void CaptureTags(long tick)
@@ -242,6 +312,12 @@ public sealed class ReplicatedEntity
 	}
 
 	internal readonly record struct CueTombstone(uint Instance, long Stamp, bool Interrupted);
+
+	internal readonly record struct EffectTombstone(
+		uint Instance,
+		EffectVisibility Visibility,
+		long Stamp,
+		bool Expired);
 
 	// A cue executed on the entity: one-shot, numbered in order, and forgotten once it's too old to be worth showing.
 	internal readonly record struct CueEvent(uint Sequence, Tag CueTag, CueParameters? Parameters, long CreatedAtTick);

@@ -15,7 +15,7 @@ public static class Protocol
 	/// The version of the wire protocol. Bumped whenever a message's layout changes, so an old build is refused instead
 	/// of misreading a new one.
 	/// </summary>
-	public const ushort Version = 3;
+	public const ushort Version = 4;
 
 	/// <summary>
 	/// The channel for connection control: the handshake, pings, and later the disconnect. Its messages are

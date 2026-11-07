@@ -428,9 +428,10 @@ public sealed class EntityAttribute
 		}
 	}
 
-	// Puts the values the server sent on a mirror: the current value stands as the base value, with no modifiers, since
-	// a mirror holds no effects of its own. Raises OnValueChanged with the change, as a change made here would.
-	internal void Mirror(int currentValue, int min, int max)
+	// Puts the values the server sent on a mirror, whose effects apply no modifiers: what lies between the base value
+	// and the current value is one sum, and a client that isn't the owner has its current value for a base value.
+	// Raises OnValueChanged with the change, as a change made here would.
+	internal void Mirror(int currentValue, int min, int max, int baseValue)
 	{
 		int previous = CurrentValue;
 
@@ -438,8 +439,10 @@ public sealed class EntityAttribute
 		_attributeOverrides.Clear();
 		Min = min;
 		Max = max;
-		BaseValue = currentValue;
-		UpdateCachedValues();
+		BaseValue = baseValue;
+		CurrentValue = currentValue;
+		Modifier = currentValue - baseValue;
+		Overflow = 0;
 		PendingValueChange = 0;
 
 		if (CurrentValue != previous)

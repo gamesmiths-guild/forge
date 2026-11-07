@@ -52,7 +52,7 @@ public class Effect
 	/// <summary>
 	/// Gets information about the ownership and source of this effect.
 	/// </summary>
-	public EffectOwnership Ownership { get; }
+	public EffectOwnership Ownership { get; internal set; }
 
 	/// <summary>
 	/// Gets the current level o this effect.

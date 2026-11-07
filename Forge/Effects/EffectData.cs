@@ -97,6 +97,11 @@ public readonly record struct EffectData
 	public TagContainer? EffectTags { get; }
 
 	/// <summary>
+	/// Gets who hears about this effect while it's active on a networked entity.
+	/// </summary>
+	public EffectVisibility Visibility { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="EffectData"/> struct.
 	/// </summary>
 	/// <param name="name">The name of this effect.</param>
@@ -114,6 +119,7 @@ public readonly record struct EffectData
 	/// <param name="cues">The cues associated with this effect.</param>
 	/// <param name="effectTags">The tags identifying this effect, used by <see cref="EffectQuery"/>. These are never
 	/// granted to the target.</param>
+	/// <param name="visibility">Who hears about this effect while it's active on a networked entity.</param>
 	public EffectData(
 		string name,
 		DurationData durationData,
@@ -126,7 +132,8 @@ public readonly record struct EffectData
 		bool suppressStackingCues = false,
 		CustomExecution[]? customExecutions = null,
 		CueData[]? cues = null,
-		TagContainer? effectTags = null)
+		TagContainer? effectTags = null,
+		EffectVisibility visibility = EffectVisibility.Default)
 	{
 		Name = name;
 		DurationData = durationData;
@@ -140,6 +147,7 @@ public readonly record struct EffectData
 		CustomExecutions = customExecutions ?? [];
 		Cues = cues ?? [];
 		EffectTags = effectTags;
+		Visibility = visibility;
 
 		if (Validation.Enabled)
 		{
