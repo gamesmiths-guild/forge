@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
@@ -62,6 +63,7 @@ public sealed class ReplicationServer
 	private readonly Dictionary<Type, int> _contextCodecs = [];
 	private readonly HashSet<EffectData> _effectsNotListed = [];
 	private readonly CueObserver _cueObserver;
+	private EffectVisibility _defaultEffectVisibility = EffectVisibility.Public;
 	private uint _nextId = 1;
 
 	/// <summary>
@@ -96,7 +98,15 @@ public sealed class ReplicationServer
 	/// Gets or sets who hears about an effect whose data says <see cref="EffectVisibility.Default"/>. Read as an effect
 	/// first goes active.
 	/// </summary>
-	public EffectVisibility DefaultEffectVisibility { get; set; } = EffectVisibility.Public;
+	/// <exception cref="ArgumentOutOfRangeException">Thrown when set to <see cref="EffectVisibility.Default"/>, which
+	/// would say nothing.</exception>
+	public EffectVisibility DefaultEffectVisibility
+	{
+		get => _defaultEffectVisibility;
+		set => _defaultEffectVisibility = value != EffectVisibility.Default
+			? value
+			: throw new ArgumentOutOfRangeException(nameof(value), value, "Say who hears about those effects.");
+	}
 
 	/// <summary>
 	/// Gets the entities being replicated, in the order they were registered.
@@ -263,6 +273,10 @@ public sealed class ReplicationServer
 	/// </summary>
 	/// <param name="tick">The tick just simulated, which the state is of. Before the first one, nothing is sent.
 	/// </param>
+	/// <remarks>
+	/// An exception from an <see cref="EffectContextCodec"/>'s write comes out of here once the send is done:
+	/// everything else went, and that effect goes on without its custom data.
+	/// </remarks>
 	public void Send(long tick)
 	{
 		if (tick < 0 || (LastSendTick >= 0 && tick - LastSendTick < SendInterval))
@@ -284,13 +298,16 @@ public sealed class ReplicationServer
 			}
 		}
 
+		ExceptionDispatchInfo? failure = null;
+
 		foreach (ClientState client in _clients.Values)
 		{
 			UpdateViews(client, tick);
-			SendTo(client, tick);
+			SendTo(client, tick, ref failure);
 		}
 
 		Prune();
+		failure?.Throw();
 	}
 
 	// What an effect seen for the first time is on the wire, and who hears about it.
@@ -550,7 +567,7 @@ public sealed class ReplicationServer
 		}
 	}
 
-	private void SendTo(ClientState client, long tick)
+	private void SendTo(ClientState client, long tick, ref ExceptionDispatchInfo? failure)
 	{
 		_candidates.Clear();
 
@@ -588,7 +605,18 @@ public sealed class ReplicationServer
 				continue;
 			}
 
-			uint maxEvent = WriteEntry(view, tick);
+			uint maxEvent;
+
+			try
+			{
+				maxEvent = WriteEntry(view, tick);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+				view.LeftOut = true;
+				continue;
+			}
 
 			if (packet.Entries.Count > 0 && _packet.ByteLength + _entry.ByteLength + TerminatorBytes > BudgetBytes)
 			{
@@ -928,8 +956,19 @@ public sealed class ReplicationServer
 			if (effect.ContextCodec >= 0)
 			{
 				_entry.WriteBits((ulong)effect.ContextCodec, registry.BitsFor(AssetKind.EffectContext));
-				registry.Get<EffectContextCodec>(AssetKind.EffectContext, effect.ContextCodec)
-					.Write(_entry, effect.Active.EffectEvaluatedData.ApplicationContext!);
+
+				try
+				{
+					registry.Get<EffectContextCodec>(AssetKind.EffectContext, effect.ContextCodec)
+						.Write(_entry, effect.Active.EffectEvaluatedData.ApplicationContext!);
+				}
+				catch
+				{
+					// It would fail every send for as long as the effect lasts, so the data stays on the server, as
+					// data with no codec does, and the entity's entry goes without it from the next send.
+					effect.ContextCodec = -1;
+					throw;
+				}
 			}
 		}
 

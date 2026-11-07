@@ -32,7 +32,7 @@ internal sealed class ReplicatedEffect(
 	public EffectVisibility Visibility { get; } = visibility;
 
 	// The index of the codec its custom data travels by, in the registry's EffectContext kind, or -1.
-	public int ContextCodec { get; } = contextCodec;
+	public int ContextCodec { get; set; } = contextCodec;
 
 	public long CreatedStamp { get; private set; } = ReplicatedEntity.Pending;
 

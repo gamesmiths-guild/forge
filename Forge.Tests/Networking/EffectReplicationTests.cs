@@ -654,6 +654,39 @@ public class EffectReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Effects")]
+	public void A_codec_that_fails_to_write_costs_only_its_data_and_says_so_once()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity failing = rig.Spawn();
+		Entity other = rig.Spawn();
+		failing.EffectsManager.ApplyEffect(Rig.Effect(rig.Assets.Blessed, failing), new UnwritableData(1));
+		Rig.Apply(other, rig.Assets.Blessed);
+
+		FluentActions.Invoking(() => rig.Step(6)).Should().Throw<InvalidOperationException>();
+		rig.Step();
+		client.Find(other).EffectsManager.GetActiveEffects().Should().ContainSingle("the send went on without it");
+
+		rig.Step(6);
+		ActiveEffectHandle mirrored = client.Find(failing).EffectsManager.GetActiveEffects().Single();
+		mirrored.TryGetContextData(out UnwritableData? data).Should().BeFalse();
+		data.Should().BeNull();
+		client.Session.MalformedPackets.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Networking", "Effects")]
+	public void A_server_s_default_visibility_has_to_say_who_hears()
+	{
+		var rig = new Rig();
+
+		FluentActions.Invoking(() => rig.Server.Replication!.DefaultEffectVisibility = EffectVisibility.Default)
+			.Should().Throw<ArgumentOutOfRangeException>();
+		rig.Server.Replication!.DefaultEffectVisibility.Should().Be(EffectVisibility.Public);
+	}
+
+	[Fact]
+	[Trait("Networking", "Effects")]
 	public void A_client_with_other_codecs_is_refused()
 	{
 		var network = new LoopbackNetwork();
@@ -899,6 +932,8 @@ public class EffectReplicationTests
 
 	private sealed record UnsentData(int Value);
 
+	private sealed record UnwritableData(int Value);
+
 	// What every machine builds for itself: the tags, the effects and the registry that names them.
 	private sealed class Assets
 	{
@@ -1061,6 +1096,12 @@ public class EffectReplicationTests
 						writer.WriteString(data.Direction);
 					},
 					static reader => new HitData((int)reader.ReadVarInt(), reader.ReadString())));
+			Registry.Register(
+				AssetKind.EffectContext,
+				"unwritable",
+				EffectContextCodec.For(
+					static (_, _) => throw new InvalidOperationException("This data can't be written."),
+					static _ => new UnwritableData(0)));
 			Registry.Seal();
 		}
 
