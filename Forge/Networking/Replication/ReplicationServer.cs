@@ -275,8 +275,8 @@ public sealed class ReplicationServer
 	/// </param>
 	/// <remarks>
 	/// An exception from an <see cref="EffectContextCodec"/>'s write comes out of here once the send is done, the first
-	/// one if several failed. The entity whose write failed is left out of that send to that client, and from the next
-	/// send on the effect goes without its custom data.
+	/// one if several failed. The entity whose write failed is left out of that send to that client, and from then on,
+	/// other clients in the same send included, the effect goes without its custom data.
 	/// </remarks>
 	public void Send(long tick)
 	{
