@@ -62,12 +62,19 @@ foreach (IForgeEntity placed in level.NetworkedEntities)
 
 mirror.HoldsUntilShown = true;         // a packet waits to be shown at its body's moment
 var shown = new InterpolationClock(client.Clock);
+mirror.Spawned += PlaceShownBody;      // one spawned by a shown packet, before its graphs run
 
 // Every frame, to show the server's entities 100 ms behind the newest state, which is about half a round trip old:
 double newest = client.ClockSync.EstimateServerTick(now) - client.Clock.TicksIn(client.ClockSync.RoundTripTime / 2);
 shown.Advance(deltaTime, newest - client.Clock.TicksIn(0.1));
-mirror.Show(shown.Tick);               // what the held packets of the ticks shown by now carry
 foreach (IForgeEntity entity in mirror.Entities)
+{
+    PlaceShownBody(entity);            // the bodies first, so what Show sets off happens where they're shown
+}
+
+mirror.Show(shown.Tick);               // what the held packets of the ticks shown by now carry
+
+void PlaceShownBody(IForgeEntity entity)
 {
     if (mirror.BodyOf(entity)?.TrySample(shown.Tick, out BodyState body) == true)
     {
