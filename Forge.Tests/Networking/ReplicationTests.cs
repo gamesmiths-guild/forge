@@ -99,6 +99,25 @@ public class ReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Replication")]
+	public void Turning_holding_off_applies_what_was_held()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		ReplicationClient replication = client.Session.Mirror!;
+		replication.HoldsUntilShown = true;
+		Entity entity = rig.Spawn();
+		Rig.Apply(entity, rig.Burning());
+		rig.Step(6);
+		client.Spawned.Should().BeEmpty();
+
+		replication.HoldsUntilShown = false;
+
+		client.Only().Tags.AllTags.HasTag(client.Tag("state.burning"))
+			.Should().BeTrue("the held packets were acknowledged and won't come again");
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
 	public void A_change_reaches_the_client_and_its_end_too()
 	{
 		var rig = new Rig();

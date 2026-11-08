@@ -55,6 +55,7 @@ public sealed class ReplicationClient
 	private uint _ackMask;
 	private bool _ackPending;
 	private bool _effectOwnersStale;
+	private bool _holdsUntilShown;
 
 	/// <summary>
 	/// Raised when the server spawned an entity and the host made it, after it was bound.
@@ -106,7 +107,25 @@ public sealed class ReplicationClient
 	/// anything but its bodies applies, so what a mirror shows keeps time with its body, which is shown behind the
 	/// newest state. Otherwise a packet applies as it arrives.
 	/// </summary>
-	public bool HoldsUntilShown { get; set; }
+	/// <remarks>
+	/// Turned off, it applies every packet still held first, in the order they arrived: they were acknowledged as they
+	/// arrived, so the server won't send them again. An exception from that comes out as <see cref="Show"/>'s does,
+	/// with holding off and every held packet applied.
+	/// </remarks>
+	public bool HoldsUntilShown
+	{
+		get => _holdsUntilShown;
+		set
+		{
+			bool releasing = _holdsUntilShown && !value;
+			_holdsUntilShown = value;
+
+			if (releasing)
+			{
+				Show(double.PositiveInfinity);
+			}
+		}
+	}
 
 	internal ReplicationClient(NetworkSession session)
 	{
