@@ -99,6 +99,8 @@ The presentation half runs in the presentation pass, `GraphProcessor.Present`, w
 
 The presentation half must not change gameplay or the graph: no emitting, no variables, no effects. A host with nothing to show skips the pass, and must still simulate the same game.
 
+**On a client, a presentation node runs whole.** A client's copy of a graph the server runs starts and ends the presentation states as the server says, with `StateNodeContext.ActivationReason` set to `Replication`, and follows no link out of them. Their simulation half runs there too, which is why a presentation node never changes gameplay in either half, and ending itself waits for the server's word. A simulation node acting on something a presentation node made, such as a Move To flying a cosmetic instance, is presentation in that graph: `Graph.NetworkKindOf` gives it. See [Graphs on the network](../../../networking/statescript.md).
+
 ```csharp
 public sealed class HighlightNodeContext : StateNodeContext
 {

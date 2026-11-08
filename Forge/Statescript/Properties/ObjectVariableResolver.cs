@@ -12,10 +12,14 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// <param name="variableName">The name of the variable to read.</param>
 /// <param name="scope">Which variable bag to read from.</param>
 public class ObjectVariableResolver<T>(StringKey variableName, VariableScope scope = VariableScope.Graph)
-	: ObjectResolver<T>
+	: ObjectResolver<T>, IVariableReader
 {
 	private readonly StringKey _variableName = variableName;
 	private readonly VariableScope _scope = scope;
+
+	StringKey IVariableReader.VariableName => _variableName;
+
+	VariableScope IVariableReader.Scope => _scope;
 
 	/// <inheritdoc/>
 	[return: MaybeNull]

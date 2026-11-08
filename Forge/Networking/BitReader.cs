@@ -269,4 +269,9 @@ public sealed class BitReader(ReadOnlyMemory<byte> data)
 	{
 		return unchecked((long)(value >> 1) ^ -(long)(value & 1));
 	}
+
+	internal byte[] CopyData()
+	{
+		return _data.ToArray();
+	}
 }

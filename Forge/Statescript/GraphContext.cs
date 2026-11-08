@@ -2,6 +2,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
+using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
 
 namespace Gamesmiths.Forge.Statescript;
@@ -90,6 +91,10 @@ public sealed class GraphContext
 	/// starts, which makes the graph's rolls repeat on every machine that simulates the owner on the same tick.
 	/// </remarks>
 	public IRandom? Random { get; set; }
+
+	// A client's copy of a graph the server runs: nothing travels along links but into client-only regions, the nodes
+	// the server runs start and end as it says, and the run ends only when it does.
+	internal bool IsRemote { get; set; }
 
 	internal Dictionary<Guid, bool> InternalNodeActivationStatus { get; } = [];
 
@@ -459,6 +464,14 @@ public sealed class GraphContext
 		return newContext;
 	}
 
+	internal void NotifyActionExecuted(Node node)
+	{
+		if (!IsRemote && ActivationContext is AbilityBehaviorContext ability)
+		{
+			ability.Owner.Abilities.GraphObserver?.ActionExecuted(this, node);
+		}
+	}
+
 	internal void PushElement(in ElementFrame frame)
 	{
 		_elementFrames.Add(frame);
@@ -494,7 +507,11 @@ public sealed class GraphContext
 	// code, and hand back what it threw for the caller to rethrow once it has finished up, unless it failed first.
 	internal ExceptionDispatchInfo? FinalizeIfIdle()
 	{
-		if (!HasStarted || FinalizationDeferralCount != 0 || RunningFrames != 0 || ActiveStateNodes.Count != 0)
+		if (IsRemote
+			|| !HasStarted
+			|| FinalizationDeferralCount != 0
+			|| RunningFrames != 0
+			|| ActiveStateNodes.Count != 0)
 		{
 			return null;
 		}

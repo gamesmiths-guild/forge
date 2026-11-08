@@ -58,6 +58,7 @@ public abstract class ActionNode : Node
 		try
 		{
 			Execute(graphContext);
+			graphContext.NotifyActionExecuted(this);
 		}
 		catch (Exception exception)
 		{

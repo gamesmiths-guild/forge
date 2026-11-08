@@ -12,10 +12,14 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 /// <param name="scope">Which variable bag to read from.</param>
 public class ObjectArrayVariableResolver<T>(
 	StringKey variableName,
-	VariableScope scope = VariableScope.Graph) : ObjectArrayResolver<T>
+	VariableScope scope = VariableScope.Graph) : ObjectArrayResolver<T>, IVariableReader
 {
 	private readonly StringKey _variableName = variableName;
 	private readonly VariableScope _scope = scope;
+
+	StringKey IVariableReader.VariableName => _variableName;
+
+	VariableScope IVariableReader.Scope => _scope;
 
 	/// <inheritdoc/>
 	public override T[] ResolveArray(GraphContext graphContext)

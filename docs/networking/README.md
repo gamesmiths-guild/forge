@@ -1,6 +1,6 @@
 # Networking
 
-Forge's networking puts one server in charge of a game that several machines play. The server simulates every entity from the players' input and sends the result down; each client sends only what its player pressed. This page covers the foundation in `Gamesmiths.Forge.Networking`: how bytes travel, how a session starts, how clocks agree and how input gets to the server. [Replication](replication.md) covers how the world gets back down to every client, and [Effects on the network](effects.md) what a client knows of the effects on an entity.
+Forge's networking puts one server in charge of a game that several machines play. The server simulates every entity from the players' input and sends the result down; each client sends only what its player pressed. This page covers the foundation in `Gamesmiths.Forge.Networking`: how bytes travel, how a session starts, how clocks agree and how input gets to the server. [Replication](replication.md) covers how the world gets back down to every client, [Effects on the network](effects.md) what a client knows of the effects on an entity, and [Graphs on the network](statescript.md) what a client shows of the graphs an entity runs.
 
 Nothing here depends on an engine. An engine integration provides a transport over its own sockets and drives the session from its loop; Forge for Godot does that with a session node.
 

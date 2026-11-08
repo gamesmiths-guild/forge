@@ -32,6 +32,11 @@ public sealed class AbilityInstanceHandle : IValidatable
 		AbilityInstance = instance;
 	}
 
+	// For a graph a client runs for the server's entity, whose ability has no instance there.
+	internal AbilityInstanceHandle()
+	{
+	}
+
 	/// <summary>
 	/// Ends the ability instance.
 	/// </summary>

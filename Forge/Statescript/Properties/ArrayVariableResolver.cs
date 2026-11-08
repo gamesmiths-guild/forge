@@ -18,13 +18,17 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 public class ArrayVariableResolver(
 	StringKey variableName,
 	Type elementType,
-	VariableScope scope = VariableScope.Graph) : IArrayPropertyResolver
+	VariableScope scope = VariableScope.Graph) : IArrayPropertyResolver, IVariableReader
 {
 	private readonly StringKey _variableName = variableName;
 	private readonly VariableScope _scope = scope;
 
 	/// <inheritdoc/>
 	public Type ElementType { get; } = elementType;
+
+	StringKey IVariableReader.VariableName => _variableName;
+
+	VariableScope IVariableReader.Scope => _scope;
 
 	/// <inheritdoc/>
 	public Variant128[] ResolveArray(GraphContext graphContext)

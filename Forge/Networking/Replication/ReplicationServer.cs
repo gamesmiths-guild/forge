@@ -1,10 +1,12 @@
 // Copyright © Gamesmiths Guild.
 
 using System.Runtime.ExceptionServices;
+using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Networking.Messages;
+using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Networking.Replication;
@@ -18,8 +20,11 @@ namespace Gamesmiths.Forge.Networking.Replication;
 /// <remarks>
 /// <para>What replicates: attributes as current values with their range, and base values to the owner, tags as the
 /// final set with what was added and removed, active effects as records of what they are, as far as each effect's
-/// <see cref="EffectVisibility"/> allows, persistent cues as state, executed cues as events that expire, and the body
-/// for interpolation. Abilities and graphs don't: a client's copy holds the results, not what produced them.</para>
+/// <see cref="EffectVisibility"/> allows, persistent cues as state, executed cues as events that expire, the graphs the
+/// entity's abilities run, as far as clients run them, and the body for interpolation. A graph goes as which of its
+/// presentation states run and since when, its value variables, and its presentation actions as events that expire,
+/// so a client shows them without following a link. Abilities don't: a client's copy holds the results, not what
+/// produced them.</para>
 /// <para>The host calls <see cref="Send"/> once per tick after simulating it; the server sends every
 /// <see cref="SendInterval"/> ticks, a packet with no entries when nothing changed, so a client knows the ticks in
 /// which nothing did. The host registers an entity when it spawns, with the id from <see cref="AllocateId"/> set on it
@@ -62,7 +67,9 @@ public sealed class ReplicationServer
 	private readonly List<ushort> _tagScratch = [];
 	private readonly Dictionary<Type, int> _contextCodecs = [];
 	private readonly HashSet<EffectData> _effectsNotListed = [];
+	private readonly HashSet<AbilityData> _abilitiesNotListed = [];
 	private readonly CueObserver _cueObserver;
+	private readonly GraphObserver _graphObserver;
 	private EffectVisibility _defaultEffectVisibility = EffectVisibility.Public;
 	private uint _nextId = 1;
 
@@ -71,6 +78,12 @@ public sealed class ReplicationServer
 	/// <see cref="EffectVisibility.ServerOnly"/>: no client can be told about it, so it stays on the server.
 	/// </summary>
 	public event Action<EffectData>? EffectNotListed;
+
+	/// <summary>
+	/// Raised the first time a graph that clients run something of runs for an ability the registry doesn't list: no
+	/// client can be told about it, so it runs on the server alone.
+	/// </summary>
+	public event Action<AbilityData>? AbilityNotListed;
 
 	/// <summary>
 	/// Gets or sets how many bytes a state packet aims to stay under. An entity whose entry alone is over it still
@@ -137,6 +150,7 @@ public sealed class ReplicationServer
 	{
 		_session = session;
 		_cueObserver = new CueObserver(this);
+		_graphObserver = new GraphObserver(this);
 
 		for (int i = 0; i < session.Registry.Count(AssetKind.EffectContext); i++)
 		{
@@ -197,6 +211,7 @@ public sealed class ReplicationServer
 		_nextId = Math.Max(_nextId, entity.NetworkId.Value + 1);
 
 		entity.CuesManager.AddObserver(_cueObserver);
+		entity.Abilities.GraphObserver = _graphObserver;
 
 		foreach (PersistentCue cue in EntitySimulation.PersistentCues(entity))
 		{
@@ -222,9 +237,12 @@ public sealed class ReplicationServer
 		_entities.Remove(replicated.Id);
 		_entityList.Remove(replicated);
 		replicated.DespawnedAtTick = _session.Clock.Tick;
+
+		// Its events and graphs stay: its last events go with its despawn, so what it did as it went, a burst as it
+		// dies, still shows.
 		replicated.Cues.Clear();
-		replicated.Events.Clear();
 		replicated.ClearEffects();
+		entity.Abilities.GraphObserver = null;
 
 		if (!_entityList.Exists(x => x.Entity.CuesManager == entity.CuesManager))
 		{
@@ -292,11 +310,8 @@ public sealed class ReplicationServer
 		{
 			entity.Capture(tick, BodySource);
 			entity.CaptureEffects(tick, this, _session.Clock);
-
-			while (entity.Events.Count > 0 && entity.Events[0].CreatedAtTick < oldestEvent)
-			{
-				entity.Events.RemoveAt(0);
-			}
+			entity.CaptureGraphs(tick, this);
+			ExpireEvents(entity, oldestEvent);
 		}
 
 		ExceptionDispatchInfo? failure = null;
@@ -304,7 +319,19 @@ public sealed class ReplicationServer
 		foreach (ClientState client in _clients.Values)
 		{
 			UpdateViews(client, tick);
+
+			// A despawn sent again, or to a client joining after a placed entity went, brings only what's still fresh.
+			foreach (EntityView view in client.Views.Values.Where(x => x.Entity.DespawnedAtTick is not null))
+			{
+				ExpireEvents(view.Entity, oldestEvent);
+			}
+
 			SendTo(client, tick, ref failure);
+		}
+
+		foreach (ReplicatedEntity entity in _entityList)
+		{
+			entity.SentEventSequence = entity.LastEventSequence;
 		}
 
 		Prune();
@@ -343,12 +370,31 @@ public sealed class ReplicationServer
 		return new ReplicatedEffect(instance, activeEffect, assetIndex, visibility, contextCodec);
 	}
 
-	// The session is over: the entities live on, and their cues are no longer anything to this server.
+	// What a graph run seen for the first time is on the wire: the ability it runs for and that activation's context.
+	internal ReplicatedGraph DescribeGraph(uint instance, GraphProcessor processor, AbilityBehaviorContext context)
+	{
+		int assetIndex = -1;
+
+		if (context.AbilityHandle.Ability is Ability ability)
+		{
+			assetIndex = _session.Registry.IndexOfAsset(AssetKind.Ability, ability.AbilityData);
+
+			if (assetIndex < 0 && _abilitiesNotListed.Add(ability.AbilityData))
+			{
+				AbilityNotListed?.Invoke(ability.AbilityData);
+			}
+		}
+
+		return new ReplicatedGraph(instance, processor, context, assetIndex);
+	}
+
+	// The session is over: the entities live on, and their cues and graphs are no longer anything to this server.
 	internal void StopObserving()
 	{
-		foreach (ReplicatedEntity entity in _entityList)
+		foreach (IForgeEntity entity in _entityList.Select(x => x.Entity))
 		{
-			entity.Entity.CuesManager.RemoveObserver(_cueObserver);
+			entity.CuesManager.RemoveObserver(_cueObserver);
+			entity.Abilities.GraphObserver = null;
 		}
 	}
 
@@ -452,6 +498,24 @@ public sealed class ReplicationServer
 		packet.Entries.Clear();
 	}
 
+	private static void ExpireEvents(ReplicatedEntity entity, long oldestEvent)
+	{
+		while (entity.Events.Count > 0 && entity.Events[0].CreatedAtTick < oldestEvent)
+		{
+			entity.Events.RemoveAt(0);
+		}
+
+		for (int i = 0; i < entity.Graphs.Count; i++)
+		{
+			List<ReplicatedGraph.GraphEvent> events = entity.Graphs[i].Events;
+
+			while (events.Count > 0 && events[0].CreatedAtTick < oldestEvent)
+			{
+				events.RemoveAt(0);
+			}
+		}
+	}
+
 	private static bool HasPending(EntityView view)
 	{
 		if (view.Leaving || view.Acked < 0)
@@ -527,7 +591,65 @@ public sealed class ReplicationServer
 			}
 		}
 
+		for (int i = 0; i < entity.Graphs.Count; i++)
+		{
+			if (GraphChanged(view, entity.Graphs[i], despawning: false))
+			{
+				return true;
+			}
+		}
+
 		return entity.BodyStamp > acked;
+	}
+
+	// A graph run goes to a client while the client lacks what it is, how it is or what it did lately, and once it has
+	// ended, to a client that has it. One the client never had goes only for its events, as a run too short to have
+	// been seen does. A despawning entity's graphs go only for their events.
+	private static bool GraphChanged(EntityView view, ReplicatedGraph graph, bool despawning)
+	{
+		if (!graph.IsListed)
+		{
+			return false;
+		}
+
+		bool events = HasEvents(graph, view.EventsAcked);
+
+		if (despawning)
+		{
+			return events;
+		}
+
+		// The end goes until acknowledged, as a removed tag does, whether or not the client acknowledged the start: it
+		// may have the run with its acknowledgement still on the way.
+		if (graph.Removed)
+		{
+			return events || graph.RemovedStamp > view.Seen;
+		}
+
+		return graph.CreatedStamp > view.Acked
+			|| graph.StatesStamp > view.Acked
+			|| graph.ValuesChanged(view.Acked)
+			|| events;
+	}
+
+	private static bool HasEvents(ReplicatedGraph graph, uint eventsAcked)
+	{
+		return graph.Events.Count > 0 && graph.Events[^1].Sequence > eventsAcked;
+	}
+
+	private static int Newer(long[] stamps, long acked)
+	{
+		int newer = 0;
+
+		for (int i = 0; i < stamps.Length; i++)
+		{
+			if (stamps[i] > acked)
+			{
+				newer++;
+			}
+		}
+
+		return newer;
 	}
 
 	private static bool AttributeChanged(EntityView view, int attribute)
@@ -551,7 +673,7 @@ public sealed class ReplicationServer
 			{
 				client.Views[entity.Id] = new EntityView(entity, tick, entity.Owner == client.Peer.Id)
 				{
-					EventsAcked = entity.LastEventSequence,
+					EventsAcked = entity.SentEventSequence,
 				};
 			}
 			else if (!relevant && view?.Leaving == false)
@@ -650,8 +772,10 @@ public sealed class ReplicationServer
 		if (view.Leaving)
 		{
 			_entry.WriteBits((ulong)EntryKind.Despawn, 2);
+			uint lastEvent = WriteEvents(entity, view.EventsAcked);
+			lastEvent = Math.Max(lastEvent, WriteGraphs(view, tick, despawning: true));
 			_entry.Align();
-			return view.EventsAcked;
+			return lastEvent;
 		}
 
 		long acked = view.Acked;
@@ -676,6 +800,7 @@ public sealed class ReplicationServer
 		WriteCues(entity, acked, seen);
 		uint maxEvent = WriteEvents(entity, view.EventsAcked);
 		WriteEffects(view, tick);
+		maxEvent = Math.Max(maxEvent, WriteGraphs(view, tick, despawning: false));
 
 		bool bodyChanged = entity.BodyStamp > acked;
 		_entry.WriteBool(bodyChanged);
@@ -1009,12 +1134,162 @@ public sealed class ReplicationServer
 		}
 	}
 
+	// Writes the graph runs the client lacks something of, and returns the newest event sequence written.
+	private uint WriteGraphs(EntityView view, long tick, bool despawning)
+	{
+		List<ReplicatedGraph> graphs = view.Entity.Graphs;
+		int changed = 0;
+
+		for (int i = 0; i < graphs.Count; i++)
+		{
+			if (GraphChanged(view, graphs[i], despawning))
+			{
+				changed++;
+			}
+		}
+
+		_entry.WriteBool(changed > 0);
+
+		if (changed == 0)
+		{
+			return view.EventsAcked;
+		}
+
+		_entry.WriteVarUInt((ulong)changed);
+		uint maxEvent = view.EventsAcked;
+
+		for (int i = 0; i < graphs.Count; i++)
+		{
+			if (GraphChanged(view, graphs[i], despawning))
+			{
+				maxEvent = Math.Max(maxEvent, WriteGraph(view, graphs[i], tick, despawning));
+			}
+		}
+
+		return maxEvent;
+	}
+
+	// What the run is goes until the client has it, which states run and for how long whenever that changes, and the
+	// variables that changed, then the events the client hasn't acknowledged and whether the run ended.
+	private uint WriteGraph(EntityView view, ReplicatedGraph graph, long tick, bool despawning)
+	{
+		long acked = view.Acked;
+		_entry.WriteVarUInt(graph.Instance);
+
+		// An ended run with no actions left to bring goes as its end alone: a client that never had it has nothing to
+		// end.
+		bool live = !despawning && !graph.Removed;
+		bool brings = live || HasEvents(graph, view.EventsAcked);
+		bool created = brings && graph.CreatedStamp > acked;
+		_entry.WriteBool(created);
+
+		if (created)
+		{
+			_entry.WriteVarUInt((ulong)graph.AssetIndex);
+			_entry.WriteVarUInt(graph.TargetId);
+			_entry.WriteVarUInt(graph.SourceId);
+			_entry.WriteVarInt(graph.Level);
+			_entry.WriteFloat(graph.Magnitude);
+		}
+
+		bool states = live && graph.StatesStamp > acked;
+		_entry.WriteBool(states);
+
+		if (states)
+		{
+			_entry.WriteVarUInt((ulong)graph.States.Count);
+
+			foreach (ReplicatedGraph.RunningState running in graph.States)
+			{
+				_entry.WriteVarUInt((ulong)running.State);
+				_entry.WriteVarUInt(running.ActivationId);
+				_entry.WriteVarUInt((ulong)(tick - running.SinceTick));
+			}
+		}
+
+		// A run that ended still sends its values with the actions it brings: they read them.
+		bool values = brings && graph.ValuesChanged(acked);
+		_entry.WriteBool(values);
+
+		if (values)
+		{
+			WriteGraphValues(graph, acked);
+		}
+
+		uint maxEvent = view.EventsAcked;
+		int events = 0;
+
+		foreach (ReplicatedGraph.GraphEvent graphEvent in graph.Events)
+		{
+			if (graphEvent.Sequence > view.EventsAcked)
+			{
+				events++;
+			}
+		}
+
+		_entry.WriteBool(events > 0);
+
+		if (events > 0)
+		{
+			_entry.WriteVarUInt((ulong)events);
+
+			foreach (ReplicatedGraph.GraphEvent graphEvent in graph.Events)
+			{
+				if (graphEvent.Sequence > view.EventsAcked)
+				{
+					maxEvent = Math.Max(maxEvent, graphEvent.Sequence);
+					_entry.WriteVarUInt(graphEvent.Sequence);
+					_entry.WriteVarUInt((ulong)graphEvent.Action);
+					_entry.WriteVarUInt(graphEvent.AfterActivation);
+				}
+			}
+		}
+
+		_entry.WriteBool(!despawning && graph.Removed);
+		return maxEvent;
+	}
+
+	private void WriteGraphValues(ReplicatedGraph graph, long acked)
+	{
+		_entry.WriteVarUInt((ulong)Newer(graph.ValueStamps, acked));
+
+		for (int i = 0; i < graph.Values.Length; i++)
+		{
+			if (graph.ValueStamps[i] > acked)
+			{
+				_entry.WriteVarUInt((ulong)i);
+				ReplicationCodec.WriteVariant(_entry, graph.Values[i]);
+			}
+		}
+
+		_entry.WriteVarUInt((ulong)Newer(graph.ArrayStamps, acked));
+
+		for (int i = 0; i < graph.Arrays.Length; i++)
+		{
+			if (graph.ArrayStamps[i] <= acked)
+			{
+				continue;
+			}
+
+			_entry.WriteVarUInt((ulong)i);
+			_entry.WriteVarUInt((ulong)graph.Arrays[i].Length);
+
+			foreach (Variant128 element in graph.Arrays[i])
+			{
+				ReplicationCodec.WriteVariant(_entry, element);
+			}
+		}
+	}
+
 	// Drops the tombstones every client that could have seen the tag, cue or effect has heard about.
 	private void Prune()
 	{
 		foreach (ReplicatedEntity entity in _entityList)
 		{
-			if (entity.RemovedTags.Count > 0 || entity.RemovedCues.Count > 0 || entity.RemovedEffects.Count > 0)
+			if (entity.RemovedTags.Count > 0
+				|| entity.RemovedCues.Count > 0
+				|| entity.RemovedEffects.Count > 0
+				|| entity.HasRemovedGraphs)
 			{
 				PruneTombstones(entity);
 			}
@@ -1060,6 +1335,10 @@ public sealed class ReplicationServer
 		// idle entity may never give them anything to acknowledge.
 		entity.RemovedEffects.RemoveAll(
 			x => x.Stamp <= (x.Visibility == EffectVisibility.OwnerOnly ? neededByOwner : needed));
+
+		// A run's actions go only with its record, so it stays until they expire: a client that first heard of the
+		// entity as the run ended hasn't acknowledged them yet.
+		entity.Graphs.RemoveAll(x => x.Removed && x.RemovedStamp <= needed && x.Events.Count == 0);
 	}
 
 	// What one client knows of one entity.
@@ -1199,6 +1478,41 @@ public sealed class ReplicationServer
 			}
 
 			return null;
+		}
+	}
+
+	// Keeps the actions clients run that each replicated entity's graphs execute, as they execute.
+	private sealed class GraphObserver(ReplicationServer server) : IGraphObserver
+	{
+		public void ActionExecuted(GraphContext graphContext, Node node)
+		{
+			if (graphContext.Processor is not GraphProcessor processor
+				|| graphContext.ActivationContext is not AbilityBehaviorContext context
+				|| !server._byEntity.TryGetValue(context.Owner, out ReplicatedEntity? entity))
+			{
+				return;
+			}
+
+			int action = processor.Graph.NetworkTable.ActionIndexOf(node);
+
+			if (action < 0)
+			{
+				return;
+			}
+
+			long tick = server._session.Clock.Tick;
+			ReplicatedGraph graph = entity.GraphFor(processor, context, server, tick);
+
+			if (graph.IsListed)
+			{
+				// The values the action read, for a run that may end before the next send looks at it.
+				graph.CaptureValues(tick);
+				graph.Events.Add(new ReplicatedGraph.GraphEvent(
+					++entity.LastEventSequence,
+					action,
+					graphContext.ActivationCount,
+					tick));
+			}
 		}
 	}
 

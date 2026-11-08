@@ -20,13 +20,17 @@ namespace Gamesmiths.Forge.Statescript.Properties;
 public class VariableResolver(
 	StringKey referencedVariableName,
 	Type valueType,
-	VariableScope scope = VariableScope.Graph) : IPropertyResolver
+	VariableScope scope = VariableScope.Graph) : IPropertyResolver, IVariableReader
 {
 	private readonly StringKey _referencedVariableName = referencedVariableName;
 	private readonly VariableScope _scope = scope;
 
 	/// <inheritdoc/>
 	public Type ValueType { get; } = valueType;
+
+	StringKey IVariableReader.VariableName => _referencedVariableName;
+
+	VariableScope IVariableReader.Scope => _scope;
 
 	/// <inheritdoc/>
 	public Variant128 Resolve(GraphContext graphContext)

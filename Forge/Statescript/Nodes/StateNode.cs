@@ -76,6 +76,8 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// </summary>
 	public bool RestartOnRetrigger { get; } = restartOnRetrigger;
 
+	internal override bool IsStateNode => true;
+
 	/// <summary>
 	/// Updates this state node with the given delta time. Only processes the update if the node is currently active,
 	/// and did not start or restart during this update.
@@ -117,20 +119,40 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 
 		if (nodeContext is not null)
 		{
-			EnterFrame(graphContext, nodeContext);
-			ExceptionDispatchInfo? failure = null;
+			RunFixedUpdate(deltaTime, graphContext, nodeContext);
+		}
+	}
 
-			try
-			{
-				OnFixedUpdate(deltaTime, graphContext);
-			}
-			catch (Exception exception)
-			{
-				failure = ExceptionDispatchInfo.Capture(exception);
-			}
+	/// <inheritdoc/>
+	internal override void ActivateRemotely(GraphContext graphContext)
+	{
+		StateNodeContext nodeContext = graphContext.GetOrCreateNodeContext<T>(NodeID);
 
-			ExceptionDispatchInfo? exit = ExitFrame(graphContext, nodeContext);
-			(failure ?? exit)?.Throw();
+		if (nodeContext.Active || nodeContext.Deactivating)
+		{
+			return;
+		}
+
+		graphContext.InternalNodeActivationStatus[NodeID] = true;
+		nodeContext.WasAborted = false;
+		RunActivation(graphContext, nodeContext, restarting: false, NodeActivationReason.Replication);
+	}
+
+	/// <inheritdoc/>
+	internal override void DeactivateRemotely(GraphContext graphContext)
+	{
+		if (IsNodeActive(graphContext))
+		{
+			Deactivate(graphContext)?.Throw();
+		}
+	}
+
+	/// <inheritdoc/>
+	internal override void CatchUp(double elapsed, GraphContext graphContext)
+	{
+		if (IsNodeActive(graphContext))
+		{
+			RunFixedUpdate(elapsed, graphContext, graphContext.GetNodeContext<StateNodeContext>(NodeID));
 		}
 	}
 
@@ -449,7 +471,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 			{
 				if (RestartOnRetrigger && !nodeContext.Activating && !nodeContext.WasAborted)
 				{
-					RunActivation(graphContext, nodeContext, restarting: true);
+					RunActivation(graphContext, nodeContext, restarting: true, NodeActivationReason.Link);
 				}
 
 				return;
@@ -472,7 +494,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 			}
 
 			nodeContext.WasAborted = false;
-			RunActivation(graphContext, nodeContext, restarting: false);
+			RunActivation(graphContext, nodeContext, restarting: false, NodeActivationReason.Link);
 		}
 		else if (receiverPort.Index == AbortPort)
 		{
@@ -556,11 +578,18 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// used here.</para>
 	/// <para>The messages are emitted even when the deactivation throws, since the node has still ended, and the
 	/// exception propagates once they have been.</para>
+	/// <para>On a client's copy of the server's graph, a node the server runs ends only when the server says, so this
+	/// does nothing there, outside a <see cref="NodeRegion.ClientOnly"/> region.</para>
 	/// </remarks>
 	/// <param name="graphContext">The graph's context.</param>
 	/// <param name="eventPortIds">ID of ports you want to Emit a message to.</param>
 	protected void DeactivateNodeAndEmitMessage(GraphContext graphContext, params int[] eventPortIds)
 	{
+		if (EndsOnlyRemotely(graphContext))
+		{
+			return;
+		}
+
 		StateNodeContext nodeContext = graphContext.GetNodeContext<StateNodeContext>(NodeID);
 
 		if (nodeContext.Activating)
@@ -610,9 +639,18 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 	/// <summary>
 	/// Deactivates the node without emitting any custom messages.
 	/// </summary>
+	/// <remarks>
+	/// Like <see cref="DeactivateNodeAndEmitMessage"/>, it does nothing on a client's copy of the server's graph
+	/// outside a <see cref="NodeRegion.ClientOnly"/> region.
+	/// </remarks>
 	/// <param name="graphContext">The graph's context.</param>
 	protected void DeactivateNode(GraphContext graphContext)
 	{
+		if (EndsOnlyRemotely(graphContext))
+		{
+			return;
+		}
+
 		Deactivate(graphContext)?.Throw();
 	}
 
@@ -737,7 +775,34 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		return nodeContext.Active && nodeContext.ActivationStamp != graphContext.UpdateStamp ? nodeContext : null;
 	}
 
-	private void RunActivation(GraphContext graphContext, StateNodeContext nodeContext, bool restarting)
+	private bool EndsOnlyRemotely(GraphContext graphContext)
+	{
+		return graphContext.IsRemote && Region != NodeRegion.ClientOnly;
+	}
+
+	private void RunFixedUpdate(double deltaTime, GraphContext graphContext, StateNodeContext nodeContext)
+	{
+		EnterFrame(graphContext, nodeContext);
+		ExceptionDispatchInfo? failure = null;
+
+		try
+		{
+			OnFixedUpdate(deltaTime, graphContext);
+		}
+		catch (Exception exception)
+		{
+			failure = ExceptionDispatchInfo.Capture(exception);
+		}
+
+		ExceptionDispatchInfo? exit = ExitFrame(graphContext, nodeContext);
+		(failure ?? exit)?.Throw();
+	}
+
+	private void RunActivation(
+		GraphContext graphContext,
+		StateNodeContext nodeContext,
+		bool restarting,
+		NodeActivationReason reason)
 	{
 		EnterFrame(graphContext, nodeContext);
 		ExceptionDispatchInfo? failure = null;
@@ -745,6 +810,7 @@ public abstract class StateNode<T>(bool restartOnRetrigger = false) : Node
 		try
 		{
 			nodeContext.Activating = true;
+			nodeContext.ActivationReason = reason;
 			nodeContext.ActivationStamp = graphContext.UpdateStamp;
 			nodeContext.ActivationId = ++graphContext.ActivationCount;
 			nodeContext.HoldOrder = HoldSequence.Next();

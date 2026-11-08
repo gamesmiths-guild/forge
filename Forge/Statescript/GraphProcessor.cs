@@ -114,8 +114,8 @@ public class GraphProcessor
 		Graph.EntryNode.StartGraph(GraphContext);
 
 		// If no state nodes were activated during the initial message propagation (e.g., action-only graphs), the graph
-		// is already complete.
-		if (GraphContext.HasStarted && !GraphContext.IsActive)
+		// is already complete. A client's copy of a graph the server runs ends when the server's does.
+		if (GraphContext.HasStarted && !GraphContext.IsActive && !GraphContext.IsRemote)
 		{
 			FinalizeGraph();
 		}

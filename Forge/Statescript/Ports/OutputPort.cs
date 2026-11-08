@@ -49,6 +49,12 @@ public class OutputPort : Port
 		PendingConnectedPorts.Add(inputPort);
 	}
 
+	// A client's copy of the server's graph follows no link but into a client-only region, which it runs itself.
+	internal static bool Reaches(InputPort port, GraphContext graphContext)
+	{
+		return !graphContext.IsRemote || port.OwnerNode?.Region == NodeRegion.ClientOnly;
+	}
+
 	/// <summary>
 	/// Gets the connected input port at the specified index.
 	/// </summary>
@@ -93,7 +99,10 @@ public class OutputPort : Port
 		{
 			for (int i = 0; i < ports.Length && graphContext.RunStamp == run; i++)
 			{
-				ports[i].ReceiveMessage(graphContext);
+				if (Reaches(ports[i], graphContext))
+				{
+					ports[i].ReceiveMessage(graphContext);
+				}
 			}
 
 			OnEmitMessage?.Invoke(PortID);
@@ -126,6 +135,11 @@ public class OutputPort : Port
 		// the rest be disabled, and what threw first propagates after.
 		for (int i = 0; i < ports.Length && graphContext.RunStamp == run; i++)
 		{
+			if (!Reaches(ports[i], graphContext))
+			{
+				continue;
+			}
+
 			try
 			{
 				ports[i].ReceiveDisableSubgraphMessage(graphContext);

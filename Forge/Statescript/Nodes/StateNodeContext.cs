@@ -21,6 +21,12 @@ public class StateNodeContext : INodeContext
 	/// </summary>
 	public bool WasAborted { get; internal set; }
 
+	/// <summary>
+	/// Gets why the running activation started: along a link, or because the server said so on a client's copy of the
+	/// server's graph.
+	/// </summary>
+	public NodeActivationReason ActivationReason { get; internal set; }
+
 	internal bool Activating { get; set; }
 
 	internal bool Deactivating { get; set; }

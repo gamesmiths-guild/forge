@@ -31,6 +31,11 @@ public class SubgraphPort : OutputPort
 		// the rest be disabled, so none is left running under what ended, and what threw first propagates after.
 		for (int i = 0; i < ports.Length && graphContext.RunStamp == run; i++)
 		{
+			if (!Reaches(ports[i], graphContext))
+			{
+				continue;
+			}
+
 			try
 			{
 				ports[i].ReceiveDisableSubgraphMessage(graphContext);
