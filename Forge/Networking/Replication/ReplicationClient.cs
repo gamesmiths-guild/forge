@@ -188,7 +188,9 @@ public sealed class ReplicationClient
 
 	/// <summary>
 	/// Applies the packets held for <see cref="HoldsUntilShown"/> whose tick the shown tick has reached, in the order
-	/// they arrived. Call it as the shown tick moves, before placing the bodies at it.
+	/// they arrived. Call it as the shown tick moves, after placing the bodies at it, so what it sets off happens where
+	/// the bodies are shown. An entity it spawns is raised through <see cref="Spawned"/> as it's bound, before its
+	/// graphs run, to be placed there too.
 	/// </summary>
 	/// <remarks>
 	/// A held packet was acknowledged as it arrived, so the server won't send it again. An exception from what an entry
