@@ -136,6 +136,67 @@ public class ClockTests
 
 	[Fact]
 	[Trait("Networking", "Clock")]
+	public void A_clock_behind_its_target_catches_up_a_tick_at_a_time()
+	{
+		var sync = new ClockSync(new SimulationClock(TickRate));
+		Exchange(sync, sentAt: 1.0, oneWay: 0.05, returnDelay: 0);
+		var dilation = new ClockDilation();
+		long tick = sync.TargetClientTick(1.1, dilation.MarginTicks) - 8;
+		dilation.Steer(tick + 8, sync, 1.1, serverInputDepth: 2);
+		var steps = new List<int>();
+
+		for (int step = 0; step < 120; step++)
+		{
+			double time = 1.1 + (step / (double)TickRate);
+			DilatedStep dilated = dilation.Steer(tick, sync, time, serverInputDepth: 2);
+
+			dilated.FirstTick.Should().Be(tick, "it never jumps this close");
+			steps.Add(dilated.Ticks);
+			tick = dilated.NextTick;
+		}
+
+		steps.Should().OnlyContain(x => x == 1 || x == 2);
+		steps.Take(6).Should().Equal(1, 2, 1, 2, 1, 2);
+		long target = sync.TargetClientTick(1.1 + (120 / (double)TickRate), dilation.MarginTicks);
+		Math.Abs(target - tick).Should().BeLessThanOrEqualTo(dilation.ToleranceTicks + 1);
+	}
+
+	[Fact]
+	[Trait("Networking", "Clock")]
+	public void The_first_estimate_puts_the_clock_on_its_target()
+	{
+		var sync = new ClockSync(new SimulationClock(TickRate));
+		var dilation = new ClockDilation();
+
+		dilation.Steer(5, sync, 1.0, serverInputDepth: 2).Should().Be(new DilatedStep(5, 1), "it has nothing to steer by");
+
+		Exchange(sync, sentAt: 1.0, oneWay: 0.05, returnDelay: 0);
+		long target = sync.TargetClientTick(1.1, dilation.MarginTicks);
+
+		dilation.Steer(target - 8, sync, 1.1, serverInputDepth: 2).Should().Be(new DilatedStep(target, 1));
+		dilation.Steer(target - 7, sync, 1.1, serverInputDepth: 2).FirstTick
+			.Should().Be(target - 7, "from then on it's steered");
+	}
+
+	[Fact]
+	[Trait("Networking", "Clock")]
+	public void A_clock_ahead_of_its_target_waits_and_one_far_off_jumps()
+	{
+		var sync = new ClockSync(new SimulationClock(TickRate));
+		Exchange(sync, sentAt: 1.0, oneWay: 0.05, returnDelay: 0);
+		var dilation = new ClockDilation { StepsPerAdjustment = 1, StepsPerCatchUp = 1 };
+		long target = sync.TargetClientTick(1.1, dilation.MarginTicks);
+		dilation.Steer(target, sync, 1.1, serverInputDepth: 2);
+
+		dilation.Steer(target + 5, sync, 1.1, serverInputDepth: 2).Should().Be(new DilatedStep(target + 5, 0));
+		dilation.Steer(target - 100, sync, 1.1, serverInputDepth: 2).Should().Be(new DilatedStep(target, 1));
+		dilation.Steer(target - 1, sync, 1.1, serverInputDepth: 2).Ticks.Should().Be(1, "a tick off is close enough");
+		dilation.Steer(target - 1, sync, 1.1, serverInputDepth: 0).Ticks
+			.Should().Be(2, "a server that ran out of the client's input asks for a tick more");
+	}
+
+	[Fact]
+	[Trait("Networking", "Clock")]
 	public void Pings_over_a_conditioned_loopback_find_the_server_tick()
 	{
 		var network = new LoopbackNetwork();

@@ -451,6 +451,23 @@ public sealed class EntityAttribute
 		}
 	}
 
+	// Puts the base value and range the server sent the client predicting the attribute's entity, keeping the modifiers
+	// its effects hold here. Raises OnValueChanged with the change, as the execution that made it on the server did.
+	internal void TakeServerValues(int baseValue, int min, int max)
+	{
+		int previous = CurrentValue;
+
+		Min = min;
+		Max = max;
+		BaseValue = baseValue;
+		UpdateCachedValues();
+
+		if (CurrentValue != previous)
+		{
+			OnValueChanged?.Invoke(this, CurrentValue - previous);
+		}
+	}
+
 	// Takes every modifier away without raising OnValueChanged, for an entity restore that takes the attribute's set
 	// away. Only active effects add modifiers, so this is where removing the set would leave it.
 	internal void DropModifiers()

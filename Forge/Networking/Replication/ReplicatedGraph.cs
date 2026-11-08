@@ -61,6 +61,16 @@ internal sealed class ReplicatedGraph
 
 	public bool IsListed => AssetIndex >= 0;
 
+	// The entity's owner runs the run itself, predicting it, so it goes only to everyone else.
+	public bool PredictedByOwner { get; }
+
+	// A run of an ability the entity's owner predicts that started from outside the owner's tick: the owner takes it in
+	// after the tick it started after and runs it itself from there.
+	public bool TakenInByOwner { get; }
+
+	// The tick the entity had last advanced through when the run started.
+	public long AfterTick { get; }
+
 	public ReplicatedGraph(uint instance, GraphProcessor processor, AbilityBehaviorContext context, int assetIndex)
 	{
 		Instance = instance;
@@ -72,6 +82,12 @@ internal sealed class ReplicatedGraph
 		SourceId = context.Source?.NetworkId.Value ?? 0;
 		Level = context.Level;
 		Magnitude = context.Magnitude;
+		AbilityInstance? run = context.InstanceHandle.AbilityInstance;
+		bool predictable = context.Owner.Abilities.TracksPrediction
+			&& context.AbilityHandle.Ability?.IsPredictable() == true;
+		PredictedByOwner = predictable && run?.IsFromOutside == false;
+		TakenInByOwner = predictable && run?.IsFromOutside == true;
+		AfterTick = run?.AfterTick ?? -1;
 
 		GraphVariableDefinitions definitions = processor.Graph.VariableDefinitions;
 		Values = [.. definitions.VariableDefinitions.Select(x => x.InitialValue)];

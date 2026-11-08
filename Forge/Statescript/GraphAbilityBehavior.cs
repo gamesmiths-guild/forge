@@ -17,7 +17,7 @@ namespace Gamesmiths.Forge.Statescript;
 /// advances together with the entity's effects.</para>
 /// </remarks>
 /// <param name="graph">The graph definition to execute when the ability activates.</param>
-public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior, ISnapshotAbilityBehavior
+public class GraphAbilityBehavior(Graph graph) : ISnapshotAbilityBehavior, INodeHoldingBehavior
 {
 	/// <summary>
 	/// Gets the <see cref="GraphProcessor"/> that runs this behavior's graph.
@@ -28,7 +28,7 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior, ISnapshotAbil
 	public bool IsPresenting => Processor.IsPresenting;
 
 	/// <inheritdoc/>
-	bool ISnapshotAbilityBehavior.IsChanging => Processor.IsChanging;
+	bool INodeHoldingBehavior.IsChanging => Processor.IsChanging;
 
 	/// <inheritdoc/>
 	public void OnStarted(AbilityBehaviorContext context)
@@ -104,16 +104,16 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior, ISnapshotAbil
 
 	/// <inheritdoc/>
 #pragma warning disable SA1202 // Elements should be ordered by access
-	object ISnapshotAbilityBehavior.CaptureSnapshot()
+	object? ISnapshotAbilityBehavior.CaptureSnapshot()
 #pragma warning restore SA1202 // Elements should be ordered by access
 	{
 		return Processor.CaptureSnapshot();
 	}
 
 	/// <inheritdoc/>
-	void ISnapshotAbilityBehavior.RestoreSnapshot(object snapshot)
+	void ISnapshotAbilityBehavior.RestoreSnapshot(object? snapshot)
 	{
-		Processor.SwapIn((GraphSnapshot)snapshot);
+		Processor.SwapIn((GraphSnapshot)snapshot!);
 	}
 
 	/// <inheritdoc/>
@@ -123,7 +123,7 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior, ISnapshotAbil
 	}
 
 	/// <inheritdoc/>
-	void ISnapshotAbilityBehavior.AddHolds(List<EntityHold> holds)
+	void INodeHoldingBehavior.AddHolds(List<EntityHold> holds)
 	{
 		Processor.AddHolds(holds);
 	}

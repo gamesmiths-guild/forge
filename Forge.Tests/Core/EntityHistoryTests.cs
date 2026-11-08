@@ -98,15 +98,10 @@ public class EntityHistoryTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 		var history = new EntityHistory(entity, capacity: 8, Step);
 		RunAndRecord(entity, history, 1, 2);
 
-		AbilityHandle coded = entity.Abilities.GrantAbilityPermanently(
-			new AbilityData("Coded", behaviorFactory: () => new CodedBehavior()),
-			1,
-			LevelComparison.None,
-			entity);
-		coded.TryActivate(out _).Should().BeTrue();
+		entity.Mover = new UncapturableMover();
 		EntitySimulation.Tick(entity, 3, Step);
 
-		history.Invoking(x => x.Record(3)).Should().Throw<NotSupportedException>();
+		history.Invoking(x => x.Record(3)).Should().Throw<InvalidOperationException>();
 
 		history.NewestTick.Should().Be(2);
 		history.Invoking(x => x.Rollback(3)).Should().Throw<ArgumentOutOfRangeException>();
@@ -527,13 +522,18 @@ public class EntityHistoryTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 		}
 	}
 
-	private sealed class CodedBehavior : IAbilityBehavior
+	private sealed class UncapturableMover : IEntityMover
 	{
-		public void OnStarted(AbilityBehaviorContext context)
+		public void Move(double fixedDeltaTime)
 		{
 		}
 
-		public void OnEnded(AbilityBehaviorContext context)
+		public BodyState CaptureState()
+		{
+			throw new InvalidOperationException("The body can't be captured.");
+		}
+
+		public void RestoreState(in BodyState state)
 		{
 		}
 	}

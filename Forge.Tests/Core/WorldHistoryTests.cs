@@ -295,20 +295,29 @@ public class WorldHistoryTests(TagsAndCuesFixture fixture) : IClassFixture<TagsA
 
 	[Fact]
 	[Trait("Simulation", "World")]
-	public void An_entity_that_leaves_running_a_behavior_that_is_not_a_graph_is_refused()
+	public void An_entity_that_leaves_running_a_coded_behavior_takes_the_run_to_limbo_as_it_is()
 	{
 		TestEntity a = Entity();
 		TestEntity c = Entity();
 		WorldHistory world = World(8, a);
+		List<string> changes = Watch(world, a, null, c);
 		Run(world, 1, 2);
 
-		world.Add(c);
 		AbilityHandle coded = Grant(c, new AbilityData("Coded", behaviorFactory: () => new CodedBehavior()));
+		world.Add(c);
+		Run(world, 3, 3);
 		coded.TryActivate(out _).Should().BeTrue();
 		world.Remove(c);
-		EntitySimulation.Tick(world.Entities, 3, Step);
+		Run(world, 4, 4);
 
-		world.Invoking(x => x.Record(3)).Should().Throw<NotSupportedException>();
+		changes.Should().Equal("entered c");
+		coded.IsActive.Should().BeTrue();
+
+		world.Rollback(3);
+
+		changes.Should().Equal("entered c", "left c");
+		world.Entities.Should().Equal(a, c);
+		coded.IsActive.Should().BeTrue();
 	}
 
 	[Fact]

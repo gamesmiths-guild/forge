@@ -20,7 +20,6 @@ namespace Gamesmiths.Forge.Core;
 /// <param name="actions">The actions and vectors this input carries.</param>
 public sealed class EntityInput(InputActionSet actions)
 {
-	private InputFrame? _waiting;
 	private long? _begunTick;
 	private bool _frameTakenForAdvance;
 
@@ -37,13 +36,16 @@ public sealed class EntityInput(InputActionSet actions)
 	// Counts the frames that became current, so a reader can tell a new tick's frame from one it has already read.
 	internal ulong FrameNumber { get; private set; }
 
+	// The frame waiting for the next tick, set aside while ticks that never got one run before it.
+	internal InputFrame? Waiting { get; set; }
+
 	/// <summary>
 	/// Submits the input for the next tick, merging it with any frame already waiting for that tick.
 	/// </summary>
 	/// <param name="frame">The input.</param>
 	public void Submit(in InputFrame frame)
 	{
-		_waiting = _waiting is InputFrame waiting ? waiting.FollowedBy(frame) : frame;
+		Waiting = Waiting is InputFrame waiting ? waiting.FollowedBy(frame) : frame;
 	}
 
 	/// <summary>
@@ -185,13 +187,13 @@ public sealed class EntityInput(InputActionSet actions)
 
 	internal EntityInputSnapshot CaptureSnapshot()
 	{
-		return new EntityInputSnapshot(Current, _waiting, _begunTick, _frameTakenForAdvance, FrameNumber);
+		return new EntityInputSnapshot(Current, Waiting, _begunTick, _frameTakenForAdvance, FrameNumber);
 	}
 
 	internal void RestoreSnapshot(EntityInputSnapshot snapshot)
 	{
 		Current = snapshot.Current;
-		_waiting = snapshot.Waiting;
+		Waiting = snapshot.Waiting;
 		_begunTick = snapshot.BegunTick;
 		_frameTakenForAdvance = snapshot.FrameTakenForAdvance;
 		FrameNumber = snapshot.FrameNumber;
@@ -200,7 +202,7 @@ public sealed class EntityInput(InputActionSet actions)
 	// A replayed tick runs with exactly the frame it first ran with, rather than one merged with whatever was waiting.
 	internal void SubmitForReplay(in InputFrame frame)
 	{
-		_waiting = frame;
+		Waiting = frame;
 	}
 
 	// Takes the frame itself when the tick was not begun since the last advance.
@@ -218,15 +220,15 @@ public sealed class EntityInput(InputActionSet actions)
 	internal void Clear()
 	{
 		Current = default;
-		_waiting = null;
+		Waiting = null;
 		FrameNumber++;
 	}
 
 	// The waiting frame becomes the tick's input; with none waiting, the last one carries on without new edges.
 	private void TakeFrame()
 	{
-		Current = _waiting ?? Current.WithoutEdges();
-		_waiting = null;
+		Current = Waiting ?? Current.WithoutEdges();
+		Waiting = null;
 		FrameNumber++;
 	}
 

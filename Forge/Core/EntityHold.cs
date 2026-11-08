@@ -9,7 +9,8 @@ using Gamesmiths.Forge.Statescript.Nodes.State;
 namespace Gamesmiths.Forge.Core;
 
 // Something on an entity that holds on to something outside itself - an active effect or one of its components, a
-// granted ability's trigger, a running state node of one of its graphs - with the order it took hold in.
+// granted ability's trigger, a running state node of one of its graphs, a coded ability run - with the order it took
+// hold in.
 internal readonly record struct EntityHold(long Order, object Holder, Node? Node = null, int? Component = null)
 {
 	internal void Detach()
@@ -26,6 +27,10 @@ internal readonly record struct EntityHold(long Order, object Holder, Node? Node
 
 			case GraphProcessor processor:
 				Node!.DetachForRestore(processor.GraphContext);
+				break;
+
+			case ISnapshotAbilityBehavior behavior:
+				behavior.OnRestoreDetach();
 				break;
 		}
 	}
@@ -59,6 +64,10 @@ internal readonly record struct EntityHold(long Order, object Holder, Node? Node
 
 			case GraphProcessor processor:
 				Node!.AttachForRestore(processor.GraphContext);
+				break;
+
+			case ISnapshotAbilityBehavior behavior:
+				behavior.OnRestoreAttach();
 				break;
 		}
 	}

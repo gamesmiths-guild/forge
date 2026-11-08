@@ -72,4 +72,11 @@ public enum AbilityActivationFailures
 	/// Failed to activate the ability due to invalid tag configuration.
 	/// </summary>
 	InvalidTagConfiguration = 1 << 11,
+
+	/// <summary>
+	/// Failed to activate the ability because only the server runs it: the entity is predicted on this client, and the
+	/// ability is <see cref="AbilityData.ServerOnly"/>, runs a behavior that isn't an
+	/// <see cref="ISnapshotAbilityBehavior"/>, or was to activate from outside the entity's own tick.
+	/// </summary>
+	ServerOnly = 1 << 12,
 }
