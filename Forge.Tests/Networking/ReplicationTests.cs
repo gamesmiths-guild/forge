@@ -447,6 +447,25 @@ public class ReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Replication")]
+	public void A_late_joiner_never_plays_what_a_placed_entity_did_long_before_it_went()
+	{
+		var rig = new Rig();
+		Entity placed = rig.Place(new NetworkEntityId(1000));
+		rig.Step(6);
+
+		rig.ServerCues.ExecuteCue(rig.ServerTag("cue.hit"), placed, null);
+		rig.Server.Replication!.Unregister(placed);
+		rig.Step((int)(ReplicationServer.EventExpirySeconds * TickRate) + 4);
+
+		Client late = rig.Join(null, new NetworkEntityId(1000));
+		rig.Step(6);
+
+		late.Despawns.Should().Be(1);
+		late.Hit.ExecuteCount.Should().Be(0, "the hit was long over when it joined");
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
 	public void Unregistering_despawns_on_every_client_even_a_placed_entity_on_a_late_joiner()
 	{
 		var rig = new Rig();

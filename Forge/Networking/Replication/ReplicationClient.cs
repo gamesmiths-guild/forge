@@ -1,5 +1,6 @@
 // Copyright © Gamesmiths Guild.
 
+using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
@@ -170,19 +171,41 @@ public sealed class ReplicationClient
 	/// Applies the packets held for <see cref="HoldsUntilShown"/> whose tick the shown tick has reached, in the order
 	/// they arrived. Call it as the shown tick moves, before placing the bodies at it.
 	/// </summary>
+	/// <remarks>
+	/// A held packet was acknowledged as it arrived, so the server won't send it again. An exception from what an entry
+	/// sets off, a cue handler or a graph's node, leaves the rest of that entity's entry unapplied and every other
+	/// entry applied, and a despawn still takes its entity away. The first exception comes out once every packet
+	/// reached is applied.
+	/// </remarks>
 	/// <param name="tick">The server tick shown now.</param>
 	public void Show(double tick)
 	{
+		ExceptionDispatchInfo? failure = null;
+
 		while (_held.Count > 0 && _held.Peek().Tick <= tick)
 		{
 			HeldPacket packet = _held.Dequeue();
-			_heldReader.Reset(packet.Data);
-			_heldReader.ReadVarUInt();
-			_heldReader.ReadVarInt();
-			ReadEntries(_heldReader, packet.Tick, previousTick: -1, bodies: false, state: true);
+
+			foreach (int start in packet.Entries)
+			{
+				_heldReader.Reset(packet.Data.AsMemory(start));
+				var id = new NetworkEntityId(ReplicationCodec.ReadEntityId(_heldReader));
+
+				try
+				{
+					ReadEntry(_heldReader, id, packet.Tick, previousTick: -1, bodies: false, state: true);
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
+			}
+
 			_shownTick = packet.Tick;
 			FollowEffects();
 		}
+
+		failure?.Throw();
 	}
 
 	/// <summary>
@@ -230,15 +253,16 @@ public sealed class ReplicationClient
 		}
 
 		long previousTick = LastServerTick;
-		ReadEntries(reader, tick, previousTick, bodies: true, state: !HoldsUntilShown);
+		List<int>? entries = HoldsUntilShown ? [] : null;
+		ReadEntries(reader, tick, previousTick, bodies: true, state: !HoldsUntilShown, entries);
 
 		// Only a packet read to its end counts: one that isn't is never acknowledged, so the server sends it all again.
 		LastServerTick = Math.Max(LastServerTick, tick);
 		Acknowledge((uint)sequence);
 
-		if (HoldsUntilShown)
+		if (entries is not null)
 		{
-			_held.Enqueue(new HeldPacket(tick, reader.CopyData()));
+			_held.Enqueue(new HeldPacket(tick, reader.CopyData(), entries));
 			return;
 		}
 
@@ -314,11 +338,18 @@ public sealed class ReplicationClient
 	}
 
 	// A packet's entries, read for their bodies, the rest of their state, or both: a held packet is read for its bodies
-	// as it arrives and for the rest once it's shown.
-	private void ReadEntries(BitReader reader, long tick, long previousTick, bool bodies, bool state)
+	// as it arrives, noting where each entry starts, and for the rest once it's shown. Entries are byte aligned.
+	private void ReadEntries(
+		BitReader reader,
+		long tick,
+		long previousTick,
+		bool bodies,
+		bool state,
+		List<int>? entries = null)
 	{
 		while (true)
 		{
+			int start = reader.BitPosition >> 3;
 			uint id = ReplicationCodec.ReadEntityId(reader);
 
 			if (id == 0)
@@ -326,6 +357,7 @@ public sealed class ReplicationClient
 				break;
 			}
 
+			entries?.Add(start);
 			ReadEntry(reader, new NetworkEntityId(id), tick, previousTick, bodies, state);
 		}
 	}
@@ -340,24 +372,29 @@ public sealed class ReplicationClient
 			case EntryKind.Despawn:
 				Mirror? going = state ? mirror : null;
 
-				// What it did as it went shows before it goes.
-				if (reader.ReadBool())
+				// What it did as it went shows before it goes, and it goes even if showing that fails.
+				try
 				{
-					ReadEvents(reader, going, _session.TagsManager.NetIndexCount);
-				}
-
-				if (reader.ReadBool())
-				{
-					ReadGraphs(reader, going);
-				}
-
-				if (state)
-				{
-					_pendingBodies.Remove(id);
-
-					if (mirror is not null)
+					if (reader.ReadBool())
 					{
-						Unbind(mirror, despawn: true);
+						ReadEvents(reader, going, _session.TagsManager.NetIndexCount);
+					}
+
+					if (reader.ReadBool())
+					{
+						ReadGraphs(reader, going, tick);
+					}
+				}
+				finally
+				{
+					if (state)
+					{
+						_pendingBodies.Remove(id);
+
+						if (mirror is not null)
+						{
+							Unbind(mirror, despawn: true);
+						}
 					}
 				}
 
@@ -507,7 +544,7 @@ public sealed class ReplicationClient
 
 		if (reader.ReadBool())
 		{
-			ReadGraphs(reader, mirror);
+			ReadGraphs(reader, mirror, tick);
 		}
 
 		if (!reader.ReadBool())
@@ -770,9 +807,11 @@ public sealed class ReplicationClient
 		return state.IsTimed ? Math.Max(state.EndTick - tick, 0) * _session.Clock.FixedDeltaTime : 0;
 	}
 
-	private void ReadGraphs(BitReader reader, Mirror? mirror)
+	private void ReadGraphs(BitReader reader, Mirror? mirror, long tick)
 	{
 		int count = ReplicationCodec.ReadCount(reader);
+		mirror?
+			.ForgetEndedGraphs(tick - (long)Math.Ceiling(_session.Clock.TicksIn(ReplicationServer.EventExpirySeconds)));
 
 		for (int i = 0; i < count; i++)
 		{
@@ -809,7 +848,7 @@ public sealed class ReplicationClient
 
 			if (mirror is not null)
 			{
-				ApplyGraph(mirror, (uint)instance, creation, states, removed);
+				ApplyGraph(mirror, (uint)instance, creation, states, removed, tick);
 			}
 		}
 	}
@@ -887,12 +926,19 @@ public sealed class ReplicationClient
 
 	// Values first, so a state starting here reads what it read there, then states and actions as the server's run had
 	// them.
-	private void ApplyGraph(Mirror mirror, uint instance, GraphCreation? creation, bool states, bool removed)
+	private void ApplyGraph(
+		Mirror mirror,
+		uint instance,
+		GraphCreation? creation,
+		bool states,
+		bool removed,
+		long tick)
 	{
 		if (!mirror.Graphs.TryGetValue(instance, out RemoteGraph? graph))
 		{
-			// A run this client never had, which it can't tell what it is.
-			if (creation is not GraphCreation created)
+			// A run this client never had, which it can't tell what it is, or one it ended, sent again while the server
+			// waits for the acknowledgement.
+			if (creation is not GraphCreation created || mirror.EndedGraphs.ContainsKey(instance))
 			{
 				return;
 			}
@@ -913,6 +959,7 @@ public sealed class ReplicationClient
 		if (removed)
 		{
 			mirror.RemoveGraph(instance);
+			mirror.EndedGraphs[instance] = tick;
 		}
 	}
 
@@ -926,10 +973,13 @@ public sealed class ReplicationClient
 			return null;
 		}
 
+		// Found as they're read, so one that arrives after the run started still is.
+		var source = new NetworkEntityId(creation.Source);
+		var target = new NetworkEntityId(creation.Target);
 		var context = new AbilityBehaviorContext(
 			mirror.Entity,
-			_resolve(new NetworkEntityId(creation.Source)),
-			_resolve(new NetworkEntityId(creation.Target)),
+			() => _resolve(source),
+			() => _resolve(target),
 			creation.Level,
 			creation.Magnitude);
 		var graph = new RemoteGraph(behavior, context);
@@ -1155,6 +1205,28 @@ public sealed class ReplicationClient
 		// The server's graph runs, with nothing for a run this machine can't follow.
 		public Dictionary<uint, RemoteGraph?> Graphs { get; } = [];
 
+		// The runs the server ended, by the tick of the packet that said so, kept while a copy of that packet's record,
+		// sent again until it's acknowledged, could still bring their actions.
+		public Dictionary<uint, long> EndedGraphs { get; } = [];
+
+		public void ForgetEndedGraphs(long before)
+		{
+			List<uint>? forgotten = null;
+
+			foreach (KeyValuePair<uint, long> ended in EndedGraphs)
+			{
+				if (ended.Value >= before)
+				{
+					continue;
+				}
+
+				forgotten ??= [];
+				forgotten.Add(ended.Key);
+			}
+
+			forgotten?.ForEach(x => EndedGraphs.Remove(x));
+		}
+
 		public void RemoveGraph(uint instance)
 		{
 			if (Graphs.Remove(instance, out RemoteGraph? graph))
@@ -1265,11 +1337,12 @@ public sealed class ReplicationClient
 		public EffectState State { get; set; } = state;
 	}
 
-	// What a graph run is, as the server sent it once: its ability and that activation's context.
 	private readonly record struct SpawnFields(bool Placed, int SceneIndex, ulong Owner, int AttributeCount);
 
-	private readonly record struct HeldPacket(long Tick, byte[] Data);
+	// A packet waiting to be shown, with where each of its entries starts.
+	private readonly record struct HeldPacket(long Tick, byte[] Data, List<int> Entries);
 
+	// What a graph run is, as the server sent it once: its ability and that activation's context.
 	private readonly record struct GraphCreation(int Ability, uint Target, uint Source, int Level, float Magnitude);
 
 	// A state clients run, running on the server as an activation it numbered, for some ticks before the packet's.

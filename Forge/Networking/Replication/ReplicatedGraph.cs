@@ -20,6 +20,8 @@ internal sealed class ReplicatedGraph
 
 	public GraphProcessor Processor { get; }
 
+	public AbilityBehaviorContext Context { get; }
+
 	public GraphNetworkTable Table { get; }
 
 	// The ability's index in the registry's Ability kind, or -1 when it isn't one a client can be told about.
@@ -63,6 +65,7 @@ internal sealed class ReplicatedGraph
 	{
 		Instance = instance;
 		Processor = processor;
+		Context = context;
 		Table = processor.Graph.NetworkTable;
 		AssetIndex = assetIndex;
 		TargetId = context.Target?.NetworkId.Value ?? 0;
@@ -96,6 +99,15 @@ internal sealed class ReplicatedGraph
 
 		CaptureStates(tick);
 		CaptureVariables(tick);
+	}
+
+	// Stamps the variables that changed since the last look, as an action executes.
+	public void CaptureValues(long tick)
+	{
+		if (IsListed)
+		{
+			CaptureVariables(tick);
+		}
 	}
 
 	public void Remove(long tick)

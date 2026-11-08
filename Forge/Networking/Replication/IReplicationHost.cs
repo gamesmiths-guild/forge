@@ -25,8 +25,9 @@ public interface IReplicationHost
 
 	/// <summary>
 	/// Takes away an entity the server despawned, or one that left this client's view. Its persistent cues were
-	/// removed already. An entity placed in the scene rather than spawned is handed here too, for the host to hide or
-	/// free.
+	/// removed already, and its graphs ended: what they still show ends in its next
+	/// <see cref="EntityAbilities.PresentAbilities"/>, which the host calls once more before the entity is gone. An
+	/// entity placed in the scene rather than spawned is handed here too, for the host to hide or free.
 	/// </summary>
 	/// <param name="entity">The entity.</param>
 	void Despawn(IForgeEntity entity);

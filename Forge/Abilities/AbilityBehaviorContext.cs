@@ -10,8 +10,12 @@ namespace Gamesmiths.Forge.Abilities;
 /// </summary>
 public class AbilityBehaviorContext
 {
-	// What the server said of its activation, for a graph a client runs for the server's entity.
-	private readonly IForgeEntity? _remoteTarget;
+	private readonly IForgeEntity? _source;
+
+	// What the server said of its activation, for a graph a client runs for the server's entity. The source and target
+	// are found as they're read: the client may get them after the run starts.
+	private readonly Func<IForgeEntity?>? _remoteSource;
+	private readonly Func<IForgeEntity?>? _remoteTarget;
 	private readonly int _remoteLevel;
 
 	/// <summary>
@@ -22,12 +26,12 @@ public class AbilityBehaviorContext
 	/// <summary>
 	/// Gets the source entity that granted this ability.
 	/// </summary>
-	public IForgeEntity? Source { get; }
+	public IForgeEntity? Source => _remoteSource is null ? _source : _remoteSource();
 
 	/// <summary>
 	/// Gets the target entity of this ability instance.
 	/// </summary>
-	public IForgeEntity? Target => InstanceHandle.IsValid ? InstanceHandle.Target : _remoteTarget;
+	public IForgeEntity? Target => InstanceHandle.IsValid ? InstanceHandle.Target : _remoteTarget?.Invoke();
 
 	/// <summary>
 	/// Gets the level of the ability at the time of execution.
@@ -65,7 +69,7 @@ public class AbilityBehaviorContext
 		AbilityHandle = ability.Handle;
 		InstanceHandle = instance.Handle;
 		Owner = ability.Owner;
-		Source = ability.SourceEntity;
+		_source = ability.SourceEntity;
 		Magnitude = magnitude;
 	}
 
@@ -73,16 +77,16 @@ public class AbilityBehaviorContext
 	// has no ability of its own.
 	internal AbilityBehaviorContext(
 		IForgeEntity owner,
-		IForgeEntity? source,
-		IForgeEntity? target,
+		Func<IForgeEntity?> source,
+		Func<IForgeEntity?> target,
 		int level,
 		float magnitude)
 	{
 		AbilityHandle = new AbilityHandle(null);
 		InstanceHandle = new AbilityInstanceHandle();
 		Owner = owner;
-		Source = source;
 		Magnitude = magnitude;
+		_remoteSource = source;
 		_remoteTarget = target;
 		_remoteLevel = level;
 	}

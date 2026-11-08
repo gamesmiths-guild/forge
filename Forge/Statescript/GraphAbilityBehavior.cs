@@ -64,8 +64,7 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior, ISnapshotAbil
 	// the variables the server sent instead of the ones the graph starts with.
 	internal void StartRemote(AbilityBehaviorContext context, Action<Variables> variables)
 	{
-		Processor.GraphContext.IsRemote = true;
-		StartGraph(context, variables);
+		Start(context, variables, remote: true);
 	}
 
 	/// <summary>
@@ -83,19 +82,7 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior, ISnapshotAbil
 	/// the graph's entry node fires.</param>
 	protected void StartGraph(AbilityBehaviorContext context, Action<Variables>? variableOverrides = null)
 	{
-		// Handed over now, the context and callback would serve the rest of the last activation's teardown and code,
-		// and its completion would end this activation.
-		if (Processor.GraphContext.StartMustWait)
-		{
-			Processor.GraphContext.PendingStart = () => StartAfterWaiting(context, variableOverrides);
-			return;
-		}
-
-		Processor.GraphContext.SharedVariables = context.Owner.SharedVariables;
-		Processor.GraphContext.ActivationContext = context;
-		Processor.GraphContext.Random = context.Owner.Random;
-		Processor.OnGraphCompleted = context.InstanceHandle.End;
-		Processor.StartGraph(variableOverrides);
+		Start(context, variableOverrides, remote: false);
 	}
 
 	/// <summary>
@@ -141,13 +128,33 @@ public class GraphAbilityBehavior(Graph graph) : IAbilityBehavior, ISnapshotAbil
 		Processor.AddHolds(holds);
 	}
 
+	// Whether the run is a client's copy of the server's is the run's own, so it changes as the run takes the processor
+	// over, not while an earlier run's teardown still has it.
+	private void Start(AbilityBehaviorContext context, Action<Variables>? variableOverrides, bool remote)
+	{
+		// Handed over now, the context and callback would serve the rest of the last activation's teardown and code,
+		// and its completion would end this activation.
+		if (Processor.GraphContext.StartMustWait)
+		{
+			Processor.GraphContext.PendingStart = () => StartAfterWaiting(context, variableOverrides, remote);
+			return;
+		}
+
+		Processor.GraphContext.IsRemote = remote;
+		Processor.GraphContext.SharedVariables = context.Owner.SharedVariables;
+		Processor.GraphContext.ActivationContext = context;
+		Processor.GraphContext.Random = context.Owner.Random;
+		Processor.OnGraphCompleted = context.InstanceHandle.End;
+		Processor.StartGraph(variableOverrides);
+	}
+
 	// OnStarted has returned by the time a start that waited runs, so the abilities system can no longer cancel the
 	// activation when it throws, as it does for a start that throws at once. It is canceled here instead.
-	private void StartAfterWaiting(AbilityBehaviorContext context, Action<Variables>? variableOverrides)
+	private void StartAfterWaiting(AbilityBehaviorContext context, Action<Variables>? variableOverrides, bool remote)
 	{
 		try
 		{
-			StartGraph(context, variableOverrides);
+			Start(context, variableOverrides, remote);
 		}
 		catch
 		{

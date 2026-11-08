@@ -32,6 +32,8 @@ For each graph an entity's abilities run that clients run something of, the serv
 - **The presentation actions it ran**, as events numbered with the entity's executed cues, sent until the client acknowledges them or they're `EventExpirySeconds` (0.2 s) old.
 - **That the run ended.**
 
+Every value variable of a graph clients run something of travels to every client that has the entity, whichever region writes it: a `ServerOnly` region keeps its nodes on the server, not its variables. A value no client may see doesn't belong in such a graph's variables.
+
 Shared variables and activation data don't travel. A graph whose presentation needs them copies them into a graph variable, with a Set Variable node or the data binder of `GraphAbilityBehavior<TData>`.
 
 A graph that clients run nothing of sends nothing at all. A run too short for any send to see it, one that started and ended between two, still brings its actions. So does an entity that goes: its last events, the burst it made as it died, go with its despawn, and play before it's taken away.
@@ -71,6 +73,9 @@ A host runs a mirror's copies with its abilities, as any entity's: `EntityAbilit
 
 - Only graphs that abilities run travel, through `GraphAbilityBehavior`. A `GraphProcessor` a host runs on its own doesn't.
 - A state that started and ended between two sends isn't seen by a client, as with every value that changed and changed back. An action always is.
+- An action reads the graph's values as its packet carries them: the newest the server's run had by then. Two actions between sends that read different values both read the later one.
+- A state the server restarted, through `RestartOnRetrigger`, ends and starts again on a client, and what its subgraph runs there starts over with it.
+- A run's target or source that a client doesn't have yet reads as `null` until it arrives, in the same packet or a later one.
 - The server runs `ClientOnly` regions too, a dedicated server included, so they must not change gameplay.
 
 ## The wire

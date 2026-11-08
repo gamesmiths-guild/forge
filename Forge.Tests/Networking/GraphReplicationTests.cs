@@ -297,6 +297,151 @@ public class GraphReplicationTests
 		client.Assets.Log.Count(x => x == "glow hidden").Should().Be(4);
 	}
 
+	[Fact]
+	[Trait("Networking", "Graphs")]
+	public void A_run_that_ends_between_sends_brings_the_values_its_actions_read()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		rig.Step(10);
+
+		Activate(entity, rig.Assets.Burst);
+		rig.Step(10);
+
+		client.Assets.Log.Should().Equal("burst 7");
+	}
+
+	[Fact]
+	[Trait("Networking", "Graphs")]
+	public void An_ended_run_s_actions_run_once_while_the_client_s_acknowledgements_are_lost()
+	{
+		var rig = new Rig();
+		Client client = rig.Join(up: new NetworkConditions(0.01));
+		Entity entity = rig.Spawn();
+		rig.Step(10);
+
+		client.Link!.Conditions = new NetworkConditions(0.01, 0, 1);
+		Activate(entity, rig.Assets.Blink);
+		rig.Step(30);
+		client.Link.Conditions = new NetworkConditions(0.01);
+		rig.Step(10);
+
+		client.Assets.Log.Should().Equal("blink 0");
+	}
+
+	[Fact]
+	[Trait("Networking", "Graphs")]
+	public void A_run_that_ends_as_its_entity_first_goes_out_still_reaches_a_client_through_loss()
+	{
+		var rig = new Rig(down: new NetworkConditions(0.01));
+		Client client = rig.Join();
+		rig.ServerLink!.Conditions = new NetworkConditions(0.01, 0, 1);
+		Entity entity = rig.Spawn();
+		Activate(entity, rig.Assets.Blink);
+		rig.Step(4);
+
+		rig.ServerLink.Conditions = new NetworkConditions(0.01);
+		rig.Step(10);
+
+		client.Assets.Log.Should().Equal("blink 0");
+	}
+
+	[Fact]
+	[Trait("Networking", "Graphs")]
+	public void A_shared_behavior_that_starts_over_between_sends_starts_over_on_a_client()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		AbilityHandle shared = Activate(entity, rig.Assets.Shared);
+		rig.Step(10);
+
+		shared.Cancel();
+		shared.TryActivate(out _).Should().BeTrue();
+		rig.Step(10);
+
+		client.Assets.Log.Count(x => x == "chime").Should().Be(2, "the second run starts from its entry too");
+	}
+
+	[Fact]
+	[Trait("Networking", "Graphs")]
+	public void A_shared_behavior_two_running_activations_hold_reaches_a_client_as_its_latest_run()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		AbilityHandle shared = Activate(entity, rig.Assets.Shared);
+		rig.Step(10);
+		shared.TryActivate(out _).Should().BeTrue();
+
+		rig.Step(60);
+
+		client.Assets.Log.Count(x => x == "chime").Should().Be(2, "each activation's run starts once");
+	}
+
+	[Fact]
+	[Trait("Networking", "Graphs")]
+	public void A_shared_behavior_a_client_ran_for_the_server_runs_its_own_activation_as_its_own()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		AbilityHandle shared = Activate(entity, rig.Assets.Shared);
+		rig.Step(10);
+		shared.Cancel();
+		rig.Step(10);
+
+		client.Assets.Log.Should().Contain("shared on Replication 0");
+
+		Activate(new Entity(client.Assets.Tags, client.Cues), client.Assets.Shared);
+
+		client.Assets.Log.Should().Contain("shared on Link 0", "a run of the client's own follows its links");
+	}
+
+	[Fact]
+	[Trait("Networking", "Graphs")]
+	public void A_target_a_client_gets_after_the_run_started_is_found_once_it_arrives()
+	{
+		var rig = new Rig();
+		Entity caster = rig.Spawn();
+		Entity target = rig.Spawn();
+		AbilityHandle aim = caster.Abilities.GrantAbilityPermanently(rig.Assets.Aim, 1, LevelComparison.Higher, null);
+		aim.TryActivate(out _, target).Should().BeTrue();
+		rig.Step(10);
+
+		Client client = rig.Join();
+		rig.Step(4);
+
+		client.Assets.Log.Should().Equal($"aim {target.NetworkId.Value}");
+	}
+
+	[Fact]
+	[Trait("Networking", "Graphs")]
+	public void A_node_that_throws_as_a_held_packet_is_shown_leaves_the_rest_of_the_packet_applied()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		ReplicationClient replication = client.Session.Mirror!;
+		replication.HoldsUntilShown = true;
+		Entity first = rig.Spawn();
+		Entity second = rig.Spawn();
+		rig.Step(6);
+		replication.Show(replication.LastServerTick);
+		client.Spawned.Should().HaveCount(2);
+
+		client.Assets.Faulty = true;
+		Activate(first, rig.Assets.Fault);
+		rig.Unregister(second);
+		rig.Step(4);
+
+		Action show = () => replication.Show(replication.LastServerTick);
+
+		show.Should().Throw<InvalidOperationException>();
+		client.Spawned.Should().ContainSingle("the despawn after the entry that threw applies")
+			.Which.NetworkId.Should().Be(first.NetworkId);
+	}
+
 	private static AbilityHandle Activate(Entity entity, AbilityData ability)
 	{
 		AbilityHandle handle = entity.Abilities.GrantAbilityPermanently(ability, 1, LevelComparison.Higher, null);
@@ -317,6 +462,9 @@ public class GraphReplicationTests
 		public List<int> Tallied { get; } = [];
 
 		public int Ticks { get; set; }
+
+		// Makes the fault node throw, on this machine only.
+		public bool Faulty { get; set; }
 
 		// Marks itself, sets power to 7, waits half a second, flashes, then glows for a second.
 		public AbilityData Cast { get; }
@@ -339,8 +487,28 @@ public class GraphReplicationTests
 		// Glows quietly for a second, and no machine's registry has it.
 		public AbilityData Unlisted { get; }
 
+		// Sets power to 7, bursts with it and ends at once.
+		public AbilityData Burst { get; }
+
+		// Glows for ten seconds and chimes in a client-only region as it starts, every activation on one behavior.
+		public AbilityData Shared { get; }
+
+		// Shows the target it aims at, as it's presented.
+		public AbilityData Aim { get; }
+
+		// Runs a node that throws where Faulty is set, and ends at once.
+		public AbilityData Fault { get; }
+
 		public Assets(double glowLength = 1)
 		{
+			var shared = new GraphAbilityBehavior(BuildShared());
+			Burst = Ability("Burst", BuildBurst());
+			Shared = new AbilityData(
+				"Shared",
+				instancingPolicy: AbilityInstancingPolicy.PerExecution,
+				behaviorFactory: () => shared);
+			Aim = Ability("Aim", BuildAim());
+			Fault = Ability("Fault", BuildFault());
 			Cast = Ability("Cast", BuildCast(glowLength));
 			Linger = Ability("Linger", Glow("linger", 10));
 			Blink = Ability("Blink", BuildBlink());
@@ -356,6 +524,10 @@ public class GraphReplicationTests
 			Registry.Register(AssetKind.Ability, "uid://sparkle", Sparkle);
 			Registry.Register(AssetKind.Ability, "uid://ponder", Ponder);
 			Registry.Register(AssetKind.Ability, "uid://tally", Tally);
+			Registry.Register(AssetKind.Ability, "uid://burst", Burst);
+			Registry.Register(AssetKind.Ability, "uid://shared", Shared);
+			Registry.Register(AssetKind.Ability, "uid://aim", Aim);
+			Registry.Register(AssetKind.Ability, "uid://fault", Fault);
 			Registry.Seal();
 		}
 
@@ -450,6 +622,53 @@ public class GraphReplicationTests
 			graph.AddConnection(Link(graph.EntryNode, EntryNode.OutputPort, sparkle));
 			graph.AddConnection(Link(graph.EntryNode, EntryNode.OutputPort, secret));
 			graph.AddConnection(Link(sparkle, StateNode<StateNodeContext>.SubgraphPort, sparks));
+			return graph;
+		}
+
+		private Graph BuildBurst()
+		{
+			var graph = new Graph();
+			var power = new SetVariableNode();
+			var burst = new FlashNode("burst", Log);
+			graph.AddNode(power);
+			graph.AddNode(burst);
+			graph.VariableDefinitions.DefineVariable("power", 0);
+			Constant(graph, "seven", new Variant128(7), typeof(int));
+			power.BindInput(SetVariableNode.SourceInput, "seven");
+			power.BindOutput(SetVariableNode.TargetOutput, "power");
+			burst.BindInput(0, "power");
+			graph.AddConnection(Link(graph.EntryNode, EntryNode.OutputPort, power));
+			graph.AddConnection(Link(power, ActionNode.OutputPort, burst));
+			return graph;
+		}
+
+		private Graph BuildShared()
+		{
+			var graph = new Graph();
+			var glow = new GlowNode("shared", Log, 10);
+			var chime = new MarkNode("chime", Log) { Region = NodeRegion.ClientOnly };
+			graph.AddNode(glow);
+			graph.AddNode(chime);
+			graph.AddConnection(Link(graph.EntryNode, EntryNode.OutputPort, glow));
+			graph.AddConnection(Link(graph.EntryNode, EntryNode.OutputPort, chime));
+			return graph;
+		}
+
+		private Graph BuildAim()
+		{
+			var graph = new Graph();
+			var aim = new AimNode(Log);
+			graph.AddNode(aim);
+			graph.AddConnection(Link(graph.EntryNode, EntryNode.OutputPort, aim));
+			return graph;
+		}
+
+		private Graph BuildFault()
+		{
+			var graph = new Graph();
+			var fault = new FaultNode(this);
+			graph.AddNode(fault);
+			graph.AddConnection(Link(graph.EntryNode, EntryNode.OutputPort, fault));
 			return graph;
 		}
 
@@ -562,6 +781,41 @@ public class GraphReplicationTests
 		{
 			graphContext.TryResolve(InputProperties[0].BoundName, out int power);
 			log.Add($"{name} {power}");
+		}
+	}
+
+	// A presentation state that notes, as it's shown, the id of the activation's target.
+	private sealed class AimNode(List<string> log) : StateNode<StateNodeContext>
+	{
+		public override NodeNetworkKind NetworkKind => NodeNetworkKind.Presentation;
+
+		protected override void OnActivate(GraphContext graphContext)
+		{
+		}
+
+		protected override void OnDeactivate(GraphContext graphContext)
+		{
+		}
+
+		protected override object? OnPresentationActivated(GraphContext graphContext)
+		{
+			var context = (AbilityBehaviorContext)graphContext.ActivationContext!;
+			log.Add($"aim {context.Target?.NetworkId.Value ?? 0}");
+			return null;
+		}
+	}
+
+	// A presentation action that throws where the machine's assets say so.
+	private sealed class FaultNode(Assets assets) : ActionNode
+	{
+		public override NodeNetworkKind NetworkKind => NodeNetworkKind.Presentation;
+
+		protected override void Execute(GraphContext graphContext)
+		{
+			if (assets.Faulty)
+			{
+				throw new InvalidOperationException("The fault node failed.");
+			}
 		}
 	}
 
@@ -767,9 +1021,10 @@ public class GraphReplicationTests
 
 	private sealed class Client : IReplicationHost
 	{
-		private readonly ConditionedTransport? _link;
-
 		public NetworkSession Session { get; }
+
+		// The client's side of its link, conditioning what it sends.
+		public ConditionedTransport? Link { get; }
 
 		public Assets Assets { get; }
 
@@ -783,8 +1038,8 @@ public class GraphReplicationTests
 
 			if (up is NetworkConditions conditions)
 			{
-				_link = new ConditionedTransport(transport, conditions, new DeterministicRandom(seed));
-				transport = _link;
+				Link = new ConditionedTransport(transport, conditions, new DeterministicRandom(seed));
+				transport = Link;
 			}
 
 			Session = new NetworkSession(
@@ -798,7 +1053,7 @@ public class GraphReplicationTests
 
 		public void Update(double time)
 		{
-			_link?.Update(time);
+			Link?.Update(time);
 			Session.Update(time);
 
 			foreach (Entity mirror in Spawned)

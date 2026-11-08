@@ -311,21 +311,7 @@ public sealed class ReplicationServer
 			entity.Capture(tick, BodySource);
 			entity.CaptureEffects(tick, this, _session.Clock);
 			entity.CaptureGraphs(tick, this);
-
-			while (entity.Events.Count > 0 && entity.Events[0].CreatedAtTick < oldestEvent)
-			{
-				entity.Events.RemoveAt(0);
-			}
-
-			for (int i = 0; i < entity.Graphs.Count; i++)
-			{
-				List<ReplicatedGraph.GraphEvent> events = entity.Graphs[i].Events;
-
-				while (events.Count > 0 && events[0].CreatedAtTick < oldestEvent)
-				{
-					events.RemoveAt(0);
-				}
-			}
+			ExpireEvents(entity, oldestEvent);
 		}
 
 		ExceptionDispatchInfo? failure = null;
@@ -333,6 +319,13 @@ public sealed class ReplicationServer
 		foreach (ClientState client in _clients.Values)
 		{
 			UpdateViews(client, tick);
+
+			// A despawn sent again, or to a client joining after a placed entity went, brings only what's still fresh.
+			foreach (EntityView view in client.Views.Values.Where(x => x.Entity.DespawnedAtTick is not null))
+			{
+				ExpireEvents(view.Entity, oldestEvent);
+			}
+
 			SendTo(client, tick, ref failure);
 		}
 
@@ -503,6 +496,24 @@ public sealed class ReplicationServer
 		}
 
 		packet.Entries.Clear();
+	}
+
+	private static void ExpireEvents(ReplicatedEntity entity, long oldestEvent)
+	{
+		while (entity.Events.Count > 0 && entity.Events[0].CreatedAtTick < oldestEvent)
+		{
+			entity.Events.RemoveAt(0);
+		}
+
+		for (int i = 0; i < entity.Graphs.Count; i++)
+		{
+			List<ReplicatedGraph.GraphEvent> events = entity.Graphs[i].Events;
+
+			while (events.Count > 0 && events[0].CreatedAtTick < oldestEvent)
+			{
+				events.RemoveAt(0);
+			}
+		}
 	}
 
 	private static bool HasPending(EntityView view)
@@ -1191,7 +1202,8 @@ public sealed class ReplicationServer
 			}
 		}
 
-		bool values = live && graph.ValuesChanged(acked);
+		// A run that ended still sends its values: the actions it brings read them.
+		bool values = graph.ValuesChanged(acked);
 		_entry.WriteBool(values);
 
 		if (values)
@@ -1318,7 +1330,10 @@ public sealed class ReplicationServer
 		// idle entity may never give them anything to acknowledge.
 		entity.RemovedEffects.RemoveAll(
 			x => x.Stamp <= (x.Visibility == EffectVisibility.OwnerOnly ? neededByOwner : needed));
-		entity.Graphs.RemoveAll(x => x.Removed && x.RemovedStamp <= needed);
+
+		// A run's actions go only with its record, so it stays until they expire: a client that first heard of the
+		// entity as the run ended hasn't acknowledged them yet.
+		entity.Graphs.RemoveAll(x => x.Removed && x.RemovedStamp <= needed && x.Events.Count == 0);
 	}
 
 	// What one client knows of one entity.
@@ -1480,15 +1495,18 @@ public sealed class ReplicationServer
 				return;
 			}
 
-			ReplicatedGraph graph = entity.GraphFor(processor, context, server);
+			long tick = server._session.Clock.Tick;
+			ReplicatedGraph graph = entity.GraphFor(processor, context, server, tick);
 
 			if (graph.IsListed)
 			{
+				// The values the action read, for a run that may end before the next send looks at it.
+				graph.CaptureValues(tick);
 				graph.Events.Add(new ReplicatedGraph.GraphEvent(
 					++entity.LastEventSequence,
 					action,
 					graphContext.ActivationCount,
-					server._session.Clock.Tick));
+					tick));
 			}
 		}
 	}

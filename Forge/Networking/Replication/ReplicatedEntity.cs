@@ -295,10 +295,13 @@ public sealed class ReplicatedEntity
 
 		foreach (Ability.BehaviorBinding binding in _behaviors)
 		{
+			// The run on the processor is its last activation's, which a shared behavior's binding may not be.
 			if (binding.Behavior is GraphAbilityBehavior behavior
 				&& behavior.Processor.Graph.NetworkTable.RunsOnClients)
 			{
-				GraphFor(behavior.Processor, binding.Context, server).Capture(tick);
+				AbilityBehaviorContext context =
+					behavior.Processor.GraphContext.ActivationContext as AbilityBehaviorContext ?? binding.Context;
+				GraphFor(behavior.Processor, context, server, tick).Capture(tick);
 			}
 		}
 
@@ -312,19 +315,23 @@ public sealed class ReplicatedEntity
 		}
 	}
 
-	// The record of a graph run, made the first time a send or an action executed in it shows it.
+	// The record of a graph run, made the first time a send or an action executed in it shows it. A behavior an ability
+	// shares between activations runs each on the same processor, so a new activation's context ends the last run's.
 	internal ReplicatedGraph GraphFor(
 		GraphProcessor processor,
 		AbilityBehaviorContext context,
-		ReplicationServer server)
+		ReplicationServer server,
+		long tick)
 	{
-		if (!_graphsByProcessor.TryGetValue(processor, out ReplicatedGraph? graph))
+		if (_graphsByProcessor.TryGetValue(processor, out ReplicatedGraph? graph) && graph.Context == context)
 		{
-			graph = server.DescribeGraph(NextGraphInstance++, processor, context);
-			_graphsByProcessor[processor] = graph;
-			Graphs.Add(graph);
+			return graph;
 		}
 
+		graph?.Remove(tick);
+		graph = server.DescribeGraph(NextGraphInstance++, processor, context);
+		_graphsByProcessor[processor] = graph;
+		Graphs.Add(graph);
 		return graph;
 	}
 
