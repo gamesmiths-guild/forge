@@ -47,6 +47,10 @@ public sealed class ReplicationClient
 	private readonly List<GraphAction> _graphEvents = [];
 	private readonly List<KeyValuePair<int, ulong>> _endingStates = [];
 	private readonly Func<NetworkEntityId, IForgeEntity?> _resolve;
+	private readonly Queue<HeldPacket> _held = new();
+	private readonly Dictionary<NetworkEntityId, RemoteBody> _pendingBodies = [];
+	private readonly BitReader _heldReader = new(ReadOnlyMemory<byte>.Empty);
+	private long _shownTick = -1;
 	private uint _ackMask;
 	private bool _ackPending;
 	private bool _effectOwnersStale;
@@ -95,6 +99,13 @@ public sealed class ReplicationClient
 	/// Gets how many entities the server spawned that the host couldn't make.
 	/// </summary>
 	public long SpawnsRefused { get; private set; }
+
+	/// <summary>
+	/// Gets or sets a value indicating whether a state packet waits for <see cref="Show"/> to reach its tick before
+	/// anything but its bodies applies, so what a mirror shows keeps time with its body, which is shown behind the
+	/// newest state. Otherwise a packet applies as it arrives.
+	/// </summary>
+	public bool HoldsUntilShown { get; set; }
 
 	internal ReplicationClient(NetworkSession session)
 	{
@@ -156,6 +167,25 @@ public sealed class ReplicationClient
 	}
 
 	/// <summary>
+	/// Applies the packets held for <see cref="HoldsUntilShown"/> whose tick the shown tick has reached, in the order
+	/// they arrived. Call it as the shown tick moves, before placing the bodies at it.
+	/// </summary>
+	/// <param name="tick">The server tick shown now.</param>
+	public void Show(double tick)
+	{
+		while (_held.Count > 0 && _held.Peek().Tick <= tick)
+		{
+			HeldPacket packet = _held.Dequeue();
+			_heldReader.Reset(packet.Data);
+			_heldReader.ReadVarUInt();
+			_heldReader.ReadVarInt();
+			ReadEntries(_heldReader, packet.Tick, previousTick: -1, bodies: false, state: true);
+			_shownTick = packet.Tick;
+			FollowEffects();
+		}
+	}
+
+	/// <summary>
 	/// Lets go of every entity: the ones the server spawned are handed to the host to take away, and the placed ones
 	/// are unbound and left as they are. For leaving a session.
 	/// </summary>
@@ -168,6 +198,9 @@ public sealed class ReplicationClient
 
 		LastServerTick = -1;
 		LastSequence = 0;
+		_held.Clear();
+		_pendingBodies.Clear();
+		_shownTick = -1;
 		_ackMask = 0;
 		_ackPending = false;
 	}
@@ -197,22 +230,19 @@ public sealed class ReplicationClient
 		}
 
 		long previousTick = LastServerTick;
-
-		while (true)
-		{
-			uint id = ReplicationCodec.ReadEntityId(reader);
-
-			if (id == 0)
-			{
-				break;
-			}
-
-			ReadEntry(reader, new NetworkEntityId(id), tick, previousTick);
-		}
+		ReadEntries(reader, tick, previousTick, bodies: true, state: !HoldsUntilShown);
 
 		// Only a packet read to its end counts: one that isn't is never acknowledged, so the server sends it all again.
 		LastServerTick = Math.Max(LastServerTick, tick);
 		Acknowledge((uint)sequence);
+
+		if (HoldsUntilShown)
+		{
+			_held.Enqueue(new HeldPacket(tick, reader.CopyData()));
+			return;
+		}
+
+		_shownTick = tick;
 		FollowEffects();
 	}
 
@@ -283,7 +313,24 @@ public sealed class ReplicationClient
 		_ackPending = true;
 	}
 
-	private void ReadEntry(BitReader reader, NetworkEntityId id, long tick, long previousTick)
+	// A packet's entries, read for their bodies, the rest of their state, or both: a held packet is read for its bodies
+	// as it arrives and for the rest once it's shown.
+	private void ReadEntries(BitReader reader, long tick, long previousTick, bool bodies, bool state)
+	{
+		while (true)
+		{
+			uint id = ReplicationCodec.ReadEntityId(reader);
+
+			if (id == 0)
+			{
+				break;
+			}
+
+			ReadEntry(reader, new NetworkEntityId(id), tick, previousTick, bodies, state);
+		}
+	}
+
+	private void ReadEntry(BitReader reader, NetworkEntityId id, long tick, long previousTick, bool bodies, bool state)
 	{
 		var kind = (EntryKind)reader.ReadBits(2);
 		_mirrors.TryGetValue(id, out Mirror? mirror);
@@ -291,27 +338,43 @@ public sealed class ReplicationClient
 		switch (kind)
 		{
 			case EntryKind.Despawn:
+				Mirror? going = state ? mirror : null;
+
 				// What it did as it went shows before it goes.
 				if (reader.ReadBool())
 				{
-					ReadEvents(reader, mirror, _session.TagsManager.NetIndexCount);
+					ReadEvents(reader, going, _session.TagsManager.NetIndexCount);
 				}
 
 				if (reader.ReadBool())
 				{
-					ReadGraphs(reader, mirror);
+					ReadGraphs(reader, going);
 				}
 
-				if (mirror is not null)
+				if (state)
 				{
-					Unbind(mirror, despawn: true);
+					_pendingBodies.Remove(id);
+
+					if (mirror is not null)
+					{
+						Unbind(mirror, despawn: true);
+					}
 				}
 
 				reader.Align();
 				return;
 
 			case EntryKind.Spawn:
-				mirror = ReadSpawn(reader, id, mirror);
+				if (state)
+				{
+					mirror = ReadSpawn(reader, id, mirror);
+				}
+				else if (!ReadSpawnFields(reader).Placed && mirror is null && !_pendingBodies.ContainsKey(id))
+				{
+					// Its bodies arrive before the spawn is shown, and wait for it.
+					_pendingBodies[id] = new RemoteBody();
+				}
+
 				break;
 
 			case EntryKind.State:
@@ -321,11 +384,12 @@ public sealed class ReplicationClient
 				throw new MalformedPacketException($"{kind} is not an entry kind.");
 		}
 
-		ReadState(reader, mirror, tick, previousTick);
+		RemoteBody? body = !bodies ? null : mirror?.Body ?? _pendingBodies.GetValueOrDefault(id);
+		ReadState(reader, state ? mirror : null, body, tick, previousTick);
 		reader.Align();
 	}
 
-	private Mirror? ReadSpawn(BitReader reader, NetworkEntityId id, Mirror? mirror)
+	private SpawnFields ReadSpawnFields(BitReader reader)
 	{
 		bool placed = reader.ReadBool();
 		int sceneIndex = -1;
@@ -333,6 +397,11 @@ public sealed class ReplicationClient
 		if (!placed)
 		{
 			sceneIndex = (int)reader.ReadBits(_session.Registry.BitsFor(AssetKind.Scene));
+
+			if (sceneIndex >= _session.Registry.Count(AssetKind.Scene))
+			{
+				throw new MalformedPacketException($"The registry has no scene {sceneIndex}.");
+			}
 		}
 
 		ulong owner = reader.ReadVarUInt();
@@ -342,6 +411,17 @@ public sealed class ReplicationClient
 		{
 			throw new MalformedPacketException($"{owner} is not a peer id.");
 		}
+
+		return new SpawnFields(placed, sceneIndex, owner, attributeCount);
+	}
+
+	private Mirror? ReadSpawn(BitReader reader, NetworkEntityId id, Mirror? mirror)
+	{
+		SpawnFields fields = ReadSpawnFields(reader);
+		bool placed = fields.Placed;
+		int sceneIndex = fields.SceneIndex;
+		ulong owner = fields.Owner;
+		int attributeCount = fields.AttributeCount;
 
 		if (mirror is not null)
 		{
@@ -357,20 +437,17 @@ public sealed class ReplicationClient
 			return null;
 		}
 
-		if (sceneIndex >= _session.Registry.Count(AssetKind.Scene))
-		{
-			throw new MalformedPacketException($"The registry has no scene {sceneIndex}.");
-		}
-
 		IForgeEntity? entity = Host?.Spawn(id, sceneIndex, new PeerId((int)owner));
 
 		if (entity is null || entity.NetworkId != id || _byEntity.ContainsKey(entity))
 		{
 			SpawnsRefused++;
+			_pendingBodies.Remove(id);
 			return null;
 		}
 
-		mirror = Bind(entity, new PeerId((int)owner), placed: false);
+		_pendingBodies.Remove(id, out RemoteBody? body);
+		mirror = Bind(entity, new PeerId((int)owner), placed: false, body);
 		Spawned?.Invoke(entity);
 
 		if (mirror.Attributes.Length != attributeCount)
@@ -383,7 +460,7 @@ public sealed class ReplicationClient
 		return mirror;
 	}
 
-	private void ReadState(BitReader reader, Mirror? mirror, long tick, long previousTick)
+	private void ReadState(BitReader reader, Mirror? mirror, RemoteBody? body, long tick, long previousTick)
 	{
 		int tagCount = _session.TagsManager.NetIndexCount;
 
@@ -442,13 +519,13 @@ public sealed class ReplicationClient
 
 		if (!reader.ReadBool())
 		{
-			mirror?.Body.Clear();
+			body?.Clear();
 			return;
 		}
 
-		BodyState body = BodyCodec.Dequantize(BodyCodec.Read(reader));
+		BodyState state = BodyCodec.Dequantize(BodyCodec.Read(reader));
 
-		if (mirror is null)
+		if (body is null)
 		{
 			return;
 		}
@@ -456,12 +533,12 @@ public sealed class ReplicationClient
 		// A body missing from the packet before this one hadn't changed by then, unless the budget left it out, so it
 		// moved only after it: held there, it isn't shown drifting from where it last stood all the way from when it
 		// stopped.
-		if (!leftOut && mirror.Body.Latest is BodyState held && mirror.Body.LatestTick < previousTick)
+		if (!leftOut && body.Latest is BodyState held && body.LatestTick < previousTick)
 		{
-			mirror.Body.Add(previousTick, held);
+			body.Add(previousTick, held);
 		}
 
-		mirror.Body.Add(tick, body);
+		body.Add(tick, state);
 	}
 
 	private void ReadCues(BitReader reader, Mirror? mirror, int tagCount)
@@ -1010,7 +1087,7 @@ public sealed class ReplicationClient
 		{
 			foreach (MirroredEffect effect in mirror.Effects.Values)
 			{
-				effect.Active.RemainingDuration = RemainingDuration(effect.State, LastServerTick);
+				effect.Active.RemainingDuration = RemainingDuration(effect.State, _shownTick);
 
 				if (_effectOwnersStale)
 				{
@@ -1028,11 +1105,11 @@ public sealed class ReplicationClient
 		return Tag.RequestTag(tagsManager, tagsManager.GetTagKeyFromNetIndex(index));
 	}
 
-	private Mirror Bind(IForgeEntity entity, PeerId owner, bool placed)
+	private Mirror Bind(IForgeEntity entity, PeerId owner, bool placed, RemoteBody? body = null)
 	{
 		EntitySimulation.Teardown(entity);
 		entity.Tags.MirrorClear();
-		var mirror = new Mirror(entity, owner, placed);
+		var mirror = new Mirror(entity, owner, placed, body ?? new RemoteBody());
 		_mirrors[entity.NetworkId] = mirror;
 		_byEntity[entity] = mirror;
 		_entities.Add(entity);
@@ -1057,7 +1134,7 @@ public sealed class ReplicationClient
 		}
 	}
 
-	private sealed class Mirror(IForgeEntity entity, PeerId owner, bool placed)
+	private sealed class Mirror(IForgeEntity entity, PeerId owner, bool placed, RemoteBody body)
 	{
 		private readonly Dictionary<uint, AppliedCue> _cues = [];
 
@@ -1069,7 +1146,7 @@ public sealed class ReplicationClient
 
 		public EntityAttribute[] Attributes { get; } = [.. entity.Attributes];
 
-		public RemoteBody Body { get; } = new();
+		public RemoteBody Body { get; } = body;
 
 		public uint LastEvent { get; set; }
 
@@ -1160,8 +1237,8 @@ public sealed class ReplicationClient
 		}
 	}
 
-	// A mirror's copy of a graph run of the server's: the behavior running it here, and which activation of the server's
-	// each state clients run is running as.
+	// A mirror's copy of a graph run of the server's: the behavior running it here, and which activation of the
+	// server's each state clients run is running as.
 	private sealed class RemoteGraph(GraphAbilityBehavior behavior, AbilityBehaviorContext context)
 	{
 		public GraphAbilityBehavior Behavior { get; } = behavior;
@@ -1189,6 +1266,10 @@ public sealed class ReplicationClient
 	}
 
 	// What a graph run is, as the server sent it once: its ability and that activation's context.
+	private readonly record struct SpawnFields(bool Placed, int SceneIndex, ulong Owner, int AttributeCount);
+
+	private readonly record struct HeldPacket(long Tick, byte[] Data);
+
 	private readonly record struct GraphCreation(int Ability, uint Target, uint Source, int Level, float Magnitude);
 
 	// A state clients run, running on the server as an activation it numbered, for some ticks before the packet's.

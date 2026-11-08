@@ -70,7 +70,6 @@ A host runs a mirror's copies with its abilities, as any entity's: `EntityAbilit
 ## Limits
 
 - Only graphs that abilities run travel, through `GraphAbilityBehavior`. A `GraphProcessor` a host runs on its own doesn't.
-- A client shows a graph's presentation as its packets arrive, so it can lead a body shown behind them for [interpolation](replication.md#a-client).
 - A state that started and ended between two sends isn't seen by a client, as with every value that changed and changed back. An action always is.
 - The server runs `ClientOnly` regions too, a dedicated server included, so they must not change gameplay.
 

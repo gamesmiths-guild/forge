@@ -60,6 +60,45 @@ public class ReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Replication")]
+	public void A_held_packet_brings_its_bodies_at_once_and_the_rest_once_its_tick_is_shown()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		ReplicationClient replication = client.Session.Mirror!;
+		replication.HoldsUntilShown = true;
+		Entity entity = rig.Spawn();
+		entity.Body = new BodyState(Vector3.UnitX, Quaternion.Identity, Vector3.Zero, true);
+		rig.Step(6);
+
+		client.Spawned.Should().BeEmpty("the spawn waits for its tick to be shown");
+		replication.Show(replication.LastServerTick);
+		Entity mirror = client.Only();
+		replication.BodyOf(mirror)!.Latest!.Value.Position.Should().Be(Vector3.UnitX, "its bodies waited with it");
+
+		long beforeBurning = replication.LastServerTick;
+		Rig.Apply(entity, rig.Burning());
+		entity.Body = new BodyState(new Vector3(2, 0, 0), Quaternion.Identity, Vector3.Zero, true);
+		rig.Step(4);
+
+		replication.BodyOf(mirror)!.Latest!.Value.Position.Should().Be(new Vector3(2, 0, 0));
+		replication.Show(beforeBurning);
+		mirror.Tags.AllTags.HasTag(client.Tag("state.burning")).Should().BeFalse();
+		client.Fire.IsApplied.Should().BeFalse();
+
+		replication.Show(replication.LastServerTick);
+		mirror.Tags.AllTags.HasTag(client.Tag("state.burning")).Should().BeTrue();
+		client.Fire.IsApplied.Should().BeTrue();
+
+		rig.Server.Replication!.Unregister(entity);
+		rig.Step(4);
+		client.Spawned.Should().ContainSingle("the despawn waits too");
+
+		replication.Show(replication.LastServerTick);
+		client.Spawned.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
 	public void A_change_reaches_the_client_and_its_end_too()
 	{
 		var rig = new Rig();

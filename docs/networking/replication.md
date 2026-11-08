@@ -60,12 +60,16 @@ foreach (IForgeEntity placed in level.NetworkedEntities)
     mirror.BindPlaced(placed);         // before the session is ready
 }
 
-// Every frame, to show bodies 100 ms behind the newest state, which is about half a round trip old:
+mirror.HoldsUntilShown = true;         // a packet waits to be shown at its body's moment
+var shown = new InterpolationClock(client.Clock);
+
+// Every frame, to show the server's entities 100 ms behind the newest state, which is about half a round trip old:
 double newest = client.ClockSync.EstimateServerTick(now) - client.Clock.TicksIn(client.ClockSync.RoundTripTime / 2);
-double shown = newest - client.Clock.TicksIn(0.1);
+shown.Advance(deltaTime, newest - client.Clock.TicksIn(0.1));
+mirror.Show(shown.Tick);               // what the held packets of the ticks shown by now carry
 foreach (IForgeEntity entity in mirror.Entities)
 {
-    if (mirror.BodyOf(entity)?.TrySample(shown, out BodyState body) == true)
+    if (mirror.BodyOf(entity)?.TrySample(shown.Tick, out BodyState body) == true)
     {
         PlaceBody(entity, body);
     }
@@ -73,8 +77,10 @@ foreach (IForgeEntity entity in mirror.Entities)
 ```
 
 - **Spawning and despawning.** The host's `IReplicationHost.Spawn` makes the entity the server spawned, from the scene index, and gives it the id; `Despawn` takes one away. Entities placed in the scene are bound with `BindPlaced`, under the same id the server gives them, before the session is ready.
-- **Mirrors.** A mirror is torn down as it's bound (see [teardown](../simulation.md#ending-an-entity)): it runs no abilities and refuses every effect applied to it. From then on its attributes, tags, active effects and persistent cues are what the server last sent, and executed cues play once as they arrive. A host doesn't simulate its mirrors: their abilities hold copies of the server's graphs, which it advances and presents with `FixedUpdateAbilities`, `UpdateAbilities` and `PresentAbilities`, as any entity's.
+- **Mirrors.** A mirror is torn down as it's bound (see [teardown](../simulation.md#ending-an-entity)): it runs no abilities and refuses every effect applied to it. From then on its attributes, tags, active effects and persistent cues are what the server last sent, and executed cues play once as they're applied. A host doesn't simulate its mirrors: their abilities hold copies of the server's graphs, which it advances and presents with `FixedUpdateAbilities`, `UpdateAbilities` and `PresentAbilities`, as any entity's.
 - **Bodies.** `BodyOf` gives the `RemoteBody`: the states the server sent, by server tick. `TrySample` interpolates between the two around a tick, which may fall between ticks. The newest state arrives about half a round trip after the server's tick it's of, so showing bodies a little behind that, by more than the send interval, keeps a state on either side of the moment shown. A body that rested and then moved is held where it stood until the send before it moved, so it isn't shown drifting there all along. A body that goes away on the server, when `BodySource` stops giving one, goes here too.
+- **Holding.** With `HoldsUntilShown`, a packet's bodies join their `RemoteBody` as it arrives, and it's acknowledged then, but the rest of it waits until `Show` reaches its tick: spawns, attributes, tags, cues, effects, graphs and despawns. So a mirror's dash animation starts as its body starts moving, and a death burst plays where the body fell, rather than both a delay early. A spawn's bodies wait with it. Without `HoldsUntilShown`, a packet applies as it arrives.
+- **The shown tick.** `InterpolationClock` runs with the client's own time and follows the target it's given by running at most a tenth faster or slower, so a target that moves doesn't move what's shown. Estimates of the server's tick and the round trip move with every ping, by as much as the link's jitter, and shown at the target itself every body would hitch each time. One more than 0.25 s away is jumped to.
 - **Late packets.** A packet older than one already read is dropped and not acknowledged, so the server sends what it carried again. `PacketsLate` counts them. So is a packet that can't be read to its end, though what came before the bad part stays applied, as the same values arrive again.
 
 ## The wire
