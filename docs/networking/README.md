@@ -1,12 +1,12 @@
 # Networking
 
-Forge's networking puts one server in charge of a game that several machines play. The server simulates every entity from the players' input and sends the result down; each client sends only what its player pressed. This page covers the foundation in `Gamesmiths.Forge.Networking`: how bytes travel, how a session starts, how clocks agree and how input gets to the server. [Replication](replication.md) covers how the world gets back down to every client, [Effects on the network](effects.md) what a client knows of the effects on an entity, and [Graphs on the network](statescript.md) what a client shows of the graphs an entity runs.
+Forge's networking puts one server in charge of a game that several machines play. The server simulates every entity from the players' input and sends the result down; each client sends only what its player pressed. This page covers the foundation in `Gamesmiths.Forge.Networking`: how bytes travel, how a session starts, how clocks agree and how input gets to the server. [Replication](replication.md) covers how the world gets back down to every client, [Effects on the network](effects.md) what a client knows of the effects on an entity, [Graphs on the network](statescript.md) what a client shows of the graphs an entity runs, and [Prediction](prediction.md) how a client runs its own entities ahead of the server.
 
 Nothing here depends on an engine. An engine integration provides a transport over its own sockets and drives the session from its loop; Forge for Godot does that with a session node.
 
 ## The model in one paragraph
 
-Time is a fixed tick, the same rate on every machine. The server's clock is the session's time. A client runs its clock a little ahead of the server's, by about a round trip plus a margin, and sends the server one **input command** per tick: which actions are held, pressed and released, the analog vectors, the aim, and any discrete input events, all for the tick the client's clock named. The server keeps each client's commands by tick in a **playout buffer** and, when it simulates a tick, takes that tick's command for the client's entity. Because the client was ahead, the command is there. If it isn't, the tick runs with what the client last held, and the server tells the client, through its pings, to run further ahead.
+Time is a fixed tick, the same rate on every machine. The server's clock is the session's time. A client runs its clock a little ahead of the server's, by about a round trip plus a margin, and sends the server one **input command** per tick: which actions are held, pressed and released, the analog vectors, the aim, and any discrete input events, all for the tick the client's clock named. The server keeps each client's commands by tick in a **playout buffer** and, when it simulates a tick, takes that tick's command for the client's entity. Because the client was ahead, the command is there. If it isn't, the tick runs with what the client last held, and the server tells the client, through its pings, to run further ahead. The client runs its own entities through the same ticks as it sends them, so its player answers at once, and puts them right where the server's word for a tick differs ([Prediction](prediction.md)).
 
 ## Transport
 
@@ -37,7 +37,7 @@ Two machines must mean the same thing by every index they exchange.
 
 ### Checksums
 
-`EntitySimulation.Checksum(entity)` hashes an entity's whole simulation state into 64 bits that come out the same on every machine whose copy is in the same state. Another entity it refers to, an effect's source or a variable, counts by its `NetworkId`, or as local when it has none, so a server's and a client's checksum of the same entity agree. `WorldHistory.ChecksumAt` does the same for a whole world, where entities without ids count by their place. The network uses them sampled, every so many ticks, to notice a client that has drifted from the server.
+`EntitySimulation.Checksum(entity)` hashes an entity's whole simulation state into 64 bits that come out the same on every machine whose copy is in the same state. Another entity it refers to, an effect's source or a variable, counts by its `NetworkId`, or as local when it has none, so a server's and a client's checksum of the same entity agree. `WorldHistory.ChecksumAt` does the same for a whole world, where entities without ids count by their place. The server sends an entity's owner a narrower one each send, of what the owner predicts and can be put right on, to check its [prediction](prediction.md#checking-a-tick) against.
 
 ## Session
 
@@ -75,6 +75,8 @@ if (client.State == SessionState.Ready)
 }
 ```
 
+A client with an entity of its own also predicts it, steering its clock with `ClockDilation`: see [Prediction](prediction.md).
+
 ### Handshake
 
 A client connects and sends `Hello`: its protocol version and the hashes of its registry, its tags and its input action set. The server answers `Welcome`, with the tick rate, its current tick and the session seed, or `Refused`, with why (`RefusalReason`: protocol version, asset registry, tags, input actions, or a full session). A refused client leaves once it knows why; the server disconnects one that hasn't after `RefusalLinger` (2 s). A client that never sends `Hello` is disconnected after `HandshakeTimeout` (5 s). A client whose clock runs at another rate than the server's leaves too. Being welcomed sets the client's clock to the server's tick and drops any input it recorded before. `SessionState` says where a client stands: connecting, handshaking, ready, refused or disconnected.
@@ -85,7 +87,7 @@ Once welcomed, a client pings every `PingInterval` (100 ms). The server answers 
 
 - A ping that left at local time `t` and was answered when the server was at tick `s` says the server was at `s` at about `t + rtt / 2`. The server's tick at any later local time follows from that.
 - Samples are noisy, since a packet held up by jitter reports a round trip it didn't have. The estimate keeps the last few samples and uses the one with the shortest round trip, the one least delayed by anything but the wire. `RoundTripTime` is the smoothed figure for display, `BestRoundTripTime` the one the estimate stands on, and `Jitter` how far the samples spread.
-- `TargetClientTick(localTime, marginTicks)` is the tick a client's clock should be at: the server's estimated tick plus a round trip plus the margin. The host moves its clock toward it.
+- `TargetClientTick(localTime, marginTicks)` is the tick a client's clock should be at: the server's estimated tick plus a round trip plus the margin. `ClockDilation` puts the clock there at the first estimate and then steers it a tick at a time, running a fixed step's ticks a little faster or slower rather than jumping (see [the clock](prediction.md#the-clock)).
 
 ### Input upstream
 

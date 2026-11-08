@@ -12,6 +12,8 @@
 | A node in a `ClientOnly` region | Runs here by itself, following links within the region, from the synced state or the entry that leads into it, and ends with that state. |
 | A node in a `ServerOnly` region | Never runs. |
 
+The entity a client owns is [predicted](prediction.md) rather than mirrored: its graphs run there whole, as on the server, following links. What its owner doesn't predict reaches it as copies, as above: the runs of `ServerOnly` abilities and of coded behaviors that can't be predicted. A run of one it predicts that started from elsewhere, such as by another entity's event, the owner takes in at the tick it started after and runs from there. A node whose `NetworkKind` is `Authority` doesn't execute on any client, in a copy or a predicted run, and the graph goes on as if it had. While a correction runs ticks again, `GraphContext.IsCorrecting` is true, and a presentation action that shows something as it executes, such as a sound played once, shows nothing.
+
 A state that has been running for a while when a client hears of it, as when the client joins late, is caught up: it gets one fixed update as long as it already ran on the server before it's presented. A node that counts its progress in its context, as Play Animation counts a clip's elapsed time, then presents part way through, the same way it does after a [restore](../rollback.md). One that already played out by then shows nothing.
 
 A packet is applied in the order the server's graph had things: the variables first, so a state that starts here reads what it read there, then what the server ended or started over ends here, newest first, then the states that started and the actions that ran, each action after the activations it followed. An action that makes something a state then acts on, such as a cosmetic scene that a Move To flies, runs before that state starts.
@@ -36,7 +38,7 @@ Every value variable of a graph clients run something of travels to every client
 
 Shared variables and activation data don't travel. A graph whose presentation needs them copies them into a graph variable, with a Set Variable node or the data binder of `GraphAbilityBehavior<TData>`.
 
-A graph that clients run nothing of sends nothing at all. A run too short for any send to see it, one that started and ended between two, still brings its actions. So does an entity that goes: its last events, the burst it made as it died, go with its despawn, and play before it's taken away.
+The owner of an entity gets only the runs it doesn't predict. A graph that clients run nothing of sends nothing at all. A run too short for any send to see it, one that started and ended between two, still brings its actions. So does an entity that goes: its last events, the burst it made as it died, go with its despawn, and play before it's taken away.
 
 An ability's graph travels as the ability's index, so one the registry doesn't list runs on the server alone. `ReplicationServer.AbilityNotListed` is raised the first time it runs a graph clients would run something of.
 

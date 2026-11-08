@@ -67,6 +67,7 @@ var abilityData = new AbilityData(
 - **TargetBlockedTags**: Target tags preventing activation.
 - **BehaviorFactory**: Factory creating the behavior instance.
 - **InputBinding**: An input action the ability activates from, in the tick its owner's input reports the action's press or release. See [Ability input bindings](input.md#ability-input-bindings).
+- **ServerOnly**: Only the server runs the ability. The client that owns the entity doesn't predict it, and shows its graph as everyone else does. See [Prediction](networking/prediction.md#what-the-owner-predicts).
 
 ## Granting Abilities
 
@@ -755,6 +756,10 @@ public class FireballBehavior : IAbilityBehavior
     }
 }
 ```
+
+### Rollback and prediction
+
+A behavior keeps its run in its own fields, where an entity snapshot can't see. One that implements `ISnapshotAbilityBehavior` takes part in [rollback](rollback.md#coded-behaviors), and a client predicts it like a Statescript graph. Any other's run is left out of snapshots, and runs on the server alone: its owner sees what it did through the entity's replicated state.
 
 ### Behavior Context
 
