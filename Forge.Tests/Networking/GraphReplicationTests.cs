@@ -245,6 +245,24 @@ public class GraphReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Graphs")]
+	public void What_a_despawned_mirror_still_showed_ends_as_it_goes()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		Activate(entity, rig.Assets.Linger);
+		rig.Step(10);
+		client.Assets.Log.Should().Contain(x => x.StartsWith("linger shown", StringComparison.Ordinal));
+
+		rig.Unregister(entity);
+		rig.Step(10);
+
+		client.Spawned.Should().BeEmpty();
+		client.Assets.Log.Should().EndWith(["linger off", "linger hidden"]);
+	}
+
+	[Fact]
+	[Trait("Networking", "Graphs")]
 	public void An_ability_the_registry_doesn_t_list_runs_on_the_server_alone_and_says_so()
 	{
 		var rig = new Rig();
@@ -1096,6 +1114,7 @@ public class GraphReplicationTests
 
 		public void Despawn(IForgeEntity entity)
 		{
+			entity.Abilities.PresentAbilities();
 			Spawned.Remove((Entity)entity);
 		}
 	}
