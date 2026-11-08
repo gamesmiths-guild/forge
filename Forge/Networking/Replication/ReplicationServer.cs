@@ -619,9 +619,11 @@ public sealed class ReplicationServer
 			return events;
 		}
 
+		// The end goes until acknowledged, as a removed tag does, whether or not the client acknowledged the start: it
+		// may have the run with its acknowledgement still on the way.
 		if (graph.Removed)
 		{
-			return events || (graph.CreatedStamp <= view.Acked && graph.RemovedStamp > view.Seen);
+			return events || graph.RemovedStamp > view.Seen;
 		}
 
 		return graph.CreatedStamp > view.Acked
@@ -1174,7 +1176,11 @@ public sealed class ReplicationServer
 		long acked = view.Acked;
 		_entry.WriteVarUInt(graph.Instance);
 
-		bool created = graph.CreatedStamp > acked;
+		// An ended run with no actions left to bring goes as its end alone: a client that never had it has nothing to
+		// end.
+		bool live = !despawning && !graph.Removed;
+		bool brings = live || HasEvents(graph, view.EventsAcked);
+		bool created = brings && graph.CreatedStamp > acked;
 		_entry.WriteBool(created);
 
 		if (created)
@@ -1186,7 +1192,6 @@ public sealed class ReplicationServer
 			_entry.WriteFloat(graph.Magnitude);
 		}
 
-		bool live = !despawning && !graph.Removed;
 		bool states = live && graph.StatesStamp > acked;
 		_entry.WriteBool(states);
 
@@ -1202,8 +1207,8 @@ public sealed class ReplicationServer
 			}
 		}
 
-		// A run that ended still sends its values: the actions it brings read them.
-		bool values = graph.ValuesChanged(acked);
+		// A run that ended still sends its values with the actions it brings: they read them.
+		bool values = brings && graph.ValuesChanged(acked);
 		_entry.WriteBool(values);
 
 		if (values)

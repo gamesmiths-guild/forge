@@ -332,6 +332,30 @@ public class GraphReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Graphs")]
+	public void A_run_ends_on_a_client_that_had_it_before_the_server_heard_so()
+	{
+		var rig = new Rig();
+		Client client = rig.Join(up: new NetworkConditions(0.01));
+		Entity entity = rig.Spawn();
+		rig.Step(10);
+
+		client.Link!.Conditions = new NetworkConditions(0.01, 0, 1);
+		AbilityHandle linger = Activate(entity, rig.Assets.Linger);
+		rig.Step(10);
+		client.Assets.Log.Should().Contain("linger on Replication 0", "the start arrived, its acknowledgement didn't");
+
+		linger.Cancel();
+		rig.Step(4);
+		Activate(entity, rig.Assets.Blink);
+		rig.Step(4);
+		client.Link.Conditions = new NetworkConditions(0.01);
+		rig.Step(20);
+
+		client.Assets.Log.Should().Contain("linger off");
+	}
+
+	[Fact]
+	[Trait("Networking", "Graphs")]
 	public void A_run_that_ends_as_its_entity_first_goes_out_still_reaches_a_client_through_loss()
 	{
 		var rig = new Rig(down: new NetworkConditions(0.01));
