@@ -83,10 +83,10 @@ internal sealed class ReplicatedGraph
 		Level = context.Level;
 		Magnitude = context.Magnitude;
 		AbilityInstance? run = context.InstanceHandle.AbilityInstance;
-		bool predictable = context.Owner.Abilities.TracksPrediction
+		TakenInByOwner = IsTakenInByOwner(context);
+		PredictedByOwner = run?.IsFromOutside == false
+			&& context.Owner.Abilities.TracksPrediction
 			&& context.AbilityHandle.Ability?.IsPredictable() == true;
-		PredictedByOwner = predictable && run?.IsFromOutside == false;
-		TakenInByOwner = predictable && run?.IsFromOutside == true;
 		AfterTick = run?.AfterTick ?? -1;
 
 		GraphVariableDefinitions definitions = processor.Graph.VariableDefinitions;
@@ -96,6 +96,14 @@ internal sealed class ReplicatedGraph
 		ArrayStamps = new long[Arrays.Length];
 		Array.Fill(ValueStamps, Never);
 		Array.Fill(ArrayStamps, Never);
+	}
+
+	// Whether a run is of an ability the entity's owner predicts and started from outside the owner's tick.
+	public static bool IsTakenInByOwner(AbilityBehaviorContext context)
+	{
+		return context.Owner.Abilities.TracksPrediction
+			&& context.InstanceHandle.AbilityInstance?.IsFromOutside == true
+			&& context.AbilityHandle.Ability?.IsPredictable() == true;
 	}
 
 	// Stamps what changed since the last look with this send's tick.

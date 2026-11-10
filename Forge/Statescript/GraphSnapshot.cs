@@ -72,15 +72,28 @@ public sealed class GraphSnapshot
 
 	// Writes what a checksum covers of the run: whether it started, how many activations it counted, which state nodes
 	// run and the graph variables. What a running node keeps in its context counts through what it changes.
-	internal void Write(IStateWriter writer)
+	// For a prediction checksum, the nodes of server-only regions are left out, and the count with them when the graph
+	// has any: a client predicting the entity doesn't run them.
+	internal void Write(IStateWriter writer, bool predicted = false)
 	{
 		writer.Write("Started", HasStarted ? 1 : 0);
-		writer.Write("Activations", unchecked((long)ActivationCount));
 
-		for (int i = 0; i < ActiveNodes.Length; i++)
+		if (!predicted || !Processor.Graph.NetworkTable.RunsServerOnlyNodes)
 		{
-			writer.Open("Active nodes", i);
-			writer.Write("Index", ActiveNodes[i].Index);
+			writer.Write("Activations", unchecked((long)ActivationCount));
+		}
+
+		int written = 0;
+
+		foreach (Node node in ActiveNodes)
+		{
+			if (predicted && node.Region == NodeRegion.ServerOnly)
+			{
+				continue;
+			}
+
+			writer.Open("Active nodes", written++);
+			writer.Write("Index", node.Index);
 			writer.Close();
 		}
 

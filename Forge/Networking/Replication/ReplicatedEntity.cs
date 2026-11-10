@@ -325,12 +325,18 @@ public sealed class ReplicatedEntity
 
 		foreach (Ability.BehaviorBinding binding in _behaviors)
 		{
-			// The run on the processor is its last activation's, which a shared behavior's binding may not be.
-			if (binding.Behavior is GraphAbilityBehavior behavior
-				&& behavior.Processor.Graph.NetworkTable.RunsOnClients)
+			if (binding.Behavior is not GraphAbilityBehavior behavior)
 			{
-				AbilityBehaviorContext context =
-					behavior.Processor.GraphContext.ActivationContext as AbilityBehaviorContext ?? binding.Context;
+				continue;
+			}
+
+			// The run on the processor is its last activation's, which a shared behavior's binding may not be.
+			AbilityBehaviorContext context =
+				behavior.Processor.GraphContext.ActivationContext as AbilityBehaviorContext ?? binding.Context;
+
+			// A graph clients run nothing of still goes to an owner that takes its run in.
+			if (behavior.Processor.Graph.NetworkTable.RunsOnClients || ReplicatedGraph.IsTakenInByOwner(context))
+			{
 				GraphFor(behavior.Processor, context, server, tick).Capture(tick);
 			}
 		}

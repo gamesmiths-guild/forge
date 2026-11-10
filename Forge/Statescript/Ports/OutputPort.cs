@@ -49,10 +49,15 @@ public class OutputPort : Port
 		PendingConnectedPorts.Add(inputPort);
 	}
 
-	// A client's copy of the server's graph follows no link but into a client-only region, which it runs itself.
+	// A client's copy of the server's graph follows no link but into a client-only region, which it runs itself. The
+	// run of an entity a client predicts follows every link but into a server-only region.
 	internal static bool Reaches(InputPort port, GraphContext graphContext)
 	{
-		return !graphContext.IsRemote || port.OwnerNode?.Region == NodeRegion.ClientOnly;
+		NodeRegion? region = port.OwnerNode?.Region;
+
+		return graphContext.IsRemote
+			? region == NodeRegion.ClientOnly
+			: region != NodeRegion.ServerOnly || !graphContext.IsOnClient;
 	}
 
 	/// <summary>

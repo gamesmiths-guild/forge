@@ -839,6 +839,8 @@ var abilityData = new AbilityData(
     behaviorFactory: () => new TrapBehavior()); // Each trap gets its own behavior
 ```
 
+On a networked entity a client owns, the factory is also called once per granted ability, on the server and on that client, ahead of any activation, to see whether its behavior can be [predicted](networking/prediction.md#what-the-owner-predicts). That behavior is never started, so a factory shouldn't count on every behavior it makes running.
+
 ## Ability Triggers
 
 Abilities can be automatically activated in response to events or tag changes. Use the static factory methods on `AbilityTriggerData` to create trigger configurations:

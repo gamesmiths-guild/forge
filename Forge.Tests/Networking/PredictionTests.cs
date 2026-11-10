@@ -38,8 +38,17 @@ public class PredictionTests
 
 	private const string Health = "TestAttributeSet.Attribute90";
 
-	private static readonly string[] _tagNames = [
-		"state.dashing", "state.slowed", "cue.dash", "cue.trail", "cue.fire", "event.hit"];
+	private static readonly string[] _tagNames =
+	[
+		"state.dashing",
+		"state.slowed",
+		"state.marked",
+		"cue.dash",
+		"cue.trail",
+		"cue.fire",
+		"event.hit",
+		"event.shove"
+	];
 
 	private static readonly InputActionSet _actions = new(["right", "dash", "chant", "spark"]);
 
@@ -230,7 +239,9 @@ public class PredictionTests
 
 		rig.Mirror.Corrections.Should().BeGreaterThan(corrections);
 		rig.Assets.Log.Should().Equal("spark", "spark again while correcting");
-		rig.ServerAssets.Log.Should().Equal(["spark", "summon"], "only the server summons");
+		rig.ServerAssets.Log.Should().Equal(
+			["spark", "summon", "glow on Link", "glow off"],
+			"only the server summons and runs the Server Only region");
 	}
 
 	[Fact]
@@ -274,6 +285,88 @@ public class PredictionTests
 		rig.Assets.Log.Should().Equal("glow on Link", "glow shown", "glow off", "glow hidden");
 		rig.ServerAssets.Log.Should().Equal("glow on Link", "glow off");
 		rig.Mirror.Corrections.Should().Be(corrections + 1, "taking the run in is the one correction");
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void A_Server_Only_region_of_a_predicted_graph_runs_on_the_server_alone_and_every_packet_agrees()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+		long corrections = rig.Mirror.Corrections;
+
+		rig.Press("spark");
+		rig.Idle(60);
+
+		rig.Assets.Log.Should().Equal("spark");
+		rig.ServerAssets.Log.Should().Equal("spark", "summon", "glow on Link", "glow off");
+		rig.Mirror.Corrections.Should().Be(corrections, "the checksum leaves the region out");
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void A_run_from_elsewhere_of_a_graph_clients_run_nothing_of_is_taken_in_too()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		Player player = rig.JoinWithPlayer();
+		long corrections = rig.Mirror.Corrections;
+
+		rig.ServerPlayer.Events.Raise(new EventData
+		{
+			EventTags = new TagContainer(rig.ServerAssets.Tags, [rig.ServerAssets.Tag("event.shove")]),
+			Target = rig.ServerPlayer,
+		});
+		rig.Idle(20);
+
+		player.Abilities.TryGetAbility(rig.Assets.Brace, out AbilityHandle? brace, player).Should().BeTrue();
+		brace!.IsActive.Should().BeTrue();
+
+		rig.Idle(40);
+
+		brace.IsActive.Should().BeFalse("it ends here as it does there");
+		rig.Mirror.Corrections.Should().Be(corrections + 1, "taking the run in is the one correction");
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void A_tag_from_what_the_owner_does_not_hear_of_reaches_it_and_goes_as_it_does_on_the_server()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		Player player = rig.JoinWithPlayer();
+		long corrections = rig.Mirror.Corrections;
+
+		rig.ServerPlayer.EffectsManager.ApplyEffect(new Effect(rig.ServerAssets.Mark, new EffectOwnership(null, null)));
+		rig.Idle(20);
+
+		player.Tags.AllTags.HasTag(rig.Assets.Tag("state.marked")).Should().BeTrue();
+		rig.Mirror.Corrections.Should().Be(corrections + 1, "with the tag, every packet agrees again");
+
+		rig.Idle(40);
+
+		player.Tags.AllTags.HasTag(rig.Assets.Tag("state.marked")).Should().BeFalse();
+		rig.Mirror.Corrections.Should().Be(corrections + 2);
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void A_press_submitted_in_a_step_the_clock_waited_through_survives_a_correction()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		Player player = rig.JoinWithPlayer();
+
+		rig.ServerPlayer.EffectsManager.ApplyEffect(new Effect(rig.ServerAssets.Hurt, new EffectOwnership(null, null)));
+		long corrections = rig.Mirror.Corrections;
+
+		for (int i = 0; i < 30 && rig.Mirror.Corrections == corrections; i++)
+		{
+			rig.Wait("dash", pressed: i == 0);
+		}
+
+		rig.Mirror.Corrections.Should().Be(corrections + 1);
+
+		rig.Idle(1);
+
+		player.Tags.AllTags.HasTag(rig.Assets.Tag("state.dashing")).Should().BeTrue();
 	}
 
 	[Fact]
@@ -334,8 +427,15 @@ public class PredictionTests
 		// Triggered by event.hit: glows for half a second.
 		public AbilityData Flinch { get; }
 
-		// Bound to spark: sparks once, summons something only the server may, then waits half a second.
+		// Bound to spark: sparks once, summons something only the server may, then waits half a second, with a glow
+		// in a Server Only region meanwhile.
 		public AbilityData Sparks { get; }
+
+		// Half a second, for the server alone to know of: the state.marked tag.
+		public EffectData Mark { get; }
+
+		// Triggered by event.shove: waits half a second, with nothing for a client to run.
+		public AbilityData Brace { get; }
 
 		public List<string> Log { get; } = [];
 
@@ -372,6 +472,14 @@ public class PredictionTests
 				effectComponents: [new ModifierTagsEffectComponent(Container("state.dashing"))],
 				cues: [new CueData(Container("cue.trail"), 0, 1, CueMagnitudeType.EffectLevel)]);
 
+			Mark = new EffectData(
+				"Mark",
+				new DurationData(
+					DurationType.HasDuration,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(0.5f))),
+				effectComponents: [new ModifierTagsEffectComponent(Container("state.marked"))],
+				visibility: EffectVisibility.ServerOnly);
+
 			Dash = new AbilityData(
 				"Dash",
 				behaviorFactory: () => new DashBehavior(this),
@@ -394,6 +502,12 @@ public class PredictionTests
 				behaviorFactory: () => new GraphAbilityBehavior(spark),
 				inputBinding: AbilityInputBinding.ForAction("spark"));
 
+			Graph wait = Wait();
+			Brace = new AbilityData(
+				"Brace",
+				abilityTriggerData: AbilityTriggerData.ForEvent(Tag("event.shove")),
+				behaviorFactory: () => new GraphAbilityBehavior(wait));
+
 			Registry.Register(AssetKind.Scene, "uid://player", "Player");
 			Registry.Register(AssetKind.Effect, "uid://slow", Slow);
 			Registry.Register(AssetKind.Effect, "uid://hurt", Hurt);
@@ -403,6 +517,7 @@ public class PredictionTests
 			Registry.Register(AssetKind.Ability, "uid://chant", Chant);
 			Registry.Register(AssetKind.Ability, "uid://flinch", Flinch);
 			Registry.Register(AssetKind.Ability, "uid://sparks", Sparks);
+			Registry.Register(AssetKind.Ability, "uid://brace", Brace);
 			Registry.Seal();
 		}
 
@@ -417,6 +532,20 @@ public class PredictionTests
 				attribute,
 				ModifierOperation.FlatBonus,
 				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(amount)));
+		}
+
+		private static Graph Wait()
+		{
+			var graph = new Graph();
+			var wait = new TimerNode();
+			graph.AddNode(wait);
+			graph.VariableDefinitions.DefineProperty(
+				"length", new VariantResolver(new Variant128(0.5), typeof(double)));
+			wait.BindInput(TimerNode.DurationInput, "length");
+			graph.AddConnection(new Connection(
+				graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+				wait.InputPorts[StateNode<StateNodeContext>.InputPort]));
+			return graph;
 		}
 
 		private Graph Glow()
@@ -436,9 +565,11 @@ public class PredictionTests
 			var spark = new SparkNode(Log);
 			var summon = new SummonNode(Log);
 			var wait = new TimerNode();
+			var muster = new GlowNode(Log, 0.25) { Region = NodeRegion.ServerOnly };
 			graph.AddNode(spark);
 			graph.AddNode(summon);
 			graph.AddNode(wait);
+			graph.AddNode(muster);
 			graph.VariableDefinitions.DefineProperty(
 				"length", new VariantResolver(new Variant128(0.5), typeof(double)));
 			wait.BindInput(TimerNode.DurationInput, "length");
@@ -451,6 +582,9 @@ public class PredictionTests
 			graph.AddConnection(new Connection(
 				summon.OutputPorts[ActionNode.OutputPort],
 				wait.InputPorts[StateNode<StateNodeContext>.InputPort]));
+			graph.AddConnection(new Connection(
+				summon.OutputPorts[ActionNode.OutputPort],
+				muster.InputPorts[StateNode<StateNodeContext>.InputPort]));
 			return graph;
 		}
 
@@ -646,6 +780,7 @@ public class PredictionTests
 			Abilities.GrantAbilityPermanently(assets.Chant, 1, LevelComparison.None, this);
 			Abilities.GrantAbilityPermanently(assets.Flinch, 1, LevelComparison.None, this);
 			Abilities.GrantAbilityPermanently(assets.Sparks, 1, LevelComparison.None, this);
+			Abilities.GrantAbilityPermanently(assets.Brace, 1, LevelComparison.None, this);
 		}
 
 		public Vector3 PositionAt(long tick)
@@ -818,6 +953,14 @@ public class PredictionTests
 			_frame = default;
 		}
 
+		// A step the client's clock waits through, simulating no tick, with the action held.
+		public void Wait(string action, bool pressed)
+		{
+			ulong bit = 1UL << _actions.IndexOf(action);
+			_frame = new InputFrame { Held = bit, Pressed = pressed ? bit : 0 };
+			Step(waits: true);
+		}
+
 		public void Idle(int ticks)
 		{
 			_frame = default;
@@ -830,7 +973,7 @@ public class PredictionTests
 
 		// One frame on both machines: what's in flight arrives, the client puts its player right, steers its clock and
 		// predicts the ticks the step simulates, and the server sends what the last tick left and simulates the next.
-		public void Step()
+		public void Step(bool waits = false)
 		{
 			_time += TickLength;
 			_serverLink.Update(_time);
@@ -840,6 +983,11 @@ public class PredictionTests
 			DilatedStep step = Client.State == SessionState.Ready
 				? _dilation.Steer(Client.Clock.Tick, Client.ClockSync, _time, Client.ServerInputDepth)
 				: new DilatedStep(Client.Clock.Tick, 1);
+
+			if (waits)
+			{
+				step = new DilatedStep(Client.Clock.Tick, 0);
+			}
 
 			Client.Clock.Set(step.FirstTick);
 

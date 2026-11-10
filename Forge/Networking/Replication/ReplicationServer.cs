@@ -213,7 +213,9 @@ public sealed class ReplicationServer
 
 		entity.CuesManager.AddObserver(_cueObserver);
 		entity.Abilities.GraphObserver = _graphObserver;
-		entity.Abilities.TracksPrediction = owner != PeerId.None && owner != PeerId.Server;
+
+		// A client predicts only an entity spawned for it: one placed in its scene is a mirror there, whoever owns it.
+		entity.Abilities.TracksPrediction = sceneIndex >= 0 && owner != PeerId.None && owner != PeerId.Server;
 
 		foreach (PersistentCue cue in EntitySimulation.PersistentCues(entity))
 		{
@@ -631,6 +633,12 @@ public sealed class ReplicationServer
 		if (view.IsOwner && graph.TakenInByOwner)
 		{
 			return !despawning && (graph.Removed ? graph.RemovedStamp > view.Seen : graph.CreatedStamp > view.Acked);
+		}
+
+		// Recorded only for an owner that takes it in.
+		if (!graph.Table.RunsOnClients)
+		{
+			return false;
 		}
 
 		bool events = HasEvents(graph, view.EventsAcked);

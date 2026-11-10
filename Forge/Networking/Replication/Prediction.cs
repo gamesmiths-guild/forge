@@ -3,6 +3,7 @@
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Networking.Replication;
 
@@ -14,6 +15,9 @@ internal sealed class Prediction(IForgeEntity entity, int attributeCount, int ca
 
 	// The base value, minimum and maximum of each attribute, as the server last sent them.
 	public ServerAttribute?[] Attributes { get; } = new ServerAttribute?[attributeCount];
+
+	// The tags the server says the entity has.
+	public HashSet<Tag> Tags { get; } = [];
 
 	// The effects the server says are on the entity, by instance, for the ones it heard of.
 	public Dictionary<uint, ServerEffect> Effects { get; } = [];

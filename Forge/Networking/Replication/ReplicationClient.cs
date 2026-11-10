@@ -375,19 +375,32 @@ public sealed class ReplicationClient
 		LastServerTick = Math.Max(LastServerTick, tick);
 		Acknowledge((uint)sequence);
 
+		// The packet is acknowledged, so a correction that throws costs neither the other entities' nor the rest of it.
+		ExceptionDispatchInfo? failure = null;
+
 		foreach (Mirror mirror in _toReconcile.Where(x => x.Prediction is not null))
 		{
-			Reconcile(mirror, tick);
+			try
+			{
+				Reconcile(mirror, tick);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
 
 		if (entries is not null)
 		{
 			_held.Enqueue(new HeldPacket(tick, reader.CopyData(), entries));
-			return;
+		}
+		else
+		{
+			_shownTick = tick;
+			FollowEffects();
 		}
 
-		_shownTick = tick;
-		FollowEffects();
+		failure?.Throw();
 	}
 
 	internal bool TryWriteAck(BitWriter writer)
@@ -742,7 +755,12 @@ public sealed class ReplicationClient
 				_removed.Add(TagAt(ReplicationCodec.ReadTagIndex(reader, tagCount)));
 			}
 
-			if (mirror?.Prediction is null)
+			if (mirror?.Prediction is Prediction predicted)
+			{
+				predicted.Tags.UnionWith(_added);
+				predicted.Tags.ExceptWith(_removed);
+			}
+			else
 			{
 				mirror?.Entity.Tags.MirrorTags(_added, _removed);
 			}
@@ -1554,6 +1572,9 @@ public sealed class ReplicationClient
 		IForgeEntity entity = mirror.Entity;
 		ExceptionDispatchInfo? failure = null;
 
+		// A frame submitted for a tick not simulated yet, as in a step the clock waited through, isn't in the history.
+		InputFrame? waiting = entity.Input?.Waiting;
+
 		entity.CuesManager.BeginCorrection();
 		entity.Abilities.IsReplaying = true;
 
@@ -1628,15 +1649,22 @@ public sealed class ReplicationClient
 		finally
 		{
 			entity.Abilities.IsReplaying = false;
+
+			if (entity.Input is EntityInput input)
+			{
+				input.Waiting = waiting;
+			}
+
 			ExceptionDispatchInfo? cueFailure = entity.CuesManager.EndCorrection();
 			failure ??= cueFailure;
 		}
 
+		// One that failed part way put nothing right to count or announce.
+		failure?.Throw();
 		Corrections++;
 		LastCorrectionTicks = (int)(newest - from);
 		prediction.ConfirmedTick = tick;
 		Corrected?.Invoke(entity);
-		failure?.Throw();
 	}
 
 	// An effect the server says is on the entity, taken in here after a tick, as the server had it then.
@@ -1733,6 +1761,37 @@ public sealed class ReplicationClient
 				taken.Value.Cancel();
 			}
 		}
+
+		SettleTags(mirror);
+	}
+
+	// With its effects and runs as the server has them, a tag the server has that nothing gives the entity here is a
+	// base tag, as one the server's own code added, and a base tag the server lacks goes.
+	private void SettleTags(Mirror mirror)
+	{
+		EntityTags tags = mirror.Entity.Tags;
+		TagsManager tagsManager = _session.TagsManager;
+		_added.Clear();
+		_removed.Clear();
+
+		foreach (Tag tag in mirror.Prediction!.Tags)
+		{
+			if (!tags.AllTags.HasTagExact(tag))
+			{
+				_added.Add(tag);
+			}
+		}
+
+		foreach (Tag tag in tags.BaseTags.InternalTags)
+		{
+			if (!mirror.Prediction.Tags.Contains(tag)
+				&& tagsManager.GetNetIndexFromTag(tag) != tagsManager.InvalidTagNetIndex)
+			{
+				_removed.Add(tag);
+			}
+		}
+
+		tags.MirrorTags(_added, _removed);
 	}
 
 	// The effects the entity's own ticks applied that this client hears of, matched in the order they were applied with

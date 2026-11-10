@@ -28,6 +28,9 @@ internal sealed class GraphNetworkTable
 
 	public bool RunsClientOnlyNodes { get; }
 
+	// A client predicting the graph's entity leaves these out, so its run can't count activations as the server's does.
+	public bool RunsServerOnlyNodes { get; }
+
 	// A graph a client runs nothing of has nothing to send.
 	public bool RunsOnClients => States.Length > 0 || Actions.Length > 0 || RunsClientOnlyNodes;
 
@@ -74,6 +77,7 @@ internal sealed class GraphNetworkTable
 		foreach (Node node in graph.Nodes)
 		{
 			RunsClientOnlyNodes |= node.Region == NodeRegion.ClientOnly;
+			RunsServerOnlyNodes |= node.Region == NodeRegion.ServerOnly;
 
 			if (node.Region != NodeRegion.None || _kinds[node] != NodeNetworkKind.Presentation)
 			{

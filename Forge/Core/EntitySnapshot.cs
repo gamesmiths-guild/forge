@@ -88,14 +88,17 @@ public sealed class EntitySnapshot
 		}
 
 		writer.Close();
-		WriteTags(writer, "Tags", Tags);
-		WriteTags(writer, "Blocked ability tags", BlockedAbilityTags);
 
 		if (scope is not null)
 		{
+			WritePredictedTags(writer);
+			WriteTags(writer, "Blocked ability tags", BlockedAbilityTags);
 			WritePredicted(writer, scope);
 			return;
 		}
+
+		WriteTags(writer, "Tags", Tags);
+		WriteTags(writer, "Blocked ability tags", BlockedAbilityTags);
 
 		for (int i = 0; i < Effects.Length; i++)
 		{
@@ -131,7 +134,7 @@ public sealed class EntitySnapshot
 			writer.Write("Level", ability.State.Level);
 			writer.Write("Inhibited", ability.State.IsInhibited ? 1 : 0);
 			writer.Write("Instances", ability.State.ActiveInstances.Length);
-			WriteGraphs(writer, ability);
+			WriteGraphs(writer, ability, predicted: false);
 			writer.Close();
 		}
 
@@ -226,14 +229,14 @@ public sealed class EntitySnapshot
 		return failure;
 	}
 
-	private static void WriteGraphs(IStateWriter writer, GrantedAbilitySnapshot ability)
+	private static void WriteGraphs(IStateWriter writer, GrantedAbilitySnapshot ability, bool predicted)
 	{
 		for (int j = 0; j < ability.State.Behaviors.Length; j++)
 		{
 			if (ability.State.Behaviors[j].State is GraphSnapshot graph)
 			{
 				writer.Open("Graphs", j);
-				graph.Write(writer);
+				graph.Write(writer, predicted);
 				writer.Close();
 			}
 		}
@@ -274,6 +277,28 @@ public sealed class EntitySnapshot
 	private static double Quantized(float value)
 	{
 		return (Math.Round(value * 1000.0, MidpointRounding.AwayFromZero) / 1000.0) + 0.0;
+	}
+
+	// The tags the entity has, whatever gives them: a predicting client holds as a base tag one the server's entity
+	// has from what the client doesn't run.
+	private void WritePredictedTags(IStateWriter writer)
+	{
+		writer.OpenSet("Tags");
+
+		foreach (Tag tag in Tags.BaseTags)
+		{
+			writer.Write(tag.ToString(), 1);
+		}
+
+		foreach (KeyValuePair<Tag, int> tag in Tags.ModifierTagCounts)
+		{
+			if (tag.Value > 0 && Array.IndexOf(Tags.BaseTags, tag.Key) < 0)
+			{
+				writer.Write(tag.Key.ToString(), 1);
+			}
+		}
+
+		writer.Close();
 	}
 
 	private void WritePredicted(IStateWriter writer, PredictionScope scope)
@@ -327,7 +352,7 @@ public sealed class EntitySnapshot
 			if (ability.Ability.IsPredictable())
 			{
 				writer.Write("Instances", ability.State.ActiveInstances.Length);
-				WriteGraphs(writer, ability);
+				WriteGraphs(writer, ability, predicted: true);
 			}
 
 			writer.Close();
