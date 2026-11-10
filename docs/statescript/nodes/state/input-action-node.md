@@ -31,6 +31,7 @@ Standard state ports, plus:
 | Index | Label | Type | Description |
 |-------|-------|------|-------------|
 | 0 | Input Source | `IForgeEntity` | Optional. The entity whose input is watched. Defaults to the ability context's owner. |
+| 1 | Input Sources | `IForgeEntity[]` | Optional. Entities watched as one button, instead of Input Source. See [Several entities](#several-entities). |
 
 ## Behavior
 
@@ -46,6 +47,12 @@ Common shapes:
 - **Hold to channel:** the channel goes on WhilePressed and ends when the button comes up.
 - **Charged shot:** a timer starts on OnPressed, and the shot fires on OnReleased.
 - **Combo window:** inside a timer's subgraph, a node with `deactivateOnPressed` waits for one press.
+
+## Several entities
+
+Bound, **Input Sources** is watched instead of Input Source: every entity in it, read each fixed step, as one button. It's down while any of them holds it, pressed when one presses it while none does, and released when the last one lets go. An entity that leaves the array stops counting from the next read.
+
+A switch anyone standing by can use binds it to the entities in an area: a press by any of them is a press.
 
 ## Usage
 
