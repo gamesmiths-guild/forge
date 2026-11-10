@@ -208,6 +208,7 @@ public class InputActionNode(string actionName = "", bool deactivateOnPressed = 
 		bool held = false;
 		bool pressed = false;
 		bool pressedAgain = false;
+		bool heldThrough = false;
 		bool unread = false;
 
 		foreach (EntityInput input in inputs)
@@ -220,21 +221,34 @@ public class InputActionNode(string actionName = "", bool deactivateOnPressed = 
 			}
 
 			InputFrame frame = input.Current;
+			bool isHeld = frame.IsHeld(action);
 			carried = true;
-			held |= frame.IsHeld(action);
+			held |= isHeld;
 
 			// The edges of a frame already read, such as the one an input-bound ability activated on, happened before
 			// the node started watching.
-			if (!WasRead(nodeContext, input))
+			if (WasRead(nodeContext, input))
 			{
-				unread = true;
-				pressed |= frame.WasPressed(action);
-				pressedAgain |= frame.WasReleased(action) && frame.IsHeld(action);
+				heldThrough |= isHeld;
+				continue;
 			}
+
+			unread = true;
+			pressed |= frame.WasPressed(action);
+			pressedAgain |= frame.WasReleased(action) && isHeld;
+			heldThrough |= isHeld && !frame.WasPressed(action) && !frame.WasReleased(action);
 		}
 
 		if (!carried)
 		{
+			// Watched entities that all left hold nothing.
+			if (WatchesInputSources && nodeContext.LastPressed == true)
+			{
+				nodeContext.Reads.Clear();
+				nodeContext.LastPressed = false;
+				Release(graphContext, nodeContext);
+			}
+
 			return;
 		}
 
@@ -262,8 +276,8 @@ public class InputActionNode(string actionName = "", bool deactivateOnPressed = 
 			return;
 		}
 
-		// A button another source still holds stays down.
-		if (down && (pressedAgain || !held))
+		// A button another source still holds, or held through the tick, stays down.
+		if (down && ((pressedAgain && !heldThrough) || !held))
 		{
 			nodeContext.LastPressed = down = false;
 

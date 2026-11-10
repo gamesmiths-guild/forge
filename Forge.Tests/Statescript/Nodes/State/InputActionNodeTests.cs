@@ -329,6 +329,53 @@ public class InputActionNodeTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 
 	[Fact]
 	[Trait("Graph", "InputAction")]
+	public void A_button_one_source_holds_stays_down_while_another_lets_go_and_presses_again()
+	{
+		TestEntity first = CreateEntity();
+		TestEntity second = CreateEntity();
+		var log = new List<string>();
+		GraphProcessor processor = WatchJumpOf([first, second], log);
+
+		first.Input!.Submit(new InputFrame { Held = 0b1, Pressed = 0b1 });
+		second.Input!.Submit(new InputFrame { Held = 0b1, Pressed = 0b1 });
+		EntitySimulation.Tick([first, second], 1, Step);
+		processor.FixedUpdateGraph(Step);
+		first.Input.Submit(new InputFrame { Held = 0b1 });
+		second.Input.Submit(new InputFrame { Held = 0b1, Pressed = 0b1, Released = 0b1 });
+		EntitySimulation.Tick([first, second], 2, Step);
+		processor.FixedUpdateGraph(Step);
+
+		log.Should().Equal("pressed");
+	}
+
+	[Fact]
+	[Trait("Graph", "InputAction")]
+	public void The_last_input_source_leaving_while_it_holds_the_button_releases_it()
+	{
+		TestEntity entity = CreateEntity();
+		var log = new List<string>();
+		GraphProcessor processor = WatchJumpOf([entity], log);
+
+		entity.Input!.Submit(new InputFrame { Held = 0b1, Pressed = 0b1 });
+		EntitySimulation.Tick(entity, 1, Step);
+		processor.FixedUpdateGraph(Step);
+		processor.GraphContext.GraphVariables.DefineObjectArrayVariable<IForgeEntity>("sources", []);
+		entity.Input.Submit(new InputFrame { Held = 0b1 });
+		EntitySimulation.Tick(entity, 2, Step);
+		processor.FixedUpdateGraph(Step);
+
+		log.Should().Equal("pressed", "released");
+
+		processor.GraphContext.GraphVariables.DefineObjectArrayVariable<IForgeEntity>("sources", [entity]);
+		entity.Input.Submit(new InputFrame { Held = 0b1 });
+		EntitySimulation.Tick(entity, 3, Step);
+		processor.FixedUpdateGraph(Step);
+
+		log.Should().Equal("pressed", "released", "pressed");
+	}
+
+	[Fact]
+	[Trait("Graph", "InputAction")]
 	public void A_derived_node_can_report_a_device_read_every_frame()
 	{
 		var log = new List<string>();
