@@ -228,6 +228,41 @@ public class EntityTags
 		}
 	}
 
+	// After a restore, counts tags for a holder the snapshot didn't count them for, or stops counting them for one it
+	// did, without raising OnTagsChanged.
+	internal void RestoreModifierTags(TagContainer tags, bool held)
+	{
+		foreach (Tag tag in tags)
+		{
+			_modifierTagCounts.TryGetValue(tag, out int count);
+
+			if (held)
+			{
+				_modifierTagCounts[tag] = count + 1;
+
+				if (count == 0)
+				{
+					ModifierTags.AddTagFast(tag);
+					AllTags.AddTagFast(tag);
+				}
+			}
+			else if (count > 0)
+			{
+				_modifierTagCounts[tag] = count - 1;
+
+				if (count == 1)
+				{
+					ModifierTags.RemoveTagExact(tag);
+
+					if (!BaseTags.HasTagExact(tag))
+					{
+						AllTags.RemoveTagExact(tag);
+					}
+				}
+			}
+		}
+	}
+
 	internal EntityTagsSnapshot CaptureSnapshot()
 	{
 		return new EntityTagsSnapshot([.. BaseTags], [.. _modifierTagCounts]);

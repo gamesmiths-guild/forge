@@ -626,6 +626,35 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 	[Fact]
 	[Trait("Simulation", "Snapshot")]
+	public void A_run_a_snapshot_cannot_reach_keeps_the_tags_it_owns_through_a_restore_and_no_others()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var red = Tag.RequestTag(_tagsManager, "color.red");
+		AbilityHandle ability = Grant(
+			entity,
+			new AbilityData(
+				"Coded",
+				activationOwnedTags: new TagContainer(_tagsManager, [red]),
+				behaviorFactory: () => new CodedBehavior()));
+		EntitySnapshot before = EntitySimulation.CaptureSnapshot(entity);
+
+		ability.TryActivate(out _).Should().BeTrue();
+		EntitySnapshot running = EntitySimulation.CaptureSnapshot(entity);
+		EntitySimulation.RestoreSnapshot(entity, before);
+
+		entity.Tags.AllTags.HasTag(red).Should().BeTrue("the run goes on, so its tag does");
+
+		ability.Cancel();
+
+		entity.Tags.AllTags.HasTag(red).Should().BeFalse();
+
+		EntitySimulation.RestoreSnapshot(entity, running);
+
+		entity.Tags.AllTags.HasTag(red).Should().BeFalse("the run stays ended, so nothing holds its tag");
+	}
+
+	[Fact]
+	[Trait("Simulation", "Snapshot")]
 	public void A_coded_behavior_with_the_snapshot_contract_is_put_back_and_takes_hold_in_order()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);

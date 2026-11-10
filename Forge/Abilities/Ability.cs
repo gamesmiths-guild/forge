@@ -251,6 +251,7 @@ internal sealed class Ability
 	{
 		var behaviors = new List<BehaviorSnapshot>(_behaviors.Count);
 		var instances = new List<AbilityInstance>(_activeInstances.Count);
+		var unreached = new List<AbilityInstance>();
 
 		foreach (AbilityInstance instance in _activeInstances)
 		{
@@ -263,6 +264,7 @@ internal sealed class Ability
 			// A run the snapshot can't reach is left out of it.
 			if (binding.Behavior is not ISnapshotAbilityBehavior behavior)
 			{
+				unreached.Add(instance);
 				continue;
 			}
 
@@ -274,6 +276,7 @@ internal sealed class Ability
 			Level,
 			IsInhibited,
 			[.. instances],
+			[.. unreached],
 			_persistentInstance is not null && instances.Contains(_persistentInstance) ? _persistentInstance : null,
 			_activeCooldownHandles is null ? [] : [.. _activeCooldownHandles],
 			[.. behaviors],
@@ -298,6 +301,24 @@ internal sealed class Ability
 			else if (Array.IndexOf(snapshot.ActiveInstances, instance) < 0)
 			{
 				DropInstance(instance);
+			}
+		}
+
+		// The entity's tags are back as the snapshot counted them, with the runs it left out that ran then. One of
+		// those that started since still holds its tags, and one that ended since holds none.
+		foreach (KeyValuePair<AbilityInstance, BehaviorBinding> run in unreached)
+		{
+			if (Array.IndexOf(snapshot.UnreachedInstances, run.Key) < 0)
+			{
+				RestoreOwnedTags(held: true);
+			}
+		}
+
+		foreach (AbilityInstance instance in snapshot.UnreachedInstances)
+		{
+			if (!unreached.Exists(x => x.Key == instance))
+			{
+				RestoreOwnedTags(held: false);
 			}
 		}
 
@@ -1206,6 +1227,19 @@ internal sealed class Ability
 			triggerData.Priority);
 	}
 
+	private void RestoreOwnedTags(bool held)
+	{
+		if (AbilityData.ActivationOwnedTags is TagContainer owned)
+		{
+			Owner.Tags.RestoreModifierTags(owned, held);
+		}
+
+		if (AbilityData.BlockAbilitiesWithTag is TagContainer blocked)
+		{
+			Owner.Abilities.BlockedAbilityTags.RestoreModifierTags(blocked, held);
+		}
+	}
+
 	private void DropInstance(AbilityInstance instance)
 	{
 		instance.Drop();
@@ -1250,6 +1284,7 @@ internal sealed class Ability
 	/// <param name="Level">The ability's level.</param>
 	/// <param name="IsInhibited">Whether the ability was inhibited.</param>
 	/// <param name="ActiveInstances">The running instances, in start order.</param>
+	/// <param name="UnreachedInstances">The running instances left out, whose runs the snapshot can't reach.</param>
 	/// <param name="PersistentInstance">The instance a per-entity ability reuses.</param>
 	/// <param name="CooldownHandles">The cooldowns the last commit applied.</param>
 	/// <param name="Behaviors">Each running instance's behavior and its captured run.</param>
@@ -1258,6 +1293,7 @@ internal sealed class Ability
 		int Level,
 		bool IsInhibited,
 		AbilityInstance[] ActiveInstances,
+		AbilityInstance[] UnreachedInstances,
 		AbilityInstance? PersistentInstance,
 		ActiveEffectHandle?[] CooldownHandles,
 		BehaviorSnapshot[] Behaviors,
