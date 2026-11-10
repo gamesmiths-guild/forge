@@ -39,7 +39,8 @@ The client's clock runs about a round trip and a margin ahead of the server's, s
 | Within `ToleranceTicks` (1) of its target | One tick. |
 | Behind | Two ticks, at most every `StepsPerCatchUp` (2) steps: input that arrives late runs with what was last held, so the client catches up fast. |
 | Ahead | No tick, at most every `StepsPerAdjustment` (10) steps: running ahead only adds latency, so it slows down gently. |
-| At its first estimate, as the client joins, or more than `JumpTicks` (30) off, as after a stall | One tick, from the target: a client behind it sends input too late to be run, and the ticks a jump skips run on both machines with what was last held. |
+| At its first estimate, as the client joins, or more than `JumpTicks` (30) behind, as after a stall | One tick, from the target: a client behind it sends input too late to be run, and the ticks a jump skips run on both machines with what was last held. |
+| More than `JumpTicks` ahead | No tick, every step, until it's within them: the ticks behind the clock were simulated and their input sent, so it never goes back. |
 
 The margin is `MarginTicks` (2), and a tick more while the server's last pong said it holds none of the client's input.
 

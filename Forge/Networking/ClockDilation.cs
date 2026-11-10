@@ -6,7 +6,8 @@ namespace Gamesmiths.Forge.Networking;
 /// Steers a client's clock toward the tick it should simulate, ahead of the server, a tick at a time: a fixed step
 /// simulates one tick as a rule, two to catch up or none to let the server come closer, so what the client simulates
 /// runs a little faster or slower instead of jumping. The clock jumps to its target with the first estimate, so a
-/// client that just joined runs ahead from its first input on, and again whenever it's far off, as after a stall.
+/// client that just joined runs ahead from its first input on, and again whenever it's far behind, as after a stall.
+/// It never goes back: far ahead, it waits for its target.
 /// </summary>
 /// <remarks>
 /// <para>The target is <see cref="ClockSync.TargetClientTick"/>'s: a round trip and <see cref="MarginTicks"/> ahead
@@ -44,7 +45,8 @@ public sealed class ClockDilation
 	public int ToleranceTicks { get; set; } = 1;
 
 	/// <summary>
-	/// Gets or sets how far from the target the clock may be, in ticks, before it jumps there.
+	/// Gets or sets how far from the target the clock may be, in ticks, before it jumps there from behind, or waits
+	/// every step for it from ahead.
 	/// </summary>
 	public int JumpTicks { get; set; } = 30;
 
@@ -67,12 +69,19 @@ public sealed class ClockDilation
 		long target = sync.TargetClientTick(localTime, MarginTicks + (serverInputDepth == 0 ? 1 : 0));
 		long error = target - clockTick;
 
-		// A client behind its target sends input too late to be run, and the ticks a jump skips run on both machines
-		// with what was last held.
 		if (!_placed || Math.Abs(error) > JumpTicks)
 		{
-			_placed = true;
 			_stepsSinceAdjustment = 0;
+
+			// The ticks behind the clock were simulated and their input sent, so a clock ahead waits for its target.
+			if (error < 0)
+			{
+				return new DilatedStep(clockTick, 0);
+			}
+
+			// A client behind its target sends input too late to be run, and the ticks a jump skips run on both
+			// machines with what was last held.
+			_placed = true;
 			return new DilatedStep(target, 1);
 		}
 

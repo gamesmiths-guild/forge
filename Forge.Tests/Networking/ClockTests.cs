@@ -180,7 +180,7 @@ public class ClockTests
 
 	[Fact]
 	[Trait("Networking", "Clock")]
-	public void A_clock_ahead_of_its_target_waits_and_one_far_off_jumps()
+	public void A_clock_ahead_of_its_target_waits_and_one_far_behind_jumps()
 	{
 		var sync = new ClockSync(new SimulationClock(TickRate));
 		Exchange(sync, sentAt: 1.0, oneWay: 0.05, returnDelay: 0);
@@ -190,6 +190,10 @@ public class ClockTests
 
 		dilation.Steer(target + 5, sync, 1.1, serverInputDepth: 2).Should().Be(new DilatedStep(target + 5, 0));
 		dilation.Steer(target - 100, sync, 1.1, serverInputDepth: 2).Should().Be(new DilatedStep(target, 1));
+		dilation.Steer(target + 100, sync, 1.1, serverInputDepth: 2)
+			.Should().Be(new DilatedStep(target + 100, 0), "the ticks behind it were simulated and sent");
+		dilation.Steer(target + 100, sync, 1.1, serverInputDepth: 2)
+			.Should().Be(new DilatedStep(target + 100, 0), "it waits every step until it's near");
 		dilation.Steer(target - 1, sync, 1.1, serverInputDepth: 2).Ticks.Should().Be(1, "a tick off is close enough");
 		dilation.Steer(target - 1, sync, 1.1, serverInputDepth: 0).Ticks
 			.Should().Be(2, "a server that ran out of the client's input asks for a tick more");
