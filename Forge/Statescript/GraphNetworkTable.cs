@@ -31,6 +31,9 @@ internal sealed class GraphNetworkTable
 	// A client predicting the graph's entity leaves these out, so its run can't count activations as the server's does.
 	public bool RunsServerOnlyNodes { get; }
 
+	// The graph variables nodes in server-only regions write, which a client predicting the graph's entity can't match.
+	public HashSet<StringKey> ServerOnlyWrites { get; } = [];
+
 	// A graph a client runs nothing of has nothing to send.
 	public bool RunsOnClients => States.Length > 0 || Actions.Length > 0 || RunsClientOnlyNodes;
 
@@ -78,6 +81,13 @@ internal sealed class GraphNetworkTable
 		{
 			RunsClientOnlyNodes |= node.Region == NodeRegion.ClientOnly;
 			RunsServerOnlyNodes |= node.Region == NodeRegion.ServerOnly;
+
+			if (node.Region == NodeRegion.ServerOnly)
+			{
+				ServerOnlyWrites.UnionWith(node.OutputVariables
+					.Where(x => x.BoundName != StringKey.Empty && x.Scope == VariableScope.Graph)
+					.Select(x => x.BoundName));
+			}
 
 			if (node.Region != NodeRegion.None || _kinds[node] != NodeNetworkKind.Presentation)
 			{

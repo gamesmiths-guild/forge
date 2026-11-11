@@ -74,7 +74,7 @@ The owner predicts what the entity's own tick does. What comes from elsewhere st
 | A run of an ability it predicts, started from elsewhere: by another entity's event, or a trigger an effect from elsewhere sets off | Taken in at the tick it started after, then predicted. What it showed in the ticks a correction ran again doesn't show. |
 | A `ServerOnly` ability, a coded behavior that isn't an [`ISnapshotAbilityBehavior`](../rollback.md#coded-behaviors) | The server's. A graph's run shows as a copy, as it does on a mirror ([Graphs on the network](statescript.md)). Activating one here fails with `AbilityActivationFailures.ServerOnly`. |
 | An `Authority` action node | Skipped: the graph goes on as if it had run. |
-| A [`ServerOnly` region](statescript.md#regions) of a graph it predicts | Not run: no link is followed into it, and the checksum leaves its nodes out. What it does to the entity arrives as the entity's state. |
+| A [`ServerOnly` region](statescript.md#regions) of a graph it predicts | Not run: no link is followed into it, and the checksum leaves out its nodes and the graph variables they write as outputs, whatever else writes them too. What it does to the entity arrives as the entity's state. |
 | The other entities and the world | Mirrors, shown behind the server. The predicted body moves against them where they're shown. |
 
 An effect counts as from elsewhere when it lands while the entity isn't advancing through its own tick, or comes from what the owner doesn't predict. One applied before the entity's first tick is part of how it starts, which the owner's copy runs too as the host makes it. A run counts the same way, by when it started.

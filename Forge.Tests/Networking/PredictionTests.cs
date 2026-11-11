@@ -16,6 +16,7 @@ using Gamesmiths.Forge.Networking;
 using Gamesmiths.Forge.Networking.Replication;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
+using Gamesmiths.Forge.Statescript.Nodes.Action;
 using Gamesmiths.Forge.Statescript.Nodes.State;
 using Gamesmiths.Forge.Statescript.Properties;
 using Gamesmiths.Forge.Tags;
@@ -428,7 +429,7 @@ public class PredictionTests
 		public AbilityData Flinch { get; }
 
 		// Bound to spark: sparks once, summons something only the server may, then waits half a second, with a glow
-		// in a Server Only region meanwhile.
+		// and a variable set in a Server Only region meanwhile.
 		public AbilityData Sparks { get; }
 
 		// Half a second, for the server alone to know of: the state.marked tag.
@@ -566,13 +567,19 @@ public class PredictionTests
 			var summon = new SummonNode(Log);
 			var wait = new TimerNode();
 			var muster = new GlowNode(Log, 0.25) { Region = NodeRegion.ServerOnly };
+			var count = new SetVariableNode { Region = NodeRegion.ServerOnly };
 			graph.AddNode(spark);
 			graph.AddNode(summon);
 			graph.AddNode(wait);
 			graph.AddNode(muster);
+			graph.AddNode(count);
 			graph.VariableDefinitions.DefineProperty(
 				"length", new VariantResolver(new Variant128(0.5), typeof(double)));
+			graph.VariableDefinitions.DefineProperty("seven", new VariantResolver(new Variant128(7), typeof(int)));
+			graph.VariableDefinitions.DefineVariable("mustered", 0);
 			wait.BindInput(TimerNode.DurationInput, "length");
+			count.BindInput(SetVariableNode.SourceInput, "seven");
+			count.BindOutput(SetVariableNode.TargetOutput, "mustered");
 			graph.AddConnection(new Connection(
 				graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 				spark.InputPorts[ActionNode.InputPort]));
@@ -585,6 +592,9 @@ public class PredictionTests
 			graph.AddConnection(new Connection(
 				summon.OutputPorts[ActionNode.OutputPort],
 				muster.InputPorts[StateNode<StateNodeContext>.InputPort]));
+			graph.AddConnection(new Connection(
+				summon.OutputPorts[ActionNode.OutputPort],
+				count.InputPorts[ActionNode.InputPort]));
 			return graph;
 		}
 
