@@ -306,6 +306,33 @@ public class PredictionTests
 
 	[Fact]
 	[Trait("Networking", "Prediction")]
+	public void A_checksum_the_server_cannot_take_costs_only_that_check_and_the_send_goes_out()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+		rig.Press("dash");
+
+		for (int i = 0; i < 30 && !rig.ServerPlayer.Tags.AllTags.HasTag(rig.ServerAssets.Tag("state.dashing")); i++)
+		{
+			rig.Idle(1);
+		}
+
+		long corrections = rig.Mirror.Corrections;
+		long failing = rig.Server.Clock.Tick + 10;
+		rig.ServerAssets.FailsCapture = true;
+
+		Action send = () => rig.Server.Replication!.Send(failing);
+
+		send.Should().Throw<InvalidOperationException>();
+		rig.ServerAssets.FailsCapture = false;
+		rig.Idle(8);
+
+		rig.Mirror.LastServerTick.Should().Be(failing, "the send went out, without the check");
+		rig.Mirror.Corrections.Should().Be(corrections);
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
 	public void A_run_from_elsewhere_of_a_graph_clients_run_nothing_of_is_taken_in_too()
 	{
 		var rig = new Rig(NetworkConditions.Good);
@@ -439,6 +466,9 @@ public class PredictionTests
 		public AbilityData Brace { get; }
 
 		public List<string> Log { get; } = [];
+
+		// Makes a running dash throw as it's captured.
+		public bool FailsCapture { get; set; }
 
 		public Assets()
 		{
@@ -637,7 +667,9 @@ public class PredictionTests
 
 		public object? CaptureSnapshot()
 		{
-			return (_ticks, _context);
+			return assets.FailsCapture
+				? throw new InvalidOperationException("The dash can't be captured.")
+				: (_ticks, _context);
 		}
 
 		public void RestoreSnapshot(object? snapshot)

@@ -146,8 +146,9 @@ public sealed class ReplicatedEntity
 	// The body the entity had as it was registered, where its setup ran.
 	internal BodyState? SpawnBody { get; }
 
-	// What the entity's owner predicts of it, hashed at the last send, for the owner to check its prediction against.
-	internal ulong PredictionChecksum { get; set; }
+	// What the entity's owner predicts of it, hashed at the last send, for the owner to check its prediction against,
+	// or null when it couldn't be.
+	internal ulong? PredictionChecksum { get; set; }
 
 	internal long BodyStamp { get; private set; } = -1;
 

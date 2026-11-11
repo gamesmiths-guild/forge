@@ -309,6 +309,7 @@ public sealed class ReplicationServer
 
 		LastSendTick = tick;
 		long oldestEvent = tick - (long)Math.Ceiling(_session.Clock.TicksIn(EventExpirySeconds));
+		ExceptionDispatchInfo? failure = null;
 
 		foreach (ReplicatedEntity entity in _entityList)
 		{
@@ -316,16 +317,25 @@ public sealed class ReplicationServer
 			entity.CaptureEffects(tick, this, _session.Clock);
 			entity.CaptureGraphs(tick, this);
 			ExpireEvents(entity, oldestEvent);
+			entity.PredictionChecksum = null;
 
-			if (entity.Entity.Abilities.TracksPrediction && _clients.ContainsKey(entity.Owner))
+			if (!entity.Entity.Abilities.TracksPrediction || !_clients.ContainsKey(entity.Owner))
+			{
+				continue;
+			}
+
+			// A coded behavior or a state hook that can't be captured costs its entity this send's check alone.
+			try
 			{
 				entity.PredictionChecksum = EntitySimulation.PredictionChecksum(
 					EntitySimulation.CaptureSnapshot(entity.Entity),
 					new PredictionScope(entity.HeardByOwner, _session.Clock.TickRate));
 			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
 		}
-
-		ExceptionDispatchInfo? failure = null;
 
 		foreach (ClientState client in _clients.Values)
 		{
@@ -855,12 +865,12 @@ public sealed class ReplicationServer
 			}
 		}
 
-		bool checksum = ChecksPrediction(view);
-		_entry.WriteBool(checksum);
+		ulong? checksum = ChecksPrediction(view) ? entity.PredictionChecksum : null;
+		_entry.WriteBool(checksum is not null);
 
-		if (checksum)
+		if (checksum is ulong value)
 		{
-			_entry.WriteBits(entity.PredictionChecksum, 64);
+			_entry.WriteBits(value, 64);
 		}
 
 		_entry.Align();
