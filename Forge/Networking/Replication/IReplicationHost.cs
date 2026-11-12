@@ -25,10 +25,11 @@ public interface IReplicationHost
 
 	/// <summary>
 	/// Makes an entity the server spawned for this client's peer, which this client predicts. It's made live, as the
-	/// scene makes it, setup included, and not marked as the server's: the client runs it ahead of the server, and the
-	/// replication puts it right as the server's word arrives. Place its body where <paramref name="body"/> says before
-	/// anything of it runs, so its setup runs where the server's did. The default makes it through
-	/// <see cref="Spawn"/>.
+	/// scene makes it, and not marked as the server's: the client runs it ahead of the server, and the replication puts
+	/// it right as the server's word arrives. Place its body where <paramref name="body"/> says before anything of it
+	/// runs, so its setup runs where the server's did. Run the setup once the replication has bound it, from
+	/// <see cref="ReplicationClient.Spawned"/>, not here: only then is it predicted, so an ability its setup activates
+	/// that the client doesn't predict is refused. The default makes it through <see cref="Spawn"/>.
 	/// </summary>
 	/// <param name="id">The id the entity is known by on every machine; the entity's
 	/// <see cref="IForgeEntity.NetworkId"/> must return it.</param>
