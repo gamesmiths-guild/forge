@@ -4,7 +4,7 @@ A client predicts the entities it owns: it runs their ticks ahead of the server 
 
 ## What a client predicts
 
-An entity the server spawned for a client's peer, the client's player, isn't a mirror on that client. `ReplicationClient.Predicted` lists them. The host makes it as the scene makes it, setup included, with its body where the server's was as the server registered it (`IReplicationHost.SpawnPredicted`), so its setup runs where the server's did. It isn't torn down: its abilities, effects and input are live. Other clients mirror it as any entity. Placed entities are never a client's, and a listen host's own player runs on the server, so neither is predicted.
+An entity the server spawned for a client's peer, the client's player, isn't a mirror on that client. `ReplicationClient.Predicted` lists them. The host makes it as the scene makes it, with its body where the server's was as the server registered it (`IReplicationHost.SpawnPredicted`), and runs its setup once the replication has bound it (`ReplicationClient.Spawned`), so the setup runs where the server's did and an ability it activates that the client doesn't predict is refused. Its attribute sets are made with it, before binding, which takes its attributes as they are: one added later doesn't follow the server. It isn't torn down: its abilities, effects and input are live. Other clients mirror it as any entity. Placed entities are never a client's, and a listen host's own player runs on the server, so neither is predicted.
 
 The host doesn't advance a predicted entity itself. `Predict` does, once per tick the client's clock simulates, and records how each tick left it, `PredictionHistoryTicks` back (by default as many as input may lead the server, `NetworkSession.MaxInputLead`):
 
