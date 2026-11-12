@@ -661,15 +661,16 @@ public class Variables
 
 	// Writes every variable by name: values as they are stored, entities by their place in the world, and other objects
 	// by their type. Each kind of variable has its own scope, since a value and an object variable can share a name,
-	// and an array writes its length, so an empty one is listed too. Variables named in leftOut aren't written.
-	internal void Write(IStateWriter writer, string name, HashSet<StringKey>? leftOut = null)
+	// and an array writes its length, so an empty one is listed too. Variables listed in leftOut, by kind and name,
+	// aren't written.
+	internal void Write(IStateWriter writer, string name, HashSet<VariableKey>? leftOut = null)
 	{
 		writer.OpenSet(name);
 		writer.OpenSet("Values");
 
 		foreach (KeyValuePair<StringKey, Variant128> variable in _variables)
 		{
-			if (leftOut?.Contains(variable.Key) == true)
+			if (leftOut?.Contains(new VariableKey(VariableKind.Value, variable.Key)) == true)
 			{
 				continue;
 			}
@@ -682,7 +683,7 @@ public class Variables
 
 		foreach (KeyValuePair<StringKey, List<Variant128>> array in _arrays)
 		{
-			if (leftOut?.Contains(array.Key) == true)
+			if (leftOut?.Contains(new VariableKey(VariableKind.Array, array.Key)) == true)
 			{
 				continue;
 			}
@@ -705,7 +706,7 @@ public class Variables
 
 		foreach (KeyValuePair<StringKey, ObjectVariableStorage> variable in _objectVariables)
 		{
-			if (leftOut?.Contains(variable.Key) == true)
+			if (leftOut?.Contains(new VariableKey(VariableKind.Object, variable.Key)) == true)
 			{
 				continue;
 			}
@@ -718,7 +719,7 @@ public class Variables
 
 		foreach (KeyValuePair<StringKey, ObjectArrayStorage> array in _objectArrays)
 		{
-			if (leftOut?.Contains(array.Key) == true)
+			if (leftOut?.Contains(new VariableKey(VariableKind.ObjectArray, array.Key)) == true)
 			{
 				continue;
 			}

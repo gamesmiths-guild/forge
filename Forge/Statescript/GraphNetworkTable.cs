@@ -31,8 +31,9 @@ internal sealed class GraphNetworkTable
 	// A client predicting the graph's entity leaves these out, so its run can't count activations as the server's does.
 	public bool RunsServerOnlyNodes { get; }
 
-	// The graph variables nodes in server-only regions write, which a client predicting the graph's entity can't match.
-	public HashSet<StringKey> ServerOnlyWrites { get; } = [];
+	// The graph variables nodes in server-only regions write, by kind and name, which a client predicting the graph's
+	// entity can't match.
+	public HashSet<VariableKey> ServerOnlyWrites { get; } = [];
 
 	// A graph a client runs nothing of has nothing to send.
 	public bool RunsOnClients => States.Length > 0 || Actions.Length > 0 || RunsClientOnlyNodes;
@@ -84,9 +85,15 @@ internal sealed class GraphNetworkTable
 
 			if (node.Region == NodeRegion.ServerOnly)
 			{
-				ServerOnlyWrites.UnionWith(node.OutputVariables
-					.Where(x => x.BoundName != StringKey.Empty && x.Scope == VariableScope.Graph)
-					.Select(x => x.BoundName));
+				foreach (OutputVariable output in node.OutputVariables)
+				{
+					if (output.BoundName != StringKey.Empty
+						&& output.Scope == VariableScope.Graph
+						&& KindWritten(output.BoundName, definitions) is VariableKind kind)
+					{
+						ServerOnlyWrites.Add(new VariableKey(kind, output.BoundName));
+					}
+				}
 			}
 
 			if (node.Region != NodeRegion.None || _kinds[node] != NodeNetworkKind.Presentation)
@@ -125,6 +132,28 @@ internal sealed class GraphNetworkTable
 	public int ActionIndexOf(Node node)
 	{
 		return _actionIndices.TryGetValue(node, out int index) ? index : -1;
+	}
+
+	// The kind of variable an output bound to a name writes: the one the graph defines under it, and where it defines
+	// several, the one Set Variable writes.
+	private static VariableKind? KindWritten(StringKey name, GraphVariableDefinitions definitions)
+	{
+		if (definitions.ObjectArrayVariableDefinitions.Exists(x => x.Name == name))
+		{
+			return VariableKind.ObjectArray;
+		}
+
+		if (definitions.ArrayVariableDefinitions.Exists(x => x.Name == name))
+		{
+			return VariableKind.Array;
+		}
+
+		if (definitions.ObjectVariableDefinitions.Exists(x => x.Name == name))
+		{
+			return VariableKind.Object;
+		}
+
+		return definitions.VariableDefinitions.Exists(x => x.Name == name) ? VariableKind.Value : null;
 	}
 
 	// What a node made is something a client has too, unless the node never runs on one.
