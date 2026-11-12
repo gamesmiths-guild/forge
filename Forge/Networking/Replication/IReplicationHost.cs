@@ -29,7 +29,9 @@ public interface IReplicationHost
 	/// it right as the server's word arrives. Place its body where <paramref name="body"/> says before anything of it
 	/// runs, so its setup runs where the server's did. Run the setup once the replication has bound it, from
 	/// <see cref="ReplicationClient.Spawned"/>, not here: only then is it predicted, so an ability its setup activates
-	/// that the client doesn't predict is refused. The default makes it through <see cref="Spawn"/>.
+	/// that the client doesn't predict is refused. Give it every attribute set here, though: binding takes the entity's
+	/// attributes as they are, and one added later doesn't follow the server. The default makes it through
+	/// <see cref="Spawn"/>.
 	/// </summary>
 	/// <param name="id">The id the entity is known by on every machine; the entity's
 	/// <see cref="IForgeEntity.NetworkId"/> must return it.</param>
