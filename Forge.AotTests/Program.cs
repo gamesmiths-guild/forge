@@ -52,6 +52,8 @@ internal static class Program
 			NetworksOverLoopback(tagsManager));
 		Check("Replication spawns a mirror and carries its tags, effects and graphs", () =>
 			ReplicatesOverLoopback(tagsManager));
+		Check("Prediction takes an effect from elsewhere into the client's own entity", () =>
+			PredictsOverLoopback(tagsManager));
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -449,6 +451,56 @@ internal static class Program
 			&& context.Value == 7
 			&& shown.Seen.Contains(new Showing(NodeActivationReason.Link, 3))
 			&& shown.Seen.Contains(new Showing(NodeActivationReason.Replication, 3));
+	}
+
+	private static bool PredictsOverLoopback(TagsManager tagsManager)
+	{
+		var actions = new InputActionSet(["jump"]);
+		var effectData = new EffectData("Burning", new DurationData(DurationType.Infinite));
+		var registry = new NetworkAssetRegistry();
+		registry.Register(AssetKind.Scene, "uid://creature", "Creature");
+		registry.Register(AssetKind.Effect, "uid://burning", effectData);
+		registry.Seal();
+
+		var network = new LoopbackNetwork();
+		var server = new NetworkSession(network.Server, new SimulationClock(60), registry, tagsManager, actions);
+		var client = new NetworkSession(network.Connect(), new SimulationClock(60), registry, tagsManager, actions);
+		var host = new SmokeHost(tagsManager);
+		client.Mirror!.Host = host;
+		SmokeEntity? entity = null;
+
+		for (int step = 0; step < 40; step++)
+		{
+			double time = step / 60.0;
+			client.Update(time);
+			client.Mirror.Predict(client.Clock.Tick, 1 / 60.0);
+			client.Clock.Advance();
+			server.Update(time);
+
+			if (entity is null && server.Peers.Count > 0)
+			{
+				entity = new SmokeEntity(tagsManager) { NetworkId = server.Replication!.AllocateId() };
+				server.Replication.Register(entity, 0, server.Peers[0].Id);
+			}
+
+			if (step == 20 && entity is not null)
+			{
+				entity.EffectsManager.ApplyEffect(new Effect(effectData, default));
+			}
+
+			if (entity is not null)
+			{
+				EntitySimulation.Tick(entity, server.Clock.Tick, 1 / 60.0);
+			}
+
+			server.Replication!.Send(server.Clock.Tick);
+			server.Clock.Advance();
+		}
+
+		return host.Spawned is SmokeEntity predicted
+			&& client.Mirror.Predicted.Contains(predicted)
+			&& predicted.EffectsManager.HasAnyActiveEffect(new EffectQuery(EffectDefinition: effectData))
+			&& client.Mirror.Corrections > 0;
 	}
 
 	// Sets the level variable to 3, then shows it.

@@ -277,6 +277,105 @@ public class InputActionNodeTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 
 	[Fact]
 	[Trait("Graph", "InputAction")]
+	public void Bound_input_sources_are_watched_as_one_button_that_any_of_them_presses()
+	{
+		TestEntity first = CreateEntity();
+		TestEntity second = CreateEntity();
+		var log = new List<string>();
+		GraphProcessor processor = WatchJumpOf([first, second], log);
+
+		second.Input!.Submit(new InputFrame { Pressed = 0b1, Released = 0b1 });
+		EntitySimulation.Tick([first, second], 1, Step);
+		processor.FixedUpdateGraph(Step);
+
+		log.Should().Equal("pressed", "released");
+
+		first.Input!.Submit(new InputFrame { Held = 0b1, Pressed = 0b1 });
+		EntitySimulation.Tick([first, second], 2, Step);
+		processor.FixedUpdateGraph(Step);
+		second.Input.Submit(new InputFrame { Held = 0b1, Pressed = 0b1 });
+		EntitySimulation.Tick([first, second], 3, Step);
+		processor.FixedUpdateGraph(Step);
+		first.Input.Submit(new InputFrame { Released = 0b1 });
+		second.Input.Submit(new InputFrame { Held = 0b1 });
+		EntitySimulation.Tick([first, second], 4, Step);
+		processor.FixedUpdateGraph(Step);
+
+		log.Should().Equal("pressed", "released", "pressed");
+
+		second.Input.Submit(new InputFrame { Released = 0b1 });
+		EntitySimulation.Tick([first, second], 5, Step);
+		processor.FixedUpdateGraph(Step);
+
+		log.Should().Equal("pressed", "released", "pressed", "released");
+	}
+
+	[Fact]
+	[Trait("Graph", "InputAction")]
+	public void An_entity_no_longer_among_the_input_sources_is_not_read()
+	{
+		TestEntity first = CreateEntity();
+		TestEntity second = CreateEntity();
+		var log = new List<string>();
+		GraphProcessor processor = WatchJumpOf([first, second], log);
+
+		processor.GraphContext.GraphVariables.DefineObjectArrayVariable<IForgeEntity>("sources", [second]);
+		first.Input!.Submit(new InputFrame { Pressed = 0b1, Released = 0b1 });
+		EntitySimulation.Tick([first, second], 1, Step);
+		processor.FixedUpdateGraph(Step);
+
+		log.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Graph", "InputAction")]
+	public void A_button_one_source_holds_stays_down_while_another_lets_go_and_presses_again()
+	{
+		TestEntity first = CreateEntity();
+		TestEntity second = CreateEntity();
+		var log = new List<string>();
+		GraphProcessor processor = WatchJumpOf([first, second], log);
+
+		first.Input!.Submit(new InputFrame { Held = 0b1, Pressed = 0b1 });
+		second.Input!.Submit(new InputFrame { Held = 0b1, Pressed = 0b1 });
+		EntitySimulation.Tick([first, second], 1, Step);
+		processor.FixedUpdateGraph(Step);
+		first.Input.Submit(new InputFrame { Held = 0b1 });
+		second.Input.Submit(new InputFrame { Held = 0b1, Pressed = 0b1, Released = 0b1 });
+		EntitySimulation.Tick([first, second], 2, Step);
+		processor.FixedUpdateGraph(Step);
+
+		log.Should().Equal("pressed");
+	}
+
+	[Fact]
+	[Trait("Graph", "InputAction")]
+	public void The_last_input_source_leaving_while_it_holds_the_button_releases_it()
+	{
+		TestEntity entity = CreateEntity();
+		var log = new List<string>();
+		GraphProcessor processor = WatchJumpOf([entity], log);
+
+		entity.Input!.Submit(new InputFrame { Held = 0b1, Pressed = 0b1 });
+		EntitySimulation.Tick(entity, 1, Step);
+		processor.FixedUpdateGraph(Step);
+		processor.GraphContext.GraphVariables.DefineObjectArrayVariable<IForgeEntity>("sources", []);
+		entity.Input.Submit(new InputFrame { Held = 0b1 });
+		EntitySimulation.Tick(entity, 2, Step);
+		processor.FixedUpdateGraph(Step);
+
+		log.Should().Equal("pressed", "released");
+
+		processor.GraphContext.GraphVariables.DefineObjectArrayVariable<IForgeEntity>("sources", [entity]);
+		entity.Input.Submit(new InputFrame { Held = 0b1 });
+		EntitySimulation.Tick(entity, 3, Step);
+		processor.FixedUpdateGraph(Step);
+
+		log.Should().Equal("pressed", "released", "pressed");
+	}
+
+	[Fact]
+	[Trait("Graph", "InputAction")]
 	public void A_derived_node_can_report_a_device_read_every_frame()
 	{
 		var log = new List<string>();
@@ -350,6 +449,34 @@ public class InputActionNodeTests(TagsAndCuesFixture fixture) : IClassFixture<Ta
 				watch.OutputPorts[InputActionNode.WhilePressedPort],
 				held.InputPorts[ActionNode.InputPort]));
 		}
+
+		var processor = new GraphProcessor(graph);
+		processor.StartGraph();
+		return processor;
+	}
+
+	private static GraphProcessor WatchJumpOf(IForgeEntity[] sources, List<string> log)
+	{
+		var graph = new Graph();
+		graph.VariableDefinitions.DefineObjectArrayVariable("sources", sources);
+
+		var watch = new InputActionNode("jump");
+		watch.BindInput(InputActionNode.InputSourcesInput, "sources");
+		var pressed = new TrackingActionNode("pressed", log);
+		var released = new TrackingActionNode("released", log);
+
+		graph.AddNode(watch);
+		graph.AddNode(pressed);
+		graph.AddNode(released);
+		graph.AddConnection(new Connection(
+			graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+			watch.InputPorts[StateNode<InputActionNodeContext>.InputPort]));
+		graph.AddConnection(new Connection(
+			watch.OutputPorts[InputActionNode.OnPressedPort],
+			pressed.InputPorts[ActionNode.InputPort]));
+		graph.AddConnection(new Connection(
+			watch.OutputPorts[InputActionNode.OnReleasedPort],
+			released.InputPorts[ActionNode.InputPort]));
 
 		var processor = new GraphProcessor(graph);
 		processor.StartGraph();

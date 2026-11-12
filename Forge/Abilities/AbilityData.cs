@@ -112,6 +112,12 @@ public readonly record struct AbilityData
 	public AbilityInputBinding? InputBinding { get; }
 
 	/// <summary>
+	/// Gets a value indicating whether only the server runs the ability. The client that owns the entity doesn't
+	/// predict it, and shows its graph as it shows everyone else's.
+	/// </summary>
+	public bool ServerOnly { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="AbilityData"/> structure.
 	/// </summary>
 	/// <param name="name">The name of the ability.</param>
@@ -144,6 +150,8 @@ public readonly record struct AbilityData
 	/// </param>
 	/// <param name="behaviorFactory">The factory function to create custom ability behavior instances.</param>
 	/// <param name="inputBinding">The input action the ability activates from, if any.</param>
+	/// <param name="serverOnly">Whether only the server runs the ability, so the client that owns the entity doesn't
+	/// predict it.</param>
 	public AbilityData(
 		string name,
 		EffectData? costEffect = null,
@@ -162,7 +170,8 @@ public readonly record struct AbilityData
 		TagContainer? targetRequiredTags = null,
 		TagContainer? targetBlockedTags = null,
 		Func<IAbilityBehavior>? behaviorFactory = null,
-		AbilityInputBinding? inputBinding = null)
+		AbilityInputBinding? inputBinding = null,
+		bool serverOnly = false)
 	{
 		Name = name;
 		CostEffect = costEffect;
@@ -182,6 +191,7 @@ public readonly record struct AbilityData
 		TargetBlockedTags = targetBlockedTags;
 		BehaviorFactory = behaviorFactory;
 		InputBinding = inputBinding;
+		ServerOnly = serverOnly;
 
 		if (Validation.Enabled)
 		{

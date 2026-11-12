@@ -21,7 +21,7 @@ EntitySimulation.RestoreSnapshot(entity, snapshot);
 | Attributes | The attribute sets, and their base, current, minimum and maximum values, with the modifiers in each channel exactly as they were rather than added up again. A set added since the snapshot leaves as a removed set does, without the modifiers effects gave it. |
 | Tags | The base tags, and how many effects grant each modifier tag. |
 | Effects | Each active effect with its level, stacks, remaining duration, period timing, inhibition, set-by-caller values, evaluated magnitudes and the state of its [components](effects/components/README.md#rollback-hooks). |
-| Abilities | The granted abilities with their grant sources, levels, inhibition and cooldowns, the blocked ability tags, and each running instance with its Statescript graph. |
+| Abilities | The granted abilities with their grant sources, levels, inhibition and cooldowns, the blocked ability tags, and each running instance with its run: a Statescript graph, or a [coded behavior](#coded-behaviors) that takes part. |
 | Shared variables | Their values. |
 | Input | The current frame and the one waiting for the next tick, if the entity has an `Input`. |
 | Random | Where the generator is, if the entity has a `Random`. |
@@ -36,6 +36,38 @@ EntitySimulation.RestoreSnapshot(entity, snapshot);
 
 **A snapshot never changes**, so it can be restored any number of times.
 
+### Coded behaviors
+
+A coded `IAbilityBehavior` keeps its run in its own fields, where a snapshot can't see. It takes part by implementing `ISnapshotAbilityBehavior`:
+
+| Member | What it does |
+|---|---|
+| `CaptureSnapshot` | Returns what the run needs to be put back, with copies of anything it changes in place. |
+| `RestoreSnapshot` | Puts the run back from that, silently: no effect, event or cue. |
+| `DropRun` | Stops a run a restore goes back to before, without ending it. |
+| `OnRestoreDetach`, `OnRestoreAttach` | Let go of and take hold again of what the run subscribed to, in the entity's order: the run counts from when it started. Both do nothing by default. |
+
+```csharp
+public sealed class ChargeBehavior : ISnapshotAbilityBehavior
+{
+    private int _ticks;
+
+    public void OnStarted(AbilityBehaviorContext context) => _ticks = 0;
+
+    public void OnEnded(AbilityBehaviorContext context) { }
+
+    public void OnFixedUpdate(double deltaTime) => _ticks++;
+
+    public object? CaptureSnapshot() => _ticks;
+
+    public void RestoreSnapshot(object? snapshot) => _ticks = (int)snapshot!;
+
+    public void DropRun() { }
+}
+```
+
+Counting in fixed steps, as `OnFixedUpdate` does, makes a restored run come out the same when its ticks run again. The run of a coded behavior that doesn't implement it is left out: a restore neither ends nor brings it back, and it goes on as it is. A behavior that ends within its own activation, such as the [Quick Start](quick-start.md)'s heal, has nothing to leave out.
+
 ### What a snapshot leaves out
 
 - **Other entities.** Each entity restores only itself. An effect it applied to another entity is the other entity's, and comes back only with a snapshot of that one. An `Effect` applied to several entities is one object, though: a restore puts its level and set by caller values back for all of them, without their effects evaluating again, so give each entity its own `Effect` when those change at runtime.
@@ -48,7 +80,6 @@ EntitySimulation.RestoreSnapshot(entity, snapshot);
 Take and restore snapshots from the host, between ticks, never from inside an ability, an effect, a graph or a handler:
 
 - While the entity is changing, part way through applying, removing or updating effects, changing an attribute, or activating, ending or removing an ability, both throw `InvalidOperationException`.
-- While one of the entity's abilities runs a behavior that isn't a Statescript graph, both throw `NotSupportedException`: a snapshot can't reach what a coded `IAbilityBehavior` keeps. A behavior that ends within its own activation, such as the [Quick Start](quick-start.md)'s heal, never runs between ticks and never gets in the way.
 - A snapshot goes back only into the entity it was taken from. Restoring it into another throws `ArgumentException`.
 
 ## Entity history

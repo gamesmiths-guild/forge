@@ -57,8 +57,12 @@ public abstract class ActionNode : Node
 
 		try
 		{
-			Execute(graphContext);
-			graphContext.NotifyActionExecuted(this);
+			// What an authority action does only the server decides: a client's run goes on as if it had happened.
+			if (NetworkKind != NodeNetworkKind.Authority || !graphContext.IsOnClient)
+			{
+				Execute(graphContext);
+				graphContext.NotifyActionExecuted(this);
+			}
 		}
 		catch (Exception exception)
 		{

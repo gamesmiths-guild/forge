@@ -53,6 +53,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	// Set once the owner is torn down, after which nothing applies to it.
 	private bool _tornDown;
 
+	// Set while a predicting client applies an effect the server says is on the owner, with where it came from there.
+	private bool _applyingServerEffect;
+
+	private bool _serverEffectFromOutside;
+
 	/// <summary>
 	/// Event triggered whenever an effect lands on the owner, carrying its evaluated data.
 	/// </summary>
@@ -157,6 +162,31 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	public IForgeEntity Owner { get; } = owner;
 
 	internal bool IsChanging => _applicationDepth > 0 || _changeDepth > 0;
+
+	// The tick the owner last began, or -1 before its first: an effect applied before it is part of how the owner
+	// starts, as one applied while it advances is part of its own tick.
+	internal long Tick { get; private set; } = -1;
+
+	// The tick the owner last advanced through, -1 before its first: an effect landing from outside its ticks lands
+	// after this tick and before the next one's advance.
+	internal long AdvancedTick { get; private set; } = -1;
+
+	internal bool IsAdvancing { get; set; }
+
+	// Set while an effect that landed from outside the owner's ticks executes, so what it raises isn't taken for the
+	// owner's own doing.
+	internal bool IsExecutingOutsideEffect { get; set; }
+
+	// Whether what the owner raises now comes from its own tick, which the client predicting it runs too.
+	internal bool RaisesOwnTick => IsAdvancing && !IsExecutingOutsideEffect && Owner.Abilities.UnpredictedDepth == 0;
+
+	// Whether what lands on the owner now comes from outside its ticks: from another entity, the host between ticks or
+	// what the owner doesn't predict. Before its first tick, it's how the owner starts.
+	internal bool FromOutside => Tick >= 0 && !RaisesOwnTick;
+
+	// On the client that predicts the owner, only what the owner's own ticks apply lands, and what the server applied
+	// from elsewhere arrives through ApplyServerEffect.
+	internal bool IsPredicted { get; set; }
 
 	internal IReadOnlyList<ActiveEffect> ActiveEffects => _activeEffects;
 
@@ -566,6 +596,45 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		}
 	}
 
+	internal void BeginTick(long tick)
+	{
+		Tick = tick;
+	}
+
+	internal void EndAdvance()
+	{
+		AdvancedTick = Tick;
+	}
+
+	// A restore puts the owner as a tick left it.
+	internal void RestoreTick(long tick)
+	{
+		Tick = tick;
+		AdvancedTick = tick;
+	}
+
+	// Applies, as the predicting client of the owner, an effect the server says is on it: what applying it sets off on
+	// the owner arrives from the server too, so nothing further lands meanwhile. One the server applied from outside
+	// the owner's ticks never executes, since executions are the server's; one the owner's own tick applied there,
+	// which this client failed to predict, runs as the owner's own from then on.
+	internal ActiveEffect? ApplyServerEffect(
+		Effect effect,
+		EffectApplicationContext? applicationContext,
+		bool fromOutside)
+	{
+		_applyingServerEffect = true;
+		_serverEffectFromOutside = fromOutside;
+
+		try
+		{
+			return ApplyEffectInternal(effect, applicationContext)?.ActiveEffect;
+		}
+		finally
+		{
+			_applyingServerEffect = false;
+		}
+	}
+
 	internal ActiveEffect? FindActiveEffectByData(EffectData effectData)
 	{
 		return FilterEffectsByData(effectData).FirstOrDefault();
@@ -921,7 +990,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		applied = false;
 
-		if (_tornDown || !effect.CanApply(Owner))
+		if (_tornDown || RefusesOutsideApplication() || !effect.CanApply(Owner))
 		{
 			return null;
 		}
@@ -990,6 +1059,18 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return ApplyNewEffect(effect, applicationContext).Handle;
 	}
 
+	// A predicted owner takes what its own ticks apply, and the effect a predicting client applies for the server, but
+	// not what that effect sets off: the server sends that as well.
+	private bool RefusesOutsideApplication()
+	{
+		if (!IsPredicted)
+		{
+			return false;
+		}
+
+		return _applyingServerEffect ? _applicationDepth > 1 : FromOutside;
+	}
+
 	private bool IsApplicationBlocked(Effect effect)
 	{
 		// Indexed rather than foreach so that a blocker unregistering itself while being consulted — an immunity effect
@@ -1043,7 +1124,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private ActiveEffect ApplyNewEffect(Effect effect, EffectApplicationContext? applicationContext)
 	{
-		var activeEffect = new ActiveEffect(effect, Owner, applicationContext);
+		var activeEffect = new ActiveEffect(effect, Owner, applicationContext)
+		{
+			AfterTick = AdvancedTick,
+			IsFromOutside = _applyingServerEffect ? _serverEffectFromOutside : FromOutside,
+			ExecutesOnServer = _applyingServerEffect && _serverEffectFromOutside,
+		};
+
 		_activeEffects.Add(activeEffect);
 
 		bool remainActive = true;

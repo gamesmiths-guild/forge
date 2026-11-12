@@ -33,7 +33,8 @@ public static class BodyCodec
 	// A unit quaternion's three smallest components lie within this of zero.
 	private const float RotationRange = 0.70710678f;
 
-	private const int RotationLevels = (1 << RotationBits) - 1;
+	// Even, so zero is a level: a body turned only about one axis, or not at all, comes back upright.
+	private const int RotationLevels = (1 << RotationBits) - 2;
 
 	/// <summary>
 	/// Quantizes a body state.
@@ -165,6 +166,49 @@ public static class BodyCodec
 			reader.ReadVarInt(),
 			reader.ReadVarInt(),
 			reader.ReadVarInt(),
+			reader.ReadBool());
+	}
+
+	// Whether two states lie within a step of each other: a body a restore put back can settle a step off at a contact,
+	// which is no difference.
+	internal static bool WithinAStep(in QuantizedBody first, in QuantizedBody second)
+	{
+		const float RotationTolerance = 2e-5f;
+
+		return Math.Abs(first.X - second.X) <= 1
+			&& Math.Abs(first.Y - second.Y) <= 1
+			&& Math.Abs(first.Z - second.Z) <= 1
+			&& Math.Abs(first.VelocityX - second.VelocityX) <= 1
+			&& Math.Abs(first.VelocityY - second.VelocityY) <= 1
+			&& Math.Abs(first.VelocityZ - second.VelocityZ) <= 1
+			&& first.Grounded == second.Grounded
+			&& Math.Abs(
+				Quaternion.Dot(Dequantize(first).Rotation, Dequantize(second).Rotation)) >= 1 - RotationTolerance;
+	}
+
+	// A body as it is, for where an entity is made: the client that predicts it runs its setup there, as the server
+	// did.
+	internal static void WriteExact(BitWriter writer, in BodyState state)
+	{
+		writer.WriteFloat(state.Position.X);
+		writer.WriteFloat(state.Position.Y);
+		writer.WriteFloat(state.Position.Z);
+		writer.WriteFloat(state.Rotation.X);
+		writer.WriteFloat(state.Rotation.Y);
+		writer.WriteFloat(state.Rotation.Z);
+		writer.WriteFloat(state.Rotation.W);
+		writer.WriteFloat(state.Velocity.X);
+		writer.WriteFloat(state.Velocity.Y);
+		writer.WriteFloat(state.Velocity.Z);
+		writer.WriteBool(state.Grounded);
+	}
+
+	internal static BodyState ReadExact(BitReader reader)
+	{
+		return new BodyState(
+			new Vector3(reader.ReadFloat(), reader.ReadFloat(), reader.ReadFloat()),
+			new Quaternion(reader.ReadFloat(), reader.ReadFloat(), reader.ReadFloat(), reader.ReadFloat()),
+			new Vector3(reader.ReadFloat(), reader.ReadFloat(), reader.ReadFloat()),
 			reader.ReadBool());
 	}
 

@@ -603,17 +603,87 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 	[Fact]
 	[Trait("Simulation", "Snapshot")]
-	public void Snapshots_are_refused_while_an_ability_runs_a_behavior_that_is_not_a_graph()
+	public void A_run_a_snapshot_cannot_reach_is_left_out_and_goes_on_through_a_restore()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);
-		AbilityHandle ability = Grant(entity, new AbilityData("Coded", behaviorFactory: () => new CodedBehavior()));
-		EntitySnapshot snapshot = EntitySimulation.CaptureSnapshot(entity);
+		var behavior = new CodedBehavior();
+		AbilityHandle ability = Grant(entity, new AbilityData("Coded", behaviorFactory: () => behavior));
+		EntitySnapshot before = EntitySimulation.CaptureSnapshot(entity);
 
 		ability.TryActivate(out _).Should().BeTrue();
+		EntitySnapshot running = EntitySimulation.CaptureSnapshot(entity);
+		EntitySimulation.RestoreSnapshot(entity, before);
 
-		FluentActions.Invoking(() => EntitySimulation.CaptureSnapshot(entity)).Should().Throw<NotSupportedException>();
-		FluentActions.Invoking(() => EntitySimulation.RestoreSnapshot(entity, snapshot))
-			.Should().Throw<NotSupportedException>();
+		ability.IsActive.Should().BeTrue();
+		behavior.Ended.Should().BeFalse();
+
+		ability.Cancel();
+		EntitySimulation.RestoreSnapshot(entity, running);
+
+		ability.IsActive.Should().BeFalse();
+		behavior.Ended.Should().BeTrue();
+	}
+
+	[Fact]
+	[Trait("Simulation", "Snapshot")]
+	public void A_run_a_snapshot_cannot_reach_keeps_the_tags_it_owns_through_a_restore_and_no_others()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var red = Tag.RequestTag(_tagsManager, "color.red");
+		AbilityHandle ability = Grant(
+			entity,
+			new AbilityData(
+				"Coded",
+				activationOwnedTags: new TagContainer(_tagsManager, [red]),
+				behaviorFactory: () => new CodedBehavior()));
+		EntitySnapshot before = EntitySimulation.CaptureSnapshot(entity);
+
+		ability.TryActivate(out _).Should().BeTrue();
+		EntitySnapshot running = EntitySimulation.CaptureSnapshot(entity);
+		EntitySimulation.RestoreSnapshot(entity, before);
+
+		entity.Tags.AllTags.HasTag(red).Should().BeTrue("the run goes on, so its tag does");
+
+		ability.Cancel();
+
+		entity.Tags.AllTags.HasTag(red).Should().BeFalse();
+
+		EntitySimulation.RestoreSnapshot(entity, running);
+
+		entity.Tags.AllTags.HasTag(red).Should().BeFalse("the run stays ended, so nothing holds its tag");
+	}
+
+	[Fact]
+	[Trait("Simulation", "Snapshot")]
+	public void A_coded_behavior_with_the_snapshot_contract_is_put_back_and_takes_hold_in_order()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		var log = new List<string>();
+		var first = new CountingBehavior("first", log);
+		var second = new CountingBehavior("second", log);
+		AbilityHandle firstAbility = Grant(entity, new AbilityData("First", behaviorFactory: () => first));
+		AbilityHandle secondAbility = Grant(entity, new AbilityData("Second", behaviorFactory: () => second));
+		EntitySnapshot before = EntitySimulation.CaptureSnapshot(entity);
+
+		firstAbility.TryActivate(out _).Should().BeTrue();
+		secondAbility.TryActivate(out _).Should().BeTrue();
+		EntitySimulation.Tick(entity, 1, Step);
+		EntitySnapshot running = EntitySimulation.CaptureSnapshot(entity);
+		EntitySimulation.Tick(entity, 2, Step);
+		EntitySimulation.Tick(entity, 3, Step);
+		log.Clear();
+
+		EntitySimulation.RestoreSnapshot(entity, running);
+
+		first.Ticks.Should().Be(1);
+		second.Ticks.Should().Be(1);
+		log.Should().Equal("second detach", "first detach", "first attach", "second attach");
+
+		EntitySimulation.RestoreSnapshot(entity, before);
+
+		firstAbility.IsActive.Should().BeFalse();
+		first.Dropped.Should().BeTrue();
+		first.Ended.Should().BeFalse();
 	}
 
 	private static string CarryOn(TestEntity entity, Effect effect)
@@ -911,12 +981,65 @@ public class EntitySnapshotTests(TagsAndCuesFixture fixture) : IClassFixture<Tag
 
 	private sealed class CodedBehavior : IAbilityBehavior
 	{
+		public bool Ended { get; private set; }
+
 		public void OnStarted(AbilityBehaviorContext context)
 		{
 		}
 
 		public void OnEnded(AbilityBehaviorContext context)
 		{
+			Ended = true;
+		}
+	}
+
+	// Counts its fixed steps, which a snapshot captures, and logs its holds letting go and taking hold.
+	private sealed class CountingBehavior(string name, List<string> log) : ISnapshotAbilityBehavior
+	{
+		public int Ticks { get; private set; }
+
+		public bool Dropped { get; private set; }
+
+		public bool Ended { get; private set; }
+
+		public void OnStarted(AbilityBehaviorContext context)
+		{
+			Ticks = 0;
+		}
+
+		public void OnEnded(AbilityBehaviorContext context)
+		{
+			Ended = true;
+		}
+
+		public void OnFixedUpdate(double deltaTime)
+		{
+			Ticks++;
+		}
+
+		public object? CaptureSnapshot()
+		{
+			return Ticks;
+		}
+
+		public void RestoreSnapshot(object? snapshot)
+		{
+			Ticks = (int)snapshot!;
+		}
+
+		public void DropRun()
+		{
+			Dropped = true;
+		}
+
+		public void OnRestoreDetach()
+		{
+			log.Add($"{name} detach");
+		}
+
+		public void OnRestoreAttach()
+		{
+			log.Add($"{name} attach");
 		}
 	}
 

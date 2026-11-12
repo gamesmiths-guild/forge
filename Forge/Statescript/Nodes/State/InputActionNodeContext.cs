@@ -16,8 +16,13 @@ public class InputActionNodeContext : StateNodeContext
 	/// </summary>
 	public bool? LastPressed { get; set; }
 
-	// The input and frame the last read came from, so a frame read on activation is not read again later in its tick.
-	internal EntityInput? LastInput { get; set; }
+	// The inputs and frames the last read came from, so a frame read on activation is not read again later in its tick.
+	internal List<KeyValuePair<EntityInput, ulong>> Reads { get; private set; } = [];
 
-	internal ulong LastFrame { get; set; }
+	/// <inheritdoc/>
+	protected override void OnCopied()
+	{
+		base.OnCopied();
+		Reads = [.. Reads];
+	}
 }

@@ -123,7 +123,8 @@ public class EntityTags
 	}
 
 	// Puts the tags the server sent on a mirror: the ones added since the client last heard and the ones removed, as
-	// base tags, since a mirror holds no effects of its own. Raises OnTagsChanged once when anything changed.
+	// base tags, since a mirror holds no effects of its own. On an entity a client predicts, a removed tag its own
+	// effects or abilities give stays for them. Raises OnTagsChanged once when anything changed.
 	internal void MirrorTags(IReadOnlyList<Tag> added, IReadOnlyList<Tag> removed)
 	{
 		bool changed = false;
@@ -141,7 +142,8 @@ public class EntityTags
 		foreach (Tag tag in removed)
 		{
 			bool removedBase = BaseTags.RemoveTagExact(tag);
-			bool removedAll = AllTags.RemoveTagExact(tag);
+			bool removedAll = !(_modifierTagCounts.TryGetValue(tag, out int count) && count > 0)
+				&& AllTags.RemoveTagExact(tag);
 			changed = changed || removedBase || removedAll;
 		}
 
@@ -225,6 +227,41 @@ public class EntityTags
 		foreach (Tag tag in tags)
 		{
 			RemoveModifierTag(tag);
+		}
+	}
+
+	// After a restore, counts tags for a holder the snapshot didn't count them for, or stops counting them for one it
+	// did, without raising OnTagsChanged.
+	internal void RestoreModifierTags(TagContainer tags, bool held)
+	{
+		foreach (Tag tag in tags)
+		{
+			_modifierTagCounts.TryGetValue(tag, out int count);
+
+			if (held)
+			{
+				_modifierTagCounts[tag] = count + 1;
+
+				if (count == 0)
+				{
+					ModifierTags.AddTagFast(tag);
+					AllTags.AddTagFast(tag);
+				}
+			}
+			else if (count > 0)
+			{
+				_modifierTagCounts[tag] = count - 1;
+
+				if (count == 1)
+				{
+					ModifierTags.RemoveTagExact(tag);
+
+					if (!BaseTags.HasTagExact(tag))
+					{
+						AllTags.RemoveTagExact(tag);
+					}
+				}
+			}
 		}
 	}
 

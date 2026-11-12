@@ -788,6 +788,20 @@ public class ReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Replication")]
+	public void A_body_turned_only_about_one_axis_stays_upright_through_the_wire()
+	{
+		var yaw = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.8f);
+
+		Quaternion still = Rounded(new BodyState(Vector3.Zero, Quaternion.Identity, Vector3.Zero, true)).Rotation;
+		Quaternion turned = Rounded(new BodyState(Vector3.Zero, yaw, Vector3.Zero, true)).Rotation;
+
+		still.Should().Be(Quaternion.Identity, "a capsule tilted by a step leans into what it touches");
+		turned.X.Should().Be(0);
+		turned.Z.Should().Be(0);
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
 	public void A_remote_body_shows_the_states_on_either_side_of_a_tick()
 	{
 		var body = new RemoteBody();

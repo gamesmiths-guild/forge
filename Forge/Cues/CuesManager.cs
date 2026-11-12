@@ -44,6 +44,13 @@ public sealed class CuesManager
 
 	private bool _presenting;
 
+	// While a predicting client puts its entity right and runs the entity's ticks again: see BeginCorrection.
+	private int _correcting;
+
+	private int _correctionStart;
+
+	private bool _correctionDeferred;
+
 	/// <summary>
 	/// Gets or sets a value indicating whether cue handlers wait for the presentation pass, <see cref="PresentCues"/>,
 	/// instead of being called the moment a cue fires. Off by default.
@@ -126,7 +133,8 @@ public sealed class CuesManager
 			observer.CueExecuted(cueTag, target, parameters);
 		}
 
-		if (!Presents || !_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
+		// The ticks a correction runs again ran once already, and played their cues then.
+		if (!Presents || _correcting > 0 || !_registeredCues.TryGetValue(cueTag, out HashSet<ICueHandler>? cues))
 		{
 			return;
 		}
@@ -400,6 +408,41 @@ public sealed class CuesManager
 
 	// Observers see every cue as it's applied, updated, removed or executed, before any handler and whether or not the
 	// cues are presented here: a network session replicates them from that.
+	// A predicting client puts its entity right between these calls: it rolls the entity back, makes it what the server
+	// says and runs its ticks again, which all ran once and showed what they did. Executed cues don't play again, and
+	// the persistent cues show the net change: one taken off and put back on the same target shows nothing, or an
+	// update if it came back with other parameters.
+	internal void BeginCorrection()
+	{
+		if (_correcting++ > 0)
+		{
+			return;
+		}
+
+		_correctionStart = _pendingCues.Count;
+		_correctionDeferred = !DeferDispatch;
+		DeferDispatch = true;
+	}
+
+	internal ExceptionDispatchInfo? EndCorrection()
+	{
+		if (--_correcting > 0)
+		{
+			return null;
+		}
+
+		KeepNetChange(_correctionStart);
+
+		if (!_correctionDeferred)
+		{
+			return null;
+		}
+
+		DeferDispatch = false;
+		_correctionDeferred = false;
+		return DispatchFrom(_correctionStart);
+	}
+
 	internal void AddObserver(ICueObserver observer)
 	{
 		if (!_observers.Contains(observer))
@@ -821,6 +864,69 @@ public sealed class CuesManager
 				failure ??= ExceptionDispatchInfo.Capture(exception);
 			}
 		}
+	}
+
+	// A persistent cue taken off a target and put back on it by another application, from the pending index on, was
+	// never off as far as the target shows: both go, and the parameters it came back with, if they differ, go as an
+	// update.
+	private void KeepNetChange(int from)
+	{
+		int i = from;
+
+		while (i < _pendingCues.Count)
+		{
+			PendingCue removal = _pendingCues[i];
+			int apply = removal.Kind == PendingCueKind.Remove
+				? _pendingCues.FindIndex(
+					i + 1,
+					x => x.Kind == PendingCueKind.Apply && x.CueTag == removal.CueTag && x.Target == removal.Target)
+				: -1;
+
+			if (apply < 0)
+			{
+				i++;
+				continue;
+			}
+
+			_pendingCues[apply] = _pendingCues[apply] with { Kind = PendingCueKind.Update };
+			_pendingCues.RemoveAt(i);
+		}
+	}
+
+	// Dispatches the pending cues from the index on, as the presentation pass would, for a host that dispatches as cues
+	// fire.
+	private ExceptionDispatchInfo? DispatchFrom(int from)
+	{
+		ExceptionDispatchInfo? failure = null;
+		_dispatchBuffer.AddRange(_pendingCues.Skip(from));
+		_pendingCues.RemoveRange(from, _pendingCues.Count - from);
+
+		foreach (PendingCue pending in _dispatchBuffer)
+		{
+			if (!_registeredCues.TryGetValue(pending.CueTag, out HashSet<ICueHandler>? cues))
+			{
+				continue;
+			}
+
+			_handlerBuffer.AddRange(cues);
+
+			foreach (ICueHandler cue in _handlerBuffer)
+			{
+				try
+				{
+					Dispatch(cue, pending);
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
+			}
+
+			_handlerBuffer.Clear();
+		}
+
+		_dispatchBuffer.Clear();
+		return failure;
 	}
 
 	// The latest persistent event pending for the same application of the cue on the target decides. An apply was never

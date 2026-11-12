@@ -17,7 +17,9 @@ namespace Gamesmiths.Forge.Abilities;
 /// </summary>
 internal sealed class Ability
 {
-	internal record struct BehaviorBinding(IAbilityBehavior Behavior, AbilityBehaviorContext Context);
+	// A run's behavior with the context it was started with, and when it took hold: a coded behavior's run holds as
+	// one.
+	internal record struct BehaviorBinding(IAbilityBehavior Behavior, AbilityBehaviorContext Context, long HoldOrder);
 
 	/// <summary>
 	/// What applying the cost effect would do to one attribute: the net change it produces, and whether every step of
@@ -53,6 +55,8 @@ internal sealed class Ability
 
 	private bool _updating;
 
+	private bool? _behaviorIsPredictable;
+
 	internal event Action<Ability>? OnAbilityDeactivated;
 
 	/// <summary>
@@ -76,10 +80,7 @@ internal sealed class Ability
 	internal long HoldOrder { get; } = HoldSequence.Next();
 
 	internal bool IsChanging =>
-		_updating || _behaviors.Values.Any(x => x.Behavior is ISnapshotAbilityBehavior { IsChanging: true });
-
-	// A behavior that isn't a Statescript graph keeps its run where an entity snapshot can't reach it.
-	internal bool RunsUnsnapshottableBehavior => _behaviors.Values.Any(x => x.Behavior is not ISnapshotAbilityBehavior);
+		_updating || _behaviors.Values.Any(x => x.Behavior is INodeHoldingBehavior { IsChanging: true });
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="Ability"/> class.
@@ -249,24 +250,34 @@ internal sealed class Ability
 	internal Snapshot CaptureSnapshot()
 	{
 		var behaviors = new List<BehaviorSnapshot>(_behaviors.Count);
+		var instances = new List<AbilityInstance>(_activeInstances.Count);
+		var unreached = new List<AbilityInstance>();
 
 		foreach (AbilityInstance instance in _activeInstances)
 		{
-			if (_behaviors.TryGetValue(instance, out BehaviorBinding binding))
+			if (!_behaviors.TryGetValue(instance, out BehaviorBinding binding))
 			{
-				behaviors.Add(new BehaviorSnapshot(
-					instance,
-					binding.Behavior,
-					binding.Context,
-					((ISnapshotAbilityBehavior)binding.Behavior).CaptureSnapshot()));
+				instances.Add(instance);
+				continue;
 			}
+
+			// A run the snapshot can't reach is left out of it.
+			if (binding.Behavior is not ISnapshotAbilityBehavior behavior)
+			{
+				unreached.Add(instance);
+				continue;
+			}
+
+			instances.Add(instance);
+			behaviors.Add(new BehaviorSnapshot(instance, binding, behavior.CaptureSnapshot()));
 		}
 
 		return new Snapshot(
 			Level,
 			IsInhibited,
-			[.. _activeInstances],
-			_persistentInstance,
+			[.. instances],
+			[.. unreached],
+			_persistentInstance is not null && instances.Contains(_persistentInstance) ? _persistentInstance : null,
 			_activeCooldownHandles is null ? [] : [.. _activeCooldownHandles],
 			[.. behaviors],
 			OnAbilityDeactivated);
@@ -274,16 +285,40 @@ internal sealed class Ability
 
 	// Puts the ability back into this same object without raising anything. An instance started since the snapshot is
 	// dropped rather than ended: its graph stops without running a node, and the next presentation pass ends what it
-	// showed.
+	// showed. A run the snapshot left out goes on as it is.
 	internal void RestoreSnapshot(Snapshot snapshot)
 	{
 		Handle.Restore(this);
+		var unreached = new List<KeyValuePair<AbilityInstance, BehaviorBinding>>();
 
 		foreach (AbilityInstance instance in _activeInstances)
 		{
-			if (Array.IndexOf(snapshot.ActiveInstances, instance) < 0)
+			if (_behaviors.TryGetValue(instance, out BehaviorBinding binding)
+				&& binding.Behavior is not ISnapshotAbilityBehavior)
+			{
+				unreached.Add(new KeyValuePair<AbilityInstance, BehaviorBinding>(instance, binding));
+			}
+			else if (Array.IndexOf(snapshot.ActiveInstances, instance) < 0)
 			{
 				DropInstance(instance);
+			}
+		}
+
+		// The entity's tags are back as the snapshot counted them, with the runs it left out that ran then. One of
+		// those that started since still holds its tags, and one that ended since holds none.
+		foreach (KeyValuePair<AbilityInstance, BehaviorBinding> run in unreached)
+		{
+			if (Array.IndexOf(snapshot.UnreachedInstances, run.Key) < 0)
+			{
+				RestoreOwnedTags(held: true);
+			}
+		}
+
+		foreach (AbilityInstance instance in snapshot.UnreachedInstances)
+		{
+			if (!unreached.Exists(x => x.Key == instance))
+			{
+				RestoreOwnedTags(held: false);
 			}
 		}
 
@@ -298,14 +333,23 @@ internal sealed class Ability
 			_activeInstances.Add(instance);
 		}
 
-		foreach (BehaviorSnapshot behavior in snapshot.Behaviors)
+		foreach (KeyValuePair<AbilityInstance, BehaviorBinding> run in unreached)
 		{
-			_behaviors[behavior.Instance] = new BehaviorBinding(behavior.Behavior, behavior.Context);
-			((ISnapshotAbilityBehavior)behavior.Behavior).RestoreSnapshot(behavior.State);
-			Owner.Abilities.UnretireBehavior(behavior.Behavior);
+			_activeInstances.Add(run.Key);
+			_behaviors[run.Key] = run.Value;
 		}
 
-		_persistentInstance = snapshot.PersistentInstance;
+		foreach (BehaviorSnapshot behavior in snapshot.Behaviors)
+		{
+			_behaviors[behavior.Instance] = behavior.Binding;
+			((ISnapshotAbilityBehavior)behavior.Binding.Behavior).RestoreSnapshot(behavior.State);
+			Owner.Abilities.UnretireBehavior(behavior.Binding.Behavior);
+		}
+
+		if (!unreached.Exists(x => x.Key == _persistentInstance))
+		{
+			_persistentInstance = snapshot.PersistentInstance;
+		}
 
 		if (_activeCooldownHandles is not null)
 		{
@@ -339,7 +383,8 @@ internal sealed class Ability
 		SubscribeTrigger();
 	}
 
-	// The trigger, and the running nodes of each graph its instances run; a graph two instances share counts once.
+	// The trigger, the running nodes of each graph its instances run and each coded run a snapshot reaches; a behavior
+	// two instances share counts once.
 	internal void AddHolds(List<EntityHold> holds)
 	{
 		if (AbilityData.AbilityTriggerData is not null)
@@ -351,10 +396,20 @@ internal sealed class Ability
 
 		foreach (AbilityInstance instance in _activeInstances)
 		{
-			if (_behaviors.TryGetValue(instance, out BehaviorBinding binding) && !behaviors.Contains(binding.Behavior))
+			if (!_behaviors.TryGetValue(instance, out BehaviorBinding binding) || behaviors.Contains(binding.Behavior))
 			{
-				behaviors.Add(binding.Behavior);
-				((ISnapshotAbilityBehavior)binding.Behavior).AddHolds(holds);
+				continue;
+			}
+
+			behaviors.Add(binding.Behavior);
+
+			if (binding.Behavior is INodeHoldingBehavior graph)
+			{
+				graph.AddHolds(holds);
+			}
+			else if (binding.Behavior is ISnapshotAbilityBehavior coded)
+			{
+				holds.Add(new EntityHold(binding.HoldOrder, coded));
 			}
 		}
 	}
@@ -388,7 +443,7 @@ internal sealed class Ability
 		}
 
 		var context = new AbilityBehaviorContext(this, instance, magnitude);
-		_behaviors[instance] = new BehaviorBinding(behavior, context);
+		_behaviors[instance] = new BehaviorBinding(behavior, context, HoldSequence.Next());
 
 		try
 		{
@@ -415,7 +470,7 @@ internal sealed class Ability
 		}
 
 		var context = new AbilityBehaviorContext<TPayload>(this, instance, payload, magnitude);
-		_behaviors[instance] = new BehaviorBinding(behavior, context);
+		_behaviors[instance] = new BehaviorBinding(behavior, context, HoldSequence.Next());
 
 		try
 		{
@@ -446,6 +501,8 @@ internal sealed class Ability
 
 		if (_behaviors.Remove(instance, out BehaviorBinding binding))
 		{
+			bool unpredicted = EnterUnpredicted();
+
 			try
 			{
 				binding.Behavior.OnEnded(binding.Context);
@@ -453,6 +510,10 @@ internal sealed class Ability
 			catch (Exception ex)
 			{
 				Console.WriteLine($"Ability behavior threw on end: {ex}");
+			}
+			finally
+			{
+				ExitUnpredicted(unpredicted);
 			}
 
 			// What it still shows - an animation, a held property - only the next presentation pass can end.
@@ -487,7 +548,16 @@ internal sealed class Ability
 			{
 				if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
 				{
-					binding.Behavior.OnUpdate(deltaTime);
+					bool unpredicted = EnterUnpredicted();
+
+					try
+					{
+						binding.Behavior.OnUpdate(deltaTime);
+					}
+					finally
+					{
+						ExitUnpredicted(unpredicted);
+					}
 				}
 			}
 		}
@@ -512,7 +582,16 @@ internal sealed class Ability
 				// another behavior - is skipped instead of being advanced after it finished.
 				if (_behaviors.TryGetValue(_behaviorBuffer[i], out BehaviorBinding binding))
 				{
-					binding.Behavior.OnFixedUpdate(deltaTime);
+					bool unpredicted = EnterUnpredicted();
+
+					try
+					{
+						binding.Behavior.OnFixedUpdate(deltaTime);
+					}
+					finally
+					{
+						ExitUnpredicted(unpredicted);
+					}
 				}
 			}
 		}
@@ -556,6 +635,13 @@ internal sealed class Ability
 	{
 		bool canActivate = true;
 		failureFlags = AbilityActivationFailures.None;
+
+		if (Owner.Abilities.IsPredicted
+			&& (!IsPredictable() || (Owner.EffectsManager.FromOutside && !Owner.Abilities.ActivatingForServer)))
+		{
+			failureFlags |= AbilityActivationFailures.ServerOnly;
+			canActivate = false;
+		}
 
 		if (IsInhibited)
 		{
@@ -623,6 +709,41 @@ internal sealed class Ability
 		}
 
 		return canActivate;
+	}
+
+	// Starts, on the client predicting the owner, a run the server started from outside the owner's tick, as the server
+	// did. Returns the run, or null when the ability can't run here.
+	internal AbilityInstance? ActivateForServer(IForgeEntity? abilityTarget, float magnitude)
+	{
+		Owner.Abilities.ActivatingForServer = true;
+
+		try
+		{
+			if (!CanActivate(abilityTarget, out AbilityActivationFailures failureFlags))
+			{
+				Owner.Abilities.NotifyAbilityActivationFailed(Handle, failureFlags);
+				return null;
+			}
+
+			return Activate(abilityTarget, magnitude);
+		}
+		finally
+		{
+			Owner.Abilities.ActivatingForServer = false;
+		}
+	}
+
+	// Whether a client predicting the owner runs the ability: one that isn't Server Only, whose behavior's run a
+	// snapshot reaches. The behavior's kind is found by making one, once.
+	internal bool IsPredictable()
+	{
+		if (AbilityData.ServerOnly)
+		{
+			return false;
+		}
+
+		_behaviorIsPredictable ??= AbilityData.BehaviorFactory?.Invoke() is null or ISnapshotAbilityBehavior;
+		return _behaviorIsPredictable.Value;
 	}
 
 	internal CooldownData[] GetCooldownData()
@@ -945,9 +1066,10 @@ internal sealed class Ability
 		return _costEffect is null || Owner.EffectsManager.TryApplyEffect(_costEffect, out _);
 	}
 
-	private void Activate(IForgeEntity? abilityTarget, float magnitude)
+	private AbilityInstance Activate(IForgeEntity? abilityTarget, float magnitude)
 	{
 		Owner.Abilities.BeginChange();
+		bool unpredicted = EnterUnpredicted();
 
 		try
 		{
@@ -955,9 +1077,11 @@ internal sealed class Ability
 			_activeInstances.Add(instance);
 			NotifyActivated();
 			instance.Start(magnitude);
+			return instance;
 		}
 		finally
 		{
+			ExitUnpredicted(unpredicted);
 			Owner.Abilities.EndChange();
 		}
 	}
@@ -965,6 +1089,7 @@ internal sealed class Ability
 	private void Activate<TData>(IForgeEntity? abilityTarget, TData data, float magnitude)
 	{
 		Owner.Abilities.BeginChange();
+		bool unpredicted = EnterUnpredicted();
 
 		try
 		{
@@ -975,7 +1100,29 @@ internal sealed class Ability
 		}
 		finally
 		{
+			ExitUnpredicted(unpredicted);
 			Owner.Abilities.EndChange();
+		}
+	}
+
+	// While an ability the owner's predicting client doesn't run runs, what it does to the owner isn't that client's
+	// own doing: the server sends it.
+	private bool EnterUnpredicted()
+	{
+		if (!Owner.Abilities.TracksPrediction || IsPredictable())
+		{
+			return false;
+		}
+
+		Owner.Abilities.UnpredictedDepth++;
+		return true;
+	}
+
+	private void ExitUnpredicted(bool entered)
+	{
+		if (entered)
+		{
+			Owner.Abilities.UnpredictedDepth--;
 		}
 	}
 
@@ -1080,6 +1227,19 @@ internal sealed class Ability
 			triggerData.Priority);
 	}
 
+	private void RestoreOwnedTags(bool held)
+	{
+		if (AbilityData.ActivationOwnedTags is TagContainer owned)
+		{
+			Owner.Tags.RestoreModifierTags(owned, held);
+		}
+
+		if (AbilityData.BlockAbilitiesWithTag is TagContainer blocked)
+		{
+			Owner.Abilities.BlockedAbilityTags.RestoreModifierTags(blocked, held);
+		}
+	}
+
 	private void DropInstance(AbilityInstance instance)
 	{
 		instance.Drop();
@@ -1089,7 +1249,7 @@ internal sealed class Ability
 			return;
 		}
 
-		((ISnapshotAbilityBehavior)binding.Behavior).DropRun();
+		(binding.Behavior as ISnapshotAbilityBehavior)?.DropRun();
 
 		if (binding.Behavior.IsPresenting)
 		{
@@ -1124,6 +1284,7 @@ internal sealed class Ability
 	/// <param name="Level">The ability's level.</param>
 	/// <param name="IsInhibited">Whether the ability was inhibited.</param>
 	/// <param name="ActiveInstances">The running instances, in start order.</param>
+	/// <param name="UnreachedInstances">The running instances left out, whose runs the snapshot can't reach.</param>
 	/// <param name="PersistentInstance">The instance a per-entity ability reuses.</param>
 	/// <param name="CooldownHandles">The cooldowns the last commit applied.</param>
 	/// <param name="Behaviors">Each running instance's behavior and its captured run.</param>
@@ -1132,6 +1293,7 @@ internal sealed class Ability
 		int Level,
 		bool IsInhibited,
 		AbilityInstance[] ActiveInstances,
+		AbilityInstance[] UnreachedInstances,
 		AbilityInstance? PersistentInstance,
 		ActiveEffectHandle?[] CooldownHandles,
 		BehaviorSnapshot[] Behaviors,
@@ -1141,12 +1303,7 @@ internal sealed class Ability
 	/// A running instance's behavior, with what it was started with and its captured run.
 	/// </summary>
 	/// <param name="Instance">The running instance.</param>
-	/// <param name="Behavior">The behavior the instance runs.</param>
-	/// <param name="Context">The context the behavior was started with.</param>
+	/// <param name="Binding">The behavior the instance runs, with its context and when it took hold.</param>
 	/// <param name="State">The behavior's captured run.</param>
-	internal readonly record struct BehaviorSnapshot(
-		AbilityInstance Instance,
-		IAbilityBehavior Behavior,
-		AbilityBehaviorContext Context,
-		object State);
+	internal readonly record struct BehaviorSnapshot(AbilityInstance Instance, BehaviorBinding Binding, object? State);
 }

@@ -79,7 +79,7 @@ Every node has a `NetworkKind` that says what its work means to a networked game
 |---|---|---|
 | `Simulation` | Changes gameplay. The default. | Applying an effect, moving a body, writing a variable. |
 | `Presentation` | Only shows something, and never feeds back into the graph. | Playing an animation or a sound, setting a visual property. |
-| `Authority` | Something only the server may decide. | Spawning a networked entity. |
+| `Authority` | Something only the server may decide. An authority action doesn't execute on a client, and the graph goes on as if it had. | Spawning a networked entity. |
 
 A presentation state node splits its work in two halves:
 

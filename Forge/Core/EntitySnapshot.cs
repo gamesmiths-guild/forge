@@ -46,6 +46,8 @@ public sealed class EntitySnapshot
 
 	internal Variant128? ExternalState { get; }
 
+	internal long EffectsTick { get; }
+
 	internal EntitySnapshot(IForgeEntity entity)
 	{
 		Entity = entity;
@@ -60,12 +62,15 @@ public sealed class EntitySnapshot
 		Random = entity.Random?.CaptureSnapshot();
 		Body = entity.Mover?.CaptureState();
 		ExternalState = entity.StateHook?.CaptureState();
+		EffectsTick = entity.EffectsManager.Tick;
 	}
 
 	// Writes the state a checksum covers, value by value. Node contexts and the state of effect components are covered
 	// through what they change, since their shape is their node's or component's own. The body is written at the
-	// network's precision, a thousandth, so float noise below it isn't a difference.
-	internal void Write(IStateWriter writer)
+	// network's precision, a thousandth, so float noise below it isn't a difference. With a prediction scope, only what
+	// it covers is written, and effects and abilities as sets, since a predicting client takes the server's effects in
+	// at the ticks it hears of them.
+	internal void Write(IStateWriter writer, PredictionScope? scope = null)
 	{
 		writer.Open("Attributes");
 
@@ -83,6 +88,15 @@ public sealed class EntitySnapshot
 		}
 
 		writer.Close();
+
+		if (scope is not null)
+		{
+			WritePredictedTags(writer);
+			WriteTags(writer, "Blocked ability tags", BlockedAbilityTags);
+			WritePredicted(writer, scope);
+			return;
+		}
+
 		WriteTags(writer, "Tags", Tags);
 		WriteTags(writer, "Blocked ability tags", BlockedAbilityTags);
 
@@ -120,17 +134,7 @@ public sealed class EntitySnapshot
 			writer.Write("Level", ability.State.Level);
 			writer.Write("Inhibited", ability.State.IsInhibited ? 1 : 0);
 			writer.Write("Instances", ability.State.ActiveInstances.Length);
-
-			for (int j = 0; j < ability.State.Behaviors.Length; j++)
-			{
-				if (ability.State.Behaviors[j].State is GraphSnapshot graph)
-				{
-					writer.Open("Graphs", j);
-					graph.Write(writer);
-					writer.Close();
-				}
-			}
-
+			WriteGraphs(writer, ability, predicted: false);
 			writer.Close();
 		}
 
@@ -185,6 +189,7 @@ public sealed class EntitySnapshot
 		Entity.Abilities.BlockedAbilityTags.RestoreSnapshot(BlockedAbilityTags);
 		ExceptionDispatchInfo? failure = Entity.EffectsManager.RestoreSnapshot(Effects);
 		Entity.Abilities.RestoreSnapshot(Abilities);
+		Entity.EffectsManager.RestoreTick(EffectsTick);
 		SharedVariables.CopyTo(Entity.SharedVariables);
 
 		if (Input is EntityInputSnapshot input)
@@ -224,6 +229,19 @@ public sealed class EntitySnapshot
 		return failure;
 	}
 
+	private static void WriteGraphs(IStateWriter writer, GrantedAbilitySnapshot ability, bool predicted)
+	{
+		for (int j = 0; j < ability.State.Behaviors.Length; j++)
+		{
+			if (ability.State.Behaviors[j].State is GraphSnapshot graph)
+			{
+				writer.Open("Graphs", j);
+				graph.Write(writer, predicted);
+				writer.Close();
+			}
+		}
+	}
+
 	private static void WriteTags(IStateWriter writer, string name, EntityTagsSnapshot tags)
 	{
 		writer.Open(name);
@@ -259,5 +277,97 @@ public sealed class EntitySnapshot
 	private static double Quantized(float value)
 	{
 		return (Math.Round(value * 1000.0, MidpointRounding.AwayFromZero) / 1000.0) + 0.0;
+	}
+
+	// The tags the entity has, whatever gives them: a predicting client holds as a base tag one the server's entity
+	// has from what the client doesn't run.
+	private void WritePredictedTags(IStateWriter writer)
+	{
+		writer.OpenSet("Tags");
+
+		foreach (Tag tag in Tags.BaseTags)
+		{
+			writer.Write(tag.ToString(), 1);
+		}
+
+		foreach (KeyValuePair<Tag, int> tag in Tags.ModifierTagCounts)
+		{
+			if (tag.Value > 0 && Array.IndexOf(Tags.BaseTags, tag.Key) < 0)
+			{
+				writer.Write(tag.Key.ToString(), 1);
+			}
+		}
+
+		writer.Close();
+	}
+
+	private void WritePredicted(IStateWriter writer, PredictionScope scope)
+	{
+		writer.OpenSet("Effects");
+
+		foreach (KeyValuePair<ActiveEffect, ActiveEffectSnapshot> entry in Effects)
+		{
+			if (!scope.HeardByOwner(entry.Key))
+			{
+				continue;
+			}
+
+			ActiveEffectSnapshot effect = entry.Value;
+			EffectOwnership ownership = effect.EffectEvaluatedData.Effect.Ownership;
+			writer.Open(entry.Key.EffectData.Name);
+			writer.Write("Level", effect.EffectLevel);
+			writer.Write("Stacks", effect.StackCount);
+			writer.Write("Remaining ticks", scope.Ticks(effect.RemainingDuration));
+			writer.Write("Executions", effect.ExecutionCount);
+			writer.Write("Inhibited", effect.IsInhibited ? 1 : 0);
+			writer.WriteEntity("Owner", ownership.Owner);
+			writer.WriteEntity("Source", ownership.Source);
+
+			// One the client made from the server's word starts its periods where it was made.
+			if (!entry.Key.IsFromOutside)
+			{
+				writer.Write("Next periodic tick", scope.Ticks(effect.NextPeriodicTick));
+			}
+
+			writer.OpenSet("Set by caller");
+
+			foreach (KeyValuePair<Tag, float> value in effect.EffectDataTags)
+			{
+				writer.Write(value.Key.ToString(), value.Value);
+			}
+
+			writer.Close();
+			writer.Close();
+		}
+
+		writer.Close();
+		writer.OpenSet("Abilities");
+
+		foreach (GrantedAbilitySnapshot ability in Abilities.Abilities)
+		{
+			writer.Open(ability.Ability.AbilityData.Name);
+			writer.Write("Level", ability.State.Level);
+			writer.Write("Inhibited", ability.State.IsInhibited ? 1 : 0);
+
+			if (ability.Ability.IsPredictable())
+			{
+				writer.Write("Instances", ability.State.ActiveInstances.Length);
+				WriteGraphs(writer, ability, predicted: true);
+			}
+
+			writer.Close();
+		}
+
+		writer.Close();
+
+		if (Random is DeterministicRandom.State random)
+		{
+			writer.Open("Random");
+			writer.Write("S0", unchecked((long)random.S0));
+			writer.Write("S1", unchecked((long)random.S1));
+			writer.Write("S2", unchecked((long)random.S2));
+			writer.Write("S3", unchecked((long)random.S3));
+			writer.Close();
+		}
 	}
 }

@@ -22,6 +22,9 @@ namespace Gamesmiths.Forge.Statescript.Nodes.State;
 /// entity sees, a tap shorter than a step included. An entity without an input, or an input that does not carry the
 /// action, is not read. An engine integration can derive from this node and report its own device's state through
 /// <see cref="ReadButtonState"/>.</para>
+/// <para>Bound, <see cref="InputSourcesInput"/> is watched instead: every entity in it, such as everyone standing in an
+/// area, as one button: down while any of them holds it, pressed when one presses it while none does, and released
+/// when the last lets go.</para>
 /// </remarks>
 /// <param name="actionName">The input action to watch.</param>
 /// <param name="deactivateOnPressed">Whether the node deactivates itself on the first press, for the "wait for one
@@ -33,6 +36,12 @@ public class InputActionNode(string actionName = "", bool deactivateOnPressed = 
 	/// Input property index for the entity whose input is watched. Unbound means the ability's owner.
 	/// </summary>
 	public const byte InputSourceInput = 0;
+
+	/// <summary>
+	/// Input property index for the entities whose input is watched as one button. Bound, it is watched instead of
+	/// <see cref="InputSourceInput"/>.
+	/// </summary>
+	public const byte InputSourcesInput = 1;
 
 	/// <summary>
 	/// Output port index for the event emitted when the button goes down.
@@ -51,10 +60,17 @@ public class InputActionNode(string actionName = "", bool deactivateOnPressed = 
 
 	private readonly string _actionName = actionName ?? string.Empty;
 	private readonly bool _deactivateOnPressed = deactivateOnPressed;
+	private readonly List<EntityInput> _inputs = [];
 
 	/// <inheritdoc/>
 	public override string Description =>
 		"Watches a button while active, emitting press and release events and routing a held subgraph.";
+
+	/// <summary>
+	/// Gets a value indicating whether <see cref="InputSourcesInput"/> is bound, so the node watches those entities
+	/// rather than <see cref="InputSourceInput"/>.
+	/// </summary>
+	protected bool WatchesInputSources => InputProperties[InputSourcesInput].BoundName != StringKey.Empty;
 
 	/// <inheritdoc/>
 	protected override void DefinePorts(List<InputPort> inputPorts, List<OutputPort> outputPorts)
@@ -69,17 +85,14 @@ public class InputActionNode(string actionName = "", bool deactivateOnPressed = 
 	protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
 	{
 		inputProperties.Add(new InputProperty("Input Source", typeof(IForgeEntity), IsOptional: true));
+		inputProperties.Add(new InputProperty("Input Sources", typeof(IForgeEntity[]), IsOptional: true));
 	}
 
 	/// <inheritdoc/>
 	protected override void OnActivate(GraphContext graphContext)
 	{
 		graphContext.GetNodeContext<InputActionNodeContext>(NodeID).LastPressed = null;
-
-		if (ResolveInputSource(graphContext)?.Input is EntityInput input)
-		{
-			ReadInput(graphContext, input);
-		}
+		ReadInputs(graphContext);
 	}
 
 	/// <inheritdoc/>
@@ -91,10 +104,7 @@ public class InputActionNode(string actionName = "", bool deactivateOnPressed = 
 	/// <inheritdoc/>
 	protected override void OnFixedUpdate(double deltaTime, GraphContext graphContext)
 	{
-		if (ResolveInputSource(graphContext)?.Input is EntityInput input)
-		{
-			ReadInput(graphContext, input);
-		}
+		ReadInputs(graphContext);
 	}
 
 	/// <summary>
@@ -148,26 +158,110 @@ public class InputActionNode(string actionName = "", bool deactivateOnPressed = 
 		}
 	}
 
+	private static bool WasRead(InputActionNodeContext nodeContext, EntityInput input)
+	{
+		foreach (KeyValuePair<EntityInput, ulong> read in nodeContext.Reads)
+		{
+			if (read.Key == input && read.Value == input.FrameNumber)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private void ReadInputs(GraphContext graphContext)
+	{
+		_inputs.Clear();
+
+		if (!WatchesInputSources)
+		{
+			if (ResolveInputSource(graphContext)?.Input is EntityInput input)
+			{
+				_inputs.Add(input);
+			}
+		}
+		else if (graphContext.TryResolveObjectArray(
+			InputProperties[InputSourcesInput].BoundName,
+			typeof(IForgeEntity),
+			out object?[]? sources))
+		{
+			foreach (object? source in sources)
+			{
+				if (source is IForgeEntity { Input: EntityInput input })
+				{
+					_inputs.Add(input);
+				}
+			}
+		}
+
+		ReadInput(graphContext, _inputs);
+	}
+
 	// A tick's input can hold a release and a press of the same button, in an order the frame cannot tell, so the state
 	// before the tick decides: a button that was down came up first, one that was up went down first.
-	private void ReadInput(GraphContext graphContext, EntityInput input)
+	private void ReadInput(GraphContext graphContext, List<EntityInput> inputs)
 	{
-		int action = input.Actions.IndexOf(_actionName);
+		InputActionNodeContext nodeContext = graphContext.GetNodeContext<InputActionNodeContext>(NodeID);
+		bool carried = false;
+		bool held = false;
+		bool pressed = false;
+		bool pressedAgain = false;
+		bool heldThrough = false;
+		bool unread = false;
 
-		if (action < 0)
+		foreach (EntityInput input in inputs)
 		{
+			int action = input.Actions.IndexOf(_actionName);
+
+			if (action < 0)
+			{
+				continue;
+			}
+
+			InputFrame frame = input.Current;
+			bool isHeld = frame.IsHeld(action);
+			carried = true;
+			held |= isHeld;
+
+			// The edges of a frame already read, such as the one an input-bound ability activated on, happened before
+			// the node started watching.
+			if (WasRead(nodeContext, input))
+			{
+				heldThrough |= isHeld;
+				continue;
+			}
+
+			unread = true;
+			pressed |= frame.WasPressed(action);
+			pressedAgain |= frame.WasReleased(action) && isHeld;
+			heldThrough |= isHeld && !frame.WasPressed(action) && !frame.WasReleased(action);
+		}
+
+		if (!carried)
+		{
+			// Watched entities that all left hold nothing.
+			if (WatchesInputSources && nodeContext.LastPressed == true)
+			{
+				nodeContext.Reads.Clear();
+				nodeContext.LastPressed = false;
+				Release(graphContext, nodeContext);
+			}
+
 			return;
 		}
 
-		InputActionNodeContext nodeContext = graphContext.GetNodeContext<InputActionNodeContext>(NodeID);
-		InputFrame frame = input.Current;
-		bool held = frame.IsHeld(action);
+		nodeContext.Reads.Clear();
+
+		foreach (EntityInput input in inputs)
+		{
+			nodeContext.Reads.Add(new KeyValuePair<EntityInput, ulong>(input, input.FrameNumber));
+		}
 
 		if (nodeContext.LastPressed is not bool down)
 		{
 			nodeContext.LastPressed = held;
-			nodeContext.LastInput = input;
-			nodeContext.LastFrame = input.FrameNumber;
 
 			if (held)
 			{
@@ -177,17 +271,13 @@ public class InputActionNode(string actionName = "", bool deactivateOnPressed = 
 			return;
 		}
 
-		// The edges of a frame already read, such as the one an input-bound ability activated on, happened before the
-		// node started watching.
-		if (nodeContext.LastInput == input && nodeContext.LastFrame == input.FrameNumber)
+		if (!unread)
 		{
 			return;
 		}
 
-		nodeContext.LastInput = input;
-		nodeContext.LastFrame = input.FrameNumber;
-
-		if (down && (frame.WasReleased(action) || !held))
+		// A button another source still holds, or held through the tick, stays down.
+		if (down && ((pressedAgain && !heldThrough) || !held))
 		{
 			nodeContext.LastPressed = down = false;
 
@@ -197,7 +287,7 @@ public class InputActionNode(string actionName = "", bool deactivateOnPressed = 
 			}
 		}
 
-		if (!down && (frame.WasPressed(action) || held))
+		if (!down && (pressed || held))
 		{
 			nodeContext.LastPressed = down = true;
 

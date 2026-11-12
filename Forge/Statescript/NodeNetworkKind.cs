@@ -21,7 +21,8 @@ public enum NodeNetworkKind : byte
 	Presentation = 1,
 
 	/// <summary>
-	/// Does something only the server may decide, such as spawning or freeing a networked entity.
+	/// Does something only the server may decide, such as spawning or freeing a networked entity. On a client, an
+	/// authority action doesn't execute and its graph goes on as if it had.
 	/// </summary>
 	Authority = 2,
 }

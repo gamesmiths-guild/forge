@@ -19,6 +19,13 @@ internal sealed class AbilityInstance
 
 	internal AbilityInstanceHandle Handle { get; }
 
+	// Whether the activation came from outside the owner's own tick: from another entity, the host between ticks or
+	// what the owner doesn't predict. The client predicting the owner takes such a run in from the server.
+	internal bool IsFromOutside { get; private set; }
+
+	// The tick the owner had last advanced through when the activation came, which it came after.
+	internal long AfterTick { get; private set; } = -1;
+
 	internal AbilityInstance(Ability ability, IForgeEntity? target)
 	{
 		_ability = ability;
@@ -33,6 +40,8 @@ internal sealed class AbilityInstance
 			return;
 		}
 
+		IsFromOutside = _ability.Owner.EffectsManager.FromOutside;
+		AfterTick = _ability.Owner.EffectsManager.AdvancedTick;
 		ApplyActivationState();
 		IsActive = true;
 		_ability.OnInstanceStarted(this, magnitude);
@@ -45,6 +54,8 @@ internal sealed class AbilityInstance
 			return;
 		}
 
+		IsFromOutside = _ability.Owner.EffectsManager.FromOutside;
+		AfterTick = _ability.Owner.EffectsManager.AdvancedTick;
 		ApplyActivationState();
 		IsActive = true;
 		_ability.OnInstanceStarted(this, data, magnitude);

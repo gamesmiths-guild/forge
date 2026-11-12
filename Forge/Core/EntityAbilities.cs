@@ -126,6 +126,22 @@ public class EntityAbilities(IForgeEntity owner)
 	// Hears of the actions the entity's graphs execute, for a server to tell clients.
 	internal IGraphObserver? GraphObserver { get; set; }
 
+	// On the client that predicts the entity: only the abilities that client can predict activate.
+	internal bool IsPredicted { get; set; }
+
+	// Set on the server for an entity a client owns, and on that client: abilities that client doesn't predict count
+	// UnpredictedDepth while they run, so what they raise is told from what the client raises itself.
+	internal bool TracksPrediction { get; set; }
+
+	internal int UnpredictedDepth { get; set; }
+
+	// Set while the client predicting the entity starts a run the server started from outside the entity's tick.
+	internal bool ActivatingForServer { get; set; }
+
+	// Set while a predicting client runs the entity's ticks again: the copies of the server's runs it shows aren't
+	// advanced again for ticks they already ran.
+	internal bool IsReplaying { get; set; }
+
 	internal bool IsChanging
 	{
 		get
@@ -603,7 +619,7 @@ public class EntityAbilities(IForgeEntity owner)
 				}
 			}
 
-			for (int i = 0; i < _remoteBehaviors.Count; i++)
+			for (int i = 0; !IsReplaying && i < _remoteBehaviors.Count; i++)
 			{
 				_remoteBehaviors[i].OnFixedUpdate(deltaTime);
 			}
@@ -880,20 +896,6 @@ public class EntityAbilities(IForgeEntity owner)
 	internal void NotifyAbilityActivationFailed(AbilityHandle abilityHandle, AbilityActivationFailures failureFlags)
 	{
 		OnAbilityActivationFailed?.Invoke(abilityHandle, failureFlags);
-	}
-
-	// The first granted ability running a behavior an entity snapshot can't capture, if any.
-	internal AbilityData? FindUnsnapshottableAbility()
-	{
-		foreach (AbilityHandle handle in _grantOrder)
-		{
-			if (handle.Ability is { RunsUnsnapshottableBehavior: true } ability)
-			{
-				return ability.AbilityData;
-			}
-		}
-
-		return null;
 	}
 
 	internal EntityAbilitiesSnapshot CaptureSnapshot()

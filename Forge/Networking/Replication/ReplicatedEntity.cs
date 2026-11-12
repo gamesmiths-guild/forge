@@ -143,6 +143,13 @@ public sealed class ReplicatedEntity
 
 	internal QuantizedBody? ShadowBody { get; private set; }
 
+	// The body the entity had as it was registered, where its setup ran.
+	internal BodyState? SpawnBody { get; }
+
+	// What the entity's owner predicts of it, hashed at the last send, for the owner to check its prediction against,
+	// or null when it couldn't be.
+	internal ulong? PredictionChecksum { get; set; }
+
 	internal long BodyStamp { get; private set; } = -1;
 
 	internal ReplicatedEntity(
@@ -150,7 +157,8 @@ public sealed class ReplicatedEntity
 		int sceneIndex,
 		PeerId owner,
 		TagsManager tagsManager,
-		long spawnedAtTick)
+		long spawnedAtTick,
+		BodyState? spawnBody)
 	{
 		Entity = entity;
 		Id = entity.NetworkId;
@@ -166,6 +174,7 @@ public sealed class ReplicatedEntity
 		RangeStamps = new long[Attributes.Length];
 		BaseStamps = new long[Attributes.Length];
 		SpawnedAtTick = spawnedAtTick;
+		SpawnBody = spawnBody;
 
 		// Nothing has been seen yet, so the first capture stamps everything.
 		Array.Fill(ShadowValues, int.MinValue);
@@ -241,6 +250,28 @@ public sealed class ReplicatedEntity
 
 	// Looks at the effects active on the entity: one seen for the first time gets a record, and one that was there and
 	// isn't any more leaves a tombstone.
+	// Whether the entity's owner has the effect: one the entity's own tick applied, which the owner predicts, or one
+	// that landed from outside, which the owner takes from the server when it hears of it.
+	internal bool OwnerHas(ActiveEffect activeEffect)
+	{
+		return !activeEffect.IsFromOutside || HeardByOwner(activeEffect);
+	}
+
+	internal bool HeardByOwner(ActiveEffect activeEffect)
+	{
+		return _effectsByActive.TryGetValue(activeEffect, out ReplicatedEffect? effect)
+			&& effect.Visibility != EffectVisibility.ServerOnly;
+	}
+
+	// A persistent cue the entity's owner shows itself: one its own tick applied, or one of an effect it has.
+	internal bool OwnerShows(CueInstance cue)
+	{
+		return cue.FromOwnTick
+			|| (cue.Application is EffectEvaluatedData data
+				&& _effectsByActive.Keys.FirstOrDefault(x => x.EffectEvaluatedData == data) is ActiveEffect activeEffect
+				&& OwnerHas(activeEffect));
+	}
+
 	internal void CaptureEffects(long tick, ReplicationServer server, SimulationClock clock)
 	{
 		IReadOnlyList<ActiveEffect> activeEffects = Entity.EffectsManager.ActiveEffects;
@@ -295,12 +326,18 @@ public sealed class ReplicatedEntity
 
 		foreach (Ability.BehaviorBinding binding in _behaviors)
 		{
-			// The run on the processor is its last activation's, which a shared behavior's binding may not be.
-			if (binding.Behavior is GraphAbilityBehavior behavior
-				&& behavior.Processor.Graph.NetworkTable.RunsOnClients)
+			if (binding.Behavior is not GraphAbilityBehavior behavior)
 			{
-				AbilityBehaviorContext context =
-					behavior.Processor.GraphContext.ActivationContext as AbilityBehaviorContext ?? binding.Context;
+				continue;
+			}
+
+			// The run on the processor is its last activation's, which a shared behavior's binding may not be.
+			AbilityBehaviorContext context =
+				behavior.Processor.GraphContext.ActivationContext as AbilityBehaviorContext ?? binding.Context;
+
+			// A graph clients run nothing of still goes to an owner that takes its run in.
+			if (behavior.Processor.Graph.NetworkTable.RunsOnClients || ReplicatedGraph.IsTakenInByOwner(context))
+			{
 				GraphFor(behavior.Processor, context, server, tick).Capture(tick);
 			}
 		}
@@ -377,11 +414,19 @@ public sealed class ReplicatedEntity
 	}
 
 	// A persistent cue applied on the entity, numbered so a client can tell it from another of the same cue.
-	internal sealed class CueInstance(uint instance, object? application, Tag cueTag, CueParameters? parameters)
+	internal sealed class CueInstance(
+		uint instance,
+		object? application,
+		Tag cueTag,
+		CueParameters? parameters,
+		bool fromOwnTick)
 	{
 		public uint Instance { get; } = instance;
 
 		public object? Application { get; } = application;
+
+		// Applied by the entity's own tick, which its owner predicts, rather than by an effect or from elsewhere.
+		public bool FromOwnTick { get; } = fromOwnTick;
 
 		public Tag CueTag { get; } = cueTag;
 
@@ -390,7 +435,7 @@ public sealed class ReplicatedEntity
 		public long Stamp { get; set; } = Pending;
 	}
 
-	internal readonly record struct CueTombstone(uint Instance, long Stamp, bool Interrupted);
+	internal readonly record struct CueTombstone(uint Instance, long Stamp, bool Interrupted, bool OwnersOwn);
 
 	internal readonly record struct EffectTombstone(
 		uint Instance,
@@ -399,5 +444,11 @@ public sealed class ReplicatedEntity
 		bool Expired);
 
 	// A cue executed on the entity: one-shot, numbered in order, and forgotten once it's too old to be worth showing.
-	internal readonly record struct CueEvent(uint Sequence, Tag CueTag, CueParameters? Parameters, long CreatedAtTick);
+	// One its own tick executed, which its owner predicts, goes to everyone but the owner.
+	internal readonly record struct CueEvent(
+		uint Sequence,
+		Tag CueTag,
+		CueParameters? Parameters,
+		long CreatedAtTick,
+		bool OwnersOwn);
 }

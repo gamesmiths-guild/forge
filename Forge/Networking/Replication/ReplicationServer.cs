@@ -204,7 +204,8 @@ public sealed class ReplicationServer
 			sceneIndex,
 			owner,
 			_session.TagsManager,
-			_session.Clock.Tick);
+			_session.Clock.Tick,
+			BodySource(entity));
 		_entities[entity.NetworkId] = replicated;
 		_byEntity[entity] = replicated;
 		_entityList.Add(replicated);
@@ -212,6 +213,9 @@ public sealed class ReplicationServer
 
 		entity.CuesManager.AddObserver(_cueObserver);
 		entity.Abilities.GraphObserver = _graphObserver;
+
+		// A client predicts only an entity spawned for it: one placed in its scene is a mirror there, whoever owns it.
+		entity.Abilities.TracksPrediction = sceneIndex >= 0 && owner != PeerId.None && owner != PeerId.Server;
 
 		foreach (PersistentCue cue in EntitySimulation.PersistentCues(entity))
 		{
@@ -305,6 +309,7 @@ public sealed class ReplicationServer
 
 		LastSendTick = tick;
 		long oldestEvent = tick - (long)Math.Ceiling(_session.Clock.TicksIn(EventExpirySeconds));
+		ExceptionDispatchInfo? failure = null;
 
 		foreach (ReplicatedEntity entity in _entityList)
 		{
@@ -312,9 +317,25 @@ public sealed class ReplicationServer
 			entity.CaptureEffects(tick, this, _session.Clock);
 			entity.CaptureGraphs(tick, this);
 			ExpireEvents(entity, oldestEvent);
-		}
+			entity.PredictionChecksum = null;
 
-		ExceptionDispatchInfo? failure = null;
+			if (!entity.Entity.Abilities.TracksPrediction || !_clients.ContainsKey(entity.Owner))
+			{
+				continue;
+			}
+
+			// A coded behavior or a state hook that can't be captured costs its entity this send's check alone.
+			try
+			{
+				entity.PredictionChecksum = EntitySimulation.PredictionChecksum(
+					EntitySimulation.CaptureSnapshot(entity.Entity),
+					new PredictionScope(entity.HeardByOwner, _session.Clock.TickRate));
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
 
 		foreach (ClientState client in _clients.Values)
 		{
@@ -518,7 +539,7 @@ public sealed class ReplicationServer
 
 	private static bool HasPending(EntityView view)
 	{
-		if (view.Leaving || view.Acked < 0)
+		if (view.Leaving || view.Acked < 0 || ChecksPrediction(view))
 		{
 			return true;
 		}
@@ -602,12 +623,30 @@ public sealed class ReplicationServer
 		return entity.BodyStamp > acked;
 	}
 
+	// Whether the view is the owner's of an entity it predicts, which gets the prediction checksum every send.
+	private static bool ChecksPrediction(EntityView view)
+	{
+		return view.IsOwner && view.Entity.Entity.Abilities.TracksPrediction;
+	}
+
 	// A graph run goes to a client while the client lacks what it is, how it is or what it did lately, and once it has
 	// ended, to a client that has it. One the client never had goes only for its events, as a run too short to have
-	// been seen does. A despawning entity's graphs go only for their events.
+	// been seen does. A despawning entity's graphs go only for their events. The owner of an entity runs the runs it
+	// predicts itself, so it gets none of them, and of a run it takes in, only that it started and that it ended.
 	private static bool GraphChanged(EntityView view, ReplicatedGraph graph, bool despawning)
 	{
-		if (!graph.IsListed)
+		if (!graph.IsListed || (view.IsOwner && graph.PredictedByOwner))
+		{
+			return false;
+		}
+
+		if (view.IsOwner && graph.TakenInByOwner)
+		{
+			return !despawning && (graph.Removed ? graph.RemovedStamp > view.Seen : graph.CreatedStamp > view.Acked);
+		}
+
+		// Recorded only for an owner that takes it in.
+		if (!graph.Table.RunsOnClients)
 		{
 			return false;
 		}
@@ -772,7 +811,7 @@ public sealed class ReplicationServer
 		if (view.Leaving)
 		{
 			_entry.WriteBits((ulong)EntryKind.Despawn, 2);
-			uint lastEvent = WriteEvents(entity, view.EventsAcked);
+			uint lastEvent = WriteEvents(view);
 			lastEvent = Math.Max(lastEvent, WriteGraphs(view, tick, despawning: true));
 			_entry.Align();
 			return lastEvent;
@@ -793,12 +832,22 @@ public sealed class ReplicationServer
 
 			_entry.WriteVarUInt((ulong)entity.Owner.Value);
 			_entry.WriteVarUInt((ulong)entity.Attributes.Length);
+
+			// The owner makes an entity it predicts where the server's body was as it was registered, exactly, so the
+			// entity's setup runs where the server's did.
+			BodyState? spawnBody = view.IsOwner && !entity.IsPlaced ? entity.SpawnBody : null;
+			_entry.WriteBool(spawnBody is not null);
+
+			if (spawnBody is BodyState body)
+			{
+				BodyCodec.WriteExact(_entry, body);
+			}
 		}
 
 		WriteAttributes(view);
 		WriteTags(entity, acked, seen);
-		WriteCues(entity, acked, seen);
-		uint maxEvent = WriteEvents(entity, view.EventsAcked);
+		WriteCues(view);
+		uint maxEvent = WriteEvents(view);
 		WriteEffects(view, tick);
 		maxEvent = Math.Max(maxEvent, WriteGraphs(view, tick, despawning: false));
 
@@ -814,6 +863,14 @@ public sealed class ReplicationServer
 			{
 				BodyCodec.Write(_entry, body);
 			}
+		}
+
+		ulong? checksum = ChecksPrediction(view) ? entity.PredictionChecksum : null;
+		_entry.WriteBool(checksum is not null);
+
+		if (checksum is ulong value)
+		{
+			_entry.WriteBits(value, 64);
 		}
 
 		_entry.Align();
@@ -919,13 +976,18 @@ public sealed class ReplicationServer
 		}
 	}
 
-	private void WriteCues(ReplicatedEntity entity, long acked, long seen)
+	// The owner of an entity it predicts shows the cues it predicts itself, so it gets only the others.
+	private void WriteCues(EntityView view)
 	{
+		ReplicatedEntity entity = view.Entity;
+		long acked = view.Acked;
+		long seen = view.Seen;
+		bool owner = ChecksPrediction(view);
 		int cues = 0;
 
 		foreach (ReplicatedEntity.CueInstance cue in entity.Cues)
 		{
-			if (cue.Stamp > acked)
+			if (cue.Stamp > acked && !(owner && entity.OwnerShows(cue)))
 			{
 				cues++;
 			}
@@ -933,7 +995,7 @@ public sealed class ReplicationServer
 
 		foreach (ReplicatedEntity.CueTombstone tombstone in entity.RemovedCues)
 		{
-			if (tombstone.Stamp > seen)
+			if (tombstone.Stamp > seen && !(owner && tombstone.OwnersOwn))
 			{
 				cues++;
 			}
@@ -950,7 +1012,7 @@ public sealed class ReplicationServer
 
 		foreach (ReplicatedEntity.CueInstance cue in entity.Cues)
 		{
-			if (cue.Stamp <= acked)
+			if (cue.Stamp <= acked || (owner && entity.OwnerShows(cue)))
 			{
 				continue;
 			}
@@ -963,7 +1025,7 @@ public sealed class ReplicationServer
 
 		foreach (ReplicatedEntity.CueTombstone tombstone in entity.RemovedCues)
 		{
-			if (tombstone.Stamp <= seen)
+			if (tombstone.Stamp <= seen || (owner && tombstone.OwnersOwn))
 			{
 				continue;
 			}
@@ -974,13 +1036,16 @@ public sealed class ReplicationServer
 		}
 	}
 
-	private uint WriteEvents(ReplicatedEntity entity, uint eventsAcked)
+	private uint WriteEvents(EntityView view)
 	{
+		ReplicatedEntity entity = view.Entity;
+		uint eventsAcked = view.EventsAcked;
+		bool owner = ChecksPrediction(view);
 		int events = 0;
 
 		foreach (ReplicatedEntity.CueEvent cueEvent in entity.Events)
 		{
-			if (cueEvent.Sequence > eventsAcked)
+			if (cueEvent.Sequence > eventsAcked && !(owner && cueEvent.OwnersOwn))
 			{
 				events++;
 			}
@@ -1004,6 +1069,12 @@ public sealed class ReplicationServer
 			}
 
 			maxEvent = Math.Max(maxEvent, cueEvent.Sequence);
+
+			if (owner && cueEvent.OwnersOwn)
+			{
+				continue;
+			}
+
 			_entry.WriteVarUInt(cueEvent.Sequence);
 			_entry.WriteVarUInt(_session.TagsManager.GetNetIndexFromTag(cueEvent.CueTag));
 			ReplicationCodec.WriteParameters(_entry, cueEvent.Parameters);
@@ -1048,7 +1119,7 @@ public sealed class ReplicationServer
 		{
 			if (view.Hears(effect.Visibility) && effect.LastChange > acked)
 			{
-				WriteEffect(effect, acked, tick);
+				WriteEffect(effect, acked, tick, ChecksPrediction(view));
 			}
 		}
 
@@ -1065,7 +1136,7 @@ public sealed class ReplicationServer
 
 	// What the effect is goes until the client has it, what it's like now whenever that changes, and how often it
 	// executed on its own, since that changes the most.
-	private void WriteEffect(ReplicatedEffect effect, long acked, long tick)
+	private void WriteEffect(ReplicatedEffect effect, long acked, long tick, bool forOwner)
 	{
 		NetworkAssetRegistry registry = _session.Registry;
 		_entry.WriteVarUInt(effect.Instance);
@@ -1077,6 +1148,16 @@ public sealed class ReplicationServer
 		if (created)
 		{
 			_entry.WriteBits((ulong)effect.AssetIndex, registry.BitsFor(AssetKind.Effect));
+
+			// The owner of an entity it predicts takes in what landed from outside after the tick it landed after.
+			bool outside = forOwner && effect.Active.IsFromOutside;
+			_entry.WriteBool(outside);
+
+			if (outside)
+			{
+				_entry.WriteVarInt(tick - effect.Active.AfterTick);
+			}
+
 			_entry.WriteBool(effect.ContextCodec >= 0);
 
 			if (effect.ContextCodec >= 0)
@@ -1176,10 +1257,14 @@ public sealed class ReplicationServer
 		long acked = view.Acked;
 		_entry.WriteVarUInt(graph.Instance);
 
+		// The owner runs a run it takes in itself, from after the tick it started after, so it hears nothing of how the
+		// run goes.
+		bool takenIn = view.IsOwner && graph.TakenInByOwner;
+
 		// An ended run with no actions left to bring goes as its end alone: a client that never had it has nothing to
 		// end.
 		bool live = !despawning && !graph.Removed;
-		bool brings = live || HasEvents(graph, view.EventsAcked);
+		bool brings = live || (!takenIn && HasEvents(graph, view.EventsAcked));
 		bool created = brings && graph.CreatedStamp > acked;
 		_entry.WriteBool(created);
 
@@ -1190,9 +1275,15 @@ public sealed class ReplicationServer
 			_entry.WriteVarUInt(graph.SourceId);
 			_entry.WriteVarInt(graph.Level);
 			_entry.WriteFloat(graph.Magnitude);
+			_entry.WriteBool(takenIn);
+
+			if (takenIn)
+			{
+				_entry.WriteVarInt(tick - graph.AfterTick);
+			}
 		}
 
-		bool states = live && graph.StatesStamp > acked;
+		bool states = !takenIn && live && graph.StatesStamp > acked;
 		_entry.WriteBool(states);
 
 		if (states)
@@ -1208,7 +1299,7 @@ public sealed class ReplicationServer
 		}
 
 		// A run that ended still sends its values with the actions it brings: they read them.
-		bool values = brings && graph.ValuesChanged(acked);
+		bool values = !takenIn && brings && graph.ValuesChanged(acked);
 		_entry.WriteBool(values);
 
 		if (values)
@@ -1221,7 +1312,7 @@ public sealed class ReplicationServer
 
 		foreach (ReplicatedGraph.GraphEvent graphEvent in graph.Events)
 		{
-			if (graphEvent.Sequence > view.EventsAcked)
+			if (!takenIn && graphEvent.Sequence > view.EventsAcked)
 			{
 				events++;
 			}
@@ -1396,8 +1487,12 @@ public sealed class ReplicationServer
 				return;
 			}
 
-			entity.Cues
-				.Add(new ReplicatedEntity.CueInstance(entity.NextCueInstance++, application, cueTag, parameters));
+			entity.Cues.Add(new ReplicatedEntity.CueInstance(
+				entity.NextCueInstance++,
+				application,
+				cueTag,
+				parameters,
+				application is not ActiveEffect && target.EffectsManager.RaisesOwnTick));
 		}
 
 		public void CueUpdated(Tag cueTag, IForgeEntity? target, CueParameters? parameters, object? application)
@@ -1437,7 +1532,11 @@ public sealed class ReplicationServer
 
 			entity.Cues.Remove(cue);
 			entity.RemovedCues
-				.Add(new ReplicatedEntity.CueTombstone(cue.Instance, ReplicatedEntity.Pending, interrupted));
+				.Add(new ReplicatedEntity.CueTombstone(
+					cue.Instance,
+					ReplicatedEntity.Pending,
+					interrupted,
+					entity.OwnerShows(cue)));
 		}
 
 		public void CueExecuted(Tag cueTag, IForgeEntity? target, CueParameters? parameters)
@@ -1451,7 +1550,8 @@ public sealed class ReplicationServer
 				++entity.LastEventSequence,
 				cueTag,
 				parameters,
-				server._session.Clock.Tick));
+				server._session.Clock.Tick,
+				target.EffectsManager.RaisesOwnTick));
 		}
 
 		private static ReplicatedEntity.CueInstance? FindCue(ReplicatedEntity entity, Tag cueTag, object? application)

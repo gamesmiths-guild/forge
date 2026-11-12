@@ -36,7 +36,7 @@ public sealed class GraphContext
 	/// Gets or sets optional activation context data for this graph execution. This provides a generic extensibility
 	/// point that allows external systems to pass contextual data into the graph without coupling
 	/// <see cref="GraphContext"/> to specific subsystems. For example, when a graph is driven by an ability,
-	/// <see cref="Abilities.AbilityBehaviorContext"/> is stored here so that ability-aware nodes can access the ability
+	/// <see cref="AbilityBehaviorContext"/> is stored here so that ability-aware nodes can access the ability
 	/// handle for operations like committing cooldowns or costs.
 	/// </summary>
 	public object? ActivationContext { get; set; }
@@ -92,9 +92,21 @@ public sealed class GraphContext
 	/// </remarks>
 	public IRandom? Random { get; set; }
 
+	/// <summary>
+	/// Gets a value indicating whether the client predicting the graph's entity is correcting it: it rolled the entity
+	/// back to the server's word for a tick and runs the ticks since again. They ran once and showed what they did, so
+	/// a presentation action that shows something as it executes, such as a sound played once, shows nothing now.
+	/// </summary>
+	public bool IsCorrecting => ActivationContext is AbilityBehaviorContext context
+		&& context.Owner.Abilities.IsReplaying;
+
 	// A client's copy of a graph the server runs: nothing travels along links but into client-only regions, the nodes
 	// the server runs start and end as it says, and the run ends only when it does.
 	internal bool IsRemote { get; set; }
+
+	// The graph runs on a client: a copy of the server's run, or the run of an entity the client predicts.
+	internal bool IsOnClient => IsRemote
+		|| (ActivationContext is AbilityBehaviorContext context && context.Owner.Abilities.IsPredicted);
 
 	internal Dictionary<Guid, bool> InternalNodeActivationStatus { get; } = [];
 

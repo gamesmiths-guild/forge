@@ -240,8 +240,6 @@ public sealed class WorldHistory
 	/// <param name="tick">The number of the tick the world was just advanced through.</param>
 	/// <exception cref="InvalidOperationException">Thrown while one of the entities' abilities, effects or attributes
 	/// are changing.</exception>
-	/// <exception cref="NotSupportedException">Thrown while one of the entities' abilities runs a behavior other than
-	/// a Statescript graph.</exception>
 	public void Record(long tick)
 	{
 		bool continues = _count > 0 && tick == _currentTick + 1;
@@ -340,8 +338,6 @@ public sealed class WorldHistory
 	/// <exception cref="ArgumentOutOfRangeException">Thrown when the history doesn't hold the tick.</exception>
 	/// <exception cref="InvalidOperationException">Thrown while one of the entities' abilities, effects or attributes
 	/// are changing.</exception>
-	/// <exception cref="NotSupportedException">Thrown while one of the entities' abilities runs a behavior other than
-	/// a Statescript graph.</exception>
 	public void Rollback(long tick)
 	{
 		if (_count == 0 || tick < OldestTick || tick > _newestTick)
@@ -436,8 +432,6 @@ public sealed class WorldHistory
 	/// world is at, or is newer than the newest tick the history holds.</exception>
 	/// <exception cref="InvalidOperationException">Thrown while one of the entities' abilities, effects or attributes
 	/// are changing.</exception>
-	/// <exception cref="NotSupportedException">Thrown while one of the entities' abilities runs a behavior other than
-	/// a Statescript graph.</exception>
 	public IReadOnlyList<WorldDesync> Replay(long toTick, Action<long>? advance = null)
 	{
 		if (_count == 0 || toTick <= _currentTick || toTick > _newestTick)

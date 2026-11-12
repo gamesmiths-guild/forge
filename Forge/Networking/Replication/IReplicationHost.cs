@@ -24,6 +24,25 @@ public interface IReplicationHost
 	IForgeEntity? Spawn(NetworkEntityId id, int sceneIndex, PeerId owner);
 
 	/// <summary>
+	/// Makes an entity the server spawned for this client's peer, which this client predicts. It's made live, as the
+	/// scene makes it, setup included, and not marked as the server's: the client runs it ahead of the server, and the
+	/// replication puts it right as the server's word arrives. Place its body where <paramref name="body"/> says before
+	/// anything of it runs, so its setup runs where the server's did. The default makes it through
+	/// <see cref="Spawn"/>.
+	/// </summary>
+	/// <param name="id">The id the entity is known by on every machine; the entity's
+	/// <see cref="IForgeEntity.NetworkId"/> must return it.</param>
+	/// <param name="sceneIndex">The index of the scene in the registry's <see cref="AssetKind.Scene"/> kind.</param>
+	/// <param name="owner">This client's peer.</param>
+	/// <param name="body">Where the server's body was as it registered the entity, exactly, or <see langword="null"/>
+	/// for an entity without one.</param>
+	/// <returns>The entity, or <see langword="null"/> when it couldn't be made.</returns>
+	IForgeEntity? SpawnPredicted(NetworkEntityId id, int sceneIndex, PeerId owner, BodyState? body)
+	{
+		return Spawn(id, sceneIndex, owner);
+	}
+
+	/// <summary>
 	/// Takes away an entity the server despawned, or one that left this client's view. Its persistent cues were
 	/// removed already, and its graphs ended: what they still show ends in its next
 	/// <see cref="EntityAbilities.PresentAbilities"/>, which the host must call, here or as it frees the entity, before

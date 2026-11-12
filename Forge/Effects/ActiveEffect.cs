@@ -79,6 +79,18 @@ internal sealed class ActiveEffect
 	// A client's copy of an effect active on the server: it holds what the server says and runs nothing.
 	internal bool IsMirror { get; }
 
+	// The tick its target had last advanced through when it was applied, -1 before the target's first: it landed
+	// after that tick's advance and before the next one's.
+	internal long AfterTick { get; init; } = -1;
+
+	// Whether it landed from outside its target's own ticks, from another entity or the host between ticks, rather
+	// than from what the target's own tick or its setup did. A client predicting the target can't foresee those.
+	internal bool IsFromOutside { get; init; }
+
+	// A predicting client's copy of an effect the server applied from outside: its executions count and time as the
+	// server's do, and change nothing, since the server sends what they did.
+	internal bool ExecutesOnServer { get; init; }
+
 	internal ActiveEffect(
 		Effect effect,
 		IForgeEntity target,
@@ -422,6 +434,35 @@ internal sealed class ActiveEffect
 
 	internal void SetMirroredExecutionCount(int executionCount)
 	{
+		ExecutionCount = executionCount;
+	}
+
+	// Puts the effect as the server says it is, on the client predicting its target. A level, set by caller values or
+	// a stack count that changed re-evaluate it as any change of them does, and an inhibition that changed applies.
+	internal void TakeServerState(
+		int level,
+		KeyValuePair<Tag, float>[] setByCallers,
+		int stackCount,
+		bool isInhibited,
+		double? remainingDuration,
+		int executionCount)
+	{
+		bool reevaluate = StackCount != stackCount || Effect.Level != level || !SameDataTags(setByCallers);
+
+		if (reevaluate)
+		{
+			Effect.RestoreSnapshot(level, setByCallers);
+			StackCount = stackCount;
+			ReapplyEffect(Effect);
+		}
+
+		SetInhibit(isInhibited);
+
+		if (remainingDuration is double remaining)
+		{
+			RemainingDuration = remaining;
+		}
+
 		ExecutionCount = executionCount;
 	}
 
@@ -892,10 +933,43 @@ internal sealed class ActiveEffect
 		}
 	}
 
+	private bool SameDataTags(KeyValuePair<Tag, float>[] setByCallers)
+	{
+		if (Effect.DataTag.Count != setByCallers.Length)
+		{
+			return false;
+		}
+
+		foreach (KeyValuePair<Tag, float> setByCaller in setByCallers)
+		{
+			if (!Effect.DataTag.TryGetValue(setByCaller.Key, out float value) || !value.Equals(setByCaller.Value))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	private void Execute()
 	{
-		EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
-		Effect.Execute(in effectEvaluatedData, ComponentInstances);
+		if (!ExecutesOnServer)
+		{
+			EffectsManager effects = EffectEvaluatedData.Target.EffectsManager;
+			bool outside = effects.IsExecutingOutsideEffect;
+			effects.IsExecutingOutsideEffect = outside || IsFromOutside;
+
+			try
+			{
+				EffectEvaluatedData effectEvaluatedData = EffectEvaluatedData;
+				Effect.Execute(in effectEvaluatedData, ComponentInstances);
+			}
+			finally
+			{
+				effects.IsExecutingOutsideEffect = outside;
+			}
+		}
+
 		ExecutionCount++;
 	}
 

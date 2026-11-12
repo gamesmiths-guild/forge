@@ -51,6 +51,9 @@ public sealed class ReplicationClient
 	private readonly Queue<HeldPacket> _held = new();
 	private readonly Dictionary<NetworkEntityId, RemoteBody> _pendingBodies = [];
 	private readonly BitReader _heldReader = new(ReadOnlyMemory<byte>.Empty);
+	private readonly List<Mirror> _predicted = [];
+	private readonly List<IForgeEntity> _predictedEntities = [];
+	private readonly List<Mirror> _toReconcile = [];
 	private long _shownTick = -1;
 	private uint _ackMask;
 	private bool _ackPending;
@@ -66,6 +69,12 @@ public sealed class ReplicationClient
 	/// Raised when an entity is about to be handed to the host to take away.
 	/// </summary>
 	public event Action<IForgeEntity>? Despawned;
+
+	/// <summary>
+	/// Raised after a state packet put a predicted entity right and its ticks since ran again, with the entity: what it
+	/// shows can ease from where it was to where it is now.
+	/// </summary>
+	public event Action<IForgeEntity>? Corrected;
 
 	/// <summary>
 	/// Gets or sets what makes and takes away the server's entities on this machine.
@@ -101,6 +110,43 @@ public sealed class ReplicationClient
 	/// Gets how many entities the server spawned that the host couldn't make.
 	/// </summary>
 	public long SpawnsRefused { get; private set; }
+
+	/// <summary>
+	/// Gets the entities this client predicts, in the order they were bound: the ones the server spawned for this
+	/// client's peer. They aren't mirrors. The host advances them through each tick with <see cref="Predict"/>, ahead
+	/// of the server, and each state packet puts them right where the server's word for its tick differs from what this
+	/// client predicted then.
+	/// </summary>
+	public IReadOnlyList<IForgeEntity> Predicted => _predictedEntities;
+
+	/// <summary>
+	/// Gets or sets how many ticks a predicted entity keeps to roll back to, read as it's bound: a state packet older
+	/// than that can't be checked. Zero keeps as many as the input may lead the server by,
+	/// <see cref="NetworkSession.MaxInputLead"/>.
+	/// </summary>
+	public int PredictionHistoryTicks { get; set; }
+
+	/// <summary>
+	/// Gets or sets what an effect whose <see cref="EffectData.Visibility"/> is <see cref="EffectVisibility.Default"/>
+	/// is, as <see cref="ReplicationServer.DefaultEffectVisibility"/> is on the server: a predicted entity is checked
+	/// on the effects this client hears of.
+	/// </summary>
+	public EffectVisibility DefaultEffectVisibility { get; set; } = EffectVisibility.Public;
+
+	/// <summary>
+	/// Gets how many state packets agreed with what this client predicted of an entity at their tick.
+	/// </summary>
+	public long Confirmations { get; private set; }
+
+	/// <summary>
+	/// Gets how many times a state packet put a predicted entity right.
+	/// </summary>
+	public long Corrections { get; private set; }
+
+	/// <summary>
+	/// Gets how many ticks the last correction rolled back and ran again.
+	/// </summary>
+	public int LastCorrectionTicks { get; private set; }
 
 	/// <summary>
 	/// Gets or sets a value indicating whether a state packet waits for <see cref="Show"/> to reach its tick before
@@ -212,6 +258,11 @@ public sealed class ReplicationClient
 				_heldReader.Reset(packet.Data.AsMemory(start));
 				var id = new NetworkEntityId(ReplicationCodec.ReadEntityId(_heldReader));
 
+				if (_mirrors.GetValueOrDefault(id)?.Prediction is not null)
+				{
+					continue;
+				}
+
 				try
 				{
 					ReadEntry(_heldReader, id, packet.Tick, previousTick: -1, bodies: false, state: true);
@@ -227,6 +278,48 @@ public sealed class ReplicationClient
 		}
 
 		failure?.Throw();
+	}
+
+	/// <summary>
+	/// Advances every entity this client predicts through a tick, ahead of the server, and records how the tick left
+	/// it. Call it once per tick the client's clock simulates, after the entity's input frame for the tick is
+	/// submitted, then send that frame for the tick.
+	/// </summary>
+	/// <remarks>
+	/// <para>Ticks the clock skipped since the last call run first, with the input held and no presses or releases, as
+	/// the server runs a tick whose input never arrived.</para>
+	/// <para>Before the clock sync's first estimate nothing is predicted: the client's clock is still at the server's
+	/// tick, so the input it sends arrives after the server ran it. The entities follow the server meanwhile, run with
+	/// what was last held up to each state packet's tick.</para>
+	/// </remarks>
+	/// <param name="tick">The tick to simulate.</param>
+	/// <param name="fixedDeltaTime">The length of the fixed step, in seconds.</param>
+	public void Predict(long tick, double fixedDeltaTime)
+	{
+		if (!_session.ClockSync.HasEstimate)
+		{
+			return;
+		}
+
+		foreach (Mirror mirror in _predicted.ToArray())
+		{
+			EntityHistory history = mirror.Prediction!.History;
+			long next = (history.NewestTick + 1) ?? tick;
+
+			// One the clock already passed by more than its history holds starts over.
+			if (next <= tick - history.Capacity)
+			{
+				next = tick;
+			}
+
+			RunHeld(mirror, next, tick - 1, fixedDeltaTime);
+
+			if (next <= tick)
+			{
+				EntitySimulation.Tick(mirror.Entity, tick, fixedDeltaTime);
+				history.Record(tick);
+			}
+		}
 	}
 
 	/// <summary>
@@ -275,20 +368,39 @@ public sealed class ReplicationClient
 
 		long previousTick = LastServerTick;
 		List<int>? entries = HoldsUntilShown ? [] : null;
+		_toReconcile.Clear();
 		ReadEntries(reader, tick, previousTick, bodies: true, state: !HoldsUntilShown, entries);
 
 		// Only a packet read to its end counts: one that isn't is never acknowledged, so the server sends it all again.
 		LastServerTick = Math.Max(LastServerTick, tick);
 		Acknowledge((uint)sequence);
 
+		// The packet is acknowledged, so a correction that throws costs neither the other entities' nor the rest of it.
+		ExceptionDispatchInfo? failure = null;
+
+		foreach (Mirror mirror in _toReconcile.Where(x => x.Prediction is not null))
+		{
+			try
+			{
+				Reconcile(mirror, tick);
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
+
 		if (entries is not null)
 		{
 			_held.Enqueue(new HeldPacket(tick, reader.CopyData(), entries));
-			return;
+		}
+		else
+		{
+			_shownTick = tick;
+			FollowEffects();
 		}
 
-		_shownTick = tick;
-		FollowEffects();
+		failure?.Throw();
 	}
 
 	internal bool TryWriteAck(BitWriter writer)
@@ -333,6 +445,17 @@ public sealed class ReplicationClient
 				continue;
 			}
 
+			if (mirror.Prediction is Prediction prediction)
+			{
+				Prediction.ServerAttribute known = prediction.Attributes[index]
+					?? new Prediction.ServerAttribute(mirror.Attributes[index].BaseValue, int.MinValue, int.MaxValue);
+				prediction.Attributes[index] = new Prediction.ServerAttribute(
+					baseValue ?? known.BaseValue,
+					min ?? (known.Min == int.MinValue ? mirror.Attributes[index].Min : known.Min),
+					max ?? (known.Max == int.MaxValue ? mirror.Attributes[index].Max : known.Max));
+				continue;
+			}
+
 			EntityAttribute attribute = mirror.Attributes[index];
 			attribute.Mirror(
 				value,
@@ -343,6 +466,76 @@ public sealed class ReplicationClient
 	}
 
 	// Records a sequence newer than any read before for the next acknowledgement.
+	// Runs a predicted entity through ticks no input was submitted for, holding what was held without presses or
+	// releases, as the server runs a tick whose input never arrived. A frame waiting for a later tick waits on.
+	private static void RunHeld(Mirror mirror, long from, long to, double fixedDeltaTime)
+	{
+		EntityHistory history = mirror.Prediction!.History;
+		EntityInput? input = mirror.Entity.Input;
+
+		for (long tick = from; tick <= to; tick++)
+		{
+			InputFrame? waiting = input?.Waiting;
+
+			if (input is not null)
+			{
+				input.Waiting = null;
+			}
+
+			EntitySimulation.Tick(mirror.Entity, tick, fixedDeltaTime);
+
+			if (input is not null)
+			{
+				input.Waiting = waiting;
+			}
+
+			history.Record(tick);
+		}
+	}
+
+	private static void ReadBody(BitReader reader, Mirror? mirror, RemoteBody? body, long tick, long previousTick)
+	{
+		bool leftOut = reader.ReadBool();
+
+		if (!reader.ReadBool())
+		{
+			body?.Clear();
+
+			if (mirror?.Prediction is Prediction gone)
+			{
+				gone.HasBody = false;
+			}
+
+			return;
+		}
+
+		QuantizedBody quantized = BodyCodec.Read(reader);
+
+		if (mirror?.Prediction is Prediction prediction)
+		{
+			prediction.Body = quantized;
+			prediction.HasBody = true;
+			return;
+		}
+
+		if (body is null)
+		{
+			return;
+		}
+
+		BodyState state = BodyCodec.Dequantize(quantized);
+
+		// A body missing from the packet before this one hadn't changed by then, unless the budget left it out, so it
+		// moved only after it: held there, it isn't shown drifting from where it last stood all the way from when it
+		// stopped.
+		if (!leftOut && body.Latest is BodyState held && body.LatestTick < previousTick)
+		{
+			body.Add(previousTick, held);
+		}
+
+		body.Add(tick, state);
+	}
+
 	private void Acknowledge(uint sequence)
 	{
 		uint shift = sequence - LastSequence;
@@ -388,6 +581,10 @@ public sealed class ReplicationClient
 		var kind = (EntryKind)reader.ReadBits(2);
 		_mirrors.TryGetValue(id, out Mirror? mirror);
 
+		// An entity this client predicts takes the server's word as it arrives, checked against the tick it's of rather
+		// than shown behind it.
+		state |= bodies && mirror?.Prediction is not null;
+
 		switch (kind)
 		{
 			case EntryKind.Despawn:
@@ -423,11 +620,14 @@ public sealed class ReplicationClient
 				return;
 
 			case EntryKind.Spawn:
-				if (state)
+				SpawnFields fields = ReadSpawnFields(reader);
+
+				if (state || (bodies && Owns(fields)))
 				{
-					mirror = ReadSpawn(reader, id, mirror);
+					mirror = Spawn(fields, id, mirror);
+					state = true;
 				}
-				else if (!ReadSpawnFields(reader).Placed && mirror is null && !_pendingBodies.ContainsKey(id))
+				else if (!fields.Placed && mirror is null && !_pendingBodies.ContainsKey(id))
 				{
 					// Its bodies arrive before the spawn is shown, and wait for it.
 					_pendingBodies[id] = new RemoteBody();
@@ -442,9 +642,17 @@ public sealed class ReplicationClient
 				throw new MalformedPacketException($"{kind} is not an entry kind.");
 		}
 
-		RemoteBody? body = !bodies ? null : mirror?.Body ?? _pendingBodies.GetValueOrDefault(id);
+		RemoteBody? body = !bodies || mirror?.Prediction is not null
+			? null
+			: mirror?.Body ?? _pendingBodies.GetValueOrDefault(id);
 		ReadState(reader, state ? mirror : null, body, tick, previousTick);
 		reader.Align();
+	}
+
+	// Whether a spawn is of an entity this client predicts: one the server spawned for this client's peer.
+	private bool Owns(SpawnFields fields)
+	{
+		return !fields.Placed && fields.Owner == (ulong)_session.LocalPeer.Value;
 	}
 
 	private SpawnFields ReadSpawnFields(BitReader reader)
@@ -470,12 +678,12 @@ public sealed class ReplicationClient
 			throw new MalformedPacketException($"{owner} is not a peer id.");
 		}
 
-		return new SpawnFields(placed, sceneIndex, owner, attributeCount);
+		BodyState? body = reader.ReadBool() ? BodyCodec.ReadExact(reader) : null;
+		return new SpawnFields(placed, sceneIndex, owner, attributeCount, body);
 	}
 
-	private Mirror? ReadSpawn(BitReader reader, NetworkEntityId id, Mirror? mirror)
+	private Mirror? Spawn(SpawnFields fields, NetworkEntityId id, Mirror? mirror)
 	{
-		SpawnFields fields = ReadSpawnFields(reader);
 		bool placed = fields.Placed;
 		int sceneIndex = fields.SceneIndex;
 		ulong owner = fields.Owner;
@@ -495,7 +703,9 @@ public sealed class ReplicationClient
 			return null;
 		}
 
-		IForgeEntity? entity = Host?.Spawn(id, sceneIndex, new PeerId((int)owner));
+		IForgeEntity? entity = Owns(fields)
+			? Host?.SpawnPredicted(id, sceneIndex, new PeerId((int)owner), fields.Body)
+			: Host?.Spawn(id, sceneIndex, new PeerId((int)owner));
 
 		if (entity is null || entity.NetworkId != id || _byEntity.ContainsKey(entity))
 		{
@@ -504,8 +714,8 @@ public sealed class ReplicationClient
 			return null;
 		}
 
-		_pendingBodies.Remove(id, out RemoteBody? body);
-		mirror = Bind(entity, new PeerId((int)owner), placed: false, body);
+		_pendingBodies.Remove(id, out RemoteBody? pending);
+		mirror = Bind(entity, new PeerId((int)owner), placed: false, pending);
 		Spawned?.Invoke(entity);
 
 		if (mirror.Attributes.Length != attributeCount)
@@ -545,7 +755,15 @@ public sealed class ReplicationClient
 				_removed.Add(TagAt(ReplicationCodec.ReadTagIndex(reader, tagCount)));
 			}
 
-			mirror?.Entity.Tags.MirrorTags(_added, _removed);
+			if (mirror?.Prediction is Prediction predicted)
+			{
+				predicted.Tags.UnionWith(_added);
+				predicted.Tags.ExceptWith(_removed);
+			}
+			else
+			{
+				mirror?.Entity.Tags.MirrorTags(_added, _removed);
+			}
 		}
 
 		if (reader.ReadBool())
@@ -568,35 +786,24 @@ public sealed class ReplicationClient
 			ReadGraphs(reader, mirror, tick);
 		}
 
+		if (reader.ReadBool())
+		{
+			ReadBody(reader, mirror, body, tick, previousTick);
+		}
+
 		if (!reader.ReadBool())
 		{
 			return;
 		}
 
-		bool leftOut = reader.ReadBool();
+		ulong checksum = reader.ReadBits(64);
 
-		if (!reader.ReadBool())
+		if (mirror?.Prediction is Prediction prediction)
 		{
-			body?.Clear();
-			return;
+			prediction.Checksum = checksum;
+			prediction.ChecksumTick = tick;
+			_toReconcile.Add(mirror);
 		}
-
-		BodyState state = BodyCodec.Dequantize(BodyCodec.Read(reader));
-
-		if (body is null)
-		{
-			return;
-		}
-
-		// A body missing from the packet before this one hadn't changed by then, unless the budget left it out, so it
-		// moved only after it: held there, it isn't shown drifting from where it last stood all the way from when it
-		// stopped.
-		if (!leftOut && body.Latest is BodyState held && body.LatestTick < previousTick)
-		{
-			body.Add(previousTick, held);
-		}
-
-		body.Add(tick, state);
 	}
 
 	private void ReadCues(BitReader reader, Mirror? mirror, int tagCount)
@@ -665,6 +872,13 @@ public sealed class ReplicationClient
 			if (reader.ReadBool())
 			{
 				bool expired = reader.ReadBool();
+
+				if (mirror?.Prediction is Prediction gone)
+				{
+					gone.Effects.Remove((uint)instance);
+					continue;
+				}
+
 				mirror?.RemoveEffect(
 					(uint)instance,
 					expired ? EffectRemovalReason.Expired : EffectRemovalReason.Removed);
@@ -673,17 +887,23 @@ public sealed class ReplicationClient
 
 			EffectData? data = null;
 			EffectApplicationContext? context = null;
+			long? afterTick = null;
 
 			if (reader.ReadBool())
 			{
 				data = ReadEffectData(reader);
+				afterTick = reader.ReadBool() ? tick - reader.ReadVarInt() : null;
 				context = ReadEffectContext(reader);
 			}
 
 			EffectState? state = reader.ReadBool() ? ReadEffectState(reader, tagCount, tick) : null;
 			int? executionCount = reader.ReadBool() ? ReplicationCodec.ReadCount(reader, int.MaxValue) : null;
 
-			if (mirror is not null)
+			if (mirror?.Prediction is Prediction prediction)
+			{
+				KnowEffect(prediction, (uint)instance, data, context, afterTick, state, executionCount);
+			}
+			else if (mirror is not null)
 			{
 				ApplyEffect(mirror, (uint)instance, data, context, state, executionCount, tick);
 			}
@@ -823,6 +1043,11 @@ public sealed class ReplicationClient
 			_resolve(new NetworkEntityId(state.SourceId)));
 	}
 
+	private EffectOwnership Ownership(uint ownerId, uint sourceId)
+	{
+		return new EffectOwnership(_resolve(new NetworkEntityId(ownerId)), _resolve(new NetworkEntityId(sourceId)));
+	}
+
 	private double RemainingDuration(EffectState state, long tick)
 	{
 		return state.IsTimed ? Math.Max(state.EndTick - tick, 0) * _session.Clock.FixedDeltaTime : 0;
@@ -843,7 +1068,7 @@ public sealed class ReplicationClient
 				throw new MalformedPacketException($"{instance} is not a graph instance.");
 			}
 
-			GraphCreation? creation = reader.ReadBool() ? ReadGraphCreation(reader) : null;
+			GraphCreation? creation = reader.ReadBool() ? ReadGraphCreation(reader, tick) : null;
 			_graphStates.Clear();
 			_graphValues.Clear();
 			_graphArrays.Clear();
@@ -867,14 +1092,38 @@ public sealed class ReplicationClient
 
 			bool removed = reader.ReadBool();
 
-			if (mirror is not null)
+			if (mirror?.Prediction is Prediction prediction
+				&& (creation?.AfterTick is not null || prediction.Runs.ContainsKey((uint)instance)))
+			{
+				KnowRun(prediction, (uint)instance, creation, removed);
+			}
+			else if (mirror is not null)
 			{
 				ApplyGraph(mirror, (uint)instance, creation, states, removed, tick);
 			}
 		}
 	}
 
-	private GraphCreation ReadGraphCreation(BitReader reader)
+	// A run the server started from outside this client's own entity's ticks, which this client takes in: known from
+	// its start until the server says it ended.
+	private void KnowRun(Prediction prediction, uint instance, GraphCreation? creation, bool removed)
+	{
+		if (removed)
+		{
+			prediction.Runs.Remove(instance);
+		}
+		else if (creation is GraphCreation created && created.AfterTick is long after)
+		{
+			prediction.Runs[instance] = new Prediction.ServerRun(
+				_session.Registry.Get<AbilityData>(AssetKind.Ability, created.Ability),
+				created.Target,
+				created.Source,
+				created.Magnitude,
+				after);
+		}
+	}
+
+	private GraphCreation ReadGraphCreation(BitReader reader, long tick)
 	{
 		int ability = ReplicationCodec.ReadCount(reader, int.MaxValue);
 
@@ -886,7 +1135,9 @@ public sealed class ReplicationClient
 		uint target = ReplicationCodec.ReadEntityId(reader);
 		uint source = ReplicationCodec.ReadEntityId(reader);
 		int level = ReplicationCodec.ReadInt(reader);
-		return new GraphCreation(ability, target, source, level, reader.ReadFloat());
+		float magnitude = reader.ReadFloat();
+		long? afterTick = reader.ReadBool() ? tick - reader.ReadVarInt() : null;
+		return new GraphCreation(ability, target, source, level, magnitude, afterTick);
 	}
 
 	private void ReadGraphStates(BitReader reader)
@@ -1150,6 +1401,448 @@ public sealed class ReplicationClient
 		return false;
 	}
 
+	// Keeps what the server says of an effect on an entity this client predicts.
+	private void KnowEffect(
+		Prediction prediction,
+		uint instance,
+		EffectData? data,
+		EffectApplicationContext? context,
+		long? afterTick,
+		EffectState? state,
+		int? executionCount)
+	{
+		if (!prediction.Effects.TryGetValue(instance, out ServerEffect? effect))
+		{
+			// One known only by its state was sent again after this client forgot it, and stays forgotten.
+			if (data is not EffectData effectData || state is null)
+			{
+				return;
+			}
+
+			effect = new ServerEffect(effectData, context, afterTick is not null, afterTick ?? -1);
+			prediction.Effects[instance] = effect;
+		}
+
+		if (state is EffectState known)
+		{
+			effect.Level = known.Level;
+			effect.StackCount = known.StackCount;
+			effect.IsInhibited = known.IsInhibited;
+			effect.IsTimed = known.IsTimed;
+			effect.EndTick = known.EndTick;
+			effect.OwnerId = known.OwnerId;
+			effect.SourceId = known.SourceId;
+			effect.SetByCallers = [.. _setByCallers];
+		}
+
+		if (executionCount is int count)
+		{
+			effect.ExecutionCount = count;
+		}
+	}
+
+	// Checks what the server said of an entity this client predicts, as of a packet's tick, against what this client
+	// simulated for that tick, and puts the entity right when they differ. A tick older than the entity's history can't
+	// be checked, and one newer than this client simulated, with its clock behind the server's, is run up to first.
+	private void Reconcile(Mirror mirror, long tick)
+	{
+		Prediction prediction = mirror.Prediction!;
+		EntityHistory history = prediction.History;
+
+		// Just bound: how it is now is how it starts, at the tick the server first sent it, rolling as it did there.
+		if (history.NewestTick is not long newest)
+		{
+			mirror.Entity.Random?.BeginTick(tick);
+			history.Record(tick);
+			newest = tick;
+		}
+
+		if (tick < history.OldestTick)
+		{
+			return;
+		}
+
+		if (tick > newest)
+		{
+			RunHeld(mirror, newest + 1, tick, _session.Clock.FixedDeltaTime);
+			newest = tick;
+		}
+
+		long from = tick;
+		bool takesIn = false;
+
+		foreach (KeyValuePair<uint, ServerEffect> effect in prediction.Effects)
+		{
+			if (effect.Value.FromOutside && !prediction.Taken.ContainsKey(effect.Key))
+			{
+				from = Math.Min(from, Math.Max(effect.Value.AfterTick, history.OldestTick!.Value));
+				takesIn = true;
+			}
+		}
+
+		foreach (KeyValuePair<uint, Prediction.ServerRun> run in prediction.Runs)
+		{
+			if (!prediction.TakenRuns.ContainsKey(run.Key))
+			{
+				from = Math.Min(from, Math.Max(run.Value.AfterTick, history.OldestTick!.Value));
+				takesIn = true;
+			}
+		}
+
+		bool letsGo = false;
+
+		foreach (KeyValuePair<uint, ActiveEffect> taken in prediction.Taken.ToArray())
+		{
+			if (prediction.Effects.ContainsKey(taken.Key))
+			{
+				continue;
+			}
+
+			// One that ended here as it did there is only forgotten.
+			if (!taken.Value.Handle.IsValid)
+			{
+				prediction.Taken.Remove(taken.Key);
+				continue;
+			}
+
+			letsGo = true;
+		}
+
+		foreach (KeyValuePair<uint, AbilityInstance> taken in prediction.TakenRuns.ToArray())
+		{
+			if (prediction.Runs.ContainsKey(taken.Key))
+			{
+				continue;
+			}
+
+			if (!taken.Value.IsActive)
+			{
+				prediction.TakenRuns.Remove(taken.Key);
+				continue;
+			}
+
+			letsGo = true;
+		}
+
+		if (!takesIn && !letsGo && Agrees(prediction, history.SnapshotAt(tick)))
+		{
+			prediction.ConfirmedTick = tick;
+			Confirmations++;
+			return;
+		}
+
+		Correct(mirror, from, tick, newest);
+	}
+
+	// Whether the entity as a tick left it here is what the server said of that tick: the checksum of what the server
+	// sends, and the body within a step.
+	private bool Agrees(Prediction prediction, EntitySnapshot snapshot)
+	{
+		if (prediction.HasBody
+			&& prediction.Body is QuantizedBody body
+			&& snapshot.Body is BodyState ours
+			&& !BodyCodec.WithinAStep(BodyCodec.Quantize(ours), body))
+		{
+			return false;
+		}
+
+		return EntitySimulation.PredictionChecksum(snapshot, new PredictionScope(HeardByOwner, _session.Clock.TickRate))
+			== prediction.Checksum;
+	}
+
+	// Whether the server tells this client of an effect on the client's own entity, as ReplicationServer decides it.
+	private bool HeardByOwner(ActiveEffect activeEffect)
+	{
+		EffectData data = activeEffect.EffectData;
+		EffectVisibility visibility = data.Visibility == EffectVisibility.Default
+			? DefaultEffectVisibility
+			: data.Visibility;
+
+		return visibility != EffectVisibility.ServerOnly
+			&& _session.Registry.IndexOfAsset(AssetKind.Effect, data) >= 0;
+	}
+
+	// Rolls the entity back to the earliest tick it has to change after, takes in at the tick each came after the
+	// effects and runs that came from outside and that it lacks, runs the ticks to the packet's and makes the entity
+	// there what the server says, then runs the ticks since again. What it shows changes only by the net change.
+	private void Correct(Mirror mirror, long from, long tick, long newest)
+	{
+		Prediction prediction = mirror.Prediction!;
+		EntityHistory history = prediction.History;
+		IForgeEntity entity = mirror.Entity;
+		ExceptionDispatchInfo? failure = null;
+
+		// A frame submitted for a tick not simulated yet, as in a step the clock waited through, isn't in the history.
+		InputFrame? waiting = entity.Input?.Waiting;
+
+		entity.CuesManager.BeginCorrection();
+		entity.Abilities.IsReplaying = true;
+
+		try
+		{
+			history.Rollback(from);
+			long at = from;
+
+			// What was taken in after the tick rolled back to went with the rollback, and goes back in at its tick: the
+			// effects that came after a tick first, then the runs, which they may have started.
+			var takeIn = prediction.Effects
+				.Where(x => x.Value.FromOutside
+					&& (!prediction.Taken.TryGetValue(x.Key, out ActiveEffect? taken) || !taken.Handle.IsValid))
+				.Select(x => new Arrival(Math.Max(x.Value.AfterTick, from), IsRun: false, x.Key))
+				.Concat(prediction.Runs
+					.Where(x => !prediction.TakenRuns.TryGetValue(x.Key, out AbilityInstance? run) || !run.IsActive)
+					.Select(x => new Arrival(Math.Max(x.Value.AfterTick, from), IsRun: true, x.Key)))
+				.OrderBy(x => x.After)
+				.ThenBy(x => x.IsRun)
+				.ThenBy(x => x.Key)
+				.ToList();
+
+			foreach (Arrival arrival in takeIn)
+			{
+				if (arrival.After > at)
+				{
+					history.Replay(arrival.After);
+					at = arrival.After;
+				}
+
+				if (arrival.IsRun)
+				{
+					prediction.TakenRuns.Remove(arrival.Key);
+
+					if (TakeIn(entity, prediction.Runs[arrival.Key]) is AbilityInstance run)
+					{
+						prediction.TakenRuns[arrival.Key] = run;
+					}
+
+					continue;
+				}
+
+				prediction.Taken.Remove(arrival.Key);
+
+				if (TakeIn(entity, prediction.Effects[arrival.Key], arrival.After, fromOutside: true)
+					is ActiveEffect taken)
+				{
+					prediction.Taken[arrival.Key] = taken;
+				}
+			}
+
+			if (tick > at)
+			{
+				history.Replay(tick);
+			}
+
+			Settle(mirror, tick);
+
+			if (newest > tick)
+			{
+				history.Replay(newest);
+			}
+			else
+			{
+				history.Record(tick);
+			}
+		}
+		catch (Exception exception)
+		{
+			failure = ExceptionDispatchInfo.Capture(exception);
+		}
+		finally
+		{
+			entity.Abilities.IsReplaying = false;
+
+			if (entity.Input is EntityInput input)
+			{
+				input.Waiting = waiting;
+			}
+
+			ExceptionDispatchInfo? cueFailure = entity.CuesManager.EndCorrection();
+			failure ??= cueFailure;
+		}
+
+		// One that failed part way put nothing right to count or announce.
+		failure?.Throw();
+		Corrections++;
+		LastCorrectionTicks = (int)(newest - from);
+		prediction.ConfirmedTick = tick;
+		Corrected?.Invoke(entity);
+	}
+
+	// An effect the server says is on the entity, taken in here after a tick, as the server had it then.
+	private ActiveEffect? TakeIn(IForgeEntity entity, ServerEffect server, long after, bool fromOutside)
+	{
+		var effect = new Effect(server.Data, Ownership(server.OwnerId, server.SourceId), server.Level);
+		effect.RestoreSnapshot(server.Level, server.SetByCallers);
+		ActiveEffect? taken = entity.EffectsManager.ApplyServerEffect(effect, server.Context, fromOutside);
+
+		taken?.TakeServerState(
+			server.Level,
+			server.SetByCallers,
+			server.StackCount,
+			server.IsInhibited,
+			server.IsTimed ? Math.Max(server.EndTick - after, 0) * _session.Clock.FixedDeltaTime : null,
+			taken.ExecutionCount);
+
+		return taken;
+	}
+
+	// A run the server started from outside the entity's ticks, started here as the server did.
+	private AbilityInstance? TakeIn(IForgeEntity entity, Prediction.ServerRun server)
+	{
+		return entity.Abilities.TryGetAbility(
+				server.Data,
+				out AbilityHandle? handle,
+				_resolve(new NetworkEntityId(server.SourceId)))
+			? handle.Ability?.ActivateForServer(_resolve(new NetworkEntityId(server.TargetId)), server.Magnitude)
+			: null;
+	}
+
+	// Makes the entity, as the packet's tick left it here, what the server says: its body, unless within a step, its
+	// base values and ranges, and the effects that came from outside, the ones gone going, as the runs it took in that
+	// the server ended do.
+	private void Settle(Mirror mirror, long tick)
+	{
+		Prediction prediction = mirror.Prediction!;
+		IForgeEntity entity = mirror.Entity;
+
+		if (prediction.HasBody && prediction.Body is QuantizedBody body && entity.Mover is IEntityMover mover
+			&& !BodyCodec.WithinAStep(BodyCodec.Quantize(mover.CaptureState()), body))
+		{
+			mover.RestoreState(BodyCodec.Dequantize(body));
+		}
+
+		for (int i = 0; i < mirror.Attributes.Length; i++)
+		{
+			EntityAttribute attribute = mirror.Attributes[i];
+
+			if (prediction.Attributes[i] is Prediction.ServerAttribute server
+				&& (attribute.BaseValue != server.BaseValue || attribute.Min != server.Min
+					|| attribute.Max != server.Max))
+			{
+				attribute.TakeServerValues(server.BaseValue, server.Min, server.Max);
+			}
+		}
+
+		SettleOwnEffects(mirror, tick);
+
+		foreach (KeyValuePair<uint, ActiveEffect> taken in prediction.Taken.ToArray())
+		{
+			if (!prediction.Effects.TryGetValue(taken.Key, out ServerEffect? server))
+			{
+				prediction.Taken.Remove(taken.Key);
+
+				if (taken.Value.Handle.IsValid)
+				{
+					entity.EffectsManager.RemoveEffect(taken.Value.Handle, forceRemoval: true);
+				}
+
+				continue;
+			}
+
+			if (!taken.Value.Handle.IsValid)
+			{
+				continue;
+			}
+
+			taken.Value.Effect.Ownership = Ownership(server.OwnerId, server.SourceId);
+			taken.Value.TakeServerState(
+				server.Level,
+				server.SetByCallers,
+				server.StackCount,
+				server.IsInhibited,
+				server.IsTimed ? Math.Max(server.EndTick - tick, 0) * _session.Clock.FixedDeltaTime : null,
+				server.ExecutionCount);
+		}
+
+		foreach (KeyValuePair<uint, AbilityInstance> taken in prediction.TakenRuns.ToArray())
+		{
+			if (!prediction.Runs.ContainsKey(taken.Key))
+			{
+				prediction.TakenRuns.Remove(taken.Key);
+				taken.Value.Cancel();
+			}
+		}
+
+		SettleTags(mirror);
+	}
+
+	// With its effects and runs as the server has them, a tag the server has that nothing gives the entity here is a
+	// base tag, as one the server's own code added, and a base tag the server lacks goes.
+	private void SettleTags(Mirror mirror)
+	{
+		EntityTags tags = mirror.Entity.Tags;
+		TagsManager tagsManager = _session.TagsManager;
+		_added.Clear();
+		_removed.Clear();
+
+		foreach (Tag tag in mirror.Prediction!.Tags)
+		{
+			if (!tags.AllTags.HasTagExact(tag))
+			{
+				_added.Add(tag);
+			}
+		}
+
+		foreach (Tag tag in tags.BaseTags.InternalTags)
+		{
+			if (!mirror.Prediction.Tags.Contains(tag)
+				&& tagsManager.GetNetIndexFromTag(tag) != tagsManager.InvalidTagNetIndex)
+			{
+				_removed.Add(tag);
+			}
+		}
+
+		tags.MirrorTags(_added, _removed);
+	}
+
+	// The effects the entity's own ticks applied that this client hears of, matched in the order they were applied with
+	// the server's, and put as the server has them: one the server has and this client lacks is taken in, one this
+	// client predicted that the server never applied goes, and the rest take the server's state.
+	private void SettleOwnEffects(Mirror mirror, long tick)
+	{
+		Prediction prediction = mirror.Prediction!;
+		IForgeEntity entity = mirror.Entity;
+		var own = entity.EffectsManager.ActiveEffects.Where(x => !x.IsFromOutside && HeardByOwner(x)).ToList();
+		var matched = new HashSet<ActiveEffect>();
+
+		foreach (ServerEffect server in prediction.Effects.OrderBy(x => x.Key).Select(x => x.Value))
+		{
+			if (server.FromOutside)
+			{
+				continue;
+			}
+
+			ActiveEffect? match = own.Find(x => !matched.Contains(x) && x.EffectData.Equals(server.Data));
+
+			if (match is null)
+			{
+				if (TakeIn(entity, server, tick, fromOutside: false) is ActiveEffect made)
+				{
+					matched.Add(made);
+				}
+
+				continue;
+			}
+
+			matched.Add(match);
+			match.Effect.Ownership = Ownership(server.OwnerId, server.SourceId);
+			match.TakeServerState(
+				server.Level,
+				server.SetByCallers,
+				server.StackCount,
+				server.IsInhibited,
+				server.IsTimed ? Math.Max(server.EndTick - tick, 0) * _session.Clock.FixedDeltaTime : null,
+				server.ExecutionCount);
+		}
+
+		foreach (ActiveEffect effect in own)
+		{
+			if (!matched.Contains(effect) && effect.Handle.IsValid)
+			{
+				entity.EffectsManager.RemoveEffect(effect.Handle, forceRemoval: true);
+			}
+		}
+	}
+
 	// After every packet: what's left of each effect follows the newest state, so it hears nothing to count down, and
 	// an effect's owner and source are whatever this client has of them now.
 	private void FollowEffects()
@@ -1178,9 +1871,33 @@ public sealed class ReplicationClient
 
 	private Mirror Bind(IForgeEntity entity, PeerId owner, bool placed, RemoteBody? body = null)
 	{
-		EntitySimulation.Teardown(entity);
-		entity.Tags.MirrorClear();
+		bool predicted = !placed && owner == _session.LocalPeer;
+
+		if (!predicted)
+		{
+			EntitySimulation.Teardown(entity);
+			entity.Tags.MirrorClear();
+		}
+
 		var mirror = new Mirror(entity, owner, placed, body ?? new RemoteBody());
+
+		if (predicted)
+		{
+			int capacity = PredictionHistoryTicks > 0
+				? PredictionHistoryTicks
+				: (int)Math.Ceiling(_session.Clock.TicksIn(NetworkSession.MaxInputLead));
+			mirror.Prediction = new Prediction(
+				entity,
+				mirror.Attributes.Length,
+				capacity,
+				_session.Clock.FixedDeltaTime);
+			entity.Abilities.IsPredicted = true;
+			entity.Abilities.TracksPrediction = true;
+			entity.EffectsManager.IsPredicted = true;
+			_predicted.Add(mirror);
+			_predictedEntities.Add(entity);
+		}
+
 		_mirrors[entity.NetworkId] = mirror;
 		_byEntity[entity] = mirror;
 		_entities.Add(entity);
@@ -1193,6 +1910,16 @@ public sealed class ReplicationClient
 		mirror.RemoveAllGraphs();
 		mirror.RemoveAllCues();
 		mirror.RemoveAllEffects();
+
+		if (mirror.Prediction is not null)
+		{
+			_predicted.Remove(mirror);
+			_predictedEntities.Remove(mirror.Entity);
+			mirror.Entity.Abilities.IsPredicted = false;
+			mirror.Entity.Abilities.TracksPrediction = false;
+			mirror.Entity.EffectsManager.IsPredicted = false;
+		}
+
 		_mirrors.Remove(mirror.Entity.NetworkId);
 		_byEntity.Remove(mirror.Entity);
 		_entities.Remove(mirror.Entity);
@@ -1218,6 +1945,9 @@ public sealed class ReplicationClient
 		public EntityAttribute[] Attributes { get; } = [.. entity.Attributes];
 
 		public RemoteBody Body { get; } = body;
+
+		// Set for an entity this client predicts, which the server's word checks rather than sets.
+		public Prediction? Prediction { get; set; }
 
 		public uint LastEvent { get; set; }
 
@@ -1358,13 +2088,29 @@ public sealed class ReplicationClient
 		public EffectState State { get; set; } = state;
 	}
 
-	private readonly record struct SpawnFields(bool Placed, int SceneIndex, ulong Owner, int AttributeCount);
+	// What a spawn is, with the body the server's entity had as it was registered, for the client that predicts it.
+	private readonly record struct SpawnFields(
+		bool Placed,
+		int SceneIndex,
+		ulong Owner,
+		int AttributeCount,
+		BodyState? Body);
 
 	// A packet waiting to be shown, with where each of its entries starts.
 	private readonly record struct HeldPacket(long Tick, byte[] Data, List<int> Entries);
 
+	// What a correction takes in after a tick: an effect, or a run, by the server's instance.
+	private readonly record struct Arrival(long After, bool IsRun, uint Key);
+
 	// What a graph run is, as the server sent it once: its ability and that activation's context.
-	private readonly record struct GraphCreation(int Ability, uint Target, uint Source, int Level, float Magnitude);
+	// A run, with the tick it started after for one this client takes in.
+	private readonly record struct GraphCreation(
+		int Ability,
+		uint Target,
+		uint Source,
+		int Level,
+		float Magnitude,
+		long? AfterTick);
 
 	// A state clients run, running on the server as an activation it numbered, for some ticks before the packet's.
 	private readonly record struct RunningState(int State, ulong Activation, int Ticks);

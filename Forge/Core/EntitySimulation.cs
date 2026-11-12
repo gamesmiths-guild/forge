@@ -3,6 +3,7 @@
 using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Abilities;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Effects;
 
 namespace Gamesmiths.Forge.Core;
 
@@ -82,6 +83,7 @@ public static class EntitySimulation
 	{
 		entity.Random?.BeginTick(tick);
 		entity.Input?.BeginTick(tick);
+		entity.EffectsManager.BeginTick(tick);
 	}
 
 	/// <summary>
@@ -96,15 +98,27 @@ public static class EntitySimulation
 	/// <param name="fixedDeltaTime">The length of the fixed step, in seconds.</param>
 	public static void Advance(IForgeEntity entity, double fixedDeltaTime)
 	{
-		if (entity.Input is EntityInput input)
-		{
-			input.BeginInputStage();
-			entity.Abilities.ActivateBoundAbilities(input);
-		}
+		EffectsManager effects = entity.EffectsManager;
+		bool advancing = effects.IsAdvancing;
+		effects.IsAdvancing = true;
 
-		entity.Mover?.Move(fixedDeltaTime);
-		entity.EffectsManager.UpdateEffects(fixedDeltaTime);
-		entity.Abilities.FixedUpdateAbilities(fixedDeltaTime);
+		try
+		{
+			if (entity.Input is EntityInput input)
+			{
+				input.BeginInputStage();
+				entity.Abilities.ActivateBoundAbilities(input);
+			}
+
+			entity.Mover?.Move(fixedDeltaTime);
+			effects.UpdateEffects(fixedDeltaTime);
+			entity.Abilities.FixedUpdateAbilities(fixedDeltaTime);
+			effects.EndAdvance();
+		}
+		finally
+		{
+			effects.IsAdvancing = advancing;
+		}
 	}
 
 	/// <summary>
@@ -115,6 +129,8 @@ public static class EntitySimulation
 	/// instances and graphs, shared variables, input, random source, body, through its
 	/// <see cref="IForgeEntity.Mover"/>, and state kept outside Forge, through its
 	/// <see cref="IForgeEntity.StateHook"/>. See <see cref="EntitySnapshot"/>.</para>
+	/// <para>An ability's run is in it when its behavior is an <see cref="ISnapshotAbilityBehavior"/>, as Statescript
+	/// graphs are. Any other run is left out, and a restore leaves it as it is.</para>
 	/// <para>Take it from the host, between ticks, rather than from inside an ability, an effect or a graph, where the
 	/// entity is part way through changing.</para>
 	/// </remarks>
@@ -122,11 +138,9 @@ public static class EntitySimulation
 	/// <returns>The snapshot.</returns>
 	/// <exception cref="InvalidOperationException">Thrown while the entity's abilities, effects or attributes are
 	/// changing.</exception>
-	/// <exception cref="NotSupportedException">Thrown while one of the entity's abilities runs a behavior other than a
-	/// Statescript graph.</exception>
 	public static EntitySnapshot CaptureSnapshot(IForgeEntity entity)
 	{
-		ThrowIfCannotSnapshot(entity, "taken");
+		ThrowIfChanging(entity, "taken");
 
 		return new EntitySnapshot(entity);
 	}
@@ -155,8 +169,6 @@ public static class EntitySimulation
 	/// <exception cref="ArgumentException">Thrown when the snapshot was taken from another entity.</exception>
 	/// <exception cref="InvalidOperationException">Thrown while the entity's abilities, effects or attributes are
 	/// changing.</exception>
-	/// <exception cref="NotSupportedException">Thrown while one of the entity's abilities runs a behavior other than a
-	/// Statescript graph.</exception>
 	public static void RestoreSnapshot(IForgeEntity entity, EntitySnapshot snapshot)
 	{
 		if (snapshot.Entity != entity)
@@ -184,8 +196,6 @@ public static class EntitySimulation
 	/// <returns>The checksum.</returns>
 	/// <exception cref="InvalidOperationException">Thrown while the entity's abilities, effects or attributes are
 	/// changing.</exception>
-	/// <exception cref="NotSupportedException">Thrown while one of the entity's abilities runs a behavior other than a
-	/// Statescript graph.</exception>
 	public static ulong Checksum(IForgeEntity entity)
 	{
 		EntitySnapshot snapshot = CaptureSnapshot(entity);
@@ -204,16 +214,16 @@ public static class EntitySimulation
 	/// </summary>
 	/// <remarks>
 	/// <para>In order: every ability is cleared, its running instances cancelled and its triggers no longer listening;
-	/// every active effect is removed the way a removal through <see cref="Effects.EffectsManager"/> removes it, with
-	/// <see cref="Effects.EffectRemovalReason.Destroyed"/>, so its components, the manager's events and its persistent
-	/// cues, as interrupted, all learn it ended; and its <see cref="IForgeEntity.Input"/> lets go of every action, for
-	/// another entity reading it.</para>
+	/// every active effect is removed the way a removal through <see cref="EffectsManager"/> removes it, with
+	/// <see cref="EffectRemovalReason.Destroyed"/>, so its components, the manager's events and its persistent cues, as
+	/// interrupted, all learn it ended; and its <see cref="IForgeEntity.Input"/> lets go of every action, for another
+	/// entity reading it.</para>
 	/// <para>From then on no effect applies to the entity and no ability is granted to it, so a completion effect a
 	/// removal applies or an ability an ending one grants doesn't outlive the teardown; a grant returns an invalid
 	/// handle. Every effect a removal callback removes meanwhile ends as destroyed too. Effects it applied to other
 	/// entities keep running on them. Its mover and state hook are the host's to drop.</para>
-	/// <para>A shared <see cref="Effects.Effect"/> holds every application of it that is still active, so an entity
-	/// dropped with effects still on it stays reachable through them unless it's torn down. Don't tear down an entity a
+	/// <para>A shared <see cref="Effect"/> holds every application of it that is still active, so an entity dropped
+	/// with effects still on it stays reachable through them unless it's torn down. Don't tear down an entity a
 	/// <see cref="WorldHistory"/> keeps in limbo: it has let go of everything already, and its cues ended then.</para>
 	/// <para>Tear it down from the host, between ticks, like <see cref="CaptureSnapshot"/>.</para>
 	/// </remarks>
@@ -329,13 +339,23 @@ public static class EntitySimulation
 	{
 		foreach (IForgeEntity entity in detaching)
 		{
-			ThrowIfCannotSnapshot(entity, "restored");
+			ThrowIfChanging(entity, "restored");
 		}
 
 		foreach (EntitySnapshot snapshot in snapshots)
 		{
-			ThrowIfCannotSnapshot(snapshot.Entity, "restored");
+			ThrowIfChanging(snapshot.Entity, "restored");
 		}
+	}
+
+	// What a predicting client and the server compare of the entity, hashed the same way on both: see PredictionScope.
+	internal static ulong PredictionChecksum(EntitySnapshot snapshot, PredictionScope scope)
+	{
+		var checksum = new StateChecksum([]);
+		checksum.Open("Entity");
+		snapshot.Write(checksum, scope);
+		checksum.Close();
+		return checksum.Value;
 	}
 
 	// The persistent cues the entity's effects and running Cue nodes hold applied.
@@ -353,18 +373,6 @@ public static class EntitySimulation
 			throw new InvalidOperationException(
 				$"An entity snapshot cannot be {action} while the entity's abilities, effects or attributes are " +
 				"changing. Take and restore snapshots from the host, between ticks.");
-		}
-	}
-
-	private static void ThrowIfCannotSnapshot(IForgeEntity entity, string action)
-	{
-		ThrowIfChanging(entity, action);
-
-		if (entity.Abilities.FindUnsnapshottableAbility() is AbilityData abilityData)
-		{
-			throw new NotSupportedException(
-				$"An entity snapshot cannot be {action} while the ability '{abilityData.Name}' runs a behavior that " +
-				"isn't a Statescript graph, since a snapshot can't reach what such a behavior keeps.");
 		}
 	}
 

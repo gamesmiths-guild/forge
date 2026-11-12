@@ -57,7 +57,11 @@ An effect travels as its index in the [asset registry](README.md#identity), so o
 
 ## What the owner gets
 
-Everyone's mirror has an attribute's current value as its base value, with no modifier, since that's all anyone needs to show it. The client that owns the entity is also sent the base value, so on its own entity `BaseValue`, `CurrentValue` and `Modifier` read as they do on the server: a health bar can show what a buff adds. `Overflow` stays zero: what lies between the base value and the current value is one sum.
+Everyone's mirror has an attribute's current value as its base value, with no modifier, since that's all anyone needs to show it. The client that owns the entity [predicts](prediction.md) it instead of mirroring it: its effects are live, so `BaseValue`, `CurrentValue`, `Modifier` and `Overflow` read as they do on the server, and a health bar can show what a buff adds.
+
+- **Effects its own tick applies**, a cooldown or a dash's speed, it applies itself as it predicts the tick, executions included.
+- **Effects from elsewhere**, another entity's or an area's, it takes from the server, at the tick each landed after. Their duration, modifiers, tags, components and cues run on its entity; their executions don't, and what they do arrives as base values, which the owner is sent with the current ones.
+- **An effect it doesn't hear of** stays the server's, as on a mirror.
 
 ## Custom data
 
@@ -103,7 +107,7 @@ A periodic effect's period follows from its level and data, and its next executi
 
 An effect is a record in the entity's entry, after its executed cues: its instance number, then whichever of these the client hasn't acknowledged.
 
-- **What it is**, once: its index in the registry, and its custom data.
+- **What it is**, once: its index in the registry, for the entity's owner whether it landed from outside the entity's ticks and after which tick, and its custom data.
 - **How it is**, when any of it changes: level, stacks, whether it's inhibited, for a timed effect its evaluated duration and how many ticks after this packet's it ends, owner and source ids, and set-by-caller values.
 - **How often it executed**, when that changes.
 
