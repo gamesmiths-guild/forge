@@ -309,7 +309,7 @@ public class PredictionTests
 	public void A_checksum_the_server_cannot_take_costs_only_that_check_and_the_send_goes_out()
 	{
 		var rig = new Rig(NetworkConditions.Good);
-		rig.JoinWithPlayer();
+		Player player = rig.JoinWithPlayer();
 		rig.Press("dash");
 
 		for (int i = 0; i < 30 && !rig.ServerPlayer.Tags.AllTags.HasTag(rig.ServerAssets.Tag("state.dashing")); i++)
@@ -319,6 +319,7 @@ public class PredictionTests
 
 		long corrections = rig.Mirror.Corrections;
 		long failing = rig.Server.Clock.Tick + 10;
+		rig.ServerPlayer.EffectsManager.ApplyEffect(new Effect(rig.ServerAssets.Hurt, new EffectOwnership(null, null)));
 		rig.ServerAssets.FailsCapture = true;
 
 		Action send = () => rig.Server.Replication!.Send(failing);
@@ -328,7 +329,12 @@ public class PredictionTests
 		rig.Idle(8);
 
 		rig.Mirror.LastServerTick.Should().Be(failing, "the send went out, without the check");
-		rig.Mirror.Corrections.Should().Be(corrections);
+		rig.Mirror.Corrections.Should().Be(corrections, "a packet without the check checks nothing");
+
+		rig.Idle(30);
+
+		player.Attributes[Health].BaseValue
+			.Should().Be(80, "the entity's state went with that send, and isn't sent again");
 	}
 
 	[Fact]
