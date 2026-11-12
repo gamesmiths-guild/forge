@@ -68,6 +68,7 @@ public sealed class ReplicationServer
 	private readonly Dictionary<Type, int> _contextCodecs = [];
 	private readonly HashSet<EffectData> _effectsNotListed = [];
 	private readonly HashSet<AbilityData> _abilitiesNotListed = [];
+	private readonly SpawnKeys _spawnKeys = new();
 	private readonly CueObserver _cueObserver;
 	private readonly GraphObserver _graphObserver;
 	private EffectVisibility _defaultEffectVisibility = EffectVisibility.Public;
@@ -179,10 +180,12 @@ public sealed class ReplicationServer
 	/// <param name="sceneIndex">The index of the scene clients spawn it from, in the registry's
 	/// <see cref="AssetKind.Scene"/> kind, or -1 for an entity placed in the scene.</param>
 	/// <param name="owner">The peer whose player it is, or <see cref="PeerId.None"/>.</param>
+	/// <param name="spawnKey">The key <see cref="KeySpawn"/> gave the graph that spawned it, which its owner's client
+	/// finds the one it made ahead of the server by.</param>
 	/// <returns>The entity's replication record.</returns>
 	/// <exception cref="ArgumentException">Thrown when the entity has no id, its id is taken, it's registered already,
 	/// or the registry has no such scene.</exception>
-	public ReplicatedEntity Register(IForgeEntity entity, int sceneIndex, PeerId owner)
+	public ReplicatedEntity Register(IForgeEntity entity, int sceneIndex, PeerId owner, SpawnKey? spawnKey = null)
 	{
 		if (!entity.NetworkId.IsValid)
 		{
@@ -205,7 +208,8 @@ public sealed class ReplicationServer
 			owner,
 			_session.TagsManager,
 			_session.Clock.Tick,
-			BodySource(entity));
+			BodySource(entity),
+			spawnKey);
 		_entities[entity.NetworkId] = replicated;
 		_byEntity[entity] = replicated;
 		_entityList.Add(replicated);
@@ -223,6 +227,26 @@ public sealed class ReplicationServer
 		}
 
 		return replicated;
+	}
+
+	/// <summary>
+	/// Gives the key of a spawn a graph's node is making for an entity whose owner's client predicts it: register the
+	/// spawned entity with it. That client makes the spawn ahead of the server under the same key, and the server's
+	/// spawn, arriving there, binds that one instead of making another.
+	/// </summary>
+	/// <remarks>
+	/// Ask once per spawn, as the node makes it: each spawn a node makes in a tick takes the next key.
+	/// </remarks>
+	/// <param name="graphContext">The context of the graph making the spawn.</param>
+	/// <param name="node">The index of the node making it, its <see cref="Node.Index"/>.</param>
+	/// <returns>The key, or <see langword="null"/> for a graph that isn't an ability's run on an entity a client
+	/// predicts.</returns>
+	public SpawnKey? KeySpawn(GraphContext graphContext, int node)
+	{
+		return graphContext.TryGetActivationContext(out AbilityBehaviorContext? context)
+			&& context.Owner.Abilities.TracksPrediction
+			? _spawnKeys.Next(context, node)
+			: null;
 	}
 
 	/// <summary>
@@ -842,6 +866,15 @@ public sealed class ReplicationServer
 			{
 				BodyCodec.WriteExact(_entry, body);
 			}
+
+			// And finds by its key the spawn it made ahead of the server.
+			SpawnKey? spawnKey = view.IsOwner ? entity.SpawnKey : null;
+			_entry.WriteBool(spawnKey is not null);
+
+			if (spawnKey is SpawnKey key)
+			{
+				WriteSpawnKey(key, tick);
+			}
 		}
 
 		WriteAttributes(view);
@@ -875,6 +908,15 @@ public sealed class ReplicationServer
 
 		_entry.Align();
 		return maxEvent;
+	}
+
+	private void WriteSpawnKey(SpawnKey key, long tick)
+	{
+		_entry.WriteVarUInt(key.Spawner.Value);
+		_entry.WriteVarUInt((ulong)(tick - key.Tick));
+		_entry.WriteUInt32(key.Ability);
+		_entry.WriteVarUInt((ulong)key.Node);
+		_entry.WriteVarUInt((ulong)key.Sequence);
 	}
 
 	private void WriteAttributes(EntityView view)

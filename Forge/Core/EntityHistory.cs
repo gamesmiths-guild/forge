@@ -159,6 +159,20 @@ public sealed class EntityHistory
 		_currentTick = tick;
 	}
 
+	internal bool Holds(long tick)
+	{
+		return _count > 0 && tick >= OldestTick && tick <= _newestTick;
+	}
+
+	// Takes the snapshot as how a held tick now leaves the entity, keeping the ticks after it and their input frames:
+	// several entities running held ticks again together record each tick this way.
+	internal void Rewrite(long tick, EntitySnapshot snapshot)
+	{
+		ThrowIfNotHeld(tick);
+		_snapshots[Slot(tick)] = snapshot;
+		_currentTick = tick;
+	}
+
 	internal EntitySnapshot SnapshotAt(long tick)
 	{
 		ThrowIfNotHeld(tick);

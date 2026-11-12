@@ -74,6 +74,12 @@ public sealed class ReplicatedEntity
 	/// </summary>
 	public long? DespawnedAtTick { get; internal set; }
 
+	/// <summary>
+	/// Gets what the entity is known by to the client that predicts the graph that spawned it, which made it ahead of
+	/// the server under the same key, or <see langword="null"/> for one no graph of a predicted entity spawned.
+	/// </summary>
+	public SpawnKey? SpawnKey { get; }
+
 	internal EntityAttribute[] Attributes { get; }
 
 	internal int[] ShadowValues { get; }
@@ -158,12 +164,14 @@ public sealed class ReplicatedEntity
 		PeerId owner,
 		TagsManager tagsManager,
 		long spawnedAtTick,
-		BodyState? spawnBody)
+		BodyState? spawnBody,
+		SpawnKey? spawnKey)
 	{
 		Entity = entity;
 		Id = entity.NetworkId;
 		SceneIndex = sceneIndex;
 		Owner = owner;
+		SpawnKey = spawnKey;
 		_tagsManager = tagsManager;
 		Attributes = [.. entity.Attributes];
 		ShadowValues = new int[Attributes.Length];

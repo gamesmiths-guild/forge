@@ -7,11 +7,53 @@ using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Networking.Replication;
 
-// A client's own entity, which it predicts: the ticks it simulated, and what the server last said of it, which a
-// packet's tick is checked against.
-internal sealed class Prediction(IForgeEntity entity, int attributeCount, int capacity, double fixedDeltaTime)
+// Where an entity a client predicts is on the client's timeline.
+internal enum PredictionState
 {
+	// Advancing with the timeline.
+	InWorld = 0,
+
+	// Freed in the tick being simulated, or since the last one, and out of the simulation once it's recorded.
+	Leaving = 1,
+
+	// Out of the simulation, having let go of everything, until something brings it back.
+	Limbo = 2,
+}
+
+// An entity a client predicts, on the client's timeline: one the server spawned for this client's peer, or one this
+// client spawned ahead of the server. It keeps the ticks the client simulated, and what the server last said of the
+// entity, which a packet's tick is checked against.
+internal sealed class Prediction(
+	IForgeEntity entity,
+	int attributeCount,
+	int capacity,
+	double fixedDeltaTime,
+	SpawnKey? key)
+{
+	public IForgeEntity Entity { get; } = entity;
+
 	public EntityHistory History { get; } = new EntityHistory(entity, capacity, fixedDeltaTime);
+
+	// What the server's spawn of one this client made ahead of it is found by.
+	public SpawnKey? Key { get; } = key;
+
+	// Gives one this client made the id of the server's spawn of it.
+	public Action<NetworkEntityId>? Bind { get; init; }
+
+	// Whether the server spawned it, or its spawn of one this client made arrived.
+	public bool IsBound { get; set; }
+
+	public PredictionState State { get; set; }
+
+	// The first tick recorded with it on the timeline, or -1 before it's recorded.
+	public long JoinTick { get; set; } = -1;
+
+	// The first tick recorded without it after it was freed.
+	public long? LeaveTick { get; set; }
+
+	// Made by this client and no longer what its timeline makes: no rollback brings it back, but the server's spawn of
+	// it does.
+	public bool Unconfirmed { get; set; }
 
 	// The base value, minimum and maximum of each attribute, as the server last sent them.
 	public ServerAttribute?[] Attributes { get; } = new ServerAttribute?[attributeCount];
@@ -42,6 +84,16 @@ internal sealed class Prediction(IForgeEntity entity, int attributeCount, int ca
 
 	// The newest tick the server agreed with, or -1 before any.
 	public long ConfirmedTick { get; set; } = -1;
+
+	// Whether a rollback to the tick has it come back as the tick left it.
+	public bool WasIn(long tick)
+	{
+		return !Unconfirmed
+			&& JoinTick >= 0
+			&& JoinTick <= tick
+			&& (LeaveTick is null || tick < LeaveTick)
+			&& History.Holds(tick);
+	}
 
 	public readonly record struct ServerAttribute(int BaseValue, int Min, int Max);
 
