@@ -57,12 +57,14 @@ public sealed class RemoteBody
 
 	/// <summary>
 	/// Finds where the body is at a tick: between the states on either side of it, at the oldest state before any, and
-	/// at the newest state after all of them.
+	/// at the newest state after all of them. Two states further apart than the snap distance, as a respawn leaves, are
+	/// not eased between: the body holds the first until the second's tick.
 	/// </summary>
 	/// <param name="tick">The tick to show, which may fall between two ticks.</param>
 	/// <param name="state">The state at that tick.</param>
+	/// <param name="snapDistance">How far apart two states may be, in units, and still be eased between.</param>
 	/// <returns><see langword="false"/> before any state arrived.</returns>
-	public bool TrySample(double tick, out BodyState state)
+	public bool TrySample(double tick, out BodyState state, float snapDistance = float.PositiveInfinity)
 	{
 		if (_samples.Count == 0)
 		{
@@ -91,6 +93,13 @@ public sealed class RemoteBody
 
 		Sample from = _samples[after - 1];
 		Sample to = _samples[after];
+
+		if (Vector3.Distance(from.State.Position, to.State.Position) > snapDistance)
+		{
+			state = from.State;
+			return true;
+		}
+
 		float t = (float)((tick - from.Tick) / (to.Tick - from.Tick));
 
 		state = new BodyState(

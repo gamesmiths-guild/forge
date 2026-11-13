@@ -56,6 +56,8 @@ public class ReplicationTests
 		client.Fire.IsApplied.Should().BeTrue("the persistent cue is state");
 		client.Session.Mirror!.OwnerOf(mirror).Should().Be(new PeerId(7));
 		client.Session.Mirror.BodyOf(mirror)!.Latest!.Value.Position.Should().Be(new Vector3(1.25f, 0, -3.5f));
+		rig.Server.TagsManager.GetNetworkUsage().Select(x => x.Key.ToString())
+			.Should().Contain("state.burning", "the server counts the tags it sends");
 	}
 
 	[Fact]
@@ -771,11 +773,11 @@ public class ReplicationTests
 		var rotation = Quaternion.Normalize(new Quaternion(0.1f, -0.7f, 0.2f, 0.6f));
 		var state = new BodyState(new Vector3(12.3456f, -0.0004f, 7f), rotation, new Vector3(1.234f, 0, -9.876f), true);
 
-		QuantizedBody quantized = BodyCodec.Quantize(state);
+		QuantizedBody quantized = BodyCodec.Quantize(state, BodyPrecision.Default);
 		var writer = new BitWriter();
-		BodyCodec.Write(writer, quantized);
-		QuantizedBody read = BodyCodec.Read(new BitReader(writer.ToArray()));
-		BodyState back = BodyCodec.Dequantize(read);
+		BodyCodec.Write(writer, quantized, BodyPrecision.Default);
+		QuantizedBody read = BodyCodec.Read(new BitReader(writer.ToArray()), BodyPrecision.Default);
+		BodyState back = BodyCodec.Dequantize(read, BodyPrecision.Default);
 
 		read.Should().Be(quantized);
 		back.Position.X.Should().BeApproximately(12.346f, 1e-4f);
@@ -783,7 +785,45 @@ public class ReplicationTests
 		back.Velocity.Z.Should().BeApproximately(-9.88f, 1e-4f);
 		back.Grounded.Should().BeTrue();
 		Math.Abs(Quaternion.Dot(back.Rotation, rotation)).Should().BeGreaterThan(0.9999f);
-		BodyCodec.Quantize(back).Should().Be(quantized, "a quantized state quantizes to itself");
+		BodyCodec.Quantize(back, BodyPrecision.Default).Should().Be(quantized, "a quantized state quantizes to itself");
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_coarser_precision_rounds_a_body_to_its_steps_in_fewer_bytes()
+	{
+		var precision = new BodyPrecision(100, 10, 6);
+		var rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 1.1f);
+		var state = new BodyState(new Vector3(12.3456f, -0.004f, 7f), rotation, new Vector3(1.234f, 0, -9.876f), true);
+
+		var writer = new BitWriter();
+		BodyCodec.Write(writer, BodyCodec.Quantize(state, precision), precision);
+		BodyState back = BodyCodec.Dequantize(BodyCodec.Read(new BitReader(writer.ToArray()), precision), precision);
+		var finer = new BitWriter();
+		BodyCodec.Write(finer, BodyCodec.Quantize(state, BodyPrecision.Default), BodyPrecision.Default);
+
+		back.Position.X.Should().BeApproximately(12.35f, 1e-4f);
+		back.Position.Y.Should().Be(0);
+		back.Velocity.X.Should().BeApproximately(1.2f, 1e-4f);
+		Math.Abs(Quaternion.Dot(back.Rotation, rotation)).Should().BeGreaterThan(0.999f);
+		back.Rotation.X.Should().Be(0, "zero is a level at any precision");
+		writer.ToArray().Length.Should().BeLessThan(finer.ToArray().Length);
+	}
+
+	[Theory]
+	[Trait("Networking", "Replication")]
+	[InlineData(0, 100, 9)]
+	[InlineData(1000, 0, 9)]
+	[InlineData(1000, 100, 1)]
+	[InlineData(1000, 100, 17)]
+	public void A_session_takes_no_precision_it_cannot_write(int positionSteps, int velocitySteps, int rotationBits)
+	{
+		var rig = new Rig();
+
+		Action set = () => rig.Server.BodyPrecision = new BodyPrecision(positionSteps, velocitySteps, rotationBits);
+
+		set.Should().Throw<ArgumentException>();
+		rig.Server.BodyPrecision.Should().Be(BodyPrecision.Default);
 	}
 
 	[Fact]
@@ -818,6 +858,23 @@ public class ReplicationTests
 		before.Position.Should().Be(Vector3.Zero);
 		body.TrySample(30, out BodyState after).Should().BeTrue();
 		after.Position.X.Should().Be(10);
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_remote_body_jumps_between_states_further_apart_than_the_snap_distance()
+	{
+		var body = new RemoteBody();
+		body.Add(10, new BodyState(Vector3.Zero, Quaternion.Identity, default, true));
+		body.Add(12, new BodyState(new Vector3(1, 0, 0), Quaternion.Identity, default, true));
+		body.Add(14, new BodyState(new Vector3(20, 0, 0), Quaternion.Identity, default, true));
+
+		body.TrySample(11, out BodyState walking, 2).Should().BeTrue();
+		walking.Position.X.Should().BeApproximately(0.5f, 1e-5f);
+		body.TrySample(13.9, out BodyState respawning, 2).Should().BeTrue();
+		respawning.Position.X.Should().Be(1, "a respawn isn't shown sliding to the spawn point");
+		body.TrySample(14, out BodyState respawned, 2).Should().BeTrue();
+		respawned.Position.X.Should().Be(20);
 	}
 
 	[Fact]
@@ -860,7 +917,7 @@ public class ReplicationTests
 
 	private static BodyState Rounded(BodyState state)
 	{
-		return BodyCodec.Dequantize(BodyCodec.Quantize(state));
+		return BodyCodec.Dequantize(BodyCodec.Quantize(state, BodyPrecision.Default), BodyPrecision.Default);
 	}
 
 	private static NetworkAssetRegistry Registry()

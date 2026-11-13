@@ -706,7 +706,7 @@ public sealed class ReplicationClient
 		return new SpawnKey(spawner, tick - (long)ago, ability, node, ReplicationCodec.ReadCount(reader, int.MaxValue));
 	}
 
-	private static void ReadBody(BitReader reader, Mirror? mirror, RemoteBody? body, long tick, long previousTick)
+	private void ReadBody(BitReader reader, Mirror? mirror, RemoteBody? body, long tick, long previousTick)
 	{
 		bool leftOut = reader.ReadBool();
 
@@ -722,7 +722,7 @@ public sealed class ReplicationClient
 			return;
 		}
 
-		QuantizedBody quantized = BodyCodec.Read(reader);
+		QuantizedBody quantized = BodyCodec.Read(reader, _session.BodyPrecision);
 
 		if (mirror?.Prediction is Prediction prediction)
 		{
@@ -736,7 +736,7 @@ public sealed class ReplicationClient
 			return;
 		}
 
-		BodyState state = BodyCodec.Dequantize(quantized);
+		BodyState state = BodyCodec.Dequantize(quantized, _session.BodyPrecision);
 
 		// A body missing from the packet before this one hadn't changed by then, unless the budget left it out, so it
 		// moved only after it: held there, it isn't shown drifting from where it last stood all the way from when it
@@ -895,7 +895,16 @@ public sealed class ReplicationClient
 
 		BodyState? body = reader.ReadBool() ? BodyCodec.ReadExact(reader) : null;
 		SpawnKey? key = reader.ReadBool() ? ReadSpawnKey(reader, tick) : null;
-		return new SpawnFields(placed, sceneIndex, owner, attributeCount, body, key);
+		var fields = new SpawnFields(placed, sceneIndex, owner, attributeCount, body, key, tick);
+
+		if (key is not null || !Owns(fields))
+		{
+			return fields;
+		}
+
+		// How many ticks the server's has run: this client's starts that far back, as far as the timeline can go.
+		ulong age = Math.Min(reader.ReadVarUInt(), (ulong)Timeline.Capacity);
+		return fields with { StartTick = Math.Max(tick - (long)age, 0) };
 	}
 
 	private Mirror? Spawn(SpawnFields fields, NetworkEntityId id, Mirror? mirror)
@@ -938,7 +947,7 @@ public sealed class ReplicationClient
 		}
 
 		_pendingBodies.Remove(id, out RemoteBody? pending);
-		mirror = Bind(entity, new PeerId((int)owner), placed: false, pending, made, fields.Key);
+		mirror = Bind(entity, new PeerId((int)owner), placed: false, pending, made, fields.Key, fields.StartTick);
 
 		if (made is not null)
 		{
@@ -1701,14 +1710,16 @@ public sealed class ReplicationClient
 		long from = tick;
 		bool correct = false;
 
-		// Just bound: how a spawn of the server's is now is how it starts, at the tick the server first sent it,
-		// rolling as it did there. One a graph spawned starts at the tick it was made in, as the server made it then,
-		// once the others joined, so the timeline can go back to it.
+		// Just bound: a spawn of the server's starts as it's made, at the tick the server's began from. One the
+		// timeline can't go back that far for starts at the oldest tick it can, rolling as the server's did there. One
+		// a graph spawned starts at the tick it was made in, as the server made it then, once the others joined, so the
+		// timeline can go back to it.
 		foreach (Prediction prediction in _unjoined.OrderBy(x => x.Key is not null).ToList())
 		{
-			long join = Math.Max(prediction.Key?.Tick ?? tick, Floor(timeline) ?? tick);
+			long start = prediction.Key?.Tick ?? prediction.StartTick ?? tick;
+			long join = Math.Max(start, Floor(timeline) ?? start);
 
-			if (prediction.Key is null)
+			if (prediction.Key is null && join != start)
 			{
 				prediction.Entity.Random?.BeginTick(join);
 			}
@@ -1826,7 +1837,7 @@ public sealed class ReplicationClient
 		if (prediction.HasBody
 			&& prediction.Body is QuantizedBody body
 			&& snapshot.Body is BodyState ours
-			&& !BodyCodec.WithinAStep(BodyCodec.Quantize(ours), body))
+			&& !BodyCodec.WithinAStep(BodyCodec.Quantize(ours, _session.BodyPrecision), body, _session.BodyPrecision))
 		{
 			return false;
 		}
@@ -2083,9 +2094,12 @@ public sealed class ReplicationClient
 		IForgeEntity entity = mirror.Entity;
 
 		if (prediction.HasBody && prediction.Body is QuantizedBody body && entity.Mover is IEntityMover mover
-			&& !BodyCodec.WithinAStep(BodyCodec.Quantize(mover.CaptureState()), body))
+			&& !BodyCodec.WithinAStep(
+				BodyCodec.Quantize(mover.CaptureState(), _session.BodyPrecision),
+				body,
+				_session.BodyPrecision))
 		{
-			mover.RestoreState(BodyCodec.Dequantize(body));
+			mover.RestoreState(BodyCodec.Dequantize(body, _session.BodyPrecision));
 		}
 
 		for (int i = 0; i < mirror.Attributes.Length; i++)
@@ -2255,7 +2269,8 @@ public sealed class ReplicationClient
 		bool placed,
 		RemoteBody? body = null,
 		Prediction? made = null,
-		SpawnKey? key = null)
+		SpawnKey? key = null,
+		long? startTick = null)
 	{
 		bool predicted = !placed && owner == _session.LocalPeer;
 
@@ -2281,6 +2296,7 @@ public sealed class ReplicationClient
 					key)
 				{
 					IsBound = true,
+					StartTick = startTick,
 				};
 
 				MarkPredicted(entity, predicted: true);
@@ -2511,7 +2527,8 @@ public sealed class ReplicationClient
 		ulong Owner,
 		int AttributeCount,
 		BodyState? Body,
-		SpawnKey? Key);
+		SpawnKey? Key,
+		long StartTick);
 
 	// A packet waiting to be shown, with where each of its entries starts.
 	private readonly record struct HeldPacket(long Tick, byte[] Data, List<int> Entries);

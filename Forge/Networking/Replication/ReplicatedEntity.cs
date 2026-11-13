@@ -192,7 +192,7 @@ public sealed class ReplicatedEntity
 	}
 
 	// Looks at the entity and stamps what changed since the last look with this send's tick.
-	internal void Capture(long tick, Func<IForgeEntity, BodyState?> bodySource)
+	internal void Capture(long tick, Func<IForgeEntity, BodyState?> bodySource, in BodyPrecision precision)
 	{
 		for (int i = 0; i < Attributes.Length; i++)
 		{
@@ -241,7 +241,7 @@ public sealed class ReplicatedEntity
 
 		if (body is BodyState state)
 		{
-			QuantizedBody quantized = BodyCodec.Quantize(state);
+			QuantizedBody quantized = BodyCodec.Quantize(state, precision);
 
 			if (ShadowBody != quantized)
 			{

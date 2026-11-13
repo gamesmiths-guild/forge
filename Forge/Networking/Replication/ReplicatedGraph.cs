@@ -61,8 +61,12 @@ internal sealed class ReplicatedGraph
 
 	public bool IsListed => AssetIndex >= 0;
 
-	// The entity's owner runs the run itself, predicting it, so it goes only to everyone else.
+	// The entity's owner runs the run itself, predicting it, so it goes only to everyone else, but for the actions it
+	// executed outside the owner's tick, which the owner's run doesn't.
 	public bool PredictedByOwner { get; }
+
+	// The send the owner was first owed a run it predicts at, for such an action.
+	public long OwnerHearsStamp { get; private set; } = Never;
 
 	// A run of an ability the entity's owner predicts that started from outside the owner's tick: the owner takes it in
 	// after the tick it started after and runs it itself from there.
@@ -121,6 +125,11 @@ internal sealed class ReplicatedGraph
 			CreatedStamp = tick;
 		}
 
+		if (OwnerHearsStamp == ReplicatedEntity.Pending)
+		{
+			OwnerHearsStamp = tick;
+		}
+
 		CaptureStates(tick);
 		CaptureVariables(tick);
 	}
@@ -131,6 +140,18 @@ internal sealed class ReplicatedGraph
 		if (IsListed)
 		{
 			CaptureVariables(tick);
+		}
+	}
+
+	// Keeps an action the run executed, and owes the run to an owner that predicts it when its own run doesn't execute
+	// the action.
+	public void Record(GraphEvent graphEvent)
+	{
+		Events.Add(graphEvent);
+
+		if (graphEvent.FromOutside && PredictedByOwner && OwnerHearsStamp == Never)
+		{
+			OwnerHearsStamp = ReplicatedEntity.Pending;
 		}
 	}
 
@@ -260,6 +281,12 @@ internal sealed class ReplicatedGraph
 	internal readonly record struct RunningState(int State, ulong ActivationId, long SinceTick);
 
 	// An action clients run, executed on the server, numbered in the entity's sequence of events, after the graph's
-	// activations up to the one numbered here, so a client runs it between the same states.
-	internal readonly record struct GraphEvent(uint Sequence, int Action, ulong AfterActivation, long CreatedAtTick);
+	// activations up to the one numbered here, so a client runs it between the same states. One executed outside the
+	// entity's own tick is one its owner's run of the graph didn't execute.
+	internal readonly record struct GraphEvent(
+		uint Sequence,
+		int Action,
+		ulong AfterActivation,
+		long CreatedAtTick,
+		bool FromOutside);
 }

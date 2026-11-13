@@ -153,8 +153,6 @@ public sealed class TagContainer : IEnumerable<Tag>, IEquatable<TagContainer>
 
 		foreach (Tag tag in container.InternalTags)
 		{
-			// TODO: Count how often each tag is sent, to order the net indices by frequency so the common ones cost a
-			// byte.
 			Tag.NetSerialize(tagsManager, tag, writer);
 		}
 

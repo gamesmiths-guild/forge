@@ -1,6 +1,7 @@
 // Copyright © Gamesmiths Guild.
 
 using FluentAssertions;
+using Gamesmiths.Forge.Networking;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
 
@@ -299,6 +300,42 @@ public class TagsManagerTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAn
 		string normalizedOutput = output.Replace("\n", Environment.NewLine);
 
 		tagsManager.ToString().Should().Be(normalizedOutput);
+	}
+
+	[Fact]
+	[Trait("Serialization", "Net index")]
+	public void Commonly_replicated_tags_take_the_first_net_indices_in_the_order_given()
+	{
+		var tagsManager = new TagsManager(SharedTagSets[3], ["simple.tag", "not.registered", "color.red"]);
+
+		Tag.NetSerialize(tagsManager, Tag.RequestTag(tagsManager, "simple.tag"), out ushort first).Should().BeTrue();
+		Tag.NetSerialize(tagsManager, Tag.RequestTag(tagsManager, "color.red"), out ushort second).Should().BeTrue();
+		Tag.NetSerialize(tagsManager, Tag.RequestTag(tagsManager, "color"), out ushort third).Should().BeTrue();
+
+		first.Should().Be(0);
+		second.Should().Be(1);
+		third.Should().Be(2, "the rest follow in their usual order");
+		Protocol.HashOf(tagsManager).Should()
+			.NotBe(Protocol.HashOf(new TagsManager(SharedTagSets[3])), "both machines must list the same ones");
+	}
+
+	[Fact]
+	[Trait("Serialization", "Net index")]
+	public void Network_usage_lists_the_tags_written_to_packets_most_written_first()
+	{
+		var tagsManager = new TagsManager(SharedTagSets[1]);
+		var writer = new BitWriter();
+		var tag = Tag.RequestTag(tagsManager, "tag");
+		var other = Tag.RequestTag(tagsManager, "other.tag");
+
+		Tag.NetSerialize(tagsManager, tag, writer);
+		Tag.NetSerialize(tagsManager, other, writer);
+		Tag.NetSerialize(tagsManager, other, writer);
+		Tag.NetSerialize(tagsManager, tag, out _);
+
+		tagsManager.GetNetworkUsage().Should().Equal(
+			new KeyValuePair<Tag, int>(other, 2),
+			new KeyValuePair<Tag, int>(tag, 1));
 	}
 
 	private static TagContainer ConstructContainer(

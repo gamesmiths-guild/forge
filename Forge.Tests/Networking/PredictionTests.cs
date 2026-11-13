@@ -48,10 +48,11 @@ public class PredictionTests
 		"cue.trail",
 		"cue.fire",
 		"event.hit",
-		"event.shove"
+		"event.shove",
+		"event.blow"
 	];
 
-	private static readonly InputActionSet _actions = new(["right", "dash", "chant", "spark"]);
+	private static readonly InputActionSet _actions = new(["right", "dash", "chant", "spark", "guard"]);
 
 	[Fact]
 	[Trait("Networking", "Prediction")]
@@ -82,7 +83,23 @@ public class PredictionTests
 		var rig = new Rig(NetworkConditions.Good);
 		rig.JoinWithPlayer();
 
-		rig.Mirror.Corrections.Should().Be(0, "it rolls from the tick the server first sent it");
+		rig.Mirror.Corrections.Should().Be(0, "it starts as the server's did, at the tick the server's began from");
+	}
+
+	[Theory]
+	[InlineData(0)]
+	[InlineData(1)]
+	[Trait("Networking", "Prediction")]
+	public void What_the_owner_s_entity_starts_at_its_setup_runs_on_the_server_s_ticks(int stepsBeforeSpawn)
+	{
+		var rig = new Rig(NetworkConditions.Good) { Pulses = true };
+		rig.JoinWithPlayer(stepsBeforeSpawn: stepsBeforeSpawn);
+
+		rig.Idle(120);
+
+		rig.Mirror.Corrections
+			.Should().Be(0, "its periods fall on the server's ticks, whichever tick the spawn was first sent at");
+		rig.Mirror.Confirmations.Should().BeGreaterThan(30);
 	}
 
 	[Fact]
@@ -290,6 +307,37 @@ public class PredictionTests
 
 	[Fact]
 	[Trait("Networking", "Prediction")]
+	public void An_action_a_predicted_run_executes_outside_its_owner_s_tick_shows_on_the_owner_once()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+		rig.Press("guard");
+		rig.Idle(30);
+
+		for (int blows = 1; blows <= 2; blows++)
+		{
+			rig.ServerPlayer.Events.Raise(new EventData
+			{
+				EventTags = new TagContainer(rig.ServerAssets.Tags, [rig.ServerAssets.Tag("event.blow")]),
+				Target = rig.ServerPlayer,
+			});
+			rig.Idle(30);
+
+			rig.ServerAssets.Log.Should().HaveCount(blows).And.OnlyContain(x => x == "spark");
+			rig.Assets.Log.Should().HaveCount(blows, "its own run never had the event, so the server's word shows it")
+				.And.OnlyContain(x => x == "spark");
+		}
+
+		rig.Press("guard");
+		rig.Idle(30);
+
+		rig.ClientPlayer!.Abilities.TryGetAbility(rig.Assets.Guard, out AbilityHandle? guard, rig.ClientPlayer)
+			.Should().BeTrue();
+		guard!.IsActive.Should().BeTrue("what it was sent is only what to show: the run is its own");
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
 	public void A_Server_Only_region_of_a_predicted_graph_runs_on_the_server_alone_and_every_packet_agrees()
 	{
 		var rig = new Rig(NetworkConditions.Good);
@@ -452,6 +500,9 @@ public class PredictionTests
 		// A quarter of a second: +4 to the speed, the state.dashing tag and a trail.
 		public EffectData Dashing { get; }
 
+		// For good: -1 to the health every three ticks, so its periods fall on the ticks of both kinds of send.
+		public EffectData Pulse { get; }
+
 		// Bound to dash: dashes, with the cue.dash executed as it starts.
 		public AbilityData Dash { get; }
 
@@ -467,6 +518,9 @@ public class PredictionTests
 
 		// Half a second, for the server alone to know of: the state.marked tag.
 		public EffectData Mark { get; }
+
+		// Bound to guard: sparks at every event.blow from then on.
+		public AbilityData Guard { get; }
 
 		// Triggered by event.shove: waits half a second, with nothing for a client to run.
 		public AbilityData Brace { get; }
@@ -509,6 +563,15 @@ public class PredictionTests
 				effectComponents: [new ModifierTagsEffectComponent(Container("state.dashing"))],
 				cues: [new CueData(Container("cue.trail"), 0, 1, CueMagnitudeType.EffectLevel)]);
 
+			Pulse = new EffectData(
+				"Pulse",
+				new DurationData(DurationType.Infinite),
+				[Flat(Health, -1)],
+				periodicData: new PeriodicData(
+					new ScalableFloat(0.05f),
+					false,
+					PeriodInhibitionRemovedPolicy.NeverReset));
+
 			Mark = new EffectData(
 				"Mark",
 				new DurationData(
@@ -545,16 +608,24 @@ public class PredictionTests
 				abilityTriggerData: AbilityTriggerData.ForEvent(Tag("event.shove")),
 				behaviorFactory: () => new GraphAbilityBehavior(wait));
 
+			Graph guard = Parry();
+			Guard = new AbilityData(
+				"Guard",
+				behaviorFactory: () => new GraphAbilityBehavior(guard),
+				inputBinding: AbilityInputBinding.ForAction("guard"));
+
 			Registry.Register(AssetKind.Scene, "uid://player", "Player");
 			Registry.Register(AssetKind.Effect, "uid://slow", Slow);
 			Registry.Register(AssetKind.Effect, "uid://hurt", Hurt);
 			Registry.Register(AssetKind.Effect, "uid://dashing", Dashing);
 			Registry.Register(AssetKind.Effect, "uid://burning", Burning);
+			Registry.Register(AssetKind.Effect, "uid://pulse", Pulse);
 			Registry.Register(AssetKind.Ability, "uid://dash", Dash);
 			Registry.Register(AssetKind.Ability, "uid://chant", Chant);
 			Registry.Register(AssetKind.Ability, "uid://flinch", Flinch);
 			Registry.Register(AssetKind.Ability, "uid://sparks", Sparks);
 			Registry.Register(AssetKind.Ability, "uid://brace", Brace);
+			Registry.Register(AssetKind.Ability, "uid://guard", Guard);
 			Registry.Seal();
 		}
 
@@ -582,6 +653,26 @@ public class PredictionTests
 			graph.AddConnection(new Connection(
 				graph.EntryNode.OutputPorts[EntryNode.OutputPort],
 				wait.InputPorts[StateNode<StateNodeContext>.InputPort]));
+			return graph;
+		}
+
+		private Graph Parry()
+		{
+			var graph = new Graph();
+			var listener = new EventListenerNode();
+			var spark = new SparkNode(Log);
+			graph.AddNode(listener);
+			graph.AddNode(spark);
+			graph.VariableDefinitions.DefineObjectVariable("blow", Tag("event.blow"));
+			graph.VariableDefinitions.DefineObjectProperty("owner", new AbilityOwnerResolver());
+			listener.BindInput(EventListenerNode.EventTagInput, "blow");
+			listener.BindInput(EventListenerNode.ListenOnInput, "owner");
+			graph.AddConnection(new Connection(
+				graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+				listener.InputPorts[StateNode<EventListenerNodeContext>.InputPort]));
+			graph.AddConnection(new Connection(
+				listener.OutputPorts[EventListenerNode.OnEventPort],
+				spark.InputPorts[ActionNode.InputPort]));
 			return graph;
 		}
 
@@ -815,7 +906,7 @@ public class PredictionTests
 
 		IEntityMover? IForgeEntity.Mover => Mover;
 
-		public Player(Assets assets, CuesManager cues)
+		public Player(Assets assets, CuesManager cues, bool pulses = false)
 		{
 			Attributes = new EntityAttributes(this, new TestAttributeSet());
 			Tags = new EntityTags(new TagContainer(assets.Tags));
@@ -829,6 +920,12 @@ public class PredictionTests
 			Abilities.GrantAbilityPermanently(assets.Flinch, 1, LevelComparison.None, this);
 			Abilities.GrantAbilityPermanently(assets.Sparks, 1, LevelComparison.None, this);
 			Abilities.GrantAbilityPermanently(assets.Brace, 1, LevelComparison.None, this);
+			Abilities.GrantAbilityPermanently(assets.Guard, 1, LevelComparison.None, this);
+
+			if (pulses)
+			{
+				EffectsManager.ApplyEffect(new Effect(assets.Pulse, new EffectOwnership(this, this)));
+			}
 		}
 
 		public Vector3 PositionAt(long tick)
@@ -905,6 +1002,9 @@ public class PredictionTests
 
 		public Player? ClientPlayer { get; private set; }
 
+		// Whether the players start with a periodic effect of their own.
+		public bool Pulses { get; init; }
+
 		// Where the client was told to make its player.
 		public BodyState? SpawnedAt { get; private set; }
 
@@ -938,7 +1038,10 @@ public class PredictionTests
 			ClientFireLog.Watch(ClientCues);
 		}
 
-		public Player JoinWithPlayer(Vector3 movedBeforeSent = default, string? holding = null)
+		public Player JoinWithPlayer(
+			Vector3 movedBeforeSent = default,
+			string? holding = null,
+			int stepsBeforeSpawn = 0)
 		{
 			_frame = holding is null ? default : new InputFrame { Held = 1UL << _actions.IndexOf(holding) };
 
@@ -948,11 +1051,17 @@ public class PredictionTests
 			}
 
 			Client.State.Should().Be(SessionState.Ready);
+
+			for (int i = 0; i < stepsBeforeSpawn; i++)
+			{
+				Step();
+			}
+
 			NetworkEntityId id = Server.Replication!.AllocateId();
-			ServerPlayer = new Player(ServerAssets, ServerCues)
+			ServerPlayer = new Player(ServerAssets, ServerCues, Pulses)
 			{
 				NetworkId = id,
-				Random = SeededAt(id, Server.Clock.Tick),
+				Random = Seeded(id),
 			};
 
 			Server.Replication.Register(ServerPlayer, 0, Server.Peers[0].Id);
@@ -1088,7 +1197,11 @@ public class PredictionTests
 
 		public IForgeEntity? Spawn(NetworkEntityId id, int sceneIndex, PeerId owner)
 		{
-			var player = new Player(Assets, ClientCues) { NetworkId = id, Random = SeededAt(id, Client.Clock.Tick) };
+			var player = new Player(Assets, ClientCues, Pulses)
+			{
+				NetworkId = id,
+				Random = Seeded(id),
+			};
 			ClientPlayer = player;
 			return player;
 		}
@@ -1098,11 +1211,12 @@ public class PredictionTests
 			ClientPlayer = null;
 		}
 
-		// Rolls from the entity's id, begun at the tick it's made at, as a game seeds a networked entity.
-		private static DeterministicRandom SeededAt(NetworkEntityId id, long tick)
+		// Rolls from the entity's id, the same on both machines until its first tick, as a game seeds a networked
+		// entity.
+		private static DeterministicRandom Seeded(NetworkEntityId id)
 		{
 			var random = new DeterministicRandom(id.Value);
-			random.BeginTick(tick);
+			random.BeginTick(0);
 			return random;
 		}
 	}

@@ -83,6 +83,8 @@ public sealed class NetworkSession
 	private readonly BitWriter _writer = new();
 	private readonly BitReader _reader = new(ReadOnlyMemory<byte>.Empty);
 	private readonly int _maxClients;
+
+	private BodyPrecision _bodyPrecision = BodyPrecision.Default;
 	private double _nextPingAt;
 	private double _localTime;
 
@@ -161,6 +163,20 @@ public sealed class NetworkSession
 	/// Gets why the server refused this client, once <see cref="State"/> is <see cref="SessionState.Refused"/>.
 	/// </summary>
 	public RefusalReason? Refusal { get; private set; }
+
+	/// <summary>
+	/// Gets or sets how finely body states are rounded for the wire. Set it before the session connects: a client
+	/// whose precision differs from the server's is refused.
+	/// </summary>
+	public BodyPrecision BodyPrecision
+	{
+		get => _bodyPrecision;
+		set
+		{
+			value.Validate();
+			_bodyPrecision = value;
+		}
+	}
 
 	/// <summary>
 	/// Gets the seed the session's randomness derives from: the server's own, or the one a client was welcomed with.
@@ -419,8 +435,12 @@ public sealed class NetworkSession
 
 		State = SessionState.Handshaking;
 		_writer.Clear();
-		new HelloMessage(Protocol.Version, Registry.Hash, Protocol.HashOf(TagsManager), Protocol.HashOf(Actions))
-			.Write(_writer);
+		new HelloMessage(
+			Protocol.Version,
+			Registry.Hash,
+			Protocol.HashOf(TagsManager),
+			Protocol.HashOf(Actions),
+			BodyPrecision).Write(_writer);
 		Transport.Send(PeerId.Server, Protocol.ControlChannel, reliable: true, _writer.WrittenBytes);
 	}
 
@@ -541,6 +561,10 @@ public sealed class NetworkSession
 		else if (hello.InputHash != Protocol.HashOf(Actions))
 		{
 			refusal = RefusalReason.InputActions;
+		}
+		else if (hello.BodyPrecision != BodyPrecision)
+		{
+			refusal = RefusalReason.BodyPrecision;
 		}
 		else if (_maxClients > 0 && _readyPeers.Count >= _maxClients)
 		{

@@ -18,6 +18,8 @@ public sealed class TagsManager
 
 	private readonly List<TagNode> _networkTagNodeIndex = [];
 
+	private readonly string[] _commonlyReplicatedTags;
+
 	private bool _networkIndexInvalidated = true;
 
 	/// <summary>
@@ -54,7 +56,26 @@ public sealed class TagsManager
 	/// </summary>
 	/// <param name="tags">List of tags to initialize.</param>
 	public TagsManager(string[] tags)
+		: this(tags, [])
 	{
+	}
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="TagsManager"/> class from a list of strings, with the tags that
+	/// travel most.
+	/// </summary>
+	/// <remarks>
+	/// A tag travels as its net index, in one byte for the first 128 indices and two from there. The commonly
+	/// replicated tags take the first indices, in the order given, so they stay at one byte however many tags are
+	/// registered. Every machine of a session must list the same ones in the same order.
+	/// <see cref="GetNetworkUsage"/> says which tags travelled most.
+	/// </remarks>
+	/// <param name="tags">List of tags to initialize.</param>
+	/// <param name="commonlyReplicatedTags">The tags that travel most, most common first. One that isn't registered
+	/// is ignored.</param>
+	public TagsManager(string[] tags, string[] commonlyReplicatedTags)
+	{
+		_commonlyReplicatedTags = commonlyReplicatedTags;
 		RootNode = new TagNode(this);
 
 		foreach (string tag in tags)
@@ -63,6 +84,20 @@ public sealed class TagsManager
 		}
 
 		ConstructNetIndex();
+	}
+
+	/// <summary>
+	/// Gets how many times each tag was written to a packet since this manager was made, most written first: the tags
+	/// worth listing as commonly replicated. Tags never written are left out.
+	/// </summary>
+	/// <returns>Each tag written at least once with how many times it was, most written first.</returns>
+	public IReadOnlyList<KeyValuePair<Tag, int>> GetNetworkUsage()
+	{
+		return [.. _tagNodeMap
+			.Where(x => x.Value.SentCount > 0)
+			.OrderByDescending(x => x.Value.SentCount)
+			.ThenBy(x => x.Value.NetIndex)
+			.Select(x => new KeyValuePair<Tag, int>(x.Key, x.Value.SentCount))];
 	}
 
 	/// <summary>
@@ -376,6 +411,17 @@ public sealed class TagsManager
 		return InvalidTagNetIndex;
 	}
 
+	// Counts a tag written to a packet, for GetNetworkUsage.
+	internal void NoteSent(ushort tagIndex)
+	{
+		VerifyNetworkIndex();
+
+		if (tagIndex < _networkTagNodeIndex.Count)
+		{
+			_networkTagNodeIndex[tagIndex].SentCount++;
+		}
+	}
+
 	internal StringKey GetTagKeyFromNetIndex(ushort tagIndex)
 	{
 		VerifyNetworkIndex();
@@ -583,9 +629,27 @@ public sealed class TagsManager
 			InvalidTagNetIndex = (ushort)(_networkTagNodeIndex.Count + 1);
 		}
 
-		// Should make some checks.
-		// Then move commonly replicated tags to the beginning for optimization.
-		// For now I'm naively serializing everything as is.
+		// The commonly replicated tags come first, in the order given, so their indices are the smallest.
+		int next = 0;
+
+		foreach (string name in _commonlyReplicatedTags)
+		{
+			Tag tag = RequestTag(name, false);
+
+			if (!tag.IsValid || !_tagNodeMap.TryGetValue(tag, out TagNode? node))
+			{
+				continue;
+			}
+
+			int index = _networkTagNodeIndex.IndexOf(node, next);
+
+			if (index >= 0)
+			{
+				_networkTagNodeIndex.RemoveAt(index);
+				_networkTagNodeIndex.Insert(next++, node);
+			}
+		}
+
 		for (ushort i = 0; i < _networkTagNodeIndex.Count; ++i)
 		{
 			if (_networkTagNodeIndex[i] is not null)

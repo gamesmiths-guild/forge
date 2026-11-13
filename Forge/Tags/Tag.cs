@@ -95,6 +95,7 @@ public readonly struct Tag : IEquatable<Tag>, IValidatable
 	{
 		bool serialized = NetSerialize(tagsManager, tag, out ushort netIndex);
 		writer.WriteVarUInt(netIndex);
+		tagsManager.NoteSent(netIndex);
 		return serialized;
 	}
 
