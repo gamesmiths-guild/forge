@@ -1075,7 +1075,12 @@ public class PredictionTests
 			Server.Clock.Advance();
 		}
 
-		public IForgeEntity? SpawnPredicted(NetworkEntityId id, int sceneIndex, PeerId owner, BodyState? body)
+		public IForgeEntity? SpawnPredicted(
+			NetworkEntityId id,
+			int sceneIndex,
+			PeerId owner,
+			BodyState? body,
+			SpawnKey? key)
 		{
 			SpawnedAt = body;
 			return Spawn(id, sceneIndex, owner);

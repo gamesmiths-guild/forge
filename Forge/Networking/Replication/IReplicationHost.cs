@@ -39,8 +39,12 @@ public interface IReplicationHost
 	/// <param name="owner">This client's peer.</param>
 	/// <param name="body">Where the server's body was as it registered the entity, exactly, or <see langword="null"/>
 	/// for an entity without one.</param>
+	/// <param name="key">The key a graph of an entity this client predicts spawned it under, which this client didn't
+	/// make it under ahead of the server: seed its random with <see cref="SpawnKey.SeedFor"/>, as the server's was. It
+	/// joins the timeline at the tick the server made it in. <see langword="null"/> for one the server spawned on its
+	/// own.</param>
 	/// <returns>The entity, or <see langword="null"/> when it couldn't be made.</returns>
-	IForgeEntity? SpawnPredicted(NetworkEntityId id, int sceneIndex, PeerId owner, BodyState? body)
+	IForgeEntity? SpawnPredicted(NetworkEntityId id, int sceneIndex, PeerId owner, BodyState? body, SpawnKey? key)
 	{
 		return Spawn(id, sceneIndex, owner);
 	}
@@ -50,7 +54,8 @@ public interface IReplicationHost
 	/// removed already, and its graphs ended: what they still show ends in its next
 	/// <see cref="EntityAbilities.PresentAbilities"/>, which the host must call, here or as it frees the entity, before
 	/// the entity is gone or leaves the host's presentation pass. An entity placed in the scene rather than spawned is
-	/// handed here too, for the host to hide or free.
+	/// handed here too, for the host to hide or free, and so is one this client spawned ahead of the server that the
+	/// server didn't, from limbo (<see cref="ReplicationClient.EnteredLimbo"/>), where it let go of everything already.
 	/// </summary>
 	/// <param name="entity">The entity.</param>
 	void Despawn(IForgeEntity entity);

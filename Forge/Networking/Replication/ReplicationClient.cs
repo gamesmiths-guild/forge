@@ -51,9 +51,13 @@ public sealed class ReplicationClient
 	private readonly Queue<HeldPacket> _held = new();
 	private readonly Dictionary<NetworkEntityId, RemoteBody> _pendingBodies = [];
 	private readonly BitReader _heldReader = new(ReadOnlyMemory<byte>.Empty);
-	private readonly List<Mirror> _predicted = [];
-	private readonly List<IForgeEntity> _predictedEntities = [];
-	private readonly List<Mirror> _toReconcile = [];
+	private readonly List<Prediction> _toReconcile = [];
+	private readonly List<Prediction> _unjoined = [];
+	private readonly List<Prediction> _rejoining = [];
+	private readonly List<Prediction> _correcting = [];
+	private readonly HashSet<SpawnKey> _ended = [];
+	private readonly SpawnKeys _spawnKeys = new();
+	private PredictionTimeline? _timeline;
 	private long _shownTick = -1;
 	private uint _ackMask;
 	private bool _ackPending;
@@ -71,10 +75,31 @@ public sealed class ReplicationClient
 	public event Action<IForgeEntity>? Despawned;
 
 	/// <summary>
-	/// Raised after a state packet put a predicted entity right and its ticks since ran again, with the entity: what it
-	/// shows can ease from where it was to where it is now.
+	/// Raised after a state packet put the entities this client predicts right and their ticks since ran again, once
+	/// for each entity in the world: what it shows can ease from where it was to where it is now.
 	/// </summary>
 	public event Action<IForgeEntity>? Corrected;
+
+	/// <summary>
+	/// Raised once a correction ran the ticks after the one it rolled back to again, with that tick. What a node made
+	/// in those ticks, such as a cosmetic scene's instance, is made again only where the ticks run again reached that
+	/// node: a host that found such instances again by their <see cref="SpawnKey"/> frees the ones this correction
+	/// didn't.
+	/// </summary>
+	public event Action<long>? Replayed;
+
+	/// <summary>
+	/// Raised when an entity this client predicts goes to limbo, once it let go of everything: one freed, one a
+	/// correction rolled back to before the tick it was made in, or one this client spawned that the server didn't.
+	/// The host hides it and takes it out of everything that isn't Forge's, such as its physics, until it comes back
+	/// or the replication hands it to <see cref="IReplicationHost.Despawn"/>.
+	/// </summary>
+	public event Action<IForgeEntity>? EnteredLimbo;
+
+	/// <summary>
+	/// Raised when an entity this client predicts comes back from limbo, before it's restored: the host shows it again.
+	/// </summary>
+	public event Action<IForgeEntity>? LeftLimbo;
 
 	/// <summary>
 	/// Gets or sets what makes and takes away the server's entities on this machine.
@@ -112,16 +137,17 @@ public sealed class ReplicationClient
 	public long SpawnsRefused { get; private set; }
 
 	/// <summary>
-	/// Gets the entities this client predicts, in the order they were bound: the ones the server spawned for this
-	/// client's peer. They aren't mirrors. The host advances them through each tick with <see cref="Predict"/>, ahead
-	/// of the server, and each state packet puts them right where the server's word for its tick differs from what this
-	/// client predicted then.
+	/// Gets the entities this client predicts that are in the world, in the order they joined its timeline: the ones
+	/// the server spawned for this client's peer, and the ones this client spawned ahead of the server
+	/// (<see cref="PredictSpawn"/>). They aren't mirrors. The host advances them all through each tick with
+	/// <see cref="Predict"/>, ahead of the server, and each state packet puts them right where the server's word for
+	/// its tick differs from what this client predicted then, rolling them back and running their ticks again together.
 	/// </summary>
-	public IReadOnlyList<IForgeEntity> Predicted => _predictedEntities;
+	public IReadOnlyList<IForgeEntity> Predicted => _timeline?.Live ?? [];
 
 	/// <summary>
-	/// Gets or sets how many ticks a predicted entity keeps to roll back to, read as it's bound: a state packet older
-	/// than that can't be checked. Zero keeps as many as the input may lead the server by,
+	/// Gets or sets how many ticks the entities this client predicts keep to roll back to, read as the first one is
+	/// bound: a state packet older than that can't be checked. Zero keeps as many as the input may lead the server by,
 	/// <see cref="NetworkSession.MaxInputLead"/>.
 	/// </summary>
 	public int PredictionHistoryTicks { get; set; }
@@ -170,6 +196,25 @@ public sealed class ReplicationClient
 			{
 				Show(double.PositiveInfinity);
 			}
+		}
+	}
+
+	// The entities this client predicts, made as the first one is bound or spawned.
+	private PredictionTimeline Timeline
+	{
+		get
+		{
+			if (_timeline is null)
+			{
+				int capacity = PredictionHistoryTicks > 0
+					? PredictionHistoryTicks
+					: (int)Math.Ceiling(_session.Clock.TicksIn(NetworkSession.MaxInputLead));
+				_timeline = new PredictionTimeline(capacity, _session.Clock.FixedDeltaTime);
+				_timeline.EnteredLimbo += x => EnteredLimbo?.Invoke(x);
+				_timeline.LeftLimbo += x => LeftLimbo?.Invoke(x);
+			}
+
+			return _timeline;
 		}
 	}
 
@@ -282,8 +327,9 @@ public sealed class ReplicationClient
 
 	/// <summary>
 	/// Advances every entity this client predicts through a tick, ahead of the server, and records how the tick left
-	/// it. Call it once per tick the client's clock simulates, after the entity's input frame for the tick is
-	/// submitted, then send that frame for the tick.
+	/// them. Every one begins the tick before any advances, so one reading another's input sees this tick's frame. Call
+	/// it once per tick the client's clock simulates, after the input frames for the tick are submitted, then send them
+	/// for the tick.
 	/// </summary>
 	/// <remarks>
 	/// <para>Ticks the clock skipped since the last call run first, with the input held and no presses or releases, as
@@ -296,30 +342,130 @@ public sealed class ReplicationClient
 	/// <param name="fixedDeltaTime">The length of the fixed step, in seconds.</param>
 	public void Predict(long tick, double fixedDeltaTime)
 	{
-		if (!_session.ClockSync.HasEstimate)
+		if (!_session.ClockSync.HasEstimate || _timeline?.NewestTick is not long newest)
 		{
 			return;
 		}
 
-		foreach (Mirror mirror in _predicted.ToArray())
+		// One the clock already passed by more than the timeline holds starts over.
+		long next = newest + 1 <= tick - _timeline.Capacity ? tick : newest + 1;
+
+		for (long held = next; held < tick; held++)
 		{
-			EntityHistory history = mirror.Prediction!.History;
-			long next = (history.NewestTick + 1) ?? tick;
-
-			// One the clock already passed by more than its history holds starts over.
-			if (next <= tick - history.Capacity)
-			{
-				next = tick;
-			}
-
-			RunHeld(mirror, next, tick - 1, fixedDeltaTime);
-
-			if (next <= tick)
-			{
-				EntitySimulation.Tick(mirror.Entity, tick, fixedDeltaTime);
-				history.Record(tick);
-			}
+			_timeline.TickHeld(held, fixedDeltaTime);
 		}
+
+		if (next <= tick)
+		{
+			_timeline.Tick(tick, fixedDeltaTime);
+		}
+
+		ReleaseUnreachable();
+	}
+
+	/// <summary>
+	/// Gives the key of a spawn a graph's node is making on this client, for a graph of an entity this client
+	/// predicts: the key the server gives the spawn it makes in the same tick, which binds the entity this client made
+	/// ahead of it (<see cref="PredictSpawn"/>).
+	/// </summary>
+	/// <remarks>
+	/// Ask once per spawn, as the node makes it, whether it makes a networked entity or something only this machine
+	/// shows: each spawn a node makes in a tick takes the next key, and a correction running the tick again numbers
+	/// them as they were, so what it makes again is found by its key (<see cref="FindSpawn"/>).
+	/// </remarks>
+	/// <param name="graphContext">The context of the graph making the spawn.</param>
+	/// <param name="node">The index of the node making it, its <see cref="Node.Index"/>.</param>
+	/// <returns>The key, or <see langword="null"/> for a graph this client doesn't predict, such as a mirror's copy of
+	/// the server's, one of an entity the server hasn't bound yet, or one that runs before the entity's first tick.
+	/// </returns>
+	public SpawnKey? KeySpawn(GraphContext graphContext, int node)
+	{
+		return !graphContext.IsRemote
+			&& graphContext.TryGetActivationContext(out AbilityBehaviorContext? context)
+			&& context.Owner.Abilities.IsPredicted
+			&& context.Owner.NetworkId.IsValid
+			? _spawnKeys.Next(context, node)
+			: null;
+	}
+
+	/// <summary>
+	/// Finds the entity this client spawned ahead of the server under a key. A correction that runs again the tick the
+	/// spawn was made in, having rolled back to before it, brings it back here as it was made, instead of the host
+	/// making another: it joins the timeline again as the tick is recorded. One the server's packets reached the tick
+	/// of without spawning it is found, and stays in limbo.
+	/// </summary>
+	/// <param name="key">The key <see cref="KeySpawn"/> gave the spawn.</param>
+	/// <returns>The entity, or <see langword="null"/> when this client made none under the key.</returns>
+	public IForgeEntity? FindSpawn(SpawnKey key)
+	{
+		return _timeline?.Remake(key, keptOut: key.Tick <= LastServerTick)?.Entity;
+	}
+
+	/// <summary>
+	/// Takes an entity this client just spawned ahead of the server into its timeline, predicted, from the tick a
+	/// graph's node made it in: it advances with the entities this client predicts from the next tick on, and the
+	/// server's spawn of it, arriving with its key, binds it. Call it while the node runs, after the entity is made and
+	/// before its setup runs, so its setup runs as a predicted entity's.
+	/// </summary>
+	/// <remarks>
+	/// <para>A spawn the server's packets reach the tick of without the server spawning it was never made there: it
+	/// goes to limbo (<see cref="EnteredLimbo"/>), where the server's spawn of it, arriving late, finds it and brings
+	/// it back, and it's handed to <see cref="IReplicationHost.Despawn"/> once no correction can reach that tick.
+	/// </para>
+	/// <para>Give the entity its own random, seeded with <see cref="SpawnKey.SeedFor"/>, as the server's must be, so
+	/// its setup and its ticks roll the same on both machines.</para>
+	/// </remarks>
+	/// <param name="entity">The entity, made under the key.</param>
+	/// <param name="key">The key <see cref="KeySpawn"/> gave the spawn.</param>
+	/// <param name="bind">Gives the entity the id of the server's spawn as it arrives, for its
+	/// <see cref="IForgeEntity.NetworkId"/> to return.</param>
+	/// <returns><see langword="false"/> when the server already despawned the entity of this key, which a correction
+	/// running the tick again doesn't make again: the host frees what it made.</returns>
+	public bool PredictSpawn(IForgeEntity entity, SpawnKey key, Action<NetworkEntityId> bind)
+	{
+		if (_ended.Contains(key))
+		{
+			return false;
+		}
+
+		var prediction = new Prediction(
+			entity,
+			entity.Attributes.Count(),
+			Timeline.Capacity,
+			Timeline.FixedDeltaTime,
+			key)
+		{
+			Bind = bind,
+		};
+
+		MarkPredicted(entity, predicted: true);
+
+		if (_correcting.Count > 0)
+		{
+			BeginCorrecting(prediction);
+		}
+
+		Timeline.Join(prediction, key.Tick);
+		return true;
+	}
+
+	/// <summary>
+	/// Takes an entity this client predicts out of its timeline, as when its graph frees it: it goes to limbo as the
+	/// tick is recorded (<see cref="EnteredLimbo"/>), and a correction rolling back to a tick it was in brings it back.
+	/// The server's despawn of it hands it to <see cref="IReplicationHost.Despawn"/>.
+	/// </summary>
+	/// <param name="entity">The entity.</param>
+	/// <returns><see langword="false"/> for an entity this client doesn't predict, which the host frees as it would.
+	/// </returns>
+	public bool PredictDespawn(IForgeEntity entity)
+	{
+		if (_timeline?.Members.FirstOrDefault(x => ReferenceEquals(x.Entity, entity)) is not Prediction prediction)
+		{
+			return false;
+		}
+
+		_timeline.Leave(prediction);
+		return true;
 	}
 
 	/// <summary>
@@ -333,6 +479,19 @@ public sealed class ReplicationClient
 			Unbind(mirror, despawn: !mirror.Placed);
 		}
 
+		// What this client spawned that the server's spawn never bound goes too.
+		foreach (Prediction prediction in _timeline?.Members.ToArray() ?? [])
+		{
+			_timeline!.Shelve(prediction);
+			Release(prediction);
+		}
+
+		_spawnKeys.ForgetAfter(long.MinValue);
+
+		_timeline = null;
+		_unjoined.Clear();
+		_rejoining.Clear();
+		_ended.Clear();
 		LastServerTick = -1;
 		LastSequence = 0;
 		_held.Clear();
@@ -375,18 +534,19 @@ public sealed class ReplicationClient
 		LastServerTick = Math.Max(LastServerTick, tick);
 		Acknowledge((uint)sequence);
 
-		// The packet is acknowledged, so a correction that throws costs neither the other entities' nor the rest of it.
+		// The packet is acknowledged, so a correction that throws costs nothing else of it.
 		ExceptionDispatchInfo? failure = null;
 
-		foreach (Mirror mirror in _toReconcile.Where(x => x.Prediction is not null))
+		if (_timeline is not null)
 		{
 			try
 			{
-				Reconcile(mirror, tick);
+				ShelveUnconfirmed(tick);
+				Reconcile(tick);
 			}
 			catch (Exception exception)
 			{
-				failure ??= ExceptionDispatchInfo.Capture(exception);
+				failure = ExceptionDispatchInfo.Capture(exception);
 			}
 		}
 
@@ -465,32 +625,43 @@ public sealed class ReplicationClient
 		}
 	}
 
-	// Records a sequence newer than any read before for the next acknowledgement.
-	// Runs a predicted entity through ticks no input was submitted for, holding what was held without presses or
-	// releases, as the server runs a tick whose input never arrived. A frame waiting for a later tick waits on.
-	private static void RunHeld(Mirror mirror, long from, long to, double fixedDeltaTime)
+	// The oldest tick the timeline can go back to: one it holds, and not before a spawn of the server's joined it,
+	// which nothing on this client makes again.
+	private static long? Floor(PredictionTimeline timeline)
 	{
-		EntityHistory history = mirror.Prediction!.History;
-		EntityInput? input = mirror.Entity.Input;
+		long? floor = timeline.OldestTick;
 
-		for (long tick = from; tick <= to; tick++)
+		foreach (Prediction prediction in timeline.Members)
 		{
-			InputFrame? waiting = input?.Waiting;
-
-			if (input is not null)
+			if (prediction.Key is null && prediction.JoinTick > floor)
 			{
-				input.Waiting = null;
+				floor = prediction.JoinTick;
 			}
-
-			EntitySimulation.Tick(mirror.Entity, tick, fixedDeltaTime);
-
-			if (input is not null)
-			{
-				input.Waiting = waiting;
-			}
-
-			history.Record(tick);
 		}
+
+		return floor;
+	}
+
+	private static void MarkPredicted(IForgeEntity entity, bool predicted)
+	{
+		entity.Abilities.IsPredicted = predicted;
+		entity.Abilities.TracksPrediction = predicted;
+		entity.EffectsManager.IsPredicted = predicted;
+	}
+
+	private static SpawnKey ReadSpawnKey(BitReader reader, long tick)
+	{
+		var spawner = new NetworkEntityId(ReplicationCodec.ReadEntityId(reader));
+		ulong ago = reader.ReadVarUInt();
+
+		if (ago > (ulong)tick)
+		{
+			throw new MalformedPacketException($"A spawn {ago} ticks before tick {tick} is not a spawn's tick.");
+		}
+
+		uint ability = reader.ReadUInt32();
+		int node = ReplicationCodec.ReadCount(reader, int.MaxValue);
+		return new SpawnKey(spawner, tick - (long)ago, ability, node, ReplicationCodec.ReadCount(reader, int.MaxValue));
 	}
 
 	private static void ReadBody(BitReader reader, Mirror? mirror, RemoteBody? body, long tick, long previousTick)
@@ -536,6 +707,7 @@ public sealed class ReplicationClient
 		body.Add(tick, state);
 	}
 
+	// Records a sequence newer than any read before for the next acknowledgement.
 	private void Acknowledge(uint sequence)
 	{
 		uint shift = sequence - LastSequence;
@@ -620,7 +792,7 @@ public sealed class ReplicationClient
 				return;
 
 			case EntryKind.Spawn:
-				SpawnFields fields = ReadSpawnFields(reader);
+				SpawnFields fields = ReadSpawnFields(reader, tick);
 
 				if (state || (bodies && Owns(fields)))
 				{
@@ -655,7 +827,7 @@ public sealed class ReplicationClient
 		return !fields.Placed && fields.Owner == (ulong)_session.LocalPeer.Value;
 	}
 
-	private SpawnFields ReadSpawnFields(BitReader reader)
+	private SpawnFields ReadSpawnFields(BitReader reader, long tick)
 	{
 		bool placed = reader.ReadBool();
 		int sceneIndex = -1;
@@ -679,7 +851,8 @@ public sealed class ReplicationClient
 		}
 
 		BodyState? body = reader.ReadBool() ? BodyCodec.ReadExact(reader) : null;
-		return new SpawnFields(placed, sceneIndex, owner, attributeCount, body);
+		SpawnKey? key = reader.ReadBool() ? ReadSpawnKey(reader, tick) : null;
+		return new SpawnFields(placed, sceneIndex, owner, attributeCount, body, key);
 	}
 
 	private Mirror? Spawn(SpawnFields fields, NetworkEntityId id, Mirror? mirror)
@@ -703,9 +876,15 @@ public sealed class ReplicationClient
 			return null;
 		}
 
-		IForgeEntity? entity = Owns(fields)
-			? Host?.SpawnPredicted(id, sceneIndex, new PeerId((int)owner), fields.Body)
-			: Host?.Spawn(id, sceneIndex, new PeerId((int)owner));
+		// One this client made ahead of the server is bound, rather than made again.
+		Prediction? made = Owns(fields) && fields.Key is SpawnKey key
+			? _timeline?.Members.FirstOrDefault(x => x.Key == key && !x.IsBound)
+			: null;
+		made?.Bind?.Invoke(id);
+
+		IForgeEntity? entity = made?.Entity ?? (Owns(fields)
+			? Host?.SpawnPredicted(id, sceneIndex, new PeerId((int)owner), fields.Body, fields.Key)
+			: Host?.Spawn(id, sceneIndex, new PeerId((int)owner)));
 
 		if (entity is null || entity.NetworkId != id || _byEntity.ContainsKey(entity))
 		{
@@ -715,8 +894,22 @@ public sealed class ReplicationClient
 		}
 
 		_pendingBodies.Remove(id, out RemoteBody? pending);
-		mirror = Bind(entity, new PeerId((int)owner), placed: false, pending);
-		Spawned?.Invoke(entity);
+		mirror = Bind(entity, new PeerId((int)owner), placed: false, pending, made, fields.Key);
+
+		if (made is not null)
+		{
+			made.IsBound = true;
+
+			// One the timeline no longer makes comes back from the tick it was made in.
+			if (made.Unconfirmed)
+			{
+				_rejoining.Add(made);
+			}
+		}
+		else
+		{
+			Spawned?.Invoke(entity);
+		}
 
 		if (mirror.Attributes.Length != attributeCount)
 		{
@@ -802,7 +995,13 @@ public sealed class ReplicationClient
 		{
 			prediction.Checksum = checksum;
 			prediction.ChecksumTick = tick;
-			_toReconcile.Add(mirror);
+			_toReconcile.Add(prediction);
+
+			// The server has one the timeline no longer makes: it comes back from the tick it was made in.
+			if (prediction.Unconfirmed && !_rejoining.Contains(prediction))
+			{
+				_rejoining.Add(prediction);
+			}
 		}
 	}
 
@@ -1441,97 +1640,139 @@ public sealed class ReplicationClient
 		}
 	}
 
-	// Checks what the server said of an entity this client predicts, as of a packet's tick, against what this client
-	// simulated for that tick, and puts the entity right when they differ. A tick older than the entity's history can't
-	// be checked, and one newer than this client simulated, with its clock behind the server's, is run up to first.
-	private void Reconcile(Mirror mirror, long tick)
+	// Makes the timeline what the server said of the entities this client predicts, after a packet of a tick. One just
+	// bound joins the timeline, and one the server has that the timeline no longer makes comes back at the tick it was
+	// made in. Each entity the packet checks is checked against what this client simulated for that tick, and the whole
+	// timeline is put right when one differs or has to change before then. A tick older than the timeline holds can't
+	// be checked, and one newer than it simulated, with the client's clock behind the server's, is run up to first.
+	private void Reconcile(long tick)
 	{
-		Prediction prediction = mirror.Prediction!;
-		EntityHistory history = prediction.History;
+		PredictionTimeline timeline = Timeline;
 
-		// Just bound: how it is now is how it starts, at the tick the server first sent it, rolling as it did there.
-		if (history.NewestTick is not long newest)
+		for (long behind = (timeline.NewestTick ?? tick) + 1; behind <= tick; behind++)
 		{
-			mirror.Entity.Random?.BeginTick(tick);
-			history.Record(tick);
-			newest = tick;
-		}
-
-		if (tick < history.OldestTick)
-		{
-			return;
-		}
-
-		if (tick > newest)
-		{
-			RunHeld(mirror, newest + 1, tick, _session.Clock.FixedDeltaTime);
-			newest = tick;
+			timeline.TickHeld(behind, timeline.FixedDeltaTime);
 		}
 
 		long from = tick;
-		bool takesIn = false;
+		bool correct = false;
 
-		foreach (KeyValuePair<uint, ServerEffect> effect in prediction.Effects)
+		// Just bound: how a spawn of the server's is now is how it starts, at the tick the server first sent it,
+		// rolling as it did there. One a graph spawned starts at the tick it was made in, as the server made it then,
+		// once the others joined, so the timeline can go back to it.
+		foreach (Prediction prediction in _unjoined.OrderBy(x => x.Key is not null).ToList())
 		{
-			if (effect.Value.FromOutside && !prediction.Taken.ContainsKey(effect.Key))
+			long join = Math.Max(prediction.Key?.Tick ?? tick, Floor(timeline) ?? tick);
+
+			if (prediction.Key is null)
 			{
-				from = Math.Min(from, Math.Max(effect.Value.AfterTick, history.OldestTick!.Value));
-				takesIn = true;
+				prediction.Entity.Random?.BeginTick(join);
+			}
+
+			timeline.Join(prediction, join);
+
+			if (join < timeline.NewestTick)
+			{
+				from = Math.Min(from, join);
+				correct = true;
 			}
 		}
 
-		foreach (KeyValuePair<uint, Prediction.ServerRun> run in prediction.Runs)
+		_unjoined.Clear();
+		long floor = Floor(timeline)!.Value;
+
+		foreach (Prediction prediction in _rejoining.Where(x => timeline.Members.Contains(x)))
 		{
-			if (!prediction.TakenRuns.ContainsKey(run.Key))
+			prediction.Unconfirmed = false;
+
+			// One whose ticks the timeline can't go back to anymore, as after a spawn of the server's joined it since,
+			// comes back at the oldest tick it can.
+			if (!prediction.WasIn(Math.Max(prediction.JoinTick, floor)))
 			{
-				from = Math.Min(from, Math.Max(run.Value.AfterTick, history.OldestTick!.Value));
-				takesIn = true;
+				timeline.Rejoin(prediction, floor);
 			}
+
+			from = Math.Min(from, prediction.JoinTick);
+			correct = true;
 		}
 
-		bool letsGo = false;
+		_rejoining.Clear();
 
-		foreach (KeyValuePair<uint, ActiveEffect> taken in prediction.Taken.ToArray())
+		if (tick < floor)
 		{
-			if (prediction.Effects.ContainsKey(taken.Key))
-			{
-				continue;
-			}
-
-			// One that ended here as it did there is only forgotten.
-			if (!taken.Value.Handle.IsValid)
-			{
-				prediction.Taken.Remove(taken.Key);
-				continue;
-			}
-
-			letsGo = true;
-		}
-
-		foreach (KeyValuePair<uint, AbilityInstance> taken in prediction.TakenRuns.ToArray())
-		{
-			if (prediction.Runs.ContainsKey(taken.Key))
-			{
-				continue;
-			}
-
-			if (!taken.Value.IsActive)
-			{
-				prediction.TakenRuns.Remove(taken.Key);
-				continue;
-			}
-
-			letsGo = true;
-		}
-
-		if (!takesIn && !letsGo && Agrees(prediction, history.SnapshotAt(tick)))
-		{
-			prediction.ConfirmedTick = tick;
-			Confirmations++;
 			return;
 		}
 
-		Correct(mirror, from, tick, newest);
+		var checks = _toReconcile.Where(x => timeline.Members.Contains(x) && x.WasIn(tick)).ToList();
+
+		foreach (Prediction prediction in checks)
+		{
+			foreach (KeyValuePair<uint, ServerEffect> effect in prediction.Effects)
+			{
+				if (effect.Value.FromOutside && !prediction.Taken.ContainsKey(effect.Key))
+				{
+					from = Math.Min(from, Math.Max(effect.Value.AfterTick, prediction.JoinTick));
+					correct = true;
+				}
+			}
+
+			foreach (KeyValuePair<uint, Prediction.ServerRun> run in prediction.Runs)
+			{
+				if (!prediction.TakenRuns.ContainsKey(run.Key))
+				{
+					from = Math.Min(from, Math.Max(run.Value.AfterTick, prediction.JoinTick));
+					correct = true;
+				}
+			}
+
+			foreach (KeyValuePair<uint, ActiveEffect> taken in prediction.Taken.ToArray())
+			{
+				if (prediction.Effects.ContainsKey(taken.Key))
+				{
+					continue;
+				}
+
+				// One that ended here as it did there is only forgotten.
+				if (!taken.Value.Handle.IsValid)
+				{
+					prediction.Taken.Remove(taken.Key);
+					continue;
+				}
+
+				correct = true;
+			}
+
+			foreach (KeyValuePair<uint, AbilityInstance> taken in prediction.TakenRuns.ToArray())
+			{
+				if (prediction.Runs.ContainsKey(taken.Key))
+				{
+					continue;
+				}
+
+				if (!taken.Value.IsActive)
+				{
+					prediction.TakenRuns.Remove(taken.Key);
+					continue;
+				}
+
+				correct = true;
+			}
+		}
+
+		if (!correct && checks.TrueForAll(x => Agrees(x, x.History.SnapshotAt(tick))))
+		{
+			foreach (Prediction prediction in checks)
+			{
+				prediction.ConfirmedTick = tick;
+				Confirmations++;
+			}
+		}
+		else
+		{
+			Correct(Math.Max(from, floor), tick, timeline.NewestTick!.Value, checks);
+		}
+
+		ReleaseUnreachable();
 	}
 
 	// Whether the entity as a tick left it here is what the server said of that tick: the checksum of what the server
@@ -1562,38 +1803,52 @@ public sealed class ReplicationClient
 			&& _session.Registry.IndexOfAsset(AssetKind.Effect, data) >= 0;
 	}
 
-	// Rolls the entity back to the earliest tick it has to change after, takes in at the tick each came after the
-	// effects and runs that came from outside and that it lacks, runs the ticks to the packet's and makes the entity
-	// there what the server says, then runs the ticks since again. What it shows changes only by the net change.
-	private void Correct(Mirror mirror, long from, long tick, long newest)
+	// Rolls the timeline back to the earliest tick it has to change after, takes in at the tick each came after the
+	// effects and runs that came from outside and that an entity lacks, runs the ticks to the packet's and makes each
+	// entity the packet checked what the server says there, then runs the ticks since again. What the entities show
+	// changes only by the net change.
+	private void Correct(long from, long tick, long newest, List<Prediction> checks)
 	{
-		Prediction prediction = mirror.Prediction!;
-		EntityHistory history = prediction.History;
-		IForgeEntity entity = mirror.Entity;
+		PredictionTimeline timeline = Timeline;
 		ExceptionDispatchInfo? failure = null;
 
 		// A frame submitted for a tick not simulated yet, as in a step the clock waited through, isn't in the history.
-		InputFrame? waiting = entity.Input?.Waiting;
+		List<WaitingFrame> waiting = WaitingFrame.Of(timeline.Members.Select(x => x.Entity));
 
-		entity.CuesManager.BeginCorrection();
-		entity.Abilities.IsReplaying = true;
+		foreach (Prediction prediction in timeline.Members)
+		{
+			BeginCorrecting(prediction);
+		}
 
 		try
 		{
-			history.Rollback(from);
+			timeline.Rollback(from);
+			_spawnKeys.ForgetAfter(from);
 			long at = from;
 
-			// What was taken in after the tick rolled back to went with the rollback, and goes back in at its tick: the
-			// effects that came after a tick first, then the runs, which they may have started.
-			var takeIn = prediction.Effects
-				.Where(x => x.Value.FromOutside
-					&& (!prediction.Taken.TryGetValue(x.Key, out ActiveEffect? taken) || !taken.Handle.IsValid))
-				.Select(x => new Arrival(Math.Max(x.Value.AfterTick, from), IsRun: false, x.Key))
-				.Concat(prediction.Runs
-					.Where(x => !prediction.TakenRuns.TryGetValue(x.Key, out AbilityInstance? run) || !run.IsActive)
-					.Select(x => new Arrival(Math.Max(x.Value.AfterTick, from), IsRun: true, x.Key)))
+			// What was taken in after the tick rolled back to went with the rollback, and goes back in at its tick, for
+			// every entity the rollback took back, checked by the packet or not: the effects that came after a tick
+			// first, then the runs, which they may have started.
+			var members = timeline.Members.ToList();
+			var takeIn = members
+				.SelectMany((prediction, index) => prediction.Effects
+					.Where(x => x.Value.FromOutside
+						&& (!prediction.Taken.TryGetValue(x.Key, out ActiveEffect? taken) || !taken.Handle.IsValid))
+					.Select(x => new Arrival(
+						Math.Max(Math.Max(x.Value.AfterTick, prediction.JoinTick), from),
+						IsRun: false,
+						index,
+						x.Key))
+					.Concat(prediction.Runs
+						.Where(x => !prediction.TakenRuns.TryGetValue(x.Key, out AbilityInstance? run) || !run.IsActive)
+						.Select(x => new Arrival(
+							Math.Max(Math.Max(x.Value.AfterTick, prediction.JoinTick), from),
+							IsRun: true,
+							index,
+							x.Key))))
 				.OrderBy(x => x.After)
 				.ThenBy(x => x.IsRun)
+				.ThenBy(x => x.Member)
 				.ThenBy(x => x.Key)
 				.ToList();
 
@@ -1601,15 +1856,22 @@ public sealed class ReplicationClient
 			{
 				if (arrival.After > at)
 				{
-					history.Replay(arrival.After);
+					timeline.Replay(arrival.After);
 					at = arrival.After;
+				}
+
+				Prediction prediction = members[arrival.Member];
+
+				if (prediction.State != PredictionState.InWorld)
+				{
+					continue;
 				}
 
 				if (arrival.IsRun)
 				{
 					prediction.TakenRuns.Remove(arrival.Key);
 
-					if (TakeIn(entity, prediction.Runs[arrival.Key]) is AbilityInstance run)
+					if (TakeIn(prediction.Entity, prediction.Runs[arrival.Key]) is AbilityInstance run)
 					{
 						prediction.TakenRuns[arrival.Key] = run;
 					}
@@ -1619,7 +1881,7 @@ public sealed class ReplicationClient
 
 				prediction.Taken.Remove(arrival.Key);
 
-				if (TakeIn(entity, prediction.Effects[arrival.Key], arrival.After, fromOutside: true)
+				if (TakeIn(prediction.Entity, prediction.Effects[arrival.Key], arrival.After, fromOutside: true)
 					is ActiveEffect taken)
 				{
 					prediction.Taken[arrival.Key] = taken;
@@ -1628,19 +1890,28 @@ public sealed class ReplicationClient
 
 			if (tick > at)
 			{
-				history.Replay(tick);
+				timeline.Replay(tick);
 			}
 
-			Settle(mirror, tick);
+			foreach (Prediction prediction in checks)
+			{
+				if (prediction.State == PredictionState.InWorld
+					&& _byEntity.TryGetValue(prediction.Entity, out Mirror? mirror))
+				{
+					Settle(mirror, tick);
+				}
+			}
 
 			if (newest > tick)
 			{
-				history.Replay(newest);
+				timeline.Replay(newest);
 			}
 			else
 			{
-				history.Record(tick);
+				timeline.RecordAgain();
 			}
+
+			timeline.ForgetUnmade(from);
 		}
 		catch (Exception exception)
 		{
@@ -1648,23 +1919,86 @@ public sealed class ReplicationClient
 		}
 		finally
 		{
-			entity.Abilities.IsReplaying = false;
-
-			if (entity.Input is EntityInput input)
+			foreach (WaitingFrame frame in waiting)
 			{
-				input.Waiting = waiting;
+				frame.PutBack();
 			}
 
-			ExceptionDispatchInfo? cueFailure = entity.CuesManager.EndCorrection();
-			failure ??= cueFailure;
+			foreach (IForgeEntity entity in _correcting.Select(x => x.Entity))
+			{
+				entity.Abilities.IsReplaying = false;
+				ExceptionDispatchInfo? cueFailure = entity.CuesManager.EndCorrection();
+				failure ??= cueFailure;
+			}
+
+			_correcting.Clear();
 		}
 
 		// One that failed part way put nothing right to count or announce.
 		failure?.Throw();
 		Corrections++;
 		LastCorrectionTicks = (int)(newest - from);
-		prediction.ConfirmedTick = tick;
-		Corrected?.Invoke(entity);
+
+		foreach (Prediction prediction in checks)
+		{
+			prediction.ConfirmedTick = tick;
+		}
+
+		Replayed?.Invoke(from);
+
+		foreach (IForgeEntity entity in timeline.Live.ToArray())
+		{
+			Corrected?.Invoke(entity);
+		}
+	}
+
+	// An entity a correction runs ticks of again: what it shows changes only by the net change, and it shows nothing as
+	// it executes.
+	private void BeginCorrecting(Prediction prediction)
+	{
+		prediction.Entity.CuesManager.BeginCorrection();
+		prediction.Entity.Abilities.IsReplaying = true;
+		_correcting.Add(prediction);
+	}
+
+	// A spawn this client made that the server's packets reached the tick of without the server spawning it was never
+	// made there: it goes to limbo, where the server's spawn of it, arriving late, finds it.
+	private void ShelveUnconfirmed(long tick)
+	{
+		foreach (Prediction prediction in _timeline!.Members
+			.Where(x => !x.IsBound && !x.Unconfirmed && x.Key?.Tick <= tick)
+			.ToList())
+		{
+			_timeline.Shelve(prediction);
+		}
+	}
+
+	// Lets go for good of what no correction can reach anymore: a spawn this client made that the server didn't, once
+	// the timeline no longer holds the tick it was made in, and the keys of the spawns the server despawned.
+	private void ReleaseUnreachable()
+	{
+		if (_timeline?.OldestTick is not long oldest)
+		{
+			return;
+		}
+
+		foreach (Prediction prediction in _timeline.Members
+			.Where(x => x.Unconfirmed && !x.IsBound && x.JoinTick < oldest)
+			.ToList())
+		{
+			Release(prediction);
+		}
+
+		_ended.RemoveWhere(x => x.Tick < oldest);
+		_spawnKeys.ForgetBefore(oldest);
+	}
+
+	// Hands an entity the timeline lets go of to the host to take away.
+	private void Release(Prediction prediction)
+	{
+		_timeline!.Remove(prediction);
+		Despawned?.Invoke(prediction.Entity);
+		Host?.Despawn(prediction.Entity);
 	}
 
 	// An effect the server says is on the entity, taken in here after a tick, as the server had it then.
@@ -1869,7 +2203,15 @@ public sealed class ReplicationClient
 		return Tag.RequestTag(tagsManager, tagsManager.GetTagKeyFromNetIndex(index));
 	}
 
-	private Mirror Bind(IForgeEntity entity, PeerId owner, bool placed, RemoteBody? body = null)
+	// Binds an entity to its id. One this client predicts joins the timeline as the packet is reconciled, unless it's
+	// one this client made, which is on it already.
+	private Mirror Bind(
+		IForgeEntity entity,
+		PeerId owner,
+		bool placed,
+		RemoteBody? body = null,
+		Prediction? made = null,
+		SpawnKey? key = null)
 	{
 		bool predicted = !placed && owner == _session.LocalPeer;
 
@@ -1883,19 +2225,23 @@ public sealed class ReplicationClient
 
 		if (predicted)
 		{
-			int capacity = PredictionHistoryTicks > 0
-				? PredictionHistoryTicks
-				: (int)Math.Ceiling(_session.Clock.TicksIn(NetworkSession.MaxInputLead));
-			mirror.Prediction = new Prediction(
-				entity,
-				mirror.Attributes.Length,
-				capacity,
-				_session.Clock.FixedDeltaTime);
-			entity.Abilities.IsPredicted = true;
-			entity.Abilities.TracksPrediction = true;
-			entity.EffectsManager.IsPredicted = true;
-			_predicted.Add(mirror);
-			_predictedEntities.Add(entity);
+			mirror.Prediction = made;
+
+			if (made is null)
+			{
+				mirror.Prediction = new Prediction(
+					entity,
+					mirror.Attributes.Length,
+					Timeline.Capacity,
+					Timeline.FixedDeltaTime,
+					key)
+				{
+					IsBound = true,
+				};
+
+				MarkPredicted(entity, predicted: true);
+				_unjoined.Add(mirror.Prediction);
+			}
 		}
 
 		_mirrors[entity.NetworkId] = mirror;
@@ -1911,13 +2257,17 @@ public sealed class ReplicationClient
 		mirror.RemoveAllCues();
 		mirror.RemoveAllEffects();
 
-		if (mirror.Prediction is not null)
+		if (mirror.Prediction is Prediction prediction)
 		{
-			_predicted.Remove(mirror);
-			_predictedEntities.Remove(mirror.Entity);
-			mirror.Entity.Abilities.IsPredicted = false;
-			mirror.Entity.Abilities.TracksPrediction = false;
-			mirror.Entity.EffectsManager.IsPredicted = false;
+			_timeline?.Remove(prediction);
+			_unjoined.Remove(prediction);
+			MarkPredicted(mirror.Entity, predicted: false);
+
+			// A correction running the tick it was made in again doesn't make it again.
+			if (despawn && prediction.Key is SpawnKey key)
+			{
+				_ended.Add(key);
+			}
 		}
 
 		_mirrors.Remove(mirror.Entity.NetworkId);
@@ -2088,19 +2438,22 @@ public sealed class ReplicationClient
 		public EffectState State { get; set; } = state;
 	}
 
-	// What a spawn is, with the body the server's entity had as it was registered, for the client that predicts it.
+	// What a spawn is, with the body the server's entity had as it was registered and the key a graph spawned it under,
+	// for the client that predicts it.
 	private readonly record struct SpawnFields(
 		bool Placed,
 		int SceneIndex,
 		ulong Owner,
 		int AttributeCount,
-		BodyState? Body);
+		BodyState? Body,
+		SpawnKey? Key);
 
 	// A packet waiting to be shown, with where each of its entries starts.
 	private readonly record struct HeldPacket(long Tick, byte[] Data, List<int> Entries);
 
-	// What a correction takes in after a tick: an effect, or a run, by the server's instance.
-	private readonly record struct Arrival(long After, bool IsRun, uint Key);
+	// What a correction takes in after a tick: an effect, or a run, by the server's instance, of one of the timeline's
+	// members.
+	private readonly record struct Arrival(long After, bool IsRun, int Member, uint Key);
 
 	// What a graph run is, as the server sent it once: its ability and that activation's context.
 	// A run, with the tick it started after for one this client takes in.
