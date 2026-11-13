@@ -467,7 +467,7 @@ entity.Abilities.OnAbilityEnded += data =>
 
 `WasCanceled` is `true` when the ability was canceled (via `AbilityHandle.Cancel()` or `CancelAbilities`, or by a grant removed or inhibited under [`CancelImmediately`](#deactivation-policies)) and `false` when it ended gracefully (reaching its natural end, or a Statescript Exit node). `AbilityEndedData` also carries `AbilityData`, captured before the handle can be freed, because an ability granted with `RemoveOnEnd` is removed by the very same call.
 
-**Failed activations.** Whoever calls the activation API already receives [`AbilityActivationFailures`](#activation-failures) as an out parameter. `OnAbilityActivationFailed` exists for the activations nobody holds the result of — those driven by [ability triggers](#ability-triggers) and by the Statescript activation nodes — which are otherwise completely silent:
+**Failed activations.** On a client predicting the entity, a refusal in the ticks a [correction](networking/prediction.md#a-correction) runs again isn't raised again. Whoever calls the activation API already receives [`AbilityActivationFailures`](#activation-failures) as an out parameter. `OnAbilityActivationFailed` exists for the activations nobody holds the result of — those driven by [ability triggers](#ability-triggers) and by the Statescript activation nodes — which are otherwise completely silent:
 
 ```csharp
 entity.Abilities.OnAbilityActivationFailed += (handle, failures) =>

@@ -79,7 +79,7 @@ A client with an entity of its own also predicts it, steering its clock with `Cl
 
 ### Handshake
 
-A client connects and sends `Hello`: its protocol version and the hashes of its registry, its tags and its input action set. The server answers `Welcome`, with the tick rate, its current tick and the session seed, or `Refused`, with why (`RefusalReason`: protocol version, asset registry, tags, input actions, or a full session). A refused client leaves once it knows why; the server disconnects one that hasn't after `RefusalLinger` (2 s). A client that never sends `Hello` is disconnected after `HandshakeTimeout` (5 s). A client whose clock runs at another rate than the server's leaves too. Being welcomed sets the client's clock to the server's tick and drops any input it recorded before. `SessionState` says where a client stands: connecting, handshaking, ready, refused or disconnected.
+A client connects and sends `Hello`: its protocol version, the hashes of its registry, its tags and its input action set, and the precision it rounds bodies to. The server answers `Welcome`, with the tick rate, its current tick and the session seed, or `Refused`, with why (`RefusalReason`: protocol version, asset registry, tags, input actions, body precision, or a full session). A refused client leaves once it knows why; the server disconnects one that hasn't after `RefusalLinger` (2 s). A client that never sends `Hello` is disconnected after `HandshakeTimeout` (5 s). A client whose clock runs at another rate than the server's leaves too. Being welcomed sets the client's clock to the server's tick and drops any input it recorded before. `SessionState` says where a client stands: connecting, handshaking, ready, refused or disconnected.
 
 ### Clock sync
 
