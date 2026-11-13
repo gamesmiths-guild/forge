@@ -439,9 +439,11 @@ public class EffectReplicationTests
 		Client client = rig.Join();
 		Entity entity = rig.Spawn();
 		Rig.Apply(entity, rig.Assets.Blessed);
+		Rig.Apply(entity, rig.Assets.Warded);
 		rig.Step(6);
 		Entity mirror = client.Only();
 		NetworkEntityId id = mirror.NetworkId;
+		mirror.EffectsManager.GetActiveEffects().Should().HaveCount(2);
 		mirror.EffectsManager.OnActiveEffectRemoved +=
 			(_, _) => throw new InvalidOperationException("A handler failed.");
 
@@ -461,8 +463,12 @@ public class EffectReplicationTests
 		}
 
 		thrown.Should().NotBeNull();
-		client.Spawned.Should().NotContain(mirror, "the despawn the handler threw in took it away all the same");
-		client.Session.Mirror!.Find(id).Should().BeNull();
+		client.Spawned
+			.Should().NotContain(mirror, "the despawn the handler threw in took it away all the same");
+		client.Session.Mirror!.Find(id)
+			.Should().BeNull();
+		mirror.EffectsManager.GetActiveEffects()
+			.Should().BeEmpty("each effect went, though the first one's handler threw");
 	}
 
 	[Fact]

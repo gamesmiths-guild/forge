@@ -489,6 +489,11 @@ public sealed class ReplicationClient
 			return false;
 		}
 
+		if (prediction.Key is SpawnKey key)
+		{
+			_ended.Add(key);
+		}
+
 		if (mirror is not null)
 		{
 			// A copy of its spawn still on its way makes nothing, until the server's despawn of it.
@@ -499,11 +504,6 @@ public sealed class ReplicationClient
 		{
 			_timeline!.Remove(prediction);
 			MarkPredicted(entity, predicted: false);
-		}
-
-		if (prediction.Key is SpawnKey key)
-		{
-			_ended.Add(key);
 		}
 
 		return true;
@@ -2396,12 +2396,7 @@ public sealed class ReplicationClient
 
 		public void RemoveAllGraphs()
 		{
-			foreach (RemoteGraph? graph in Graphs.Values)
-			{
-				graph?.End(Entity);
-			}
-
-			Graphs.Clear();
+			LetGoOfAll(Graphs, x => x?.End(Entity));
 		}
 
 		public void RemoveEffect(uint instance, EffectRemovalReason reason)
@@ -2414,12 +2409,7 @@ public sealed class ReplicationClient
 
 		public void RemoveAllEffects()
 		{
-			foreach (MirroredEffect effect in Effects.Values)
-			{
-				Entity.EffectsManager.RemoveMirrorEffect(effect.Active, EffectRemovalReason.Destroyed);
-			}
-
-			Effects.Clear();
+			LetGoOfAll(Effects, x => Entity.EffectsManager.RemoveMirrorEffect(x.Active, EffectRemovalReason.Destroyed));
 		}
 
 		public void ApplyCue(uint instance, Tag cueTag, CueParameters? parameters)
@@ -2451,12 +2441,29 @@ public sealed class ReplicationClient
 
 		public void RemoveAllCues()
 		{
-			foreach (AppliedCue applied in _cues.Values)
+			LetGoOfAll(_cues, x => Entity.CuesManager.RemoveCue(x.CueTag, Entity, interrupted: true, x));
+		}
+
+		// Lets go of each, even if one before it throws, and forgets them all: the first exception comes out after.
+		private static void LetGoOfAll<TKey, TValue>(Dictionary<TKey, TValue> all, Action<TValue> letGo)
+			where TKey : notnull
+		{
+			ExceptionDispatchInfo? failure = null;
+
+			foreach (TValue value in all.Values)
 			{
-				Entity.CuesManager.RemoveCue(applied.CueTag, Entity, interrupted: true, applied);
+				try
+				{
+					letGo(value);
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
 			}
 
-			_cues.Clear();
+			all.Clear();
+			failure?.Throw();
 		}
 
 		// The application a replicated persistent cue is applied for on this machine: one object per instance.
