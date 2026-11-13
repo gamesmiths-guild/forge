@@ -56,6 +56,7 @@ public sealed class ReplicationClient
 	private readonly List<Prediction> _rejoining = [];
 	private readonly List<Prediction> _correcting = [];
 	private readonly HashSet<SpawnKey> _ended = [];
+	private readonly HashSet<NetworkEntityId> _forgotten = [];
 	private readonly SpawnKeys _spawnKeys = new();
 	private PredictionTimeline? _timeline;
 	private long _shownTick = -1;
@@ -478,18 +479,25 @@ public sealed class ReplicationClient
 	/// <returns><see langword="false"/> for an entity this client doesn't predict.</returns>
 	public bool ForgetPredicted(IForgeEntity entity)
 	{
-		if (_timeline?.Members.FirstOrDefault(x => ReferenceEquals(x.Entity, entity)) is not Prediction prediction)
+		// A bound one may not have joined the timeline yet, as when its setup frees it as it spawns.
+		Prediction? prediction = _byEntity.TryGetValue(entity, out Mirror? mirror)
+			? mirror.Prediction
+			: _timeline?.Members.FirstOrDefault(x => ReferenceEquals(x.Entity, entity));
+
+		if (prediction is null)
 		{
 			return false;
 		}
 
-		if (_byEntity.TryGetValue(entity, out Mirror? mirror))
+		if (mirror is not null)
 		{
+			// A copy of its spawn still on its way makes nothing, until the server's despawn of it.
+			_forgotten.Add(entity.NetworkId);
 			Unbind(mirror, despawn: false);
 		}
 		else
 		{
-			_timeline.Remove(prediction);
+			_timeline!.Remove(prediction);
 			MarkPredicted(entity, predicted: false);
 		}
 
@@ -525,6 +533,7 @@ public sealed class ReplicationClient
 		_unjoined.Clear();
 		_rejoining.Clear();
 		_ended.Clear();
+		_forgotten.Clear();
 		LastServerTick = -1;
 		LastSequence = 0;
 		_held.Clear();
@@ -813,6 +822,7 @@ public sealed class ReplicationClient
 					if (state)
 					{
 						_pendingBodies.Remove(id);
+						_forgotten.Remove(id);
 
 						if (mirror is not null)
 						{
@@ -903,9 +913,10 @@ public sealed class ReplicationClient
 			return mirror;
 		}
 
-		if (placed)
+		// A placed entity this machine doesn't have, or one its host took away: its state is skipped until it's
+		// despawned.
+		if (placed || _forgotten.Contains(id))
 		{
-			// A placed entity this machine doesn't have: its state is skipped until it's despawned.
 			return null;
 		}
 

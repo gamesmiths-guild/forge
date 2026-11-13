@@ -324,11 +324,16 @@ public class SpawnPredictionTests
 		rig.Mirror.Predicted.Should().NotContain(bolt);
 		rig.Idle(30);
 
-		rig.Despawned.Should().NotContain(bolt, "its host took it away already");
-		rig.Limbo.Should().NotContain(bolt);
-		Bolt made = rig.ClientBolts.Should().HaveCount(2, "the server's spawn found nothing to bind").And.Subject.Last();
-		made.NetworkId.Should().Be(rig.ServerBolts.Single().NetworkId);
-		rig.Mirror.Predicted.Should().Contain(made);
+		rig.Despawned
+			.Should().NotContain(bolt, "its host took it away already");
+		rig.Limbo
+			.Should().NotContain(bolt);
+		Bolt made = rig.ClientBolts
+			.Should().HaveCount(2, "the server's spawn found nothing to bind").And.Subject.Last();
+		made.NetworkId
+			.Should().Be(rig.ServerBolts.Single().NetworkId);
+		rig.Mirror.Predicted
+			.Should().Contain(made);
 	}
 
 	[Fact]
@@ -351,6 +356,29 @@ public class SpawnPredictionTests
 		rig.Mirror.Find(id).Should().BeNull();
 		rig.Mirror.Predicted.Should().NotContain(bolt);
 		rig.ServerBolts.Should().BeEmpty("the server's faded and went");
+		rig.Despawned.Should().NotContain(bolt, "its host took it away already");
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void A_spawn_its_host_takes_away_as_it_spawns_never_joins_and_copies_of_it_make_nothing()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+		rig.ClientRefuses = true;
+		rig.ForgetsOnSpawn = true;
+
+		rig.Press("fire");
+		rig.Idle(30);
+
+		Bolt bolt = rig.ClientBolts.Should().ContainSingle("copies of the spawn on their way made no other").Subject;
+		rig.Mirror.Predicted.Should().NotContain(bolt, "its host took it away as it spawned");
+		rig.Mirror.Find(bolt.NetworkId).Should().BeNull();
+
+		rig.Idle(90);
+
+		rig.ServerBolts.Should().BeEmpty("the server's faded and went");
+		rig.ClientBolts.Should().ContainSingle();
 		rig.Despawned.Should().NotContain(bolt, "its host took it away already");
 	}
 
@@ -651,6 +679,9 @@ public class SpawnPredictionTests
 		// Whether the client's graph shoots without the client making the bolt, leaving it to the server's spawn.
 		public bool ClientRefuses { get; set; }
 
+		// Whether the client's host takes away each bolt the server's spawn makes, as it spawns.
+		public bool ForgetsOnSpawn { get; set; }
+
 		// Whether the client's graph frees each bolt in the tick it makes it in.
 		public bool FreesAtOnce { get; set; }
 
@@ -681,7 +712,15 @@ public class SpawnPredictionTests
 			Mirror.Host = this;
 			Mirror.EnteredLimbo += Limbo.Add;
 			Mirror.LeftLimbo += Returned.Add;
-			Mirror.Spawned += x => (x as Bolt)?.Setup();
+			Mirror.Spawned += x =>
+			{
+				(x as Bolt)?.Setup();
+
+				if (ForgetsOnSpawn && x is Bolt)
+				{
+					Mirror.ForgetPredicted(x).Should().BeTrue();
+				}
+			};
 			ServerAssets.Shoot = ServerShoot;
 			ServerAssets.Vanish = x => _serverVanished.Add((Bolt)x);
 			Assets.Shoot = ClientShoot;
