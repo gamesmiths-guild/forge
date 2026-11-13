@@ -310,6 +310,50 @@ public class SpawnPredictionTests
 		rig.ClientBolts[^1].NetworkId.Should().Be(rig.ServerBolts.Single().NetworkId);
 	}
 
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void A_shot_its_host_took_away_before_the_server_s_spawn_leaves_the_timeline_and_the_spawn_makes_another()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+
+		rig.Press("fire");
+		Bolt bolt = rig.ClientBolts.Should().ContainSingle().Subject;
+
+		rig.Mirror.ForgetPredicted(bolt).Should().BeTrue();
+		rig.Mirror.Predicted.Should().NotContain(bolt);
+		rig.Idle(30);
+
+		rig.Despawned.Should().NotContain(bolt, "its host took it away already");
+		rig.Limbo.Should().NotContain(bolt);
+		Bolt made = rig.ClientBolts.Should().HaveCount(2, "the server's spawn found nothing to bind").And.Subject.Last();
+		made.NetworkId.Should().Be(rig.ServerBolts.Single().NetworkId);
+		rig.Mirror.Predicted.Should().Contain(made);
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void A_bound_shot_its_host_took_away_is_let_go_and_the_server_s_word_of_it_finds_nothing()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+
+		rig.Press("fire");
+		Bolt bolt = rig.ClientBolts.Should().ContainSingle().Subject;
+		rig.Idle(30);
+		NetworkEntityId id = bolt.NetworkId;
+		id.IsValid.Should().BeTrue();
+
+		rig.Mirror.ForgetPredicted(bolt).Should().BeTrue();
+		rig.Mirror.ForgetPredicted(bolt).Should().BeFalse("it's no longer one this client predicts");
+		rig.Idle(120);
+
+		rig.Mirror.Find(id).Should().BeNull();
+		rig.Mirror.Predicted.Should().NotContain(bolt);
+		rig.ServerBolts.Should().BeEmpty("the server's faded and went");
+		rig.Despawned.Should().NotContain(bolt, "its host took it away already");
+	}
+
 	private sealed class Assets
 	{
 		public TagsManager Tags { get; } = new(_tagNames);

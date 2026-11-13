@@ -469,6 +469,39 @@ public sealed class ReplicationClient
 	}
 
 	/// <summary>
+	/// Lets go for good of an entity this client predicts that the host took away itself rather than through
+	/// <see cref="PredictDespawn"/>, as when a node it lives under is freed: it leaves the timeline, a correction
+	/// running the tick it was made in doesn't make it again, and it isn't handed to
+	/// <see cref="IReplicationHost.Despawn"/>. What the server still sends of it finds nothing here.
+	/// </summary>
+	/// <param name="entity">The entity.</param>
+	/// <returns><see langword="false"/> for an entity this client doesn't predict.</returns>
+	public bool ForgetPredicted(IForgeEntity entity)
+	{
+		if (_timeline?.Members.FirstOrDefault(x => ReferenceEquals(x.Entity, entity)) is not Prediction prediction)
+		{
+			return false;
+		}
+
+		if (_byEntity.TryGetValue(entity, out Mirror? mirror))
+		{
+			Unbind(mirror, despawn: false);
+		}
+		else
+		{
+			_timeline.Remove(prediction);
+			MarkPredicted(entity, predicted: false);
+		}
+
+		if (prediction.Key is SpawnKey key)
+		{
+			_ended.Add(key);
+		}
+
+		return true;
+	}
+
+	/// <summary>
 	/// Lets go of every entity: the ones the server spawned are handed to the host to take away, and the placed ones
 	/// are unbound and left as they are. For leaving a session.
 	/// </summary>
