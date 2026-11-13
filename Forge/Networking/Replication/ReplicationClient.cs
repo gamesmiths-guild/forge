@@ -56,6 +56,7 @@ public sealed class ReplicationClient
 	private readonly List<Prediction> _rejoining = [];
 	private readonly List<Prediction> _correcting = [];
 	private readonly HashSet<SpawnKey> _ended = [];
+	private readonly HashSet<NetworkEntityId> _forgotten = [];
 	private readonly SpawnKeys _spawnKeys = new();
 	private PredictionTimeline? _timeline;
 	private long _shownTick = -1;
@@ -469,6 +470,46 @@ public sealed class ReplicationClient
 	}
 
 	/// <summary>
+	/// Lets go for good of an entity this client predicts that the host took away itself rather than through
+	/// <see cref="PredictDespawn"/>, as when a node it lives under is freed: it leaves the timeline, a correction
+	/// running the tick it was made in doesn't make it again, and it isn't handed to
+	/// <see cref="IReplicationHost.Despawn"/>. What the server still sends of it finds nothing here.
+	/// </summary>
+	/// <param name="entity">The entity.</param>
+	/// <returns><see langword="false"/> for an entity this client doesn't predict.</returns>
+	public bool ForgetPredicted(IForgeEntity entity)
+	{
+		// A bound one may not have joined the timeline yet, as when its setup frees it as it spawns.
+		Prediction? prediction = _byEntity.TryGetValue(entity, out Mirror? mirror)
+			? mirror.Prediction
+			: _timeline?.Members.FirstOrDefault(x => ReferenceEquals(x.Entity, entity));
+
+		if (prediction is null)
+		{
+			return false;
+		}
+
+		if (prediction.Key is SpawnKey key)
+		{
+			_ended.Add(key);
+		}
+
+		if (mirror is not null)
+		{
+			// A copy of its spawn still on its way makes nothing, until the server's despawn of it.
+			_forgotten.Add(entity.NetworkId);
+			Unbind(mirror, despawn: false);
+		}
+		else
+		{
+			_timeline!.Remove(prediction);
+			MarkPredicted(entity, predicted: false);
+		}
+
+		return true;
+	}
+
+	/// <summary>
 	/// Lets go of every entity: the ones the server spawned are handed to the host to take away, and the placed ones
 	/// are unbound and left as they are. For leaving a session.
 	/// </summary>
@@ -492,6 +533,7 @@ public sealed class ReplicationClient
 		_unjoined.Clear();
 		_rejoining.Clear();
 		_ended.Clear();
+		_forgotten.Clear();
 		LastServerTick = -1;
 		LastSequence = 0;
 		_held.Clear();
@@ -780,6 +822,7 @@ public sealed class ReplicationClient
 					if (state)
 					{
 						_pendingBodies.Remove(id);
+						_forgotten.Remove(id);
 
 						if (mirror is not null)
 						{
@@ -870,9 +913,10 @@ public sealed class ReplicationClient
 			return mirror;
 		}
 
-		if (placed)
+		// A placed entity this machine doesn't have, or one its host took away: its state is skipped until it's
+		// despawned.
+		if (placed || _forgotten.Contains(id))
 		{
-			// A placed entity this machine doesn't have: its state is skipped until it's despawned.
 			return null;
 		}
 
@@ -2251,11 +2295,23 @@ public sealed class ReplicationClient
 		return mirror;
 	}
 
+	// Lets go of a mirror. What it shows goes first, each part even if one before it throws, and it's let go of all the
+	// same, so nothing keeps an entity its host took away: the first exception comes out after.
 	private void Unbind(Mirror mirror, bool despawn)
 	{
-		mirror.RemoveAllGraphs();
-		mirror.RemoveAllCues();
-		mirror.RemoveAllEffects();
+		ExceptionDispatchInfo? failure = null;
+
+		foreach (Action letGo in (Action[])[mirror.RemoveAllGraphs, mirror.RemoveAllCues, mirror.RemoveAllEffects])
+		{
+			try
+			{
+				letGo();
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
 
 		if (mirror.Prediction is Prediction prediction)
 		{
@@ -2280,6 +2336,8 @@ public sealed class ReplicationClient
 			Despawned?.Invoke(mirror.Entity);
 			Host?.Despawn(mirror.Entity);
 		}
+
+		failure?.Throw();
 	}
 
 	private sealed class Mirror(IForgeEntity entity, PeerId owner, bool placed, RemoteBody body)
@@ -2338,12 +2396,7 @@ public sealed class ReplicationClient
 
 		public void RemoveAllGraphs()
 		{
-			foreach (RemoteGraph? graph in Graphs.Values)
-			{
-				graph?.End(Entity);
-			}
-
-			Graphs.Clear();
+			LetGoOfAll(Graphs, x => x?.End(Entity));
 		}
 
 		public void RemoveEffect(uint instance, EffectRemovalReason reason)
@@ -2356,12 +2409,7 @@ public sealed class ReplicationClient
 
 		public void RemoveAllEffects()
 		{
-			foreach (MirroredEffect effect in Effects.Values)
-			{
-				Entity.EffectsManager.RemoveMirrorEffect(effect.Active, EffectRemovalReason.Destroyed);
-			}
-
-			Effects.Clear();
+			LetGoOfAll(Effects, x => Entity.EffectsManager.RemoveMirrorEffect(x.Active, EffectRemovalReason.Destroyed));
 		}
 
 		public void ApplyCue(uint instance, Tag cueTag, CueParameters? parameters)
@@ -2393,12 +2441,29 @@ public sealed class ReplicationClient
 
 		public void RemoveAllCues()
 		{
-			foreach (AppliedCue applied in _cues.Values)
+			LetGoOfAll(_cues, x => Entity.CuesManager.RemoveCue(x.CueTag, Entity, interrupted: true, x));
+		}
+
+		// Lets go of each, even if one before it throws, and forgets them all: the first exception comes out after.
+		private static void LetGoOfAll<TKey, TValue>(Dictionary<TKey, TValue> all, Action<TValue> letGo)
+			where TKey : notnull
+		{
+			ExceptionDispatchInfo? failure = null;
+
+			foreach (TValue value in all.Values)
 			{
-				Entity.CuesManager.RemoveCue(applied.CueTag, Entity, interrupted: true, applied);
+				try
+				{
+					letGo(value);
+				}
+				catch (Exception exception)
+				{
+					failure ??= ExceptionDispatchInfo.Capture(exception);
+				}
 			}
 
-			_cues.Clear();
+			all.Clear();
+			failure?.Throw();
 		}
 
 		// The application a replicated persistent cue is applied for on this machine: one object per instance.
