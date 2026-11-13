@@ -433,6 +433,40 @@ public class EffectReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Effects")]
+	public void A_despawned_mirror_whose_handler_throws_as_its_effects_go_still_goes()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		Rig.Apply(entity, rig.Assets.Blessed);
+		rig.Step(6);
+		Entity mirror = client.Only();
+		NetworkEntityId id = mirror.NetworkId;
+		mirror.EffectsManager.OnActiveEffectRemoved +=
+			(_, _) => throw new InvalidOperationException("A handler failed.");
+
+		rig.Server.Replication!.Unregister(entity);
+		InvalidOperationException? thrown = null;
+
+		for (int i = 0; i < 12 && thrown is null; i++)
+		{
+			try
+			{
+				rig.Step();
+			}
+			catch (InvalidOperationException exception)
+			{
+				thrown = exception;
+			}
+		}
+
+		thrown.Should().NotBeNull();
+		client.Spawned.Should().NotContain(mirror, "the despawn the handler threw in took it away all the same");
+		client.Session.Mirror!.Find(id).Should().BeNull();
+	}
+
+	[Fact]
+	[Trait("Networking", "Effects")]
 	public void Visibility_decides_who_hears_about_an_effect_and_never_what_it_did()
 	{
 		var rig = new Rig();

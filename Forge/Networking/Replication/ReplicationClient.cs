@@ -2295,11 +2295,23 @@ public sealed class ReplicationClient
 		return mirror;
 	}
 
+	// Lets go of a mirror. What it shows goes first, each part even if one before it throws, and it's let go of all the
+	// same, so nothing keeps an entity its host took away: the first exception comes out after.
 	private void Unbind(Mirror mirror, bool despawn)
 	{
-		mirror.RemoveAllGraphs();
-		mirror.RemoveAllCues();
-		mirror.RemoveAllEffects();
+		ExceptionDispatchInfo? failure = null;
+
+		foreach (Action letGo in (Action[])[mirror.RemoveAllGraphs, mirror.RemoveAllCues, mirror.RemoveAllEffects])
+		{
+			try
+			{
+				letGo();
+			}
+			catch (Exception exception)
+			{
+				failure ??= ExceptionDispatchInfo.Capture(exception);
+			}
+		}
 
 		if (mirror.Prediction is Prediction prediction)
 		{
@@ -2324,6 +2336,8 @@ public sealed class ReplicationClient
 			Despawned?.Invoke(mirror.Entity);
 			Host?.Despawn(mirror.Entity);
 		}
+
+		failure?.Throw();
 	}
 
 	private sealed class Mirror(IForgeEntity entity, PeerId owner, bool placed, RemoteBody body)
