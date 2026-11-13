@@ -34,10 +34,13 @@ if (client.Mirror!.KeySpawn(graphContext, Index) is SpawnKey key)
 
     Bolt bolt = MakeBolt(seed: key.SeedFor(client.SessionSeed));
 
-    if (client.Mirror.PredictSpawn(bolt, key, id => bolt.NetworkId = id))
+    if (!client.Mirror.PredictSpawn(bolt, key, id => bolt.NetworkId = id))
     {
-        bolt.RunSetup();                            // after PredictSpawn, so it runs as a predicted entity's
+        FreeBolt(bolt);                             // the server despawned it already: a correction doesn't make it again
+        return;
     }
+
+    bolt.RunSetup();                                // after PredictSpawn, so it runs as a predicted entity's
 }
 ```
 
@@ -55,7 +58,7 @@ An entity that leaves the timeline waits in **limbo**: out of the simulation, ha
 
 - **A correction rolls back to before the tick it was made in.** It goes to limbo, and the tick running again makes it again: `FindSpawn` brings it back as it was made, instead of the host making another.
 - **It's freed.** `PredictDespawn` takes it out as the tick is recorded, as when its graph's Queue Free runs. A correction to a tick it was in brings it back. The server's despawn hands it to `IReplicationHost.Despawn`.
-- **The server never made it.** Once a packet of the tick it was made in or later arrives without its spawn, the server didn't make it there, as when its press arrived too late: it goes to limbo, and no correction brings it back. If its spawn arrives after all, from a packet the budget left it out of, it comes back from the tick it was made in. Once no correction can reach that tick, it's handed to `IReplicationHost.Despawn`.
+- **The server never made it.** Once a packet of the tick it was made in or later arrives without its spawn, the server didn't make it there, as when its press arrived too late: it goes to limbo, and no correction brings it back. If its spawn arrives after all, from a packet the budget left it out of, it comes back from the tick it was made in, or, once the timeline can't go back that far, as it was last recorded, which the server's word then puts right. Once no correction can reach that tick, it's handed to `IReplicationHost.Despawn`.
 
 A spawn of the server's that arrives with a key this client made nothing under, as when the server's tick made a spawn the client's didn't, is made through `IReplicationHost.SpawnPredicted`, with the key to seed it, and joins the timeline at the tick the server made it in, as if it had been predicted from there. A spawn the server despawned isn't made again by a correction that runs its tick again: `PredictSpawn` refuses its key.
 
