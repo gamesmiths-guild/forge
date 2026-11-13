@@ -210,6 +210,90 @@ public class SpawnPredictionTests
 		rig.Mirror.Corrections.Should().Be(corrections, "it came back where the server's is");
 	}
 
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void A_bolt_freed_in_the_tick_it_was_made_in_is_made_again_by_a_correction_from_before_it()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+		rig.FreesAtOnce = true;
+		long corrections = rig.Mirror.Corrections;
+
+		rig.SlowServerPlayer();
+		rig.Press("fire");
+		Bolt bolt = rig.ClientBolts.Should().ContainSingle().Subject;
+		rig.Limbo.Should().Contain(bolt, "its graph freed it as it made it");
+		rig.Idle(30);
+
+		rig.Mirror.Corrections.Should().BeGreaterThan(corrections, "the slow landed before the shot");
+		rig.Returned.Should().Contain(bolt, "running its tick again made it again, as that tick left it");
+		rig.ClientBolts.Should().ContainSingle();
+		rig.Mirror.Predicted.Should().NotContain(bolt, "the tick that made it again freed it again");
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void A_correction_from_before_a_shot_the_server_never_fired_keeps_it_in_limbo()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+		rig.ServerRefuses = true;
+		long corrections = rig.Mirror.Corrections;
+
+		// The slow lands before the shot, and the packets saying so are lost until the server is past the shot's tick.
+		rig.SlowServerPlayer();
+		rig.ServerLink.Conditions = NetworkConditions.Good with { LossRate = 1 };
+		rig.Press("fire");
+		Bolt bolt = rig.ClientBolts.Should().ContainSingle().Subject;
+		rig.Idle(10);
+		rig.ServerLink.Conditions = NetworkConditions.Good;
+		rig.Idle(30);
+
+		rig.Mirror.Corrections.Should().BeGreaterThan(corrections);
+		rig.Limbo.Should().Contain(bolt, "the server's packets reached its tick without spawning it");
+		rig.Returned.Should().NotContain(bolt, "running its tick again doesn't bring back what the server didn't make");
+		rig.ClientBolts.Should().ContainSingle("the correction found it, kept out, instead of making another");
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void A_shot_whose_spawn_comes_after_the_timeline_can_reach_its_ticks_comes_back_as_last_recorded()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+
+		// A packet holds one entry, so a packet of the shot's tick comes without its spawn.
+		rig.Server.Replication!.BudgetBytes = 1;
+		rig.Press("fire");
+		Bolt bolt = rig.ClientBolts.Should().ContainSingle().Subject;
+		long shot = rig.ClientKeys.Single().Tick;
+
+		while (rig.Server.Replication.LastSendTick < shot)
+		{
+			rig.Idle(1);
+		}
+
+		// Then nothing arrives until a spawn of the server's that no key finds comes with the shot's, joining the
+		// timeline after the last tick the shot was recorded in, so the timeline can't go back to before it.
+		rig.ServerLink.Conditions = NetworkConditions.Good with { LossRate = 1 };
+		rig.Idle(10);
+		rig.Limbo.Should().Contain(bolt, "a packet of its tick came without its spawn");
+		rig.SpawnServerBolt();
+		rig.Idle(20);
+		rig.Server.Replication.BudgetBytes = ReplicationServer.DefaultBudgetBytes;
+		rig.ServerLink.Conditions = NetworkConditions.Good;
+		rig.Idle(20);
+
+		bolt.NetworkId.Should().Be(rig.ServerBolts[0].NetworkId);
+		rig.Returned.Should().Contain(bolt, "its spawn arrived, though the timeline can't go back to its ticks");
+		rig.Mirror.Predicted.Should().Contain(bolt);
+		long corrections = rig.Mirror.Corrections;
+
+		rig.Idle(10);
+
+		rig.Mirror.Corrections.Should().Be(corrections, "the server's word put it right as it came back");
+	}
+
 	private sealed class Assets
 	{
 		public TagsManager Tags { get; } = new(_tagNames);
@@ -465,7 +549,6 @@ public class SpawnPredictionTests
 
 	private sealed class Rig : IReplicationHost
 	{
-		private readonly ConditionedTransport _serverLink;
 		private readonly ConditionedTransport _clientLink;
 		private readonly ClockDilation _dilation = new();
 		private readonly List<Bolt> _serverVanished = [];
@@ -508,6 +591,11 @@ public class SpawnPredictionTests
 		// Whether the client's graph shoots without the client making the bolt, leaving it to the server's spawn.
 		public bool ClientRefuses { get; set; }
 
+		// Whether the client's graph frees each bolt in the tick it makes it in.
+		public bool FreesAtOnce { get; set; }
+
+		public ConditionedTransport ServerLink { get; }
+
 		public ReplicationClient Mirror => Client.Mirror!;
 
 		// How many ticks the client's clock is ahead of the server's.
@@ -516,10 +604,10 @@ public class SpawnPredictionTests
 		public Rig(NetworkConditions conditions)
 		{
 			var network = new LoopbackNetwork();
-			_serverLink = new ConditionedTransport(network.Server, conditions, new DeterministicRandom(1));
+			ServerLink = new ConditionedTransport(network.Server, conditions, new DeterministicRandom(1));
 			_clientLink = new ConditionedTransport(network.Connect(), conditions, new DeterministicRandom(31));
 			Server = new NetworkSession(
-				_serverLink,
+				ServerLink,
 				new SimulationClock(TickRate, 100),
 				ServerAssets.Registry,
 				ServerAssets.Tags,
@@ -566,6 +654,21 @@ public class SpawnPredictionTests
 			Idle(60);
 		}
 
+		// Spawns a bolt of the server's for the client's peer, not from a graph, so no key finds it there.
+		public void SpawnServerBolt()
+		{
+			NetworkEntityId id = Server.Replication!.AllocateId();
+			var bolt = new Bolt(ServerAssets, ServerCues, Vector3.Zero)
+			{
+				NetworkId = id,
+				Random = new DeterministicRandom(id.Value),
+			};
+
+			bolt.Setup();
+			Server.Replication.Register(bolt, 1, Server.Peers[0].Id);
+			ServerBolts.Add(bolt);
+		}
+
 		// Slows the server's player from outside its ticks, as the world would.
 		public void SlowServerPlayer()
 		{
@@ -599,7 +702,7 @@ public class SpawnPredictionTests
 		public void Step()
 		{
 			_time += TickLength;
-			_serverLink.Update(_time);
+			ServerLink.Update(_time);
 			_clientLink.Update(_time);
 			Client.Update(_time);
 
@@ -663,7 +766,7 @@ public class SpawnPredictionTests
 			var bolt = new Bolt(Assets, ClientCues, body!.Value.Position)
 			{
 				NetworkId = id,
-				Random = Seeded(key!.Value, Client.SessionSeed),
+				Random = key is SpawnKey made ? Seeded(made, Client.SessionSeed) : new DeterministicRandom(id.Value),
 			};
 
 			ClientBolts.Add(bolt);
@@ -725,8 +828,18 @@ public class SpawnPredictionTests
 		{
 			SpawnKey key = Mirror.KeySpawn(graphContext, node)!.Value;
 
-			if (ClientRefuses || Mirror.FindSpawn(key) is not null)
+			if (ClientRefuses)
 			{
+				return;
+			}
+
+			if (Mirror.FindSpawn(key) is IForgeEntity found)
+			{
+				if (FreesAtOnce)
+				{
+					Mirror.PredictDespawn(found);
+				}
+
 				return;
 			}
 
@@ -735,10 +848,19 @@ public class SpawnPredictionTests
 				Random = Seeded(key, Client.SessionSeed),
 			};
 
-			Mirror.PredictSpawn(bolt, key, x => bolt.NetworkId = x).Should().BeTrue();
+			if (!Mirror.PredictSpawn(bolt, key, x => bolt.NetworkId = x))
+			{
+				return;
+			}
+
 			bolt.Setup();
 			ClientKeys.Add(key);
 			ClientBolts.Add(bolt);
+
+			if (FreesAtOnce)
+			{
+				Mirror.PredictDespawn(bolt);
+			}
 		}
 	}
 }

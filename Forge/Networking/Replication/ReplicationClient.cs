@@ -390,13 +390,14 @@ public sealed class ReplicationClient
 	/// <summary>
 	/// Finds the entity this client spawned ahead of the server under a key. A correction that runs again the tick the
 	/// spawn was made in, having rolled back to before it, brings it back here as it was made, instead of the host
-	/// making another: it joins the timeline again as the tick is recorded.
+	/// making another: it joins the timeline again as the tick is recorded. One the server's packets reached the tick
+	/// of without spawning it is found, and stays in limbo.
 	/// </summary>
 	/// <param name="key">The key <see cref="KeySpawn"/> gave the spawn.</param>
 	/// <returns>The entity, or <see langword="null"/> when this client made none under the key.</returns>
 	public IForgeEntity? FindSpawn(SpawnKey key)
 	{
-		return _timeline?.Remake(key)?.Entity;
+		return _timeline?.Remake(key, keptOut: key.Tick <= LastServerTick)?.Entity;
 	}
 
 	/// <summary>
@@ -443,7 +444,7 @@ public sealed class ReplicationClient
 			BeginCorrecting(prediction);
 		}
 
-		Timeline.Join(prediction, Timeline.NewestTick ?? key.Tick);
+		Timeline.Join(prediction, key.Tick);
 		return true;
 	}
 
@@ -480,8 +481,11 @@ public sealed class ReplicationClient
 		// What this client spawned that the server's spawn never bound goes too.
 		foreach (Prediction prediction in _timeline?.Members.ToArray() ?? [])
 		{
+			_timeline!.Shelve(prediction);
 			Release(prediction);
 		}
+
+		_spawnKeys.ForgetAfter(long.MinValue);
 
 		_timeline = null;
 		_unjoined.Clear();
@@ -649,7 +653,7 @@ public sealed class ReplicationClient
 		var spawner = new NetworkEntityId(ReplicationCodec.ReadEntityId(reader));
 		ulong ago = reader.ReadVarUInt();
 
-		if (ago > (ulong)tick + 1)
+		if (ago > (ulong)tick)
 		{
 			throw new MalformedPacketException($"A spawn {ago} ticks before tick {tick} is not a spawn's tick.");
 		}
@@ -1674,16 +1678,24 @@ public sealed class ReplicationClient
 		}
 
 		_unjoined.Clear();
+		long floor = Floor(timeline)!.Value;
 
 		foreach (Prediction prediction in _rejoining.Where(x => timeline.Members.Contains(x)))
 		{
 			prediction.Unconfirmed = false;
+
+			// One whose ticks the timeline can't go back to anymore, as after a spawn of the server's joined it since,
+			// comes back at the oldest tick it can.
+			if (!prediction.WasIn(Math.Max(prediction.JoinTick, floor)))
+			{
+				timeline.Rejoin(prediction, floor);
+			}
+
 			from = Math.Min(from, prediction.JoinTick);
 			correct = true;
 		}
 
 		_rejoining.Clear();
-		long floor = Floor(timeline)!.Value;
 
 		if (tick < floor)
 		{
@@ -1813,9 +1825,11 @@ public sealed class ReplicationClient
 			_spawnKeys.ForgetAfter(from);
 			long at = from;
 
-			// What was taken in after the tick rolled back to went with the rollback, and goes back in at its tick: the
-			// effects that came after a tick first, then the runs, which they may have started.
-			var takeIn = checks
+			// What was taken in after the tick rolled back to went with the rollback, and goes back in at its tick, for
+			// every entity the rollback took back, checked by the packet or not: the effects that came after a tick
+			// first, then the runs, which they may have started.
+			var members = timeline.Members.ToList();
+			var takeIn = members
 				.SelectMany((prediction, index) => prediction.Effects
 					.Where(x => x.Value.FromOutside
 						&& (!prediction.Taken.TryGetValue(x.Key, out ActiveEffect? taken) || !taken.Handle.IsValid))
@@ -1845,7 +1859,12 @@ public sealed class ReplicationClient
 					at = arrival.After;
 				}
 
-				Prediction prediction = checks[arrival.Member];
+				Prediction prediction = members[arrival.Member];
+
+				if (prediction.State != PredictionState.InWorld)
+				{
+					continue;
+				}
 
 				if (arrival.IsRun)
 				{
@@ -1970,6 +1989,7 @@ public sealed class ReplicationClient
 		}
 
 		_ended.RemoveWhere(x => x.Tick < oldest);
+		_spawnKeys.ForgetBefore(oldest);
 	}
 
 	// Hands an entity the timeline lets go of to the host to take away.
@@ -2430,8 +2450,8 @@ public sealed class ReplicationClient
 	// A packet waiting to be shown, with where each of its entries starts.
 	private readonly record struct HeldPacket(long Tick, byte[] Data, List<int> Entries);
 
-	// What a correction takes in after a tick: an effect, or a run, by the server's instance, of one of the entities it
-	// checks.
+	// What a correction takes in after a tick: an effect, or a run, by the server's instance, of one of the timeline's
+	// members.
 	private readonly record struct Arrival(long After, bool IsRun, int Member, uint Key);
 
 	// What a graph run is, as the server sent it once: its ability and that activation's context.

@@ -216,13 +216,14 @@ internal sealed class PredictionTimeline(int capacity, double fixedDeltaTime)
 	}
 
 	// Brings back, as it was made, a member made under the key that a rollback went back to before, now that a run of
-	// the tick it was made in makes it again: it joins again as the tick is recorded. Returns the member, or null when
-	// none was made under the key.
-	public Prediction? Remake(SpawnKey key)
+	// the tick it was made in makes it again: it joins again as the tick is recorded, or now, made between ticks. One
+	// the server's word kept out, unbound, stays in limbo. Returns the member, or null when none was made under the
+	// key.
+	public Prediction? Remake(SpawnKey key, bool keptOut)
 	{
 		Prediction? member = _members.Find(x => x.Key == key);
 
-		if (member?.State != PredictionState.Limbo || Advancing is null)
+		if (member?.State != PredictionState.Limbo || (keptOut && !member.IsBound))
 		{
 			return member;
 		}
@@ -234,9 +235,34 @@ internal sealed class PredictionTimeline(int capacity, double fixedDeltaTime)
 		member.State = PredictionState.InWorld;
 		member.Unconfirmed = false;
 		member.LeaveTick = null;
-		_joining.Add(member);
+
+		if (Advancing is null)
+		{
+			RefreshLive();
+		}
+		else
+		{
+			_joining.Add(member);
+		}
+
 		failure?.Throw();
 		return member;
+	}
+
+	// Brings back from limbo, at a tick its history doesn't reach, a member the server's word says is in the world: it
+	// comes back as it was last recorded, and joins at the tick, for a correction from there to put it right.
+	public void Rejoin(Prediction member, long tick)
+	{
+		EntitySnapshot snapshot = member.History.SnapshotAt(member.History.NewestTick!.Value);
+		EntitySimulation.ThrowIfCannotRestore([], [snapshot]);
+		LeftLimbo?.Invoke(member.Entity);
+		ExceptionDispatchInfo? failure = EntitySimulation.RestoreSnapshots([], [snapshot]);
+		member.State = PredictionState.InWorld;
+		member.LeaveTick = null;
+		member.JoinTick = tick;
+		member.History.Record(tick, snapshot);
+		RefreshLive();
+		failure?.Throw();
 	}
 
 	// After ticks ran again from a rollback: a member the rollback went back to before that no run made again is no
@@ -283,13 +309,12 @@ internal sealed class PredictionTimeline(int capacity, double fixedDeltaTime)
 		}
 	}
 
-	// Records the tick the members just advanced through: the ones freed in it go to limbo, the others keep how it
-	// left them, and the ones made in it join, as it left them. Every snapshot is taken first, so a tick that can't be
-	// recorded changes nothing.
+	// Records the tick the members just advanced through, as it left each, the ones made in it joining: the ones freed
+	// in it then go to limbo, keeping the tick, and its input, for a run of it again. Every snapshot is taken first, so
+	// a tick that can't be recorded changes nothing.
 	private void Record(long tick, bool again)
 	{
-		List<Recorded> kept = Capture(InWorld());
-		List<Recorded> joined = Capture(_joining.Where(x => x.State == PredictionState.InWorld));
+		List<Recorded> recorded = Capture(_members.Where(x => x.State != PredictionState.Limbo));
 		var leaving = _members.Where(x => x.State == PredictionState.Leaving).ToList();
 
 		EntitySimulation.ThrowIfCannotRestore([.. leaving.Select(x => x.Entity)], []);
@@ -299,22 +324,16 @@ internal sealed class PredictionTimeline(int capacity, double fixedDeltaTime)
 		{
 			member.State = PredictionState.Limbo;
 			member.LeaveTick = tick;
+		}
 
-			if (_joining.Contains(member))
+		foreach (Recorded member in recorded)
+		{
+			if (_joining.Contains(member.Member))
 			{
-				member.JoinTick = tick;
+				member.Member.JoinTick = tick;
 			}
-		}
 
-		foreach (Recorded recorded in kept)
-		{
-			Store(recorded.Member, tick, recorded.Snapshot, again);
-		}
-
-		foreach (Recorded recorded in joined)
-		{
-			recorded.Member.JoinTick = tick;
-			recorded.Member.History.Record(tick, recorded.Snapshot);
+			Store(member.Member, tick, member.Snapshot, again);
 		}
 
 		_joining.Clear();

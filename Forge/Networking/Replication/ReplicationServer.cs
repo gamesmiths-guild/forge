@@ -332,6 +332,7 @@ public sealed class ReplicationServer
 		}
 
 		LastSendTick = tick;
+		_spawnKeys.ForgetBefore(tick);
 		long oldestEvent = tick - (long)Math.Ceiling(_session.Clock.TicksIn(EventExpirySeconds));
 		ExceptionDispatchInfo? failure = null;
 

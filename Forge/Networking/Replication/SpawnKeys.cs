@@ -9,24 +9,22 @@ namespace Gamesmiths.Forge.Networking.Replication;
 internal sealed class SpawnKeys
 {
 	private readonly Dictionary<Slot, int> _made = [];
-	private long _newestTick = long.MinValue;
 
 	// The key of the next spawn the node makes for the run, in the tick its entity is in.
 	public SpawnKey Next(AbilityBehaviorContext context, int node)
 	{
 		long tick = context.Owner.EffectsManager.Tick;
-
-		if (tick > _newestTick)
-		{
-			Forget(x => x.Tick < tick);
-			_newestTick = tick;
-		}
-
 		uint ability = (uint)Fnv64.Add(Fnv64.Offset, context.AbilityHandle.Ability!.AbilityData.Name);
 		var slot = new Slot(context.Owner.NetworkId.Value, tick, ability, node);
 		_made.TryGetValue(slot, out int sequence);
 		_made[slot] = sequence + 1;
 		return new SpawnKey(context.Owner.NetworkId, tick, ability, node, sequence);
+	}
+
+	// Forgets the spawns made before a tick, which nothing numbers again.
+	public void ForgetBefore(long tick)
+	{
+		Forget(x => x.Tick < tick);
 	}
 
 	// Forgets the spawns made after a tick, so a correction running those ticks again numbers theirs as they were.
