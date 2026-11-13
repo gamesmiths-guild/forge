@@ -240,7 +240,7 @@ public sealed class ReplicationServer
 	/// <param name="graphContext">The context of the graph making the spawn.</param>
 	/// <param name="node">The index of the node making it, its <see cref="Node.Index"/>.</param>
 	/// <returns>The key, or <see langword="null"/> for a graph that isn't an ability's run on an entity a client
-	/// predicts.</returns>
+	/// predicts, or one that runs before the entity's first tick.</returns>
 	public SpawnKey? KeySpawn(GraphContext graphContext, int node)
 	{
 		return graphContext.TryGetActivationContext(out AbilityBehaviorContext? context)

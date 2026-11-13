@@ -294,6 +294,22 @@ public class SpawnPredictionTests
 		rig.Mirror.Corrections.Should().Be(corrections, "the server's word put it right as it came back");
 	}
 
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void A_shot_fired_before_its_shooter_s_first_tick_is_the_server_s_and_reaches_its_owner()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+		int known = rig.ClientBolts.Count;
+
+		rig.FireFromNewServerPlayer();
+		rig.Idle(30);
+
+		rig.ServerKeys.Should().BeEmpty("a tick before the first has nothing to key the spawn by");
+		rig.ClientBolts.Should().HaveCount(known + 1, "its spawn, keyless, reached the owner");
+		rig.ClientBolts[^1].NetworkId.Should().Be(rig.ServerBolts.Single().NetworkId);
+	}
+
 	private sealed class Assets
 	{
 		public TagsManager Tags { get; } = new(_tagNames);
@@ -669,6 +685,16 @@ public class SpawnPredictionTests
 			ServerBolts.Add(bolt);
 		}
 
+		// Registers another player of the server's for the client's peer and fires its shot before its first tick.
+		public void FireFromNewServerPlayer()
+		{
+			NetworkEntityId id = Server.Replication!.AllocateId();
+			var player = new Player(ServerAssets, ServerCues) { NetworkId = id, Random = new DeterministicRandom(id.Value) };
+			Server.Replication.Register(player, 0, Server.Peers[0].Id);
+			player.Abilities.GrantedAbilities.First()
+				.TryActivate(out _).Should().BeTrue();
+		}
+
 		// Slows the server's player from outside its ticks, as the world would.
 		public void SlowServerPlayer()
 		{
@@ -805,19 +831,29 @@ public class SpawnPredictionTests
 
 		private void ServerShoot(GraphContext graphContext, int node)
 		{
-			SpawnKey key = Server.Replication!.KeySpawn(graphContext, node)!.Value;
+			SpawnKey? key = Server.Replication!.KeySpawn(graphContext, node);
 
 			if (ServerRefuses)
 			{
 				return;
 			}
 
-			ServerKeys.Add(key);
-			var bolt = new Bolt(ServerAssets, ServerCues, Muzzle(ServerPlayer, key))
+			NetworkEntityId id = Server.Replication.AllocateId();
+			var bolt = new Bolt(
+				ServerAssets,
+				ServerCues,
+				key is SpawnKey made ? Muzzle(ServerPlayer, made) : Vector3.Zero)
 			{
-				NetworkId = Server.Replication.AllocateId(),
-				Random = Seeded(key, Server.SessionSeed),
+				NetworkId = id,
+				Random = key is SpawnKey seeded
+					? Seeded(seeded, Server.SessionSeed)
+					: new DeterministicRandom(id.Value),
 			};
+
+			if (key is SpawnKey keyed)
+			{
+				ServerKeys.Add(keyed);
+			}
 
 			bolt.Setup();
 			Server.Replication.Register(bolt, 1, Server.Peers[0].Id, key);

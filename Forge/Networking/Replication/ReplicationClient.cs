@@ -376,7 +376,8 @@ public sealed class ReplicationClient
 	/// <param name="graphContext">The context of the graph making the spawn.</param>
 	/// <param name="node">The index of the node making it, its <see cref="Node.Index"/>.</param>
 	/// <returns>The key, or <see langword="null"/> for a graph this client doesn't predict, such as a mirror's copy of
-	/// the server's, or one of an entity the server hasn't bound yet.</returns>
+	/// the server's, one of an entity the server hasn't bound yet, or one that runs before the entity's first tick.
+	/// </returns>
 	public SpawnKey? KeySpawn(GraphContext graphContext, int node)
 	{
 		return !graphContext.IsRemote

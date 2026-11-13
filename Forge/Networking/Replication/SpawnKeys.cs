@@ -10,10 +10,17 @@ internal sealed class SpawnKeys
 {
 	private readonly Dictionary<Slot, int> _made = [];
 
-	// The key of the next spawn the node makes for the run, in the tick its entity is in.
-	public SpawnKey Next(AbilityBehaviorContext context, int node)
+	// The key of the next spawn the node makes for the run, in the tick its entity is in, or null before the entity's
+	// first tick, which has no tick to key it by.
+	public SpawnKey? Next(AbilityBehaviorContext context, int node)
 	{
 		long tick = context.Owner.EffectsManager.Tick;
+
+		if (tick < 0)
+		{
+			return null;
+		}
+
 		uint ability = (uint)Fnv64.Add(Fnv64.Offset, context.AbilityHandle.Ability!.AbilityData.Name);
 		var slot = new Slot(context.Owner.NetworkId.Value, tick, ability, node);
 		_made.TryGetValue(slot, out int sequence);

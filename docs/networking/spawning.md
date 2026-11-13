@@ -44,7 +44,7 @@ if (client.Mirror!.KeySpawn(graphContext, Index) is SpawnKey key)
 }
 ```
 
-`KeySpawn` gives `null` for a graph that isn't an ability's run, or, on the client, for one it doesn't predict: a mirror's copy of the server's graph, or a graph of a spawn the server hasn't bound yet. Such spawns are the server's to make.
+`KeySpawn` gives `null` for a graph that isn't an ability's run, for one that runs before its entity's first tick, or, on the client, for one it doesn't predict: a mirror's copy of the server's graph, or a graph of a spawn the server hasn't bound yet. Such spawns are the server's to make.
 
 ## On the client's timeline
 
