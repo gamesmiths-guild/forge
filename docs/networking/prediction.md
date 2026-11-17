@@ -70,7 +70,7 @@ The owner predicts what the entity's own tick does. What comes from elsewhere st
 | Its input, its movement, and the abilities its own tick activates, from an input binding or a trigger its own tick sets off, with their graphs | Predicted. |
 | Effects its own tick applies to it: costs, cooldowns, a dash's speed | Predicted, executions included. |
 | Effects from elsewhere: another entity's, an area's, the host's between ticks | The server's, taken in at the tick they landed after. Their duration, modifiers, tags, components and cues run here, and their executions don't: what an execution does to base values arrives as base values. Damage and death are always the server's. |
-| Effects it applies to other entities | Refused: other entities are mirrors. |
+| Effects it applies to other entities | Refused: other entities are mirrors. Their executed cues show at once, and the server's don't show again ([Showing a hit at once](lag-compensation.md#showing-a-hit-at-once)). |
 | A run of an ability it predicts, started from elsewhere: by another entity's event, or a trigger an effect from elsewhere sets off | Taken in at the tick it started after, then predicted. What it showed in the ticks a correction ran again doesn't show. |
 | A presentation action a run it predicts executes outside its own tick, as from a listener for an event only the server raises | The server's. It arrives and shows once, in a copy of the run that runs nothing else, since the owner's own run never executes it. What the action's branch changes arrives as the entity's state. A run it took in from elsewhere doesn't bring these: of that run, only its start and end arrive. |
 | A `ServerOnly` ability, a coded behavior that isn't an [`ISnapshotAbilityBehavior`](../rollback.md#coded-behaviors) | The server's. A graph's run shows as a copy, as it does on a mirror ([Graphs on the network](statescript.md)). Activating one here fails with `AbilityActivationFailures.ServerOnly`. |
@@ -83,7 +83,7 @@ An effect counts as from elsewhere when it lands while the entity isn't advancin
 ## Limits
 
 - A run the entity's own tick started is checked, not put right. One the server didn't have, or had otherwise, as when a press arrived too late to run, corrects only through what it changes, and ends as it ends here.
-- A run that reads other entities, through an overlap or a query, finds them where this client shows them, behind the server, and what it finds and keeps isn't put right: while it differs from the server's, every packet corrects the entity. Make such an ability `ServerOnly`, as one that spreads fire to whoever is near.
+- A run that reads other entities, through an overlap or a query, finds them where this client shows them, behind the server, and what it finds and keeps isn't put right (a hit is tested on the server as this client saw it: [Hits on the network](lag-compensation.md)): while it differs from the server's, every packet corrects the entity. Make such an ability `ServerOnly`, as one that spreads fire to whoever is near.
 - A run taken in from elsewhere starts without activation data.
 - Only a graph's run is taken in. A coded `ISnapshotAbilityBehavior`'s run that started from elsewhere doesn't reach the owner, which is corrected at every packet until the run ends.
 - A predicted graph that goes on from a `ServerOnly` region, through a link out of it or a variable it writes, goes on only on the server, and isn't put right. Keep such a region a dead end, or make the ability `ServerOnly`.
