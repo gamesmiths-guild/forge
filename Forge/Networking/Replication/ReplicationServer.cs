@@ -65,6 +65,7 @@ public sealed class ReplicationServer
 	private readonly BitWriter _entry = new();
 	private readonly List<EntityView> _candidates = [];
 	private readonly List<ushort> _tagScratch = [];
+	private readonly List<ushort> _entryTags = [];
 	private readonly Dictionary<Type, int> _contextCodecs = [];
 	private readonly HashSet<EffectData> _effectsNotListed = [];
 	private readonly HashSet<AbilityData> _abilitiesNotListed = [];
@@ -839,6 +840,12 @@ public sealed class ReplicationServer
 			}
 
 			_packet.WriteBytes(_entry.WrittenBytes);
+
+			foreach (ushort tag in _entryTags)
+			{
+				_session.TagsManager.NoteSent(tag);
+			}
+
 			view.Accumulated = 0;
 			view.LeftOut = false;
 			view.Sent = true;
@@ -857,6 +864,7 @@ public sealed class ReplicationServer
 	{
 		ReplicatedEntity entity = view.Entity;
 		_entry.Clear();
+		_entryTags.Clear();
 		_entry.WriteVarUInt(entity.Id.Value);
 
 		if (view.Leaving)
@@ -1004,11 +1012,12 @@ public sealed class ReplicationServer
 		}
 	}
 
-	// A tag travels as its net index, counted for the manager's report of the tags that travel most.
+	// A tag travels as its net index, counted for the manager's report of the tags that travel most once its entry is
+	// in the packet.
 	private void WriteTag(ushort index)
 	{
 		_entry.WriteVarUInt(index);
-		_session.TagsManager.NoteSent(index);
+		_entryTags.Add(index);
 	}
 
 	private void WriteTags(ReplicatedEntity entity, long acked, long seen)
@@ -1384,17 +1393,6 @@ public sealed class ReplicationServer
 			}
 		}
 
-		// A run that ended still sends its values with the actions it brings: they read them. An owner hearing of a run
-		// it predicts for the first time gets them all.
-		long valuesAcked = outside && created ? -1 : acked;
-		bool values = !takenIn && brings && graph.ValuesChanged(valuesAcked);
-		_entry.WriteBool(values);
-
-		if (values)
-		{
-			WriteGraphValues(graph, valuesAcked);
-		}
-
 		uint maxEvent = view.EventsAcked;
 		int events = 0;
 
@@ -1404,6 +1402,20 @@ public sealed class ReplicationServer
 			{
 				events++;
 			}
+		}
+
+		// A run that ended still sends its values with the actions it brings: they read them. An owner's copy of a run
+		// it predicts gets them all with each action, since it hears nothing of the run between them.
+		long valuesAcked = outside ? -1 : acked;
+		bool values = !takenIn
+			&& brings
+			&& (!outside || created || events > 0)
+			&& graph.ValuesChanged(valuesAcked);
+		_entry.WriteBool(values);
+
+		if (values)
+		{
+			WriteGraphValues(graph, valuesAcked);
 		}
 
 		_entry.WriteBool(events > 0);
@@ -1700,7 +1712,7 @@ public sealed class ReplicationServer
 					action,
 					graphContext.ActivationCount,
 					tick,
-					!context.Owner.EffectsManager.RaisesOwnTick));
+					context.Owner.EffectsManager.FromOutside));
 			}
 		}
 	}

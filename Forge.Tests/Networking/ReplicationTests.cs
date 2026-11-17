@@ -62,6 +62,25 @@ public class ReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Replication")]
+	public void Only_the_tags_of_entries_that_fit_a_packet_are_counted()
+	{
+		var rig = new Rig();
+		rig.Join();
+		rig.Server.Replication!.BudgetBytes = 1;
+		Rig.Apply(rig.Spawn(), rig.Burning());
+		Rig.Apply(rig.Spawn(), rig.Burning());
+
+		for (int i = 0; i < 60 && rig.Server.TagsManager.GetNetworkUsage().Count == 0; i++)
+		{
+			rig.Step();
+		}
+
+		rig.Server.TagsManager.GetNetworkUsage().Single(x => x.Key.ToString() == "state.burning").Value
+			.Should().Be(1, "the budget left the second entity out of the packet");
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
 	public void A_held_packet_brings_its_bodies_at_once_and_the_rest_once_its_tick_is_shown()
 	{
 		var rig = new Rig();
@@ -875,6 +894,10 @@ public class ReplicationTests
 		respawning.Position.X.Should().Be(1, "a respawn isn't shown sliding to the spawn point");
 		body.TrySample(14, out BodyState respawned, 2).Should().BeTrue();
 		respawned.Position.X.Should().Be(20);
+
+		body.Add(16, new BodyState(new Vector3(21, 0, 0), Quaternion.Identity, default, true));
+		body.TrySample(14, out BodyState stillRespawned, 2).Should().BeTrue();
+		stillRespawned.Position.X.Should().Be(20, "at its own tick a state is where the body is");
 	}
 
 	[Fact]

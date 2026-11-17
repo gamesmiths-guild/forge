@@ -322,11 +322,12 @@ public class PredictionTests
 				Target = rig.ServerPlayer,
 			});
 			rig.Idle(30);
-
-			rig.ServerAssets.Log.Should().HaveCount(blows).And.OnlyContain(x => x == "spark");
-			rig.Assets.Log.Should().HaveCount(blows, "its own run never had the event, so the server's word shows it")
-				.And.OnlyContain(x => x == "spark");
 		}
+
+		rig.ServerAssets.Log.Should().Equal("spark 0", "spark 7");
+		rig.Assets.Log.Should().Equal(
+			["spark 0", "spark 7"],
+			"its own run never had the event, so the server's word shows it, with what the run set in between");
 
 		rig.Press("guard");
 		rig.Idle(30);
@@ -334,6 +335,17 @@ public class PredictionTests
 		rig.ClientPlayer!.Abilities.TryGetAbility(rig.Assets.Guard, out AbilityHandle? guard, rig.ClientPlayer)
 			.Should().BeTrue();
 		guard!.IsActive.Should().BeTrue("what it was sent is only what to show: the run is its own");
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void An_action_the_setup_of_the_owner_s_entity_executes_shows_on_the_owner_once()
+	{
+		var rig = new Rig(NetworkConditions.Good) { SparksAtSetup = true };
+		rig.JoinWithPlayer();
+
+		rig.ServerAssets.Log.Should().ContainSingle(x => x == "spark");
+		rig.Assets.Log.Should().Equal(["spark"], "its own setup showed it, so the server doesn't send it");
 	}
 
 	[Fact]
@@ -660,10 +672,22 @@ public class PredictionTests
 		{
 			var graph = new Graph();
 			var listener = new EventListenerNode();
-			var spark = new SparkNode(Log);
+			var spark = new CountedSparkNode(Log);
+			var wait = new TimerNode();
+			var count = new SetVariableNode();
 			graph.AddNode(listener);
 			graph.AddNode(spark);
+			graph.AddNode(wait);
+			graph.AddNode(count);
 			graph.VariableDefinitions.DefineObjectVariable("blow", Tag("event.blow"));
+			graph.VariableDefinitions.DefineVariable("blows", 0);
+			graph.VariableDefinitions.DefineProperty(
+				"length", new VariantResolver(new Variant128(0.75), typeof(double)));
+			graph.VariableDefinitions.DefineProperty("seven", new VariantResolver(new Variant128(7), typeof(int)));
+			wait.BindInput(TimerNode.DurationInput, "length");
+			count.BindInput(SetVariableNode.SourceInput, "seven");
+			count.BindOutput(SetVariableNode.TargetOutput, "blows");
+			spark.BindInput(CountedSparkNode.CountInput, "blows");
 			graph.VariableDefinitions.DefineObjectProperty("owner", new AbilityOwnerResolver());
 			listener.BindInput(EventListenerNode.EventTagInput, "blow");
 			listener.BindInput(EventListenerNode.ListenOnInput, "owner");
@@ -673,6 +697,14 @@ public class PredictionTests
 			graph.AddConnection(new Connection(
 				listener.OutputPorts[EventListenerNode.OnEventPort],
 				spark.InputPorts[ActionNode.InputPort]));
+
+			// What the run sets on its own tick, between two blows.
+			graph.AddConnection(new Connection(
+				graph.EntryNode.OutputPorts[EntryNode.OutputPort],
+				wait.InputPorts[StateNode<StateNodeContext>.InputPort]));
+			graph.AddConnection(new Connection(
+				wait.OutputPorts[TimerNode.OnTimerEndPort],
+				count.InputPorts[ActionNode.InputPort]));
 			return graph;
 		}
 
@@ -833,6 +865,25 @@ public class PredictionTests
 		protected override void Execute(GraphContext graphContext)
 		{
 			log.Add(graphContext.IsCorrecting ? "spark again while correcting" : "spark");
+		}
+	}
+
+	// A spark that shows the count it reads.
+	private sealed class CountedSparkNode(List<string> log) : ActionNode
+	{
+		public const byte CountInput = 0;
+
+		public override NodeNetworkKind NetworkKind => NodeNetworkKind.Presentation;
+
+		protected override void DefineParameters(List<InputProperty> inputProperties, List<OutputVariable> outputVariables)
+		{
+			inputProperties.Add(new InputProperty("Count", typeof(int)));
+		}
+
+		protected override void Execute(GraphContext graphContext)
+		{
+			graphContext.TryResolve(InputProperties[CountInput].BoundName, out int count);
+			log.Add($"spark {count}");
 		}
 	}
 
@@ -1005,6 +1056,9 @@ public class PredictionTests
 		// Whether the players start with a periodic effect of their own.
 		public bool Pulses { get; init; }
 
+		// Whether the players' setup activates Sparks.
+		public bool SparksAtSetup { get; init; }
+
 		// Where the client was told to make its player.
 		public BodyState? SpawnedAt { get; private set; }
 
@@ -1031,6 +1085,7 @@ public class PredictionTests
 				Assets.Tags,
 				_actions);
 			Client.Mirror!.Host = this;
+			Client.Mirror.Spawned += x => SparkAtSetup((Player)x, Assets);
 			ClientCues = new CuesManager { DeferDispatch = true };
 			ClientCueLog = new CueLog(Assets);
 			ClientCueLog.Watch(ClientCues);
@@ -1065,6 +1120,7 @@ public class PredictionTests
 			};
 
 			Server.Replication.Register(ServerPlayer, 0, Server.Peers[0].Id);
+			SparkAtSetup(ServerPlayer, ServerAssets);
 			ServerPlayer.Mover.Push(movedBeforeSent);
 
 			for (int i = 0; i < 120 && ClientPlayer is null; i++)
@@ -1218,6 +1274,15 @@ public class PredictionTests
 			var random = new DeterministicRandom(id.Value);
 			random.BeginTick(0);
 			return random;
+		}
+
+		private void SparkAtSetup(Player player, Assets assets)
+		{
+			if (SparksAtSetup)
+			{
+				player.Abilities.TryGetAbility(assets.Sparks, out AbilityHandle? sparks, player).Should().BeTrue();
+				sparks!.TryActivate(out _).Should().BeTrue();
+			}
 		}
 	}
 }

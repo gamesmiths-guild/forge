@@ -96,7 +96,7 @@ public sealed class RemoteBody
 
 		if (Vector3.Distance(from.State.Position, to.State.Position) > snapDistance)
 		{
-			state = from.State;
+			state = tick < to.Tick ? from.State : to.State;
 			return true;
 		}
 

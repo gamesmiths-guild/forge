@@ -92,6 +92,27 @@ public class SessionTests
 
 	[Fact]
 	[Trait("Networking", "Session")]
+	public void A_hello_of_an_older_protocol_is_refused_for_its_version()
+	{
+		var network = new LoopbackNetwork();
+		NetworkSession server = Server(network);
+		var refused = new List<RefusalReason>();
+		server.PeerRefused += (_, reason) => refused.Add(reason);
+		INetworkTransport raw = network.Connect();
+		var writer = new BitWriter();
+		writer.WriteByte((byte)ControlMessage.Hello);
+		writer.WriteUInt16(Protocol.Version - 1);
+		writer.WriteUInt64(0);
+		raw.Send(PeerId.Server, Protocol.ControlChannel, reliable: true, writer.WrittenBytes);
+
+		server.Update(0);
+
+		refused.Should().Equal(RefusalReason.ProtocolVersion);
+		server.MalformedPackets.Should().Be(0, "what follows the version is another protocol's to lay out");
+	}
+
+	[Fact]
+	[Trait("Networking", "Session")]
 	public void A_refused_client_that_stays_is_disconnected_after_the_linger()
 	{
 		var network = new LoopbackNetwork();

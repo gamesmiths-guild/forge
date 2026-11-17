@@ -40,11 +40,19 @@ public readonly record struct HelloMessage(
 	/// Reads the message, after its <see cref="ControlMessage.Hello"/> byte.
 	/// </summary>
 	/// <param name="reader">Where to read.</param>
-	/// <returns>The message.</returns>
+	/// <returns>The message. One of another protocol version carries the version alone, since what follows it may
+	/// differ.</returns>
 	public static HelloMessage Read(BitReader reader)
 	{
+		ushort version = reader.ReadUInt16();
+
+		if (version != Protocol.Version)
+		{
+			return new HelloMessage(version, 0, 0, 0, default);
+		}
+
 		return new HelloMessage(
-			reader.ReadUInt16(),
+			version,
 			reader.ReadUInt64(),
 			reader.ReadUInt64(),
 			reader.ReadUInt64(),
