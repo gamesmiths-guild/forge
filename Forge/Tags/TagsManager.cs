@@ -75,7 +75,7 @@ public sealed class TagsManager
 	/// is ignored.</param>
 	public TagsManager(string[] tags, string[] commonlyReplicatedTags)
 	{
-		_commonlyReplicatedTags = commonlyReplicatedTags;
+		_commonlyReplicatedTags = [.. commonlyReplicatedTags];
 		RootNode = new TagNode(this);
 
 		foreach (string tag in tags)
