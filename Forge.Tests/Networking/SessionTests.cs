@@ -5,6 +5,7 @@ using FluentAssertions;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Networking;
 using Gamesmiths.Forge.Networking.Messages;
+using Gamesmiths.Forge.Networking.Replication;
 using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Tests.Networking;
@@ -53,6 +54,7 @@ public class SessionTests
 	[InlineData(RefusalReason.AssetRegistry)]
 	[InlineData(RefusalReason.Tags)]
 	[InlineData(RefusalReason.InputActions)]
+	[InlineData(RefusalReason.BodyPrecision)]
 	public void A_mismatched_client_is_refused_and_leaves(RefusalReason expected)
 	{
 		var network = new LoopbackNetwork();
@@ -67,6 +69,11 @@ public class SessionTests
 		TagsManager tags = expected == RefusalReason.Tags ? new TagsManager(["input.menu", "event.hurt"]) : _tags;
 		INetworkTransport transport = network.Connect();
 		var client = new NetworkSession(transport, new SimulationClock(TickRate), registry, tags, actions);
+
+		if (expected == RefusalReason.BodyPrecision)
+		{
+			client.BodyPrecision = BodyPrecision.Default with { PositionSteps = 100 };
+		}
 
 		client.Update(0);
 		server.Update(0);
@@ -85,13 +92,34 @@ public class SessionTests
 
 	[Fact]
 	[Trait("Networking", "Session")]
+	public void A_hello_of_an_older_protocol_is_refused_for_its_version()
+	{
+		var network = new LoopbackNetwork();
+		NetworkSession server = Server(network);
+		var refused = new List<RefusalReason>();
+		server.PeerRefused += (_, reason) => refused.Add(reason);
+		INetworkTransport raw = network.Connect();
+		var writer = new BitWriter();
+		writer.WriteByte((byte)ControlMessage.Hello);
+		writer.WriteUInt16(Protocol.Version - 1);
+		writer.WriteUInt64(0);
+		raw.Send(PeerId.Server, Protocol.ControlChannel, reliable: true, writer.WrittenBytes);
+
+		server.Update(0);
+
+		refused.Should().Equal(RefusalReason.ProtocolVersion);
+		server.MalformedPackets.Should().Be(0, "what follows the version is another protocol's to lay out");
+	}
+
+	[Fact]
+	[Trait("Networking", "Session")]
 	public void A_refused_client_that_stays_is_disconnected_after_the_linger()
 	{
 		var network = new LoopbackNetwork();
 		NetworkSession server = Server(network);
 		INetworkTransport raw = network.Connect();
 		var writer = new BitWriter();
-		new HelloMessage(Protocol.Version + 1, 0, 0, 0).Write(writer);
+		new HelloMessage(Protocol.Version + 1, 0, 0, 0, BodyPrecision.Default).Write(writer);
 		raw.Send(PeerId.Server, Protocol.ControlChannel, reliable: true, writer.WrittenBytes);
 
 		server.Update(0);
@@ -359,7 +387,7 @@ public class SessionTests
 		NetworkSession server = Server(network);
 		INetworkTransport refused = network.Connect();
 		var writer = new BitWriter();
-		new HelloMessage(Protocol.Version + 1, 0, 0, 0).Write(writer);
+		new HelloMessage(Protocol.Version + 1, 0, 0, 0, BodyPrecision.Default).Write(writer);
 		refused.Send(PeerId.Server, Protocol.ControlChannel, reliable: true, writer.WrittenBytes);
 		server.Update(0);
 		network.Connect();

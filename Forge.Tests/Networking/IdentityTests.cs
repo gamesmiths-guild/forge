@@ -10,6 +10,7 @@ using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Networking;
 using Gamesmiths.Forge.Networking.Messages;
+using Gamesmiths.Forge.Networking.Replication;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
@@ -149,7 +150,7 @@ public class IdentityTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCu
 	[Theory]
 	[Trait("Networking", "Identity")]
 	[InlineData(0)]
-	[InlineData(6)]
+	[InlineData(7)]
 	[InlineData(255)]
 	public void A_refusal_with_no_reason_is_malformed(byte reason)
 	{
@@ -161,7 +162,7 @@ public class IdentityTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCu
 	public void Control_messages_read_back()
 	{
 		var writer = new BitWriter();
-		new HelloMessage(Protocol.Version, 0xABCDEF, 0x777, 0x123456).Write(writer);
+		new HelloMessage(Protocol.Version, 0xABCDEF, 0x777, 0x123456, new BodyPrecision(100, 10, 12)).Write(writer);
 		new WelcomeMessage(60, 1234, 0xFEEDFACE).Write(writer);
 		new RefusedMessage(RefusalReason.AssetRegistry).Write(writer);
 		new PingMessage(42).Write(writer);
@@ -171,7 +172,8 @@ public class IdentityTests(TagsAndCuesFixture fixture) : IClassFixture<TagsAndCu
 		var reader = new BitReader(writer.ToArray());
 
 		reader.ReadByte().Should().Be((byte)ControlMessage.Hello);
-		HelloMessage.Read(reader).Should().Be(new HelloMessage(Protocol.Version, 0xABCDEF, 0x777, 0x123456));
+		HelloMessage.Read(reader)
+			.Should().Be(new HelloMessage(Protocol.Version, 0xABCDEF, 0x777, 0x123456, new BodyPrecision(100, 10, 12)));
 		reader.ReadByte().Should().Be((byte)ControlMessage.Welcome);
 		WelcomeMessage.Read(reader).Should().Be(new WelcomeMessage(60, 1234, 0xFEEDFACE));
 		reader.ReadByte().Should().Be((byte)ControlMessage.Refused);

@@ -171,6 +171,10 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	// after this tick and before the next one's advance.
 	internal long AdvancedTick { get; private set; } = -1;
 
+	// The first tick the owner advanced through, -1 before it: how long it has run is what a client predicting it
+	// starts from.
+	internal long FirstTick { get; private set; } = -1;
+
 	internal bool IsAdvancing { get; set; }
 
 	// Set while an effect that landed from outside the owner's ticks executes, so what it raises isn't taken for the
@@ -604,6 +608,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	internal void EndAdvance()
 	{
 		AdvancedTick = Tick;
+
+		if (FirstTick < 0)
+		{
+			FirstTick = Tick;
+		}
 	}
 
 	// A restore puts the owner as a tick left it.

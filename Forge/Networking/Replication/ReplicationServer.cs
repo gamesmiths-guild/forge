@@ -65,6 +65,7 @@ public sealed class ReplicationServer
 	private readonly BitWriter _entry = new();
 	private readonly List<EntityView> _candidates = [];
 	private readonly List<ushort> _tagScratch = [];
+	private readonly List<ushort> _entryTags = [];
 	private readonly Dictionary<Type, int> _contextCodecs = [];
 	private readonly HashSet<EffectData> _effectsNotListed = [];
 	private readonly HashSet<AbilityData> _abilitiesNotListed = [];
@@ -338,7 +339,7 @@ public sealed class ReplicationServer
 
 		foreach (ReplicatedEntity entity in _entityList)
 		{
-			entity.Capture(tick, BodySource);
+			entity.Capture(tick, BodySource, _session.BodyPrecision);
 			entity.CaptureEffects(tick, this, _session.Clock);
 			entity.CaptureGraphs(tick, this);
 			ExpireEvents(entity, oldestEvent);
@@ -657,12 +658,30 @@ public sealed class ReplicationServer
 	// A graph run goes to a client while the client lacks what it is, how it is or what it did lately, and once it has
 	// ended, to a client that has it. One the client never had goes only for its events, as a run too short to have
 	// been seen does. A despawning entity's graphs go only for their events. The owner of an entity runs the runs it
-	// predicts itself, so it gets none of them, and of a run it takes in, only that it started and that it ended.
+	// predicts itself, so of them it gets only the actions executed outside its tick, and of a run it takes in, only
+	// that it started and that it ended.
 	private static bool GraphChanged(EntityView view, ReplicatedGraph graph, bool despawning)
 	{
-		if (!graph.IsListed || (view.IsOwner && graph.PredictedByOwner))
+		if (!graph.IsListed)
 		{
 			return false;
+		}
+
+		if (view.IsOwner && graph.PredictedByOwner)
+		{
+			if (graph.OwnerHearsStamp < 0 || !graph.Table.RunsOnClients)
+			{
+				return false;
+			}
+
+			bool outside = HasEvents(graph, view.EventsAcked, fromOutside: true);
+
+			if (despawning)
+			{
+				return outside;
+			}
+
+			return outside || (graph.Removed ? graph.RemovedStamp > view.Seen : graph.OwnerHearsStamp > view.Acked);
 		}
 
 		if (view.IsOwner && graph.TakenInByOwner)
@@ -696,9 +715,17 @@ public sealed class ReplicationServer
 			|| events;
 	}
 
-	private static bool HasEvents(ReplicatedGraph graph, uint eventsAcked)
+	private static bool HasEvents(ReplicatedGraph graph, uint eventsAcked, bool fromOutside = false)
 	{
-		return graph.Events.Count > 0 && graph.Events[^1].Sequence > eventsAcked;
+		for (int i = graph.Events.Count - 1; i >= 0 && graph.Events[i].Sequence > eventsAcked; i--)
+		{
+			if (!fromOutside || graph.Events[i].FromOutside)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private static int Newer(long[] stamps, long acked)
@@ -813,6 +840,12 @@ public sealed class ReplicationServer
 			}
 
 			_packet.WriteBytes(_entry.WrittenBytes);
+
+			foreach (ushort tag in _entryTags)
+			{
+				_session.TagsManager.NoteSent(tag);
+			}
+
 			view.Accumulated = 0;
 			view.LeftOut = false;
 			view.Sent = true;
@@ -831,6 +864,7 @@ public sealed class ReplicationServer
 	{
 		ReplicatedEntity entity = view.Entity;
 		_entry.Clear();
+		_entryTags.Clear();
 		_entry.WriteVarUInt(entity.Id.Value);
 
 		if (view.Leaving)
@@ -876,6 +910,13 @@ public sealed class ReplicationServer
 			{
 				WriteSpawnKey(key, tick);
 			}
+			else if (view.IsOwner && !entity.IsPlaced)
+			{
+				// One the server spawned has run since: its owner starts it that many ticks back, so both run the same
+				// ticks.
+				long first = entity.Entity.EffectsManager.FirstTick;
+				_entry.WriteVarUInt(first < 0 || first > tick ? 0 : (ulong)(tick - first + 1));
+			}
 		}
 
 		WriteAttributes(view);
@@ -895,7 +936,7 @@ public sealed class ReplicationServer
 
 			if (entity.ShadowBody is QuantizedBody body)
 			{
-				BodyCodec.Write(_entry, body);
+				BodyCodec.Write(_entry, body, _session.BodyPrecision);
 			}
 		}
 
@@ -971,6 +1012,14 @@ public sealed class ReplicationServer
 		}
 	}
 
+	// A tag travels as its net index, counted for the manager's report of the tags that travel most once its entry is
+	// in the packet.
+	private void WriteTag(ushort index)
+	{
+		_entry.WriteVarUInt(index);
+		_entryTags.Add(index);
+	}
+
 	private void WriteTags(ReplicatedEntity entity, long acked, long seen)
 	{
 		_tagScratch.Clear();
@@ -1008,14 +1057,14 @@ public sealed class ReplicationServer
 
 		for (int i = 0; i < added; i++)
 		{
-			_entry.WriteVarUInt(_tagScratch[i]);
+			WriteTag(_tagScratch[i]);
 		}
 
 		_entry.WriteVarUInt((ulong)(_tagScratch.Count - added));
 
 		for (int i = added; i < _tagScratch.Count; i++)
 		{
-			_entry.WriteVarUInt(_tagScratch[i]);
+			WriteTag(_tagScratch[i]);
 		}
 	}
 
@@ -1062,7 +1111,7 @@ public sealed class ReplicationServer
 
 			_entry.WriteVarUInt(cue.Instance);
 			_entry.WriteBool(false);
-			_entry.WriteVarUInt(_session.TagsManager.GetNetIndexFromTag(cue.CueTag));
+			WriteTag(_session.TagsManager.GetNetIndexFromTag(cue.CueTag));
 			ReplicationCodec.WriteParameters(_entry, cue.Parameters);
 		}
 
@@ -1119,7 +1168,7 @@ public sealed class ReplicationServer
 			}
 
 			_entry.WriteVarUInt(cueEvent.Sequence);
-			_entry.WriteVarUInt(_session.TagsManager.GetNetIndexFromTag(cueEvent.CueTag));
+			WriteTag(_session.TagsManager.GetNetIndexFromTag(cueEvent.CueTag));
 			ReplicationCodec.WriteParameters(_entry, cueEvent.Parameters);
 		}
 
@@ -1244,7 +1293,7 @@ public sealed class ReplicationServer
 
 			for (int i = 0; i < effect.SetByCallers.Count; i++)
 			{
-				_entry.WriteVarUInt(effect.SetByCallers[i].Key);
+				WriteTag(effect.SetByCallers[i].Key);
 				_entry.WriteFloat(effect.SetByCallers[i].Value);
 			}
 		}
@@ -1304,11 +1353,14 @@ public sealed class ReplicationServer
 		// run goes.
 		bool takenIn = view.IsOwner && graph.TakenInByOwner;
 
+		// And of a run it predicts, only the actions executed outside its tick, in a copy that runs nothing else.
+		bool outside = view.IsOwner && graph.PredictedByOwner;
+
 		// An ended run with no actions left to bring goes as its end alone: a client that never had it has nothing to
 		// end.
 		bool live = !despawning && !graph.Removed;
-		bool brings = live || (!takenIn && HasEvents(graph, view.EventsAcked));
-		bool created = brings && graph.CreatedStamp > acked;
+		bool brings = live || (!takenIn && HasEvents(graph, view.EventsAcked, outside));
+		bool created = brings && (outside ? graph.OwnerHearsStamp : graph.CreatedStamp) > acked;
 		_entry.WriteBool(created);
 
 		if (created)
@@ -1326,7 +1378,7 @@ public sealed class ReplicationServer
 			}
 		}
 
-		bool states = !takenIn && live && graph.StatesStamp > acked;
+		bool states = !takenIn && !outside && live && graph.StatesStamp > acked;
 		_entry.WriteBool(states);
 
 		if (states)
@@ -1341,24 +1393,29 @@ public sealed class ReplicationServer
 			}
 		}
 
-		// A run that ended still sends its values with the actions it brings: they read them.
-		bool values = !takenIn && brings && graph.ValuesChanged(acked);
-		_entry.WriteBool(values);
-
-		if (values)
-		{
-			WriteGraphValues(graph, acked);
-		}
-
 		uint maxEvent = view.EventsAcked;
 		int events = 0;
 
 		foreach (ReplicatedGraph.GraphEvent graphEvent in graph.Events)
 		{
-			if (!takenIn && graphEvent.Sequence > view.EventsAcked)
+			if (!takenIn && graphEvent.Sequence > view.EventsAcked && (!outside || graphEvent.FromOutside))
 			{
 				events++;
 			}
+		}
+
+		// A run that ended still sends its values with the actions it brings: they read them. An owner's copy of a run
+		// it predicts gets them all with each action, since it hears nothing of the run between them.
+		long valuesAcked = outside ? -1 : acked;
+		bool values = !takenIn
+			&& brings
+			&& (!outside || created || events > 0)
+			&& graph.ValuesChanged(valuesAcked);
+		_entry.WriteBool(values);
+
+		if (values)
+		{
+			WriteGraphValues(graph, valuesAcked);
 		}
 
 		_entry.WriteBool(events > 0);
@@ -1369,7 +1426,7 @@ public sealed class ReplicationServer
 
 			foreach (ReplicatedGraph.GraphEvent graphEvent in graph.Events)
 			{
-				if (graphEvent.Sequence > view.EventsAcked)
+				if (graphEvent.Sequence > view.EventsAcked && (!outside || graphEvent.FromOutside))
 				{
 					maxEvent = Math.Max(maxEvent, graphEvent.Sequence);
 					_entry.WriteVarUInt(graphEvent.Sequence);
@@ -1650,11 +1707,12 @@ public sealed class ReplicationServer
 			{
 				// The values the action read, for a run that may end before the next send looks at it.
 				graph.CaptureValues(tick);
-				graph.Events.Add(new ReplicatedGraph.GraphEvent(
+				graph.Record(new ReplicatedGraph.GraphEvent(
 					++entity.LastEventSequence,
 					action,
 					graphContext.ActivationCount,
-					tick));
+					tick,
+					context.Owner.EffectsManager.FromOutside));
 			}
 		}
 	}

@@ -48,6 +48,9 @@ internal sealed class Prediction(
 	// The first tick recorded with it on the timeline, or -1 before it's recorded.
 	public long JoinTick { get; set; } = -1;
 
+	// The tick a spawn of the server's began from there, which it joins the timeline at.
+	public long? StartTick { get; init; }
+
 	// The first tick recorded without it after it was freed.
 	public long? LeaveTick { get; set; }
 

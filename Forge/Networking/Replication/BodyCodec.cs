@@ -6,42 +6,20 @@ using Gamesmiths.Forge.Core;
 namespace Gamesmiths.Forge.Networking.Replication;
 
 /// <summary>
-/// Writes and reads body states, quantized.
+/// Writes and reads body states, quantized to a session's <see cref="BodyPrecision"/>.
 /// </summary>
 public static class BodyCodec
 {
-	/// <summary>
-	/// The step positions are rounded to, in units.
-	/// </summary>
-	public const float PositionStep = 0.001f;
-
-	/// <summary>
-	/// The step velocities are rounded to, in units per second.
-	/// </summary>
-	public const float VelocityStep = 0.01f;
-
-	/// <summary>
-	/// How many bits each of a rotation's three smallest components takes.
-	/// </summary>
-	public const int RotationBits = 9;
-
-	// The steps in a unit, whole, so a state rebuilt from its steps is the float nearest the decimal value it stands for.
-	private const double PositionSteps = 1000;
-
-	private const double VelocitySteps = 100;
-
 	// A unit quaternion's three smallest components lie within this of zero.
 	private const float RotationRange = 0.70710678f;
-
-	// Even, so zero is a level: a body turned only about one axis, or not at all, comes back upright.
-	private const int RotationLevels = (1 << RotationBits) - 2;
 
 	/// <summary>
 	/// Quantizes a body state.
 	/// </summary>
 	/// <param name="state">The state.</param>
+	/// <param name="precision">The session's precision.</param>
 	/// <returns>The state as it travels.</returns>
-	public static QuantizedBody Quantize(in BodyState state)
+	public static QuantizedBody Quantize(in BodyState state, in BodyPrecision precision)
 	{
 		var rotation = Quaternion.Normalize(state.Rotation);
 
@@ -77,21 +55,21 @@ public static class BodyCodec
 		{
 			if (i != largest)
 			{
-				levels[written++] = Level(components[i]);
+				levels[written++] = Level(components[i], precision.RotationLevels);
 			}
 		}
 
 		return new QuantizedBody(
-			Steps(state.Position.X, PositionSteps),
-			Steps(state.Position.Y, PositionSteps),
-			Steps(state.Position.Z, PositionSteps),
+			Steps(state.Position.X, precision.PositionSteps),
+			Steps(state.Position.Y, precision.PositionSteps),
+			Steps(state.Position.Z, precision.PositionSteps),
 			largest,
 			levels[0],
 			levels[1],
 			levels[2],
-			Steps(state.Velocity.X, VelocitySteps),
-			Steps(state.Velocity.Y, VelocitySteps),
-			Steps(state.Velocity.Z, VelocitySteps),
+			Steps(state.Velocity.X, precision.VelocitySteps),
+			Steps(state.Velocity.Y, precision.VelocitySteps),
+			Steps(state.Velocity.Z, precision.VelocitySteps),
 			state.Grounded);
 	}
 
@@ -99,11 +77,18 @@ public static class BodyCodec
 	/// Rebuilds the body state a quantized one stands for.
 	/// </summary>
 	/// <param name="body">The quantized state.</param>
+	/// <param name="precision">The session's precision.</param>
 	/// <returns>The state, as the receiver sees it.</returns>
-	public static BodyState Dequantize(in QuantizedBody body)
+	public static BodyState Dequantize(in QuantizedBody body, in BodyPrecision precision)
 	{
+		int levels = precision.RotationLevels;
+
+		// Whole steps in a unit, so a state rebuilt from its steps is the float nearest the decimal value it stands
+		// for.
+		double positionSteps = precision.PositionSteps;
+		double velocitySteps = precision.VelocitySteps;
 		Span<float> components = stackalloc float[4];
-		Span<float> smallest = [FromLevel(body.A), FromLevel(body.B), FromLevel(body.C)];
+		Span<float> smallest = [FromLevel(body.A, levels), FromLevel(body.B, levels), FromLevel(body.C, levels)];
 		int read = 0;
 		float sumOfSquares = 0;
 
@@ -119,12 +104,15 @@ public static class BodyCodec
 		components[body.Largest] = MathF.Sqrt(Math.Max(0, 1 - sumOfSquares));
 
 		return new BodyState(
-			new Vector3((float)(body.X / PositionSteps), (float)(body.Y / PositionSteps), (float)(body.Z / PositionSteps)),
+			new Vector3(
+				(float)(body.X / positionSteps),
+				(float)(body.Y / positionSteps),
+				(float)(body.Z / positionSteps)),
 			Quaternion.Normalize(new Quaternion(components[0], components[1], components[2], components[3])),
 			new Vector3(
-				(float)(body.VelocityX / VelocitySteps),
-				(float)(body.VelocityY / VelocitySteps),
-				(float)(body.VelocityZ / VelocitySteps)),
+				(float)(body.VelocityX / velocitySteps),
+				(float)(body.VelocityY / velocitySteps),
+				(float)(body.VelocityZ / velocitySteps)),
 			body.Grounded);
 	}
 
@@ -133,15 +121,16 @@ public static class BodyCodec
 	/// </summary>
 	/// <param name="writer">The writer.</param>
 	/// <param name="body">The state.</param>
-	public static void Write(BitWriter writer, in QuantizedBody body)
+	/// <param name="precision">The session's precision.</param>
+	public static void Write(BitWriter writer, in QuantizedBody body, in BodyPrecision precision)
 	{
 		writer.WriteVarInt(body.X);
 		writer.WriteVarInt(body.Y);
 		writer.WriteVarInt(body.Z);
 		writer.WriteBits(body.Largest, 2);
-		writer.WriteBits(body.A, RotationBits);
-		writer.WriteBits(body.B, RotationBits);
-		writer.WriteBits(body.C, RotationBits);
+		writer.WriteBits(body.A, precision.RotationBits);
+		writer.WriteBits(body.B, precision.RotationBits);
+		writer.WriteBits(body.C, precision.RotationBits);
 		writer.WriteVarInt(body.VelocityX);
 		writer.WriteVarInt(body.VelocityY);
 		writer.WriteVarInt(body.VelocityZ);
@@ -152,17 +141,18 @@ public static class BodyCodec
 	/// Reads a quantized body state.
 	/// </summary>
 	/// <param name="reader">The reader.</param>
+	/// <param name="precision">The session's precision.</param>
 	/// <returns>The state.</returns>
-	public static QuantizedBody Read(BitReader reader)
+	public static QuantizedBody Read(BitReader reader, in BodyPrecision precision)
 	{
 		return new QuantizedBody(
 			reader.ReadVarInt(),
 			reader.ReadVarInt(),
 			reader.ReadVarInt(),
 			(byte)reader.ReadBits(2),
-			(ushort)reader.ReadBits(RotationBits),
-			(ushort)reader.ReadBits(RotationBits),
-			(ushort)reader.ReadBits(RotationBits),
+			(ushort)reader.ReadBits(precision.RotationBits),
+			(ushort)reader.ReadBits(precision.RotationBits),
+			(ushort)reader.ReadBits(precision.RotationBits),
 			reader.ReadVarInt(),
 			reader.ReadVarInt(),
 			reader.ReadVarInt(),
@@ -171,7 +161,7 @@ public static class BodyCodec
 
 	// Whether two states lie within a step of each other: a body a restore put back can settle a step off at a contact,
 	// which is no difference.
-	internal static bool WithinAStep(in QuantizedBody first, in QuantizedBody second)
+	internal static bool WithinAStep(in QuantizedBody first, in QuantizedBody second, in BodyPrecision precision)
 	{
 		const float RotationTolerance = 2e-5f;
 
@@ -183,7 +173,8 @@ public static class BodyCodec
 			&& Math.Abs(first.VelocityZ - second.VelocityZ) <= 1
 			&& first.Grounded == second.Grounded
 			&& Math.Abs(
-				Quaternion.Dot(Dequantize(first).Rotation, Dequantize(second).Rotation)) >= 1 - RotationTolerance;
+				Quaternion.Dot(Dequantize(first, precision).Rotation, Dequantize(second, precision).Rotation))
+				>= 1 - RotationTolerance;
 	}
 
 	// A body as it is, for where an entity is made: the client that predicts it runs its setup there, as the server
@@ -217,14 +208,14 @@ public static class BodyCodec
 		return float.IsNaN(value) ? 0 : (long)Math.Round(value * stepsPerUnit);
 	}
 
-	private static ushort Level(float component)
+	private static ushort Level(float component, int levels)
 	{
 		double normalized = Math.Clamp((component + RotationRange) / (2 * RotationRange), 0, 1);
-		return (ushort)Math.Round(normalized * RotationLevels);
+		return (ushort)Math.Round(normalized * levels);
 	}
 
-	private static float FromLevel(ushort level)
+	private static float FromLevel(ushort level, int levels)
 	{
-		return (float)(((double)level / RotationLevels * 2 * RotationRange) - RotationRange);
+		return (float)(((double)level / levels * 2 * RotationRange) - RotationRange);
 	}
 }

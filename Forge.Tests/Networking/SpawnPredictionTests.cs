@@ -279,10 +279,10 @@ public class SpawnPredictionTests
 		rig.Idle(10);
 		rig.Limbo.Should().Contain(bolt, "a packet of its tick came without its spawn");
 		rig.SpawnServerBolt();
-		rig.Idle(20);
+		rig.Idle(5);
 		rig.Server.Replication.BudgetBytes = ReplicationServer.DefaultBudgetBytes;
 		rig.ServerLink.Conditions = NetworkConditions.Good;
-		rig.Idle(20);
+		rig.Idle(15);
 
 		bolt.NetworkId.Should().Be(rig.ServerBolts[0].NetworkId);
 		rig.Returned.Should().Contain(bolt, "its spawn arrived, though the timeline can't go back to its ticks");

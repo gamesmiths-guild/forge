@@ -64,6 +64,9 @@ public class TagNode : IComparable<TagNode>, IComparable
 
 	internal bool IsExplicitTag { get; }
 
+	// How many times the tag was written to a packet.
+	internal int SentCount { get; set; }
+
 	/// <summary>
 	/// Initializes a new instance of the <see cref="TagNode"/> class.
 	/// </summary>

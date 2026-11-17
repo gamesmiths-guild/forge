@@ -893,9 +893,13 @@ public class EntityAbilities(IForgeEntity owner)
 		OnAbilityActivated?.Invoke(abilityHandle);
 	}
 
+	// A refusal changes nothing, so the ticks a correction runs again only repeat the ones already raised.
 	internal void NotifyAbilityActivationFailed(AbilityHandle abilityHandle, AbilityActivationFailures failureFlags)
 	{
-		OnAbilityActivationFailed?.Invoke(abilityHandle, failureFlags);
+		if (!IsReplaying)
+		{
+			OnAbilityActivationFailed?.Invoke(abilityHandle, failureFlags);
+		}
 	}
 
 	internal EntityAbilitiesSnapshot CaptureSnapshot()

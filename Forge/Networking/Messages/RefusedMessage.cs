@@ -31,6 +31,11 @@ public enum RefusalReason : byte
 	/// The client's tags differ from the server's, so an input event would raise another tag.
 	/// </summary>
 	Tags = 5,
+
+	/// <summary>
+	/// The client rounds body states to another precision than the server, so it would read bodies wrong.
+	/// </summary>
+	BodyPrecision = 6,
 }
 
 /// <summary>
@@ -59,7 +64,7 @@ public readonly record struct RefusedMessage(RefusalReason Reason)
 	{
 		byte reason = reader.ReadByte();
 
-		if (reason is < (byte)RefusalReason.ProtocolVersion or > (byte)RefusalReason.Tags)
+		if (reason is < (byte)RefusalReason.ProtocolVersion or > (byte)RefusalReason.BodyPrecision)
 		{
 			throw new MalformedPacketException($"{reason} is not a refusal reason.");
 		}
