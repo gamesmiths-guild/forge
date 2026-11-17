@@ -378,6 +378,13 @@ public sealed class NetworkSession
 		foreach (NetworkPeer peer in _readyPeers)
 		{
 			InputDelivery delivery = peer.Input.Take(tick, out InputCommand command);
+
+			// A lost command's stand-in says nothing about what the client was shown.
+			if (delivery == InputDelivery.Received)
+			{
+				Replication.LagCompensation.NoteViewDelay(peer.Id, command.ViewDelay);
+			}
+
 			Replication.DeliverInput(peer.Id, command, raisableEvents);
 			InputTaken?.Invoke(peer, command, delivery);
 		}
@@ -455,6 +462,7 @@ public sealed class NetworkSession
 				left.IsReady = false;
 				_readyPeers.Remove(left);
 				Replication!.RemoveClient(left);
+				Replication.LagCompensation.ForgetPeer(left.Id);
 				PeerLeft?.Invoke(left);
 			}
 
@@ -606,7 +614,7 @@ public sealed class NetworkSession
 		{
 			if (State == SessionState.Ready)
 			{
-				Mirror!.Receive(_reader);
+				Mirror!.Receive(_reader, ClockSync.HasEstimate ? ClockSync.EstimateServerTick(_localTime) : null);
 			}
 
 			return;

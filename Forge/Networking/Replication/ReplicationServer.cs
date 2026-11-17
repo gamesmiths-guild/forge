@@ -104,6 +104,12 @@ public sealed class ReplicationServer
 	public IRelevancy Relevancy { get; set; } = AlwaysRelevant.Instance;
 
 	/// <summary>
+	/// Gets the server's memory of the world as its clients were shown it, which tests their shots against what they
+	/// saw.
+	/// </summary>
+	public LagCompensation LagCompensation { get; }
+
+	/// <summary>
 	/// Gets or sets where an entity's body state comes from: its mover's, by default. A host whose entities have bodies
 	/// without movers reads them here.
 	/// </summary>
@@ -151,6 +157,7 @@ public sealed class ReplicationServer
 	internal ReplicationServer(NetworkSession session)
 	{
 		_session = session;
+		LagCompensation = new LagCompensation(session.Clock);
 		_cueObserver = new CueObserver(this);
 		_graphObserver = new GraphObserver(this);
 
@@ -214,6 +221,7 @@ public sealed class ReplicationServer
 		_entities[entity.NetworkId] = replicated;
 		_byEntity[entity] = replicated;
 		_entityList.Add(replicated);
+		LagCompensation.Track(replicated);
 		_nextId = Math.Max(_nextId, entity.NetworkId.Value + 1);
 
 		entity.CuesManager.AddObserver(_cueObserver);
@@ -266,6 +274,7 @@ public sealed class ReplicationServer
 		_entities.Remove(replicated.Id);
 		_entityList.Remove(replicated);
 		replicated.DespawnedAtTick = _session.Clock.Tick;
+		LagCompensation.Untrack(replicated);
 
 		// Its events and graphs stay: its last events go with its despawn, so what it did as it went, a burst as it
 		// dies, still shows.
@@ -340,6 +349,12 @@ public sealed class ReplicationServer
 		foreach (ReplicatedEntity entity in _entityList)
 		{
 			entity.Capture(tick, BodySource, _session.BodyPrecision);
+
+			if (entity.ShadowBody is QuantizedBody shadow)
+			{
+				LagCompensation.Record(entity, tick, BodyCodec.Dequantize(shadow, _session.BodyPrecision));
+			}
+
 			entity.CaptureEffects(tick, this, _session.Clock);
 			entity.CaptureGraphs(tick, this);
 			ExpireEvents(entity, oldestEvent);

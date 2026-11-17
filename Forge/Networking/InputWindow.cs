@@ -26,6 +26,9 @@ public sealed class InputWindow
 	/// </summary>
 	public const int MaxCapacity = 15;
 
+	// A command's view delay travels in eighths of a tick.
+	private const int ViewDelaySteps = 8;
+
 	private readonly List<InputCommand> _commands = [];
 
 	/// <summary>
@@ -81,13 +84,22 @@ public sealed class InputWindow
 		long newestTick = reader.ReadVarInt();
 		int count = (int)reader.ReadBits(4);
 		InputFrame previous = default;
+		long previousDelay = 0;
 
 		for (int i = 0; i < count; i++)
 		{
 			InputFrame frame = InputCodec.ReadFrame(reader, previous, actions);
 			ushort[] events = InputCodec.ReadEvents(reader);
-			commands.Add(new InputCommand(0, frame, events));
+			long delay = reader.ReadBool() ? previousDelay : previousDelay + reader.ReadVarInt();
+
+			if (delay < 0)
+			{
+				throw new MalformedPacketException("A view delay is negative.");
+			}
+
+			commands.Add(new InputCommand(0, frame, events) { ViewDelay = (double)delay / ViewDelaySteps });
 			previous = frame;
+			previousDelay = delay;
 		}
 
 		if (count == 0)
@@ -184,6 +196,7 @@ public sealed class InputWindow
 		writer.WriteBits((ulong)_commands.Count, 4);
 
 		InputFrame previous = default;
+		long previousDelay = 0;
 
 		foreach (InputCommand command in _commands)
 		{
@@ -191,6 +204,17 @@ public sealed class InputWindow
 			InputCodec.WriteFrame(writer, command.Frame, previous, Actions);
 			InputCodec.WriteEvents(writer, command.Events);
 			previous = command.Frame;
+
+			// The delay barely moves from tick to tick, so it's mostly a single bit.
+			long delay = (long)Math.Round(Math.Max(command.ViewDelay, 0) * ViewDelaySteps);
+			writer.WriteBool(delay == previousDelay);
+
+			if (delay != previousDelay)
+			{
+				writer.WriteVarInt(delay - previousDelay);
+			}
+
+			previousDelay = delay;
 		}
 
 		for (int i = 1; i < _commands.Count; i++)

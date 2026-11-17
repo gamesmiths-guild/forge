@@ -7,6 +7,8 @@ using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Stacking;
+using Gamesmiths.Forge.Networking.Replication;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Effects;
 
@@ -191,6 +193,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	// On the client that predicts the owner, only what the owner's own ticks apply lands, and what the server applied
 	// from elsewhere arrives through ApplyServerEffect.
 	internal bool IsPredicted { get; set; }
+
+	// The server's lag compensation, on an entity it replicates: while a compensated hit is tested, an application's
+	// checks read the effects that count as the instigator saw them as they were.
+	internal LagCompensation? LagCompensation { get; set; }
+
+	// The client, on an entity it mirrors: what its predicted runs apply here is refused, and shown as it predicts.
+	internal IMirrorPresenter? MirrorPresenter { get; set; }
 
 	internal IReadOnlyList<ActiveEffect> ActiveEffects => _activeEffects;
 
@@ -921,6 +930,19 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		}
 	}
 
+	private static bool AddedSince(IEffectApplicationBlocker blocker, LagCompensation.HeldEffect[] held)
+	{
+		foreach (LagCompensation.HeldEffect effect in held)
+		{
+			if (effect.EndTick is null && effect.Blockers.Contains(blocker))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private static bool IsStillActive(ActiveEffect activeEffect)
 	{
 		return activeEffect.EffectEvaluatedData.Target.EffectsManager._activeEffects.Contains(activeEffect);
@@ -999,12 +1021,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		applied = false;
 
-		if (_tornDown || RefusesOutsideApplication() || !effect.CanApply(Owner))
+		if (_tornDown)
 		{
+			MirrorPresenter?.Refused(Owner, effect, applicationContext);
 			return null;
 		}
 
-		if (IsApplicationBlocked(effect))
+		if (RefusesOutsideApplication() || !CanApply(effect))
 		{
 			return null;
 		}
@@ -1080,8 +1103,64 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return _applyingServerEffect ? _applicationDepth > 1 : FromOutside;
 	}
 
-	private bool IsApplicationBlocked(Effect effect)
+	private bool CanApply(Effect effect)
 	{
+		IReadOnlyList<LagCompensation.HeldEffect>? adjustments = LagCompensation?.Adjustments(Owner);
+
+		if (adjustments is null || adjustments.Count == 0)
+		{
+			return effect.CanApply(Owner) && !IsApplicationBlocked(effect, []);
+		}
+
+		// Copied, since what a check sets off can test another hit's application.
+		LagCompensation.HeldEffect[] held = [.. adjustments];
+		HoldRewound(held, true);
+
+		try
+		{
+			return effect.CanApply(Owner) && !IsApplicationBlocked(effect, held);
+		}
+		finally
+		{
+			HoldRewound(held, false);
+		}
+	}
+
+	// Puts the tags of the effects that changed since the instigator's tick as they were then, without raising
+	// anything, or back as they are. One removed since was there then; one added since wasn't.
+	private void HoldRewound(LagCompensation.HeldEffect[] held, bool asThen)
+	{
+		foreach (LagCompensation.HeldEffect effect in held)
+		{
+			bool wasThere = effect.EndTick is not null;
+
+			foreach (TagContainer tags in effect.Tags)
+			{
+				Owner.Tags.RestoreModifierTags(tags, asThen == wasThere);
+			}
+		}
+	}
+
+	private bool IsApplicationBlocked(Effect effect, LagCompensation.HeldEffect[] held)
+	{
+		foreach (LagCompensation.HeldEffect removed in held)
+		{
+			if (removed.EndTick is null)
+			{
+				continue;
+			}
+
+			// A removed immunity lets everything through, so its queries are read as it would have.
+			ImmunityEffectComponent? immunity = removed.Immunities.FirstOrDefault(
+				x => Array.Exists(x.ImmunityQueries, query => !query.IsEmpty && query.Matches(effect)));
+
+			if (immunity is not null)
+			{
+				OnEffectApplicationBlocked?.Invoke(effect, immunity);
+				return true;
+			}
+		}
+
 		// Indexed rather than foreach so that a blocker unregistering itself while being consulted — an immunity effect
 		// that removes itself on its first block, say — doesn't invalidate the iteration. Costs nothing when the list
 		// is empty, which is the common case.
@@ -1091,7 +1170,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		{
 			IEffectApplicationBlocker blocker = _applicationBlockers[i];
 
-			if (!blocker.AllowEffectApplication(in effect))
+			if (!AddedSince(blocker, held) && !blocker.AllowEffectApplication(in effect))
 			{
 				OnEffectApplicationBlocked?.Invoke(effect, blocker);
 				return true;

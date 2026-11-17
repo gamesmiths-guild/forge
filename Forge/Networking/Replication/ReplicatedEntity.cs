@@ -60,6 +60,12 @@ public sealed class ReplicatedEntity
 	public float Priority { get; set; } = 1;
 
 	/// <summary>
+	/// Gets or sets a value indicating whether a client's action are tested against the entity's body where the client
+	/// was shown it (<see cref="LagCompensation"/>). Off, they meet it where it is. On by default.
+	/// </summary>
+	public bool LagCompensated { get; set; } = true;
+
+	/// <summary>
 	/// Gets the body state the server last captured, or <see langword="null"/> when the entity has no body.
 	/// </summary>
 	public BodyState? Body { get; private set; }

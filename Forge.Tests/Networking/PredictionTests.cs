@@ -494,6 +494,115 @@ public class PredictionTests
 		rig.Mirror.Corrections.Should().BeLessThan(40);
 	}
 
+	[Theory]
+	[Trait("Networking", "Prediction")]
+	[InlineData(CuePrediction.Default, true, true)]
+	[InlineData(CuePrediction.Default, false, false)]
+	[InlineData(CuePrediction.Always, false, true)]
+	[InlineData(CuePrediction.Never, true, false)]
+	public void A_hit_a_predicted_run_lands_on_a_mirror_shows_its_executed_cues_once(
+		CuePrediction prediction,
+		bool predictsByDefault,
+		bool early)
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+		rig.Mirror.PredictCuesOnOthers = predictsByDefault;
+		var flashes = new CueRecorder();
+		rig.ClientCues.RegisterCue(rig.Assets.Tag("cue.dash"), flashes);
+		Player dummy = rig.AddDummy();
+		IForgeEntity mirror = rig.Mirror.Entities.Single(x => x != rig.ClientPlayer);
+		int health = mirror.Attributes[Health].BaseValue;
+
+		mirror.EffectsManager.ApplyEffect(
+			new Effect(FlashData(rig.Assets, prediction), new EffectOwnership(rig.ClientPlayer, rig.ClientPlayer)));
+		rig.ClientCues.PresentCues();
+
+		flashes.Log.Should().HaveCount(early ? 1 : 0);
+		mirror.Attributes[Health].BaseValue.Should().Be(health, "only the cue shows early: the effect is the server's");
+
+		dummy.EffectsManager.ApplyEffect(
+			new Effect(
+				FlashData(rig.ServerAssets, prediction),
+				new EffectOwnership(rig.ServerPlayer, rig.ServerPlayer)));
+		rig.Idle(60);
+
+		flashes.Log.Should().Equal(["execute"], "the server's cue for a hit shown early isn't shown again");
+		mirror.Attributes[Health].BaseValue.Should().Be(health - 10);
+	}
+
+	[Theory]
+	[Trait("Networking", "Prediction")]
+	[InlineData(true)]
+	[InlineData(false)]
+	public void A_persistent_cue_shown_early_on_a_mirror_is_taken_over_or_withdrawn(bool serverApplies)
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+		var glows = new CueRecorder();
+		rig.ClientCues.RegisterCue(rig.Assets.Tag("cue.fire"), glows);
+		Player dummy = rig.AddDummy();
+		IForgeEntity mirror = rig.Mirror.Entities.Single(x => x != rig.ClientPlayer);
+
+		mirror.EffectsManager.ApplyEffect(
+			new Effect(GlowData(rig.Assets), new EffectOwnership(rig.ClientPlayer, rig.ClientPlayer)));
+		rig.ClientCues.PresentCues();
+		glows.Log.Should().Equal("apply");
+
+		if (serverApplies)
+		{
+			ActiveEffectHandle glow = dummy.EffectsManager.ApplyEffect(
+				new Effect(GlowData(rig.ServerAssets), new EffectOwnership(rig.ServerPlayer, rig.ServerPlayer)))!;
+			rig.Idle(30);
+			dummy.EffectsManager.RemoveEffect(glow);
+		}
+
+		rig.Idle(60);
+		rig.Mirror.Show(rig.Client.Clock.Tick + 60);
+		rig.ClientCues.PresentCues();
+
+		glows.Log.Should().Equal(
+			serverApplies ? ["apply", "update", "interrupt"] : ["apply", "interrupt"],
+			serverApplies ? "the server's cue takes over the one shown early" : "the server never applied it");
+	}
+
+	// Flash: an instant -10 to Health, with cue.dash.
+	private static EffectData FlashData(Assets assets, CuePrediction prediction)
+	{
+		return new EffectData(
+			"Flash",
+			new DurationData(DurationType.Instant),
+			assets.Hurt.Modifiers,
+			cues:
+			[
+				new CueData(
+					new TagContainer(assets.Tags, [assets.Tag("cue.dash")]),
+					0,
+					10,
+					CueMagnitudeType.EffectLevel,
+					PredictOnOthers: prediction)
+			]);
+	}
+
+	// Glow: half a second of cue.fire, shown early on others.
+	private static EffectData GlowData(Assets assets)
+	{
+		return new EffectData(
+			"Glow",
+			new DurationData(
+				DurationType.HasDuration,
+				new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(0.5f))),
+			cues:
+			[
+				new CueData(
+					new TagContainer(assets.Tags, [assets.Tag("cue.fire")]),
+					0,
+					1,
+					CueMagnitudeType.EffectLevel,
+					PredictOnOthers: CuePrediction.Always)
+			]);
+	}
+
 	private sealed class Assets
 	{
 		public TagsManager Tags { get; } = new(_tagNames);
@@ -1025,6 +1134,31 @@ public class PredictionTests
 		}
 	}
 
+	private sealed class CueRecorder : ICueHandler
+	{
+		public List<string> Log { get; } = [];
+
+		public void OnExecute(IForgeEntity? target, CueParameters? parameters)
+		{
+			Log.Add("execute");
+		}
+
+		public void OnApply(IForgeEntity? target, CueParameters? parameters)
+		{
+			Log.Add("apply");
+		}
+
+		public void OnRemove(IForgeEntity? target, bool interrupted)
+		{
+			Log.Add(interrupted ? "interrupt" : "remove");
+		}
+
+		public void OnUpdate(IForgeEntity? target, CueParameters? parameters)
+		{
+			Log.Add("update");
+		}
+	}
+
 	private sealed class Rig : IReplicationHost
 	{
 		private readonly ConditionedTransport _serverLink;
@@ -1174,6 +1308,14 @@ public class PredictionTests
 			Step(waits: true);
 		}
 
+		public Player AddDummy()
+		{
+			var dummy = new Player(ServerAssets, ServerCues) { NetworkId = Server.Replication!.AllocateId() };
+			Server.Replication.Register(dummy, 0, PeerId.None);
+			Idle(30);
+			return dummy;
+		}
+
 		public void Idle(int ticks)
 		{
 			_frame = default;
@@ -1258,13 +1400,20 @@ public class PredictionTests
 				NetworkId = id,
 				Random = Seeded(id),
 			};
-			ClientPlayer = player;
+			if (owner == Client.LocalPeer)
+			{
+				ClientPlayer = player;
+			}
+
 			return player;
 		}
 
 		public void Despawn(IForgeEntity entity)
 		{
-			ClientPlayer = null;
+			if (entity == ClientPlayer)
+			{
+				ClientPlayer = null;
+			}
 		}
 
 		// Rolls from the entity's id, the same on both machines until its first tick, as a game seeds a networked
