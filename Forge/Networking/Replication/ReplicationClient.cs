@@ -181,8 +181,8 @@ public sealed class ReplicationClient
 	public bool PredictCuesOnOthers { get; set; } = true;
 
 	/// <summary>
-	/// Gets how far behind the newest state it holds this client should show the server's entities, worked out from
-	/// how the state packets arrive, for a host that adapts its interpolation delay to the link.
+	/// Gets how far behind the newest state it holds this client should show the server's entities, worked out from how
+	/// the state packets arrive, for a host that adapts its interpolation delay to the link.
 	/// </summary>
 	public InterpolationDelay InterpolationDelay { get; }
 
@@ -842,12 +842,17 @@ public sealed class ReplicationClient
 				break;
 			}
 
-			entries?.Add(start);
-			ReadEntry(reader, new NetworkEntityId(id), tick, previousTick, bodies, state);
+			// An entry taken whole as it arrives isn't read again when it's shown: by then, a despawn it was followed
+			// by may have taken its entity, which its spawn would make again.
+			if (!ReadEntry(reader, new NetworkEntityId(id), tick, previousTick, bodies, state))
+			{
+				entries?.Add(start);
+			}
 		}
 	}
 
-	private void ReadEntry(BitReader reader, NetworkEntityId id, long tick, long previousTick, bool bodies, bool state)
+	// Returns whether the entry's state was applied.
+	private bool ReadEntry(BitReader reader, NetworkEntityId id, long tick, long previousTick, bool bodies, bool state)
 	{
 		var kind = (EntryKind)reader.ReadBits(2);
 		_mirrors.TryGetValue(id, out Mirror? mirror);
@@ -889,7 +894,7 @@ public sealed class ReplicationClient
 				}
 
 				reader.Align();
-				return;
+				return state;
 
 			case EntryKind.Spawn:
 				SpawnFields fields = ReadSpawnFields(reader, tick);
@@ -919,6 +924,7 @@ public sealed class ReplicationClient
 			: mirror?.Body ?? _pendingBodies.GetValueOrDefault(id);
 		ReadState(reader, state ? mirror : null, body, tick, previousTick);
 		reader.Align();
+		return state;
 	}
 
 	// Whether a spawn is of an entity this client predicts: one the server spawned for this client's peer.
