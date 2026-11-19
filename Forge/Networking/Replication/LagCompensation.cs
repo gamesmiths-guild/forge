@@ -263,8 +263,8 @@ public sealed class LagCompensation
 	}
 
 	// The effects of an entity that count as the instigator saw them and changed since: added since, to leave out, and
-	// removed since, to put in. Empty outside a scope.
-	internal IReadOnlyList<HeldEffect> Adjustments(IForgeEntity entity)
+	// removed since, to put in, and one being removed, whatever it was. Empty outside a scope.
+	internal IReadOnlyList<HeldEffect> Adjustments(IForgeEntity entity, ActiveEffect? removing)
 	{
 		_adjusted.Clear();
 
@@ -275,16 +275,19 @@ public sealed class LagCompensation
 
 		foreach (HeldEffect effect in tracked.Effects)
 		{
-			bool then = effect.StartTick <= ShownTick && (effect.EndTick is null || effect.EndTick > ShownTick);
-			bool now = effect.EndTick is null;
-
-			if (then != now)
+			if (WasThere(effect) != (effect.EndTick is null) || effect.Effect == removing)
 			{
 				_adjusted.Add(effect);
 			}
 		}
 
 		return _adjusted;
+	}
+
+	// Whether the effect was on its entity at the tick the open scope tests against.
+	internal bool WasThere(HeldEffect effect)
+	{
+		return effect.StartTick <= ShownTick && (effect.EndTick is null || effect.EndTick > ShownTick);
 	}
 
 	// An effect that counts as the instigator saw it, with what it grants for an application's checks: its tags and its

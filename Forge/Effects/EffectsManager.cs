@@ -45,6 +45,9 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	// Reused by every update, so a tick allocates nothing. Sharing one list is what makes the update non-re-entrant.
 	private readonly List<ActiveEffect> _updateBuffer = [];
 
+	// The tag grants a lag-compensated check put as the hit's instigator saw them, with whether each was put in.
+	private readonly List<HeldGrant> _heldGrants = [];
+
 	private int _applicationDepth;
 
 	// Removals and updates in progress, which like applications run callbacks part way through.
@@ -60,14 +63,16 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private bool _serverEffectFromOutside;
 
-	// The effects whose tags are held as a lag-compensated hit's instigator saw them, while a check reads them, and
-	// which of them had ended as they were held.
+	// The effects held as a lag-compensated hit's instigator saw them, while a check reads them, and whether each was
+	// there then.
 	private LagCompensation.HeldEffect[]? _held;
 
-	private bool[]? _heldEnded;
+	private bool[]? _heldThen;
 
-	// Which of them have their tags held: not one being removed, whose removal takes its tags as they are.
-	private bool[]? _heldTags;
+	// The effect being removed, and how many of its tag grants its removal took away so far.
+	private ActiveEffect? _removing;
+
+	private int _removingGrantsTaken;
 
 	/// <summary>
 	/// Event triggered whenever an effect lands on the owner, carrying its evaluated data.
@@ -1122,7 +1127,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	// anything: one removed since was there then, one added since wasn't. False when nothing changed since.
 	private bool HoldRewound()
 	{
-		IReadOnlyList<LagCompensation.HeldEffect>? adjustments = LagCompensation?.Adjustments(Owner);
+		IReadOnlyList<LagCompensation.HeldEffect>? adjustments = LagCompensation?.Adjustments(Owner, _removing);
 
 		if (adjustments is null || adjustments.Count == 0)
 		{
@@ -1131,9 +1136,26 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 		// Copied, since what a check sets off can test another hit's application.
 		_held = [.. adjustments];
-		_heldEnded = [.. _held.Select(x => x.EndTick is not null)];
-		_heldTags = [.. _held.Select(x => x.EndTick is not null || _activeEffects.Contains(x.Effect))];
-		RestoreHeldTags(asThen: true);
+		_heldThen = [.. _held.Select(LagCompensation!.WasThere)];
+
+		// Each grant is put as it was where it differs from how it counts now: one of the effect being removed counts
+		// until its removal takes it away.
+		for (int i = 0; i < _held.Length; i++)
+		{
+			LagCompensation.HeldEffect held = _held[i];
+
+			for (int grant = 0; grant < held.Tags.Length; grant++)
+			{
+				bool counted = held.EndTick is null && (held.Effect != _removing || grant >= _removingGrantsTaken);
+
+				if (counted != _heldThen[i])
+				{
+					_heldGrants.Add(new HeldGrant(held.Tags[grant], _heldThen[i]));
+					Owner.Tags.RestoreModifierTags(held.Tags[grant], _heldThen[i]);
+				}
+			}
+		}
+
 		return true;
 	}
 
@@ -1145,26 +1167,14 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			return;
 		}
 
-		RestoreHeldTags(asThen: false);
-		_held = null;
-		_heldEnded = null;
-		_heldTags = null;
-	}
-
-	private void RestoreHeldTags(bool asThen)
-	{
-		for (int i = 0; i < _held!.Length; i++)
+		foreach (HeldGrant grant in _heldGrants)
 		{
-			if (!_heldTags![i])
-			{
-				continue;
-			}
-
-			foreach (TagContainer tags in _held[i].Tags)
-			{
-				Owner.Tags.RestoreModifierTags(tags, asThen == _heldEnded![i]);
-			}
+			Owner.Tags.RestoreModifierTags(grant.Tags, !grant.Added);
 		}
+
+		_heldGrants.Clear();
+		_held = null;
+		_heldThen = null;
 	}
 
 	// Whether a blocker is one an effect added since the instigator's tick has: it wasn't there then.
@@ -1172,7 +1182,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		for (int i = 0; i < (_held?.Length ?? 0); i++)
 		{
-			if (!_heldEnded![i] && Array.IndexOf(_held![i].Blockers, blocker) >= 0)
+			if (!_heldThen![i] && Array.IndexOf(_held![i].Blockers, blocker) >= 0)
 			{
 				return true;
 			}
@@ -1187,7 +1197,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		{
 			LagCompensation.HeldEffect removed = _held![h];
 
-			if (!_heldEnded![h])
+			// One there then that's gone, or going, now.
+			if (!_heldThen![h] || (removed.EndTick is null && removed.Effect != _removing))
 			{
 				continue;
 			}
@@ -1427,6 +1438,10 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		bool rewound = _held is not null;
 		ReleaseRewound();
 		_changeDepth++;
+		ActiveEffect? outerRemoving = _removing;
+		int outerTaken = _removingGrantsTaken;
+		_removing = effectToRemove;
+		_removingGrantsTaken = 0;
 
 		try
 		{
@@ -1436,6 +1451,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 			foreach (IEffectComponent component in effectToRemove.ComponentInstances)
 			{
+				// A grant counts as taken as its removal starts: what its tags' change sets off sees it gone.
+				if (component is ModifierTagsEffectComponent)
+				{
+					_removingGrantsTaken++;
+				}
+
 				component.OnActiveEffectUnapplied(
 					Owner,
 					new ActiveEffectEvaluatedData(
@@ -1466,6 +1487,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		finally
 		{
 			_changeDepth--;
+			_removing = outerRemoving;
+			_removingGrantsTaken = outerTaken;
 
 			if (rewound)
 			{
@@ -1473,4 +1496,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			}
 		}
 	}
+
+	// A tag grant a held check put as it was: in, or taken out.
+	private readonly record struct HeldGrant(TagContainer Tags, bool Added);
 }

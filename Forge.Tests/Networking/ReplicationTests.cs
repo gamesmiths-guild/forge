@@ -1096,14 +1096,14 @@ public class ReplicationTests
 			target.EffectsManager.RemoveEffect(stun);
 		};
 		Tag stunned = rig.ServerTag("state.stunned");
-		bool shown = true;
-		target.Tags.OnTagsChanged += x => shown = x.HasTag(stunned);
+		int changes = 0;
+		target.Tags.OnTagsChanged += _ => changes++;
 
 		Lands(rig.Server.Replication!.LagCompensation, target, hit, before - 1).Should().BeFalse();
 
 		blocked.Should().Be(1);
 		target.Tags.AllTags.HasTag(stunned).Should().BeTrue("the older guard still grants it");
-		shown.Should().BeTrue("no change said it went");
+		changes.Should().Be(0, "the older guard's tag never went");
 	}
 
 	[Fact]
@@ -1170,6 +1170,51 @@ public class ReplicationTests
 
 		target.Set.Attribute100.BaseValue
 			.Should().Be(value + 1, "the ward wasn't there at the tick the instigator saw");
+	}
+
+	[Theory]
+	[Trait("Networking", "LagCompensation")]
+	[InlineData(true)]
+	[InlineData(false)]
+	public void A_hit_a_guard_s_removal_sets_off_meets_the_guard_as_the_instigator_saw_it(bool guardWasThere)
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		EffectData hit = HitData(rig);
+		var guard = new EffectData(
+			"Guard",
+			new DurationData(DurationType.Infinite),
+			effectComponents:
+			[
+				new AdditionalEffectsEffectComponent(onCompleteAlways: [new ConditionalEffect(hit)]),
+				new ModifierTagsEffectComponent(
+					new TagContainer(rig.ServerTagsManager, [rig.ServerTag("state.stunned")])),
+			],
+			lagCompensation: EffectLagCompensation.Rewound);
+		ActiveEffectHandle? early = guardWasThere ? Rig.Apply(target, guard) : null;
+		rig.Step(10);
+		long before = rig.Server.Clock.Tick;
+		ActiveEffectHandle warded = early ?? Rig.Apply(target, guard)!;
+		int value = target.Set.Attribute100.BaseValue;
+		LagCompensation compensation = rig.Server.Replication!.LagCompensation;
+
+		// Its tag going applies the hit again, after the completion effect.
+		target.Tags.OnTagsChanged += _ => Rig.Apply(target, hit);
+		compensation.Begin(new PeerId(5), before - 1);
+
+		try
+		{
+			target.EffectsManager.RemoveEffect(warded);
+		}
+		finally
+		{
+			compensation.End();
+		}
+
+		target.Set.Attribute100.BaseValue.Should().Be(
+			guardWasThere ? value : value - 2,
+			guardWasThere ? "the instigator saw the guard" : "the guard came after the tick the instigator saw");
+		target.Tags.AllTags.HasTag(rig.ServerTag("state.stunned")).Should().BeFalse();
 	}
 
 	[Theory]
