@@ -7,6 +7,8 @@ using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects.Components;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Stacking;
+using Gamesmiths.Forge.Networking.Replication;
+using Gamesmiths.Forge.Tags;
 
 namespace Gamesmiths.Forge.Effects;
 
@@ -43,6 +45,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	// Reused by every update, so a tick allocates nothing. Sharing one list is what makes the update non-re-entrant.
 	private readonly List<ActiveEffect> _updateBuffer = [];
 
+	// The tag grants a lag-compensated check put as the hit's instigator saw them, with whether each was put in.
+	private readonly List<HeldGrant> _heldGrants = [];
+
+	// The effects being removed, one inside another's removal included, and how many of each one's tag grants its
+	// removal took away so far.
+	private readonly Dictionary<ActiveEffect, int> _removals = [];
+
 	private int _applicationDepth;
 
 	// Removals and updates in progress, which like applications run callbacks part way through.
@@ -57,6 +66,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	private bool _applyingServerEffect;
 
 	private bool _serverEffectFromOutside;
+
+	// The effects held as a lag-compensated hit's instigator saw them, while a check reads them, and whether each was
+	// there then.
+	private LagCompensation.HeldEffect[]? _held;
+
+	private bool[]? _heldThen;
 
 	/// <summary>
 	/// Event triggered whenever an effect lands on the owner, carrying its evaluated data.
@@ -191,6 +206,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	// On the client that predicts the owner, only what the owner's own ticks apply lands, and what the server applied
 	// from elsewhere arrives through ApplyServerEffect.
 	internal bool IsPredicted { get; set; }
+
+	// The server's lag compensation, on an entity it replicates: while a compensated hit is tested, an application's
+	// checks read the effects that count as the instigator saw them as they were.
+	internal LagCompensation? LagCompensation { get; set; }
+
+	// The client, on an entity it mirrors: what its predicted runs apply here is refused, and shown as it predicts.
+	internal IMirrorPresenter? MirrorPresenter { get; set; }
 
 	internal IReadOnlyList<ActiveEffect> ActiveEffects => _activeEffects;
 
@@ -999,12 +1021,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		applied = false;
 
-		if (_tornDown || RefusesOutsideApplication() || !effect.CanApply(Owner))
+		if (_tornDown)
 		{
+			MirrorPresenter?.Refused(Owner, effect, applicationContext);
 			return null;
 		}
 
-		if (IsApplicationBlocked(effect))
+		if (RefusesOutsideApplication() || !CanApply(effect))
 		{
 			return null;
 		}
@@ -1080,8 +1103,118 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		return _applyingServerEffect ? _applicationDepth > 1 : FromOutside;
 	}
 
+	private bool CanApply(Effect effect)
+	{
+		// A check that another one sets off, as a blocked application's handler applying an effect here, reads the
+		// tags as they're held already.
+		if (_held is not null || !HoldRewound())
+		{
+			return effect.CanApply(Owner) && !IsApplicationBlocked(effect);
+		}
+
+		try
+		{
+			return effect.CanApply(Owner) && !IsApplicationBlocked(effect);
+		}
+		finally
+		{
+			ReleaseRewound();
+		}
+	}
+
+	// Puts the tags of the effects that changed since the instigator's tick as they were then, without raising
+	// anything: one removed since was there then, one added since wasn't. False when nothing changed since.
+	private bool HoldRewound()
+	{
+		IReadOnlyList<LagCompensation.HeldEffect>? adjustments = LagCompensation?.Adjustments(Owner, _removals);
+
+		if (adjustments is null || adjustments.Count == 0)
+		{
+			return false;
+		}
+
+		// Copied, since what a check sets off can test another hit's application.
+		_held = [.. adjustments];
+		_heldThen = [.. _held.Select(LagCompensation!.WasThere)];
+
+		// Each grant is put as it was where it differs from how it counts now: one of the effect being removed counts
+		// until its removal takes it away.
+		for (int i = 0; i < _held.Length; i++)
+		{
+			LagCompensation.HeldEffect held = _held[i];
+
+			for (int grant = 0; grant < held.Tags.Length; grant++)
+			{
+				bool counted = held.EndTick is null
+					&& (!_removals.TryGetValue(held.Effect, out int taken) || grant >= taken);
+
+				if (counted != _heldThen[i])
+				{
+					_heldGrants.Add(new HeldGrant(held.Tags[grant], _heldThen[i]));
+					Owner.Tags.RestoreModifierTags(held.Tags[grant], _heldThen[i]);
+				}
+			}
+		}
+
+		return true;
+	}
+
+	// Puts the held tags back as they are.
+	private void ReleaseRewound()
+	{
+		if (_held is null)
+		{
+			return;
+		}
+
+		foreach (HeldGrant grant in _heldGrants)
+		{
+			Owner.Tags.RestoreModifierTags(grant.Tags, !grant.Added);
+		}
+
+		_heldGrants.Clear();
+		_held = null;
+		_heldThen = null;
+	}
+
+	// Whether a blocker is one an effect added since the instigator's tick has: it wasn't there then.
+	private bool AddedSince(IEffectApplicationBlocker blocker)
+	{
+		for (int i = 0; i < (_held?.Length ?? 0); i++)
+		{
+			if (!_heldThen![i] && Array.IndexOf(_held![i].Blockers, blocker) >= 0)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private bool IsApplicationBlocked(Effect effect)
 	{
+		for (int h = 0; h < (_held?.Length ?? 0); h++)
+		{
+			LagCompensation.HeldEffect removed = _held![h];
+
+			// One there then that's gone, or going, now.
+			if (!_heldThen![h] || (removed.EndTick is null && !_removals.ContainsKey(removed.Effect)))
+			{
+				continue;
+			}
+
+			// A removed immunity lets everything through, so its queries are read as it would have.
+			ImmunityEffectComponent? immunity = Array.Find(
+				removed.Immunities,
+				x => Array.Exists(x.ImmunityQueries, query => !query.IsEmpty && query.Matches(effect)));
+
+			if (immunity is not null)
+			{
+				OnEffectApplicationBlocked?.Invoke(effect, immunity);
+				return true;
+			}
+		}
+
 		// Indexed rather than foreach so that a blocker unregistering itself while being consulted — an immunity effect
 		// that removes itself on its first block, say — doesn't invalidate the iteration. Costs nothing when the list
 		// is empty, which is the common case.
@@ -1091,7 +1224,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		{
 			IEffectApplicationBlocker blocker = _applicationBlockers[i];
 
-			if (!blocker.AllowEffectApplication(in effect))
+			if (!AddedSince(blocker) && !blocker.AllowEffectApplication(in effect))
 			{
 				OnEffectApplicationBlocked?.Invoke(effect, blocker);
 				return true;
@@ -1300,7 +1433,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			reason = EffectRemovalReason.Destroyed;
 		}
 
+		// One removed during a lag-compensated check, by what the check set off, takes away tags as they are, and the
+		// check goes on as the instigator saw what's left.
+		bool rewound = _held is not null;
+		ReleaseRewound();
 		_changeDepth++;
+		_removals[effectToRemove] = 0;
 
 		try
 		{
@@ -1310,6 +1448,12 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 			foreach (IEffectComponent component in effectToRemove.ComponentInstances)
 			{
+				// A grant counts as taken as its removal starts: what its tags' change sets off sees it gone.
+				if (component is ModifierTagsEffectComponent)
+				{
+					_removals[effectToRemove]++;
+				}
+
 				component.OnActiveEffectUnapplied(
 					Owner,
 					new ActiveEffectEvaluatedData(
@@ -1340,6 +1484,15 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		finally
 		{
 			_changeDepth--;
+			_removals.Remove(effectToRemove);
+
+			if (rewound)
+			{
+				HoldRewound();
+			}
 		}
 	}
+
+	// A tag grant a held check put as it was: in, or taken out.
+	private readonly record struct HeldGrant(TagContainer Tags, bool Added);
 }

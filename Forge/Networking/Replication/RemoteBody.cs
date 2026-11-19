@@ -34,6 +34,9 @@ public sealed class RemoteBody
 	/// </summary>
 	public int Count => _samples.Count;
 
+	// How many states are kept at most: more on the server, to reach as far back as lag compensation does.
+	internal int MaxCount { get; set; } = Capacity;
+
 	/// <summary>
 	/// Adds the state the server sent for a tick. A state for a tick at or before the newest is ignored: it arrived
 	/// late, and what came after it already says where the body went.
@@ -47,7 +50,7 @@ public sealed class RemoteBody
 			return;
 		}
 
-		if (_samples.Count == Capacity)
+		if (_samples.Count >= MaxCount)
 		{
 			_samples.RemoveAt(0);
 		}

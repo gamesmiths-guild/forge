@@ -162,6 +162,30 @@ public class SpawnPredictionTests
 
 	[Fact]
 	[Trait("Networking", "Prediction")]
+	public void A_bolt_s_despawn_isn_t_undone_by_copies_of_its_spawn_shown_after_it()
+	{
+		// Acknowledgements take longer than the bolt lives, so every packet until its despawn carries its spawn.
+		var rig =
+			new Rig(NetworkConditions.Good, new NetworkConditions(0.3, 0, 0), boltSeconds: 0.2) { ShowsBehind = 4 };
+		rig.JoinWithPlayer();
+
+		rig.Press("fire");
+		Bolt bolt = rig.ClientBolts.Should().ContainSingle().Subject;
+
+		for (int i = 0; i < 90 && !rig.Despawned.Contains(bolt); i++)
+		{
+			rig.Idle(1);
+		}
+
+		rig.Despawned.Should().Contain(bolt, "the server's despawn of it arrived");
+
+		rig.Idle(30);
+
+		rig.ClientBolts.Should().ContainSingle("a spawn the client took as it arrived isn't taken again as it's shown");
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
 	public void A_spawn_the_owner_did_not_make_joins_its_timeline_at_the_tick_the_server_made_it_in()
 	{
 		var rig = new Rig(NetworkConditions.Good);
@@ -397,7 +421,7 @@ public class SpawnPredictionTests
 		// Bound to volley: shoots two bolts from one node.
 		public AbilityData Volley { get; }
 
-		// A bolt's: frees it after a second.
+		// A bolt's: frees it after its seconds, one by default.
 		public AbilityData Fade { get; }
 
 		// Makes the bolts a graph shoots, on its machine, with the node's index.
@@ -406,7 +430,7 @@ public class SpawnPredictionTests
 		// Frees a bolt its graph is done with, on its machine.
 		public Action<IForgeEntity>? Vanish { get; set; }
 
-		public Assets()
+		public Assets(double boltSeconds = 1)
 		{
 			Slow = new EffectData(
 				"Slow",
@@ -436,7 +460,7 @@ public class SpawnPredictionTests
 				behaviorFactory: () => new GraphAbilityBehavior(volley),
 				inputBinding: AbilityInputBinding.ForAction("volley"));
 
-			Graph fade = Fading();
+			Graph fade = Fading(boltSeconds);
 			Fade = new AbilityData("Fade", behaviorFactory: () => new GraphAbilityBehavior(fade));
 
 			Registry.Register(AssetKind.Scene, "uid://player", "Player");
@@ -459,7 +483,7 @@ public class SpawnPredictionTests
 			return graph;
 		}
 
-		private Graph Fading()
+		private Graph Fading(double seconds)
 		{
 			var graph = new Graph();
 			var wait = new TimerNode();
@@ -467,7 +491,7 @@ public class SpawnPredictionTests
 			graph.AddNode(wait);
 			graph.AddNode(vanish);
 			graph.VariableDefinitions.DefineProperty(
-				"length", new VariantResolver(new Variant128(1.0), typeof(double)));
+				"length", new VariantResolver(new Variant128(seconds), typeof(double)));
 			wait.BindInput(TimerNode.DurationInput, "length");
 			graph.AddConnection(new Connection(
 				graph.EntryNode.OutputPorts[EntryNode.OutputPort],
@@ -643,9 +667,9 @@ public class SpawnPredictionTests
 		private InputFrame _frame;
 		private double _time;
 
-		public Assets ServerAssets { get; } = new();
+		public Assets ServerAssets { get; }
 
-		public Assets Assets { get; } = new();
+		public Assets Assets { get; }
 
 		public NetworkSession Server { get; }
 
@@ -685,6 +709,9 @@ public class SpawnPredictionTests
 		// Whether the client's graph frees each bolt in the tick it makes it in.
 		public bool FreesAtOnce { get; set; }
 
+		// How many ticks behind the newest state the client shows the server's, holding packets until then.
+		public int? ShowsBehind { get; set; }
+
 		public ConditionedTransport ServerLink { get; }
 
 		public ReplicationClient Mirror => Client.Mirror!;
@@ -692,11 +719,16 @@ public class SpawnPredictionTests
 		// How many ticks the client's clock is ahead of the server's.
 		public long TicksAhead => Client.Clock.Tick - Server.Clock.Tick;
 
-		public Rig(NetworkConditions conditions)
+		public Rig(NetworkConditions conditions, NetworkConditions? clientConditions = null, double boltSeconds = 1)
 		{
+			ServerAssets = new Assets(boltSeconds);
+			Assets = new Assets(boltSeconds);
 			var network = new LoopbackNetwork();
 			ServerLink = new ConditionedTransport(network.Server, conditions, new DeterministicRandom(1));
-			_clientLink = new ConditionedTransport(network.Connect(), conditions, new DeterministicRandom(31));
+			_clientLink = new ConditionedTransport(
+				network.Connect(),
+				clientConditions ?? conditions,
+				new DeterministicRandom(31));
 			Server = new NetworkSession(
 				ServerLink,
 				new SimulationClock(TickRate, 100),
@@ -814,6 +846,12 @@ public class SpawnPredictionTests
 			ServerLink.Update(_time);
 			_clientLink.Update(_time);
 			Client.Update(_time);
+
+			if (ShowsBehind is int behind)
+			{
+				Mirror.HoldsUntilShown = true;
+				Mirror.Show(Mirror.LastServerTick - behind);
+			}
 
 			DilatedStep step = Client.State == SessionState.Ready
 				? _dilation.Steer(Client.Clock.Tick, Client.ClockSync, _time, Client.ServerInputDepth)

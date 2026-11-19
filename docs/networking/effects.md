@@ -47,6 +47,8 @@ var cooldown = new EffectData(
 
 Visibility decides who gets the **effect**. What it did is the entity's state, and reaches every client that has the entity whatever this says: the attribute values it changed, the tags it granted and the cues it fired. An effect that's `ServerOnly` and grants a tag still shows that tag on every mirror. To hide what an effect does, don't give it a cue, and keep it from changing what others can see.
 
+`EffectData.LagCompensation` says how the effect counts for a client's shot, which the server tests against the world as the client saw it: as it is, or, for whether the hit lands, as it was then ([Hits on the network](lag-compensation.md#what-else-counts-as-it-was)).
+
 Choose `ServerOnly` for what no client needs, such as an effect that grants abilities: nothing about it goes on the wire. Choose `OwnerOnly` for what only its player reads, such as a cooldown: others' copies are spared the record, and the cooldown's tag still reaches them.
 
 ### Effects no client can hear about

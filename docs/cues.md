@@ -53,6 +53,14 @@ var cueData = new CueData(
 );
 ```
 
+`PredictOnOthers` says whether a networked client shows the cue on an entity it mirrors as soon as its own predicted run applies the effect there, as a shot hitting an enemy, rather than when the server's word arrives: `Default`, `Always` or `Never` ([Hits on the network](networking/lag-compensation.md#showing-a-hit-at-once)).
+
+```csharp
+// A damage number waits for what the server dealt; the flash and the sound show at once.
+var numberCue = new CueData(numberTags, 0, 1000, CueMagnitudeType.AttributeValueChange, "CombatAttributeSet.CurrentHealth",
+    PredictOnOthers: CuePrediction.Never);
+```
+
 ### Cue Magnitude Types
 
 `CueMagnitudeType` determines how a cue's magnitude is calculated:

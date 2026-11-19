@@ -17,6 +17,13 @@ namespace Gamesmiths.Forge.Networking;
 public readonly record struct InputCommand(long Tick, InputFrame Frame, ushort[] Events)
 {
 	/// <summary>
+	/// Gets how many ticks behind the command's tick the client showed the entities it mirrors as it simulated the
+	/// tick: the server tests the client's action against them as they were that long ago (<see
+	/// cref="Replication.LagCompensation"/>). It travels in eighths of a tick, and as 0 when negative or not a number.
+	/// </summary>
+	public double ViewDelay { get; init; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="InputCommand"/> struct.
 	/// A command with no events.
 	/// </summary>

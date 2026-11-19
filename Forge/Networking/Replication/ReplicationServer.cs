@@ -104,6 +104,12 @@ public sealed class ReplicationServer
 	public IRelevancy Relevancy { get; set; } = AlwaysRelevant.Instance;
 
 	/// <summary>
+	/// Gets the server's memory of the world as its clients were shown it, which tests their shots against what they
+	/// saw.
+	/// </summary>
+	public LagCompensation LagCompensation { get; }
+
+	/// <summary>
 	/// Gets or sets where an entity's body state comes from: its mover's, by default. A host whose entities have bodies
 	/// without movers reads them here.
 	/// </summary>
@@ -151,6 +157,7 @@ public sealed class ReplicationServer
 	internal ReplicationServer(NetworkSession session)
 	{
 		_session = session;
+		LagCompensation = new LagCompensation(session.Clock);
 		_cueObserver = new CueObserver(this);
 		_graphObserver = new GraphObserver(this);
 
@@ -214,6 +221,7 @@ public sealed class ReplicationServer
 		_entities[entity.NetworkId] = replicated;
 		_byEntity[entity] = replicated;
 		_entityList.Add(replicated);
+		LagCompensation.Track(replicated);
 		_nextId = Math.Max(_nextId, entity.NetworkId.Value + 1);
 
 		entity.CuesManager.AddObserver(_cueObserver);
@@ -266,6 +274,7 @@ public sealed class ReplicationServer
 		_entities.Remove(replicated.Id);
 		_entityList.Remove(replicated);
 		replicated.DespawnedAtTick = _session.Clock.Tick;
+		LagCompensation.Untrack(replicated);
 
 		// Its events and graphs stay: its last events go with its despawn, so what it did as it went, a burst as it
 		// dies, still shows.
@@ -340,6 +349,16 @@ public sealed class ReplicationServer
 		foreach (ReplicatedEntity entity in _entityList)
 		{
 			entity.Capture(tick, BodySource, _session.BodyPrecision);
+
+#pragma warning disable SA1118 // Parameter should not span multiple lines
+			LagCompensation.Record(
+				entity,
+				tick,
+				entity.ShadowBody is QuantizedBody shadow
+					? BodyCodec.Dequantize(shadow, _session.BodyPrecision)
+					: null);
+#pragma warning restore SA1118 // Parameter should not span multiple lines
+
 			entity.CaptureEffects(tick, this, _session.Clock);
 			entity.CaptureGraphs(tick, this);
 			ExpireEvents(entity, oldestEvent);
@@ -435,13 +454,19 @@ public sealed class ReplicationServer
 		return new ReplicatedGraph(instance, processor, context, assetIndex);
 	}
 
-	// The session is over: the entities live on, and their cues and graphs are no longer anything to this server.
+	// The session is over: the entities live on, and their cues, graphs and effects are no longer anything to this
+	// server.
 	internal void StopObserving()
 	{
 		foreach (IForgeEntity entity in _entityList.Select(x => x.Entity))
 		{
 			entity.CuesManager.RemoveObserver(_cueObserver);
 			entity.Abilities.GraphObserver = null;
+		}
+
+		foreach (ReplicatedEntity entity in _entityList)
+		{
+			LagCompensation.Untrack(entity);
 		}
 	}
 

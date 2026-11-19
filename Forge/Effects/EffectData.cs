@@ -102,6 +102,12 @@ public readonly record struct EffectData
 	public EffectVisibility Visibility { get; }
 
 	/// <summary>
+	/// Gets how this effect counts for a lag-compensated hit on its target: as it is when the server tests the hit, or
+	/// as it was when the instigator saw the target.
+	/// </summary>
+	public EffectLagCompensation LagCompensation { get; }
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="EffectData"/> struct.
 	/// </summary>
 	/// <param name="name">The name of this effect.</param>
@@ -120,6 +126,7 @@ public readonly record struct EffectData
 	/// <param name="effectTags">The tags identifying this effect, used by <see cref="EffectQuery"/>. These are never
 	/// granted to the target.</param>
 	/// <param name="visibility">Who hears about this effect while it's active on a networked entity.</param>
+	/// <param name="lagCompensation">How this effect counts for a lag-compensated hit on its target.</param>
 	public EffectData(
 		string name,
 		DurationData durationData,
@@ -133,7 +140,8 @@ public readonly record struct EffectData
 		CustomExecution[]? customExecutions = null,
 		CueData[]? cues = null,
 		TagContainer? effectTags = null,
-		EffectVisibility visibility = EffectVisibility.Default)
+		EffectVisibility visibility = EffectVisibility.Default,
+		EffectLagCompensation lagCompensation = EffectLagCompensation.Current)
 	{
 		Name = name;
 		DurationData = durationData;
@@ -148,6 +156,7 @@ public readonly record struct EffectData
 		Cues = cues ?? [];
 		EffectTags = effectTags;
 		Visibility = visibility;
+		LagCompensation = lagCompensation;
 
 		if (Validation.Enabled)
 		{

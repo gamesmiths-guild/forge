@@ -879,6 +879,447 @@ public class ReplicationTests
 		after.Position.X.Should().Be(10);
 	}
 
+	[Theory]
+	[Trait("Networking", "Interpolation")]
+	[InlineData(0, 0, 2, 2.6)]
+	[InlineData(0.02, 0, 2.8, 5)]
+	[InlineData(0, 0.1, 3.5, 4.8)]
+	public void The_interpolation_delay_follows_how_the_packets_arrive(
+		double jitter,
+		float loss,
+		double atLeast,
+		double atMost)
+	{
+		var rig = new Rig(new NetworkConditions(0.01, jitter, loss));
+		Client client = rig.Join();
+		InterpolationDelay delay = client.Session.Mirror!.InterpolationDelay;
+
+		for (int i = 0; i < 600; i++)
+		{
+			rig.Step();
+			delay.Update(i / (double)TickRate);
+		}
+
+		delay.SendInterval.Should().Be(ReplicationServer.DefaultSendInterval);
+		delay.Ticks.Should().BeInRange(atLeast, atMost);
+	}
+
+	[Fact]
+	[Trait("Networking", "Interpolation")]
+	public void The_interpolation_delay_rises_at_once_falls_slowly_and_keeps_to_its_bounds()
+	{
+		var rig = new Rig(new NetworkConditions(0.01, 0, 0.2f));
+		Client client = rig.Join();
+		InterpolationDelay delay = client.Session.Mirror!.InterpolationDelay;
+		delay.MaxSeconds = 3.0 / TickRate;
+		double time = 0;
+
+		for (int i = 0; i < 300; i++)
+		{
+			rig.Step();
+			time += 1.0 / TickRate;
+			delay.Update(time);
+		}
+
+		delay.Ticks.Should().Be(3, "the loss calls for 4, and the longest is 3");
+
+		delay.MaxSeconds = 1;
+		time += 1.0 / TickRate;
+		delay.Update(time);
+		delay.Ticks.Should().BeGreaterThan(3.5, "it rises at once");
+
+		rig.ServerLink!.Conditions = new NetworkConditions(0.01);
+		double before = delay.Ticks;
+
+		for (int i = 0; i < 30; i++)
+		{
+			rig.Step();
+			time += 1.0 / TickRate;
+			delay.Update(time);
+		}
+
+		delay.Ticks.Should().BeLessThan(before).And.BeGreaterThan(before - 2.1, "it falls by 4 ticks a second at most");
+
+		delay.MaxSeconds = 3.0 / TickRate;
+		time += 1.0 / TickRate;
+		delay.Update(time);
+		delay.Ticks.Should().Be(3, "a longest lowered holds at once");
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void The_server_rewinds_the_bodies_a_client_was_shown_but_not_its_own()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity target = rig.Spawn();
+		Entity mine = rig.Spawn(client.Peer);
+		Entity exempt = rig.Spawn();
+		rig.Server.Replication!.Find(exempt)!.LagCompensated = false;
+
+		for (int i = 0; i < 20; i++)
+		{
+			long now = rig.Server.Clock.Tick;
+			target.Body = new BodyState(new Vector3(now, 0, 0), Quaternion.Identity, default, true);
+			mine.Body = target.Body;
+			exempt.Body = target.Body;
+			rig.Step();
+		}
+
+		long tick = rig.Server.Clock.Tick + 3;
+		client.Session.SendInput(new InputCommand(tick, default) { ViewDelay = 6 });
+		rig.Step(3);
+		rig.Server.TakeInput(tick);
+
+		LagCompensation compensation = rig.Server.Replication.LagCompensation;
+		compensation.ViewDelay(client.Peer).Should().Be(6);
+		compensation.ShownTickOf(client.Peer, tick).Should().Be(tick - 6);
+		compensation.ShownTickOf(client.Peer, tick, 0.5).Should().Be(tick - 3);
+
+		var bodies = new List<RewoundBody>();
+		double shown = rig.Server.Clock.Tick - 8.5;
+		compensation.Rewound(client.Peer, shown, bodies);
+		bodies
+			.Should().ContainSingle("its own body and an exempt one aren't rewound").Which.Entity.Should().Be(target);
+		bodies[0].Body.Position.X
+			.Should().BeApproximately((float)shown, 1e-4f, "it's between the sends on either side");
+
+		client.Session.SendInput(new InputCommand(tick + 1, default) { ViewDelay = 100 });
+		rig.Step();
+		rig.Server.TakeInput(tick + 1);
+		compensation.ViewDelay(client.Peer)
+			.Should().Be(TickRate * 0.5, "an instigator further behind is rewound by the cap");
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void A_placed_entity_its_instigator_owns_is_rewound_and_a_body_that_went_away_is_not()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity placed = rig.Place(new NetworkEntityId(1000), client.Peer);
+		placed.Body = new BodyState(Vector3.One, Quaternion.Identity, default, true);
+		rig.Step(6);
+		LagCompensation compensation = rig.Server.Replication!.LagCompensation;
+		var bodies = new List<RewoundBody>();
+
+		compensation.Rewound(client.Peer, rig.Server.Clock.Tick - 2, bodies);
+		bodies.Should().ContainSingle("its owner's client shows it behind, as any mirror");
+
+		placed.Body = null;
+		rig.Step(2);
+
+		compensation.TryRewind(placed, rig.Server.Clock.Tick - 4, out _).Should().BeFalse("its clients let go of it");
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void The_server_keeps_bodies_as_far_back_as_it_rewinds()
+	{
+		var rig = new Rig();
+		rig.Server.Replication!.SendInterval = 1;
+		rig.Server.Replication.LagCompensation.MaxRewindSeconds = 2;
+		Entity target = rig.Spawn();
+
+		for (int i = 0; i < 150; i++)
+		{
+			target.Body = new BodyState(new Vector3(rig.Server.Clock.Tick, 0, 0), Quaternion.Identity, default, true);
+			rig.Step();
+		}
+
+		double shown = rig.Server.Clock.Tick - 100.5;
+		rig.Server.Replication.LagCompensation.TryRewind(target, shown, out BodyState body).Should().BeTrue();
+		body.Position.X.Should().BeApproximately((float)shown, 1e-4f);
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void A_rewound_effect_an_entity_had_as_it_was_registered_counts()
+	{
+		var rig = new Rig();
+		var target = new Entity(rig.ServerTagsManager, rig.ServerCues)
+		{
+			NetworkId = rig.Server.Replication!.AllocateId(),
+		};
+		EffectData hit = HitData(rig);
+		ActiveEffectHandle guard = Rig.Apply(target, GuardData(rig, hit, false, EffectLagCompensation.Rewound))!;
+		rig.Server.Replication.Register(target, 0, PeerId.None);
+		rig.Step(10);
+
+		target.EffectsManager.RemoveEffect(guard);
+
+		Lands(rig.Server.Replication.LagCompensation, target, hit, rig.Server.Clock.Tick - 2)
+			.Should().BeFalse("the guard was up at the tick the instigator saw");
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void A_check_a_blocked_hit_sets_off_leaves_the_rewound_tags_as_they_were()
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		EffectData hit = HitData(rig);
+		rig.Step(10);
+		long before = rig.Server.Clock.Tick;
+		ActiveEffectHandle stun = Rig.Apply(target, GuardData(rig, hit, false, EffectLagCompensation.Rewound))!;
+		Rig.Apply(target, GuardData(rig, hit, true, EffectLagCompensation.Current));
+		int blocked = 0;
+		target.EffectsManager.OnEffectApplicationBlocked += (_, _) =>
+		{
+			blocked++;
+			Rig.Apply(target, Rig.Raise());
+		};
+
+		Lands(rig.Server.Replication!.LagCompensation, target, hit, before - 1);
+		blocked.Should().Be(1, "the immunity turned the hit away, and its handler checked another application");
+		target.EffectsManager.RemoveEffect(stun);
+
+		target.Tags.AllTags.HasTag(rig.ServerTag("state.stunned")).Should().BeFalse("each check put back what it took");
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void An_effect_removed_during_a_rewound_check_leaves_what_others_grant()
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		EffectData hit = Rig.Raise();
+		Rig.Apply(target, GuardData(rig, hit, false, EffectLagCompensation.Current));
+		rig.Step(10);
+		long before = rig.Server.Clock.Tick;
+		ActiveEffectHandle stun = Rig.Apply(target, GuardData(rig, hit, false, EffectLagCompensation.Rewound))!;
+		Rig.Apply(target, GuardData(rig, hit, true, EffectLagCompensation.Current));
+		int blocked = 0;
+		target.EffectsManager.OnEffectApplicationBlocked += (_, _) =>
+		{
+			blocked++;
+			target.EffectsManager.RemoveEffect(stun);
+		};
+		Tag stunned = rig.ServerTag("state.stunned");
+		int changes = 0;
+		target.Tags.OnTagsChanged += _ => changes++;
+
+		Lands(rig.Server.Replication!.LagCompensation, target, hit, before - 1).Should().BeFalse();
+
+		blocked.Should().Be(1);
+		target.Tags.AllTags.HasTag(stunned).Should().BeTrue("the older guard still grants it");
+		changes.Should().Be(0, "the older guard's tag never went");
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void A_check_set_off_by_a_removal_s_own_tags_leaves_them_removed()
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		EffectData hit = Rig.Raise();
+		rig.Step(10);
+		long before = rig.Server.Clock.Tick;
+		ActiveEffectHandle stun = Rig.Apply(target, GuardData(rig, hit, false, EffectLagCompensation.Rewound))!;
+		Rig.Apply(target, GuardData(rig, hit, true, EffectLagCompensation.Current));
+		Tag stunned = rig.ServerTag("state.stunned");
+		int checks = 0;
+		target.EffectsManager.OnEffectApplicationBlocked += (_, _) => target.EffectsManager.RemoveEffect(stun);
+		target.Tags.OnTagsChanged += x =>
+		{
+			if (!x.HasTag(stunned))
+			{
+				checks++;
+				Rig.Apply(target, Rig.Raise());
+			}
+		};
+
+		Lands(rig.Server.Replication!.LagCompensation, target, hit, before - 1);
+
+		checks.Should().Be(1, "the stun's removal took its tag away");
+		target.Tags.AllTags.HasTag(stunned).Should().BeFalse("the check its removal set off put nothing back");
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void An_immunity_added_since_doesn_t_turn_away_what_its_own_removal_applies()
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		EffectData aftermath = Rig.Raise();
+		var ward = new EffectData(
+			"Ward",
+			new DurationData(DurationType.Infinite),
+			effectComponents:
+			[
+				new AdditionalEffectsEffectComponent(onCompleteAlways: [new ConditionalEffect(aftermath)]),
+				new ImmunityEffectComponent([new EffectQuery(aftermath)]),
+			],
+			lagCompensation: EffectLagCompensation.Rewound);
+		rig.Step(10);
+		long before = rig.Server.Clock.Tick;
+		ActiveEffectHandle warded = Rig.Apply(target, ward)!;
+		int value = target.Set.Attribute100.BaseValue;
+		LagCompensation compensation = rig.Server.Replication!.LagCompensation;
+
+		compensation.Begin(new PeerId(5), before - 1);
+
+		try
+		{
+			target.EffectsManager.RemoveEffect(warded);
+		}
+		finally
+		{
+			compensation.End();
+		}
+
+		target.Set.Attribute100.BaseValue
+			.Should().Be(value + 1, "the ward wasn't there at the tick the instigator saw");
+	}
+
+	[Theory]
+	[Trait("Networking", "LagCompensation")]
+	[InlineData(true)]
+	[InlineData(false)]
+	public void A_hit_a_guard_s_removal_sets_off_meets_the_guard_as_the_instigator_saw_it(bool guardWasThere)
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		EffectData hit = HitData(rig);
+		var guard = new EffectData(
+			"Guard",
+			new DurationData(DurationType.Infinite),
+			effectComponents:
+			[
+				new AdditionalEffectsEffectComponent(onCompleteAlways: [new ConditionalEffect(hit)]),
+				new ModifierTagsEffectComponent(
+					new TagContainer(rig.ServerTagsManager, [rig.ServerTag("state.stunned")])),
+			],
+			lagCompensation: EffectLagCompensation.Rewound);
+		ActiveEffectHandle? early = guardWasThere ? Rig.Apply(target, guard) : null;
+		rig.Step(10);
+		long before = rig.Server.Clock.Tick;
+		ActiveEffectHandle warded = early ?? Rig.Apply(target, guard)!;
+		int value = target.Set.Attribute100.BaseValue;
+		LagCompensation compensation = rig.Server.Replication!.LagCompensation;
+
+		// Its tag going applies the hit again, after the completion effect.
+		target.Tags.OnTagsChanged += _ => Rig.Apply(target, hit);
+		compensation.Begin(new PeerId(5), before - 1);
+
+		try
+		{
+			target.EffectsManager.RemoveEffect(warded);
+		}
+		finally
+		{
+			compensation.End();
+		}
+
+		target.Set.Attribute100.BaseValue.Should().Be(
+			guardWasThere ? value : value - 2,
+			guardWasThere ? "the instigator saw the guard" : "the guard came after the tick the instigator saw");
+		target.Tags.AllTags.HasTag(rig.ServerTag("state.stunned")).Should().BeFalse();
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void A_removal_inside_another_s_leaves_the_outer_one_s_tags_removed()
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		var chained = new EffectData(
+			"Chained",
+			new DurationData(DurationType.Infinite),
+			effectComponents:
+			[
+				new AdditionalEffectsEffectComponent(onCompleteAlways: [new ConditionalEffect(Rig.Raise())])
+			]);
+		ActiveEffectHandle chain = Rig.Apply(target, chained)!;
+		rig.Step(10);
+		long before = rig.Server.Clock.Tick;
+		ActiveEffectHandle stun =
+			Rig.Apply(target, GuardData(rig, HitData(rig), false, EffectLagCompensation.Rewound))!;
+		Tag stunned = rig.ServerTag("state.stunned");
+		int value = target.Set.Attribute100.BaseValue;
+		target.Tags.OnTagsChanged += x =>
+		{
+			if (!x.HasTag(stunned))
+			{
+				target.EffectsManager.RemoveEffect(chain);
+			}
+		};
+		LagCompensation compensation = rig.Server.Replication!.LagCompensation;
+
+		compensation.Begin(new PeerId(5), before - 1);
+
+		try
+		{
+			target.EffectsManager.RemoveEffect(stun);
+		}
+		finally
+		{
+			compensation.End();
+		}
+
+		target.Set.Attribute100.BaseValue.Should().Be(value + 1, "the chained effect's completion landed");
+		target.Tags.AllTags.HasTag(stunned).Should().BeFalse("the stun's removal took its tag away for good");
+	}
+
+	[Theory]
+	[Trait("Networking", "LagCompensation")]
+	[InlineData(0, 0.25, 1)]
+	[InlineData(0.125, 0.25, 0.5)]
+	[InlineData(0.3, 0.25, 0)]
+	[InlineData(0.01, 0, 0)]
+	[InlineData(0, 0, 1)]
+	[InlineData(5, double.PositiveInfinity, 1)]
+	public void An_action_s_compensation_fades_as_it_runs(double elapsed, double fade, double remaining)
+	{
+		LagCompensation.Remaining(elapsed, fade).Should().Be(remaining);
+	}
+
+	[Theory]
+	[Trait("Networking", "LagCompensation")]
+	[InlineData(false)]
+	[InlineData(true)]
+	public void A_rewound_effect_decides_whether_a_hit_lands_as_the_instigator_saw_it(bool immunity)
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		EffectData hit = HitData(rig);
+		EffectData guard = GuardData(rig, hit, immunity, EffectLagCompensation.Rewound);
+		LagCompensation compensation = rig.Server.Replication!.LagCompensation;
+		int changes = 0;
+		target.Tags.OnTagsChanged += _ => changes++;
+
+		rig.Step(10);
+		long applied = rig.Server.Clock.Tick;
+		ActiveEffectHandle handle = Rig.Apply(target, guard)!;
+
+		Lands(compensation, target, hit, applied - 2).Should().BeTrue("the guard came up after the tick the instigator saw");
+		Lands(compensation, target, hit, applied).Should().BeFalse();
+		Rig.Apply(target, hit).Should().BeNull("outside a scope the guard is as it is");
+
+		rig.Step(4);
+		long removed = rig.Server.Clock.Tick;
+		target.EffectsManager.RemoveEffect(handle);
+		int settled = changes;
+
+		Lands(compensation, target, hit, removed - 0.5).Should().BeFalse("the guard was still up at the tick the instigator saw");
+		Lands(compensation, target, hit, removed).Should().BeTrue();
+		target.Tags.AllTags.HasTag(rig.ServerTag("state.stunned")).Should().BeFalse();
+		changes.Should().Be(settled, "the tags are put as they were without raising anything");
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void An_effect_that_counts_as_it_is_protects_from_a_hit_aimed_before_it()
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		rig.Step(10);
+		EffectData hit = HitData(rig);
+		Rig.Apply(target, GuardData(rig, hit, false, EffectLagCompensation.Current));
+
+		Lands(rig.Server.Replication!.LagCompensation, target, hit, rig.Server.Clock.Tick - 5).Should().BeFalse();
+	}
+
 	[Fact]
 	[Trait("Networking", "Replication")]
 	public void A_remote_body_jumps_between_states_further_apart_than_the_snap_distance()
@@ -912,6 +1353,66 @@ public class ReplicationTests
 		ack.Acknowledges(37).Should().BeTrue();
 		ack.Acknowledges(41).Should().BeFalse();
 		ack.Acknowledges(7).Should().BeFalse();
+	}
+
+	// Hit: an instant -1 to Attribute100's base value, turned away from a stunned target.
+	private static EffectData HitData(Rig rig)
+	{
+		return new EffectData(
+			"Hit",
+			new DurationData(DurationType.Instant),
+			[
+				new Modifier(
+					"TestAttributeSet.Attribute100",
+					ModifierOperation.FlatBonus,
+					new ModifierMagnitude(MagnitudeCalculationType.ScalableFloat, new ScalableFloat(-1)))
+			],
+			effectComponents:
+			[
+				new TargetTagRequirementsEffectComponent(
+					new TagRequirements(
+						IgnoreTags: new TagContainer(rig.ServerTagsManager, [rig.ServerTag("state.stunned")])))
+			]);
+	}
+
+	// Guard: grants state.stunned, or turns hits away as an immunity.
+	private static EffectData GuardData(Rig rig, EffectData hit, bool immunity, EffectLagCompensation lagCompensation)
+	{
+		IEffectComponent component = immunity
+			? new ImmunityEffectComponent([new EffectQuery(hit)])
+			: new ModifierTagsEffectComponent(
+				new TagContainer(rig.ServerTagsManager, [rig.ServerTag("state.stunned")]));
+
+		return new EffectData(
+			"Guard",
+			new DurationData(DurationType.Infinite),
+			effectComponents: [component],
+			lagCompensation: lagCompensation);
+	}
+
+	private static bool Lands(LagCompensation compensation, Entity target, EffectData hit, double shownTick)
+	{
+		compensation.Begin(new PeerId(5), shownTick);
+
+		try
+		{
+			bool landed = false;
+#pragma warning disable SA1313 // Parameter names should begin with lower-case letter
+			void OnApplied(EffectEvaluatedData _)
+			{
+				landed = true;
+			}
+#pragma warning restore SA1313 // Parameter names should begin with lower-case letter
+
+			target.EffectsManager.OnEffectApplied += OnApplied;
+			Rig.Apply(target, hit);
+			target.EffectsManager.OnEffectApplied -= OnApplied;
+			return landed;
+		}
+		finally
+		{
+			compensation.End();
+		}
 	}
 
 	private static int ObserverCount(CuesManager cues)

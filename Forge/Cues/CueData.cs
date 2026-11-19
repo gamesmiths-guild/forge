@@ -17,13 +17,16 @@ namespace Gamesmiths.Forge.Cues;
 /// <param name="FinalChannel">In case <paramref name="MagnitudeType"/> ==
 /// <see cref="CueMagnitudeType.AttributeMagnitudeEvaluatedUpToChannel"/> a final channel for the calculation
 /// must be provided.</param>
+/// <param name="PredictOnOthers">Whether a client shows the cue on an entity it mirrors as soon as its own predicted
+/// run applies the effect there.</param>
 public readonly record struct CueData(
 	TagContainer? CueTags,
 	int MinValue,
 	int MaxValue,
 	CueMagnitudeType MagnitudeType,
 	string? MagnitudeAttribute = null,
-	int FinalChannel = 0)
+	int FinalChannel = 0,
+	CuePrediction PredictOnOthers = CuePrediction.Default)
 {
 	/// <summary>
 	/// Calculates and gets the normalized magnitude for the given value.
