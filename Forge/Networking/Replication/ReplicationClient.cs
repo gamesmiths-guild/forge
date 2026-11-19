@@ -659,7 +659,9 @@ public sealed class ReplicationClient
 	}
 
 	// What the effect's flat modifiers would change on the target as this client holds it, for its cues' magnitudes.
-	private static AttributeChangeSet PredictedChanges(in EffectEvaluatedData evaluated)
+	// An instant effect clamps after each modifier, as it executes them; one that lasts sums them and clamps once, as
+	// the attribute does its modifiers.
+	private static AttributeChangeSet PredictedChanges(in EffectEvaluatedData evaluated, bool instant)
 	{
 		var values = new Dictionary<EntityAttribute, int>();
 
@@ -672,14 +674,14 @@ public sealed class ReplicationClient
 
 			EntityAttribute attribute = modifier.Attribute;
 			int value = values.TryGetValue(attribute, out int changed) ? changed : attribute.CurrentValue;
-			values[attribute] = value + (int)modifier.Magnitude;
+			value += (int)modifier.Magnitude;
+			values[attribute] = instant ? Math.Clamp(value, attribute.Min, attribute.Max) : value;
 		}
 
 		var changes = new AttributeChangeSet();
 
 		foreach (KeyValuePair<EntityAttribute, int> value in values)
 		{
-			// Summed first and clamped once, as the attribute's own value is.
 			int clamped = Math.Clamp(value.Value, value.Key.Min, value.Key.Max);
 			changes.Record(value.Key, clamped - value.Key.CurrentValue);
 		}
@@ -2467,7 +2469,7 @@ public sealed class ReplicationClient
 		if (!CuesManager.TryCaptureCueMagnitudes(
 			in evaluated,
 			instant ? CueTriggerRequirement.OnExecute : CueTriggerRequirement.OnApply,
-			PredictedChanges(evaluated),
+			PredictedChanges(evaluated, instant),
 			magnitudes))
 		{
 			return;
