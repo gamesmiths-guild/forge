@@ -1135,6 +1135,43 @@ public class ReplicationTests
 		target.Tags.AllTags.HasTag(stunned).Should().BeFalse("the check its removal set off put nothing back");
 	}
 
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void An_immunity_added_since_doesn_t_turn_away_what_its_own_removal_applies()
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		EffectData aftermath = Rig.Raise();
+		var ward = new EffectData(
+			"Ward",
+			new DurationData(DurationType.Infinite),
+			effectComponents:
+			[
+				new AdditionalEffectsEffectComponent(onCompleteAlways: [new ConditionalEffect(aftermath)]),
+				new ImmunityEffectComponent([new EffectQuery(aftermath)]),
+			],
+			lagCompensation: EffectLagCompensation.Rewound);
+		rig.Step(10);
+		long before = rig.Server.Clock.Tick;
+		ActiveEffectHandle warded = Rig.Apply(target, ward)!;
+		int value = target.Set.Attribute100.BaseValue;
+		LagCompensation compensation = rig.Server.Replication!.LagCompensation;
+
+		compensation.Begin(new PeerId(5), before - 1);
+
+		try
+		{
+			target.EffectsManager.RemoveEffect(warded);
+		}
+		finally
+		{
+			compensation.End();
+		}
+
+		target.Set.Attribute100.BaseValue
+			.Should().Be(value + 1, "the ward wasn't there at the tick the instigator saw");
+	}
+
 	[Theory]
 	[Trait("Networking", "LagCompensation")]
 	[InlineData(0, 0.25, 1)]

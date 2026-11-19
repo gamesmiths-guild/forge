@@ -66,6 +66,9 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private bool[]? _heldEnded;
 
+	// Which of them have their tags held: not one being removed, whose removal takes its tags as they are.
+	private bool[]? _heldTags;
+
 	/// <summary>
 	/// Event triggered whenever an effect lands on the owner, carrying its evaluated data.
 	/// </summary>
@@ -1126,17 +1129,10 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			return false;
 		}
 
-		// Copied, since what a check sets off can test another hit's application. One being removed, whose tags its
-		// removal takes as they are, is left alone.
-		_held = [.. adjustments.Where(x => x.EndTick is not null || _activeEffects.Contains(x.Effect))];
-
-		if (_held.Length == 0)
-		{
-			_held = null;
-			return false;
-		}
-
+		// Copied, since what a check sets off can test another hit's application.
+		_held = [.. adjustments];
 		_heldEnded = [.. _held.Select(x => x.EndTick is not null)];
+		_heldTags = [.. _held.Select(x => x.EndTick is not null || _activeEffects.Contains(x.Effect))];
 		RestoreHeldTags(asThen: true);
 		return true;
 	}
@@ -1152,12 +1148,18 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		RestoreHeldTags(asThen: false);
 		_held = null;
 		_heldEnded = null;
+		_heldTags = null;
 	}
 
 	private void RestoreHeldTags(bool asThen)
 	{
 		for (int i = 0; i < _held!.Length; i++)
 		{
+			if (!_heldTags![i])
+			{
+				continue;
+			}
+
 			foreach (TagContainer tags in _held[i].Tags)
 			{
 				Owner.Tags.RestoreModifierTags(tags, asThen == _heldEnded![i]);
