@@ -937,7 +937,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		foreach (LagCompensation.HeldEffect effect in held)
 		{
-			if (effect.EndTick is null && effect.Blockers.Contains(blocker))
+			if (effect.EndTick is null && Array.IndexOf(effect.Blockers, blocker) >= 0)
 			{
 				return true;
 			}
@@ -1163,7 +1163,8 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			}
 
 			// A removed immunity lets everything through, so its queries are read as it would have.
-			ImmunityEffectComponent? immunity = removed.Immunities.FirstOrDefault(
+			ImmunityEffectComponent? immunity = Array.Find(
+				removed.Immunities,
 				x => Array.Exists(x.ImmunityQueries, query => !query.IsEmpty && query.Matches(effect)));
 
 			if (immunity is not null)

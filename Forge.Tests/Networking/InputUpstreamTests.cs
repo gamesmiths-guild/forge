@@ -214,13 +214,15 @@ public class InputUpstreamTests(TagsAndCuesFixture fixture) : IClassFixture<Tags
 		window.Add(new InputCommand(101, default) { ViewDelay = 6.3 });
 		window.Add(new InputCommand(102, default) { ViewDelay = 7 });
 		window.Add(new InputCommand(103, default) { ViewDelay = -2 });
+		window.Add(new InputCommand(104, default) { ViewDelay = double.NaN });
+		window.Add(new InputCommand(105, default) { ViewDelay = double.PositiveInfinity });
 
 		var writer = new BitWriter();
 		window.Write(writer);
 		var read = new List<InputCommand>();
 		InputWindow.Read(new BitReader(writer.ToArray()), _actions, read);
 
-		read.Select(x => x.ViewDelay).Should().Equal(6.25, 6.25, 7, 0);
+		read.Select(x => x.ViewDelay).Should().Equal(6.25, 6.25, 7, 0, 0, int.MaxValue);
 	}
 
 	[Fact]

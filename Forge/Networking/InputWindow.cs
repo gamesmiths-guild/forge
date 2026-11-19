@@ -205,8 +205,10 @@ public sealed class InputWindow
 			InputCodec.WriteEvents(writer, command.Events);
 			previous = command.Frame;
 
-			// The delay barely moves from tick to tick, so it's mostly a single bit.
-			long delay = (long)Math.Round(Math.Max(command.ViewDelay, 0) * ViewDelaySteps);
+			// The delay barely moves from tick to tick, so it's mostly a single bit. One that isn't a number travels as
+			// 0, and one past any rewind as the furthest that fits.
+			double viewDelay = double.IsNaN(command.ViewDelay) ? 0 : Math.Clamp(command.ViewDelay, 0, int.MaxValue);
+			long delay = (long)Math.Round(viewDelay * ViewDelaySteps);
 			writer.WriteBool(delay == previousDelay);
 
 			if (delay != previousDelay)

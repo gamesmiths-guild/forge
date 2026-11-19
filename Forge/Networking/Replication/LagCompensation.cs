@@ -299,11 +299,11 @@ public sealed class LagCompensation
 
 		public TagContainer[] Tags { get; } = tags;
 
-		public IEnumerable<IEffectApplicationBlocker> Blockers =>
-			Effect.ComponentInstances.OfType<IEffectApplicationBlocker>();
+		public IEffectApplicationBlocker[] Blockers { get; } =
+			[.. effect.ComponentInstances.OfType<IEffectApplicationBlocker>()];
 
-		public IEnumerable<ImmunityEffectComponent> Immunities =>
-			Effect.ComponentInstances.OfType<ImmunityEffectComponent>();
+		public ImmunityEffectComponent[] Immunities { get; } =
+			[.. effect.ComponentInstances.OfType<ImmunityEffectComponent>()];
 	}
 
 	private sealed class Tracked
