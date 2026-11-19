@@ -672,14 +672,16 @@ public sealed class ReplicationClient
 
 			EntityAttribute attribute = modifier.Attribute;
 			int value = values.TryGetValue(attribute, out int changed) ? changed : attribute.CurrentValue;
-			values[attribute] = Math.Clamp(value + (int)modifier.Magnitude, attribute.Min, attribute.Max);
+			values[attribute] = value + (int)modifier.Magnitude;
 		}
 
 		var changes = new AttributeChangeSet();
 
 		foreach (KeyValuePair<EntityAttribute, int> value in values)
 		{
-			changes.Record(value.Key, value.Value - value.Key.CurrentValue);
+			// Summed first and clamped once, as the attribute's own value is.
+			int clamped = Math.Clamp(value.Value, value.Key.Min, value.Key.Max);
+			changes.Record(value.Key, clamped - value.Key.CurrentValue);
 		}
 
 		return changes;
