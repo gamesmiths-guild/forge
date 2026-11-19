@@ -351,8 +351,9 @@ public sealed class ReplicationClient
 			FollowEffects();
 		}
 
-		failure ??= ExpirePredictedCues(tick);
-		failure?.Throw();
+		// The shown tick, not the one asked for, which is infinite as holding is turned off.
+		ExceptionDispatchInfo? expiry = ExpirePredictedCues(_shownTick);
+		(failure ?? expiry)?.Throw();
 	}
 
 	/// <summary>
@@ -565,6 +566,7 @@ public sealed class ReplicationClient
 		_rejoining.Clear();
 		_ended.Clear();
 		_forgotten.Clear();
+		_predictedCues.Clear();
 		LastServerTick = -1;
 		LastSequence = 0;
 		_held.Clear();
@@ -598,7 +600,6 @@ public sealed class ReplicationClient
 			throw new MalformedPacketException($"{tick} is not a server tick.");
 		}
 
-		InterpolationDelay.NoteArrival((uint)sequence, tick, serverTickNow);
 		long previousTick = LastServerTick;
 		List<int>? entries = HoldsUntilShown ? [] : null;
 		_toReconcile.Clear();
@@ -606,6 +607,7 @@ public sealed class ReplicationClient
 
 		// Only a packet read to its end counts: one that isn't is never acknowledged, so the server sends it all again.
 		LastServerTick = Math.Max(LastServerTick, tick);
+		InterpolationDelay.NoteArrival((uint)sequence, tick, serverTickNow);
 		Acknowledge((uint)sequence);
 
 		// The packet is acknowledged, so a correction that throws costs nothing else of it.
@@ -632,6 +634,8 @@ public sealed class ReplicationClient
 		{
 			_shownTick = tick;
 			FollowEffects();
+			ExceptionDispatchInfo? expiry = ExpirePredictedCues(tick);
+			failure ??= expiry;
 		}
 
 		failure?.Throw();
@@ -657,7 +661,7 @@ public sealed class ReplicationClient
 	// What the effect's flat modifiers would change on the target as this client holds it, for its cues' magnitudes.
 	private static AttributeChangeSet PredictedChanges(in EffectEvaluatedData evaluated)
 	{
-		var changes = new AttributeChangeSet();
+		var values = new Dictionary<EntityAttribute, int>();
 
 		foreach (ModifierEvaluatedData modifier in evaluated.ModifiersEvaluatedData)
 		{
@@ -667,8 +671,15 @@ public sealed class ReplicationClient
 			}
 
 			EntityAttribute attribute = modifier.Attribute;
-			int value = Math.Clamp(attribute.CurrentValue + (int)modifier.Magnitude, attribute.Min, attribute.Max);
-			changes.Record(attribute, value - attribute.CurrentValue);
+			int value = values.TryGetValue(attribute, out int changed) ? changed : attribute.CurrentValue;
+			values[attribute] = Math.Clamp(value + (int)modifier.Magnitude, attribute.Min, attribute.Max);
+		}
+
+		var changes = new AttributeChangeSet();
+
+		foreach (KeyValuePair<EntityAttribute, int> value in values)
+		{
+			changes.Record(value.Key, value.Value - value.Key.CurrentValue);
 		}
 
 		return changes;
@@ -1145,8 +1156,9 @@ public sealed class ReplicationClient
 			CueParameters? parameters = ReplicationCodec.ReadParameters(reader, _resolve);
 
 			// A persistent cue this client showed early takes the server's as an update.
-			bool shown = mirror?.HasCue((uint)instance) == false
-				&& TakePredictedCue(mirror.Entity, cueTag, parameters, persistent: true);
+			PredictedCue? shown = mirror?.HasCue((uint)instance) == false
+				? TakePredictedCue(mirror.Entity, cueTag, parameters, persistent: true)
+				: null;
 			mirror?.ApplyCue((uint)instance, cueTag, parameters, shown);
 		}
 	}
@@ -1171,7 +1183,7 @@ public sealed class ReplicationClient
 			{
 				mirror.LastEvent = (uint)sequence;
 
-				if (!TakePredictedCue(mirror.Entity, cueTag, parameters, persistent: false))
+				if (TakePredictedCue(mirror.Entity, cueTag, parameters, persistent: false) is null)
 				{
 					mirror.Entity.CuesManager.ExecuteCue(cueTag, mirror.Entity, parameters);
 				}
@@ -2389,7 +2401,11 @@ public sealed class ReplicationClient
 	{
 		ExceptionDispatchInfo? failure = null;
 
-		foreach (Action letGo in (Action[])[mirror.RemoveAllGraphs, mirror.RemoveAllCues, mirror.RemoveAllEffects])
+		foreach (Action letGo in (Action[])[
+			mirror.RemoveAllGraphs,
+			mirror.RemoveAllCues,
+			() => WithdrawPredictedCues(mirror.Entity),
+			mirror.RemoveAllEffects])
 		{
 			try
 			{
@@ -2487,7 +2503,7 @@ public sealed class ReplicationClient
 
 	// The server's cue for what this client showed early: it isn't shown again. Its source counts when it's still here:
 	// a shot is gone by the time its hit's cue arrives, as often as not.
-	private bool TakePredictedCue(IForgeEntity target, Tag cueTag, CueParameters? parameters, bool persistent)
+	private PredictedCue? TakePredictedCue(IForgeEntity target, Tag cueTag, CueParameters? parameters, bool persistent)
 	{
 		int index = _predictedCues.FindIndex(
 			x => x.Persistent == persistent
@@ -2497,11 +2513,33 @@ public sealed class ReplicationClient
 
 		if (index < 0)
 		{
-			return false;
+			return null;
 		}
 
+		PredictedCue taken = _predictedCues[index];
 		_predictedCues.RemoveAt(index);
-		return true;
+		return taken;
+	}
+
+	// What this client showed early on an entity it lets go of goes with it.
+	private void WithdrawPredictedCues(IForgeEntity target)
+	{
+		for (int i = _predictedCues.Count - 1; i >= 0; i--)
+		{
+			PredictedCue predicted = _predictedCues[i];
+
+			if (!ReferenceEquals(predicted.Target, target))
+			{
+				continue;
+			}
+
+			_predictedCues.RemoveAt(i);
+
+			if (predicted.Persistent)
+			{
+				target.CuesManager.RemoveCue(predicted.CueTag, target, interrupted: true, predicted);
+			}
+		}
 	}
 
 	// A cue shown early that the server's word didn't follow by the time its tick was shown and then some: an executed
@@ -2639,7 +2677,8 @@ public sealed class ReplicationClient
 			return _cues.ContainsKey(instance);
 		}
 
-		public void ApplyCue(uint instance, Tag cueTag, CueParameters? parameters, bool shownAlready = false)
+		// A cue this client showed early keeps being the one shown: what follows of it is for that application.
+		public void ApplyCue(uint instance, Tag cueTag, CueParameters? parameters, object? shownAs = null)
 		{
 			if (_cues.TryGetValue(instance, out AppliedCue? applied))
 			{
@@ -2647,35 +2686,35 @@ public sealed class ReplicationClient
 				if (!CuesManager.SameParameters(applied.Parameters, parameters))
 				{
 					applied.Parameters = parameters;
-					Entity.CuesManager.UpdateCue(cueTag, Entity, parameters, applied);
+					Entity.CuesManager.UpdateCue(cueTag, Entity, parameters, applied.Application);
 				}
 
 				return;
 			}
 
-			applied = new AppliedCue(cueTag, parameters);
+			applied = new AppliedCue(cueTag, parameters) { ShownAs = shownAs };
 			_cues[instance] = applied;
 
-			if (shownAlready)
+			if (shownAs is not null)
 			{
-				Entity.CuesManager.UpdateCue(cueTag, Entity, parameters, applied);
+				Entity.CuesManager.UpdateCue(cueTag, Entity, parameters, applied.Application);
 				return;
 			}
 
-			Entity.CuesManager.ApplyCue(cueTag, Entity, parameters, applied);
+			Entity.CuesManager.ApplyCue(cueTag, Entity, parameters, applied.Application);
 		}
 
 		public void RemoveCue(uint instance, bool interrupted)
 		{
 			if (_cues.Remove(instance, out AppliedCue? applied))
 			{
-				Entity.CuesManager.RemoveCue(applied.CueTag, Entity, interrupted, applied);
+				Entity.CuesManager.RemoveCue(applied.CueTag, Entity, interrupted, applied.Application);
 			}
 		}
 
 		public void RemoveAllCues()
 		{
-			LetGoOfAll(_cues, x => Entity.CuesManager.RemoveCue(x.CueTag, Entity, interrupted: true, x));
+			LetGoOfAll(_cues, x => Entity.CuesManager.RemoveCue(x.CueTag, Entity, interrupted: true, x.Application));
 		}
 
 		// Lets go of each, even if one before it throws, and forgets them all: the first exception comes out after.
@@ -2706,6 +2745,11 @@ public sealed class ReplicationClient
 			public Tag CueTag { get; } = cueTag;
 
 			public CueParameters? Parameters { get; set; } = parameters;
+
+			public object? ShownAs { get; init; }
+
+			// What the cue manager knows the application by.
+			public object Application => ShownAs ?? this;
 		}
 	}
 

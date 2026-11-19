@@ -95,17 +95,17 @@ public sealed class InterpolationDelay
 
 		double lossAllowance = interval * Math.Min(Loss / FullLossAllowance, 1);
 		double target = interval + (JitterScale * Jitter) + lossAllowance;
-		target = Math.Clamp(
-			target,
-			Math.Max(interval, _clock.TicksIn(MinSeconds)),
-			Math.Max(interval, _clock.TicksIn(MaxSeconds)));
+		double lowest = Math.Max(interval, _clock.TicksIn(MinSeconds));
+		double highest = Math.Max(interval, _clock.TicksIn(MaxSeconds));
+		target = Math.Clamp(target, lowest, highest);
 
 		double elapsed = double.IsNaN(_lastLocalTime) ? 0 : Math.Max(localTime - _lastLocalTime, 0);
 		_lastLocalTime = localTime;
 
+		// Bounds that just moved hold at once.
 		_delayTicks = _delayTicks < 0 || target >= _delayTicks
 			? target
-			: Math.Max(target, _delayTicks - (FallTicksPerSecond * elapsed));
+			: Math.Min(Math.Max(target, _delayTicks - (FallTicksPerSecond * elapsed)), highest);
 	}
 
 	/// <summary>

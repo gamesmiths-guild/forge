@@ -939,6 +939,11 @@ public class ReplicationTests
 		}
 
 		delay.Ticks.Should().BeLessThan(before).And.BeGreaterThan(before - 2.1, "it falls by 4 ticks a second at most");
+
+		delay.MaxSeconds = 3.0 / TickRate;
+		time += 1.0 / TickRate;
+		delay.Update(time);
+		delay.Ticks.Should().Be(3, "a longest lowered holds at once");
 	}
 
 	[Fact]

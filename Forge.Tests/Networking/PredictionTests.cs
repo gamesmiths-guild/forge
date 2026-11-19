@@ -558,12 +558,30 @@ public class PredictionTests
 		}
 
 		rig.Idle(60);
-		rig.Mirror.Show(rig.Client.Clock.Tick + 60);
 		rig.ClientCues.PresentCues();
 
 		glows.Log.Should().Equal(
 			serverApplies ? ["apply", "update", "interrupt"] : ["apply", "interrupt"],
 			serverApplies ? "the server's cue takes over the one shown early" : "the server never applied it");
+	}
+
+	[Fact]
+	[Trait("Networking", "Prediction")]
+	public void A_persistent_cue_shown_early_on_a_mirror_goes_with_the_mirror()
+	{
+		var rig = new Rig(NetworkConditions.Good);
+		rig.JoinWithPlayer();
+		var glows = new CueRecorder();
+		rig.ClientCues.RegisterCue(rig.Assets.Tag("cue.fire"), glows);
+		Player dummy = rig.AddDummy();
+		IForgeEntity mirror = rig.Mirror.Entities.Single(x => x != rig.ClientPlayer);
+
+		mirror.EffectsManager.ApplyEffect(
+			new Effect(GlowData(rig.Assets), new EffectOwnership(rig.ClientPlayer, rig.ClientPlayer)));
+		rig.Server.Replication!.Unregister(dummy);
+		rig.Idle(6);
+
+		glows.Log.Should().Equal(["apply", "interrupt"], "its despawn withdrew it before the server's word came");
 	}
 
 	// Flash: an instant -10 to Health, with cue.dash.
