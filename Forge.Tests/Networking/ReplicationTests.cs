@@ -1217,6 +1217,50 @@ public class ReplicationTests
 		target.Tags.AllTags.HasTag(rig.ServerTag("state.stunned")).Should().BeFalse();
 	}
 
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void A_removal_inside_another_s_leaves_the_outer_one_s_tags_removed()
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		var chained = new EffectData(
+			"Chained",
+			new DurationData(DurationType.Infinite),
+			effectComponents:
+			[
+				new AdditionalEffectsEffectComponent(onCompleteAlways: [new ConditionalEffect(Rig.Raise())])
+			]);
+		ActiveEffectHandle chain = Rig.Apply(target, chained)!;
+		rig.Step(10);
+		long before = rig.Server.Clock.Tick;
+		ActiveEffectHandle stun =
+			Rig.Apply(target, GuardData(rig, HitData(rig), false, EffectLagCompensation.Rewound))!;
+		Tag stunned = rig.ServerTag("state.stunned");
+		int value = target.Set.Attribute100.BaseValue;
+		target.Tags.OnTagsChanged += x =>
+		{
+			if (!x.HasTag(stunned))
+			{
+				target.EffectsManager.RemoveEffect(chain);
+			}
+		};
+		LagCompensation compensation = rig.Server.Replication!.LagCompensation;
+
+		compensation.Begin(new PeerId(5), before - 1);
+
+		try
+		{
+			target.EffectsManager.RemoveEffect(stun);
+		}
+		finally
+		{
+			compensation.End();
+		}
+
+		target.Set.Attribute100.BaseValue.Should().Be(value + 1, "the chained effect's completion landed");
+		target.Tags.AllTags.HasTag(stunned).Should().BeFalse("the stun's removal took its tag away for good");
+	}
+
 	[Theory]
 	[Trait("Networking", "LagCompensation")]
 	[InlineData(0, 0.25, 1)]

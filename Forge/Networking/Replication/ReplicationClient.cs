@@ -2546,7 +2546,11 @@ public sealed class ReplicationClient
 
 			try
 			{
-				predicted.Target.CuesManager.RemoveCue(predicted.CueTag, predicted.Target, interrupted: true, predicted);
+				predicted.Target.CuesManager.RemoveCue(
+					predicted.CueTag,
+					predicted.Target,
+					interrupted: true,
+					predicted);
 			}
 			catch (Exception exception)
 			{
