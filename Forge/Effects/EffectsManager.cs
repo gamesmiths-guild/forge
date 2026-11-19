@@ -60,6 +60,9 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private bool _serverEffectFromOutside;
 
+	// The effects whose tags are held as a lag-compensated hit's instigator saw them, while a check reads them.
+	private LagCompensation.HeldEffect[]? _held;
+
 	/// <summary>
 	/// Event triggered whenever an effect lands on the owner, carrying its evaluated data.
 	/// </summary>
@@ -1105,6 +1108,13 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private bool CanApply(Effect effect)
 	{
+		// A check that another one sets off, as a blocked application's handler applying an effect here, reads the
+		// tags as they're held already.
+		if (_held is not null)
+		{
+			return effect.CanApply(Owner) && !IsApplicationBlocked(effect, _held);
+		}
+
 		IReadOnlyList<LagCompensation.HeldEffect>? adjustments = LagCompensation?.Adjustments(Owner);
 
 		if (adjustments is null || adjustments.Count == 0)
@@ -1115,6 +1125,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		// Copied, since what a check sets off can test another hit's application.
 		LagCompensation.HeldEffect[] held = [.. adjustments];
 		HoldRewound(held, true);
+		_held = held;
 
 		try
 		{
@@ -1122,6 +1133,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		}
 		finally
 		{
+			_held = null;
 			HoldRewound(held, false);
 		}
 	}

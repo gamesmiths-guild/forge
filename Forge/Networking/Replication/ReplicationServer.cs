@@ -350,10 +350,14 @@ public sealed class ReplicationServer
 		{
 			entity.Capture(tick, BodySource, _session.BodyPrecision);
 
-			if (entity.ShadowBody is QuantizedBody shadow)
-			{
-				LagCompensation.Record(entity, tick, BodyCodec.Dequantize(shadow, _session.BodyPrecision));
-			}
+#pragma warning disable SA1118 // Parameter should not span multiple lines
+			LagCompensation.Record(
+				entity,
+				tick,
+				entity.ShadowBody is QuantizedBody shadow
+					? BodyCodec.Dequantize(shadow, _session.BodyPrecision)
+					: null);
+#pragma warning restore SA1118 // Parameter should not span multiple lines
 
 			entity.CaptureEffects(tick, this, _session.Clock);
 			entity.CaptureGraphs(tick, this);
@@ -450,13 +454,19 @@ public sealed class ReplicationServer
 		return new ReplicatedGraph(instance, processor, context, assetIndex);
 	}
 
-	// The session is over: the entities live on, and their cues and graphs are no longer anything to this server.
+	// The session is over: the entities live on, and their cues, graphs and effects are no longer anything to this
+	// server.
 	internal void StopObserving()
 	{
 		foreach (IForgeEntity entity in _entityList.Select(x => x.Entity))
 		{
 			entity.CuesManager.RemoveObserver(_cueObserver);
 			entity.Abilities.GraphObserver = null;
+		}
+
+		foreach (ReplicatedEntity entity in _entityList)
+		{
+			LagCompensation.Untrack(entity);
 		}
 	}
 

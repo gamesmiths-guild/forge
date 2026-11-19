@@ -155,7 +155,8 @@ public sealed class LagCompensation
 		{
 			ReplicatedEntity entity = tracked.Entity;
 
-			if (entity.Owner == instigator
+			// A placed entity is a mirror on its owner's client too, shown behind as any other.
+			if ((entity.Owner == instigator && !entity.IsPlaced)
 				|| !entity.LagCompensated
 				|| entity.DespawnedAtTick is not null
 				|| !tracked.Body.TrySample(tick, out BodyState body, snapDistance))
@@ -212,6 +213,13 @@ public sealed class LagCompensation
 		var tracked = new Tracked(entity, this);
 		_tracked[entity.Entity] = tracked;
 		entity.Entity.EffectsManager.LagCompensation = this;
+
+		// What it had as it was registered counts from then.
+		foreach (ActiveEffect effect in entity.Entity.EffectsManager.ActiveEffects)
+		{
+			tracked.Hold(effect);
+		}
+
 		entity.Entity.EffectsManager.OnActiveEffectAdded += tracked.OnEffectAdded;
 		entity.Entity.EffectsManager.OnActiveEffectRemoved += tracked.Removed;
 	}
@@ -228,17 +236,29 @@ public sealed class LagCompensation
 		entity.Entity.EffectsManager.OnActiveEffectRemoved -= tracked.Removed;
 	}
 
-	internal void Record(ReplicatedEntity entity, long tick, in BodyState body)
+	// Notes what a send carried of an entity: its body, or none, which clears the body's history as a client clears it.
+	internal void Record(ReplicatedEntity entity, long tick, BodyState? body)
 	{
 		if (!_tracked.TryGetValue(entity.Entity, out Tracked? tracked))
 		{
 			return;
 		}
 
-		tracked.Body.Add(tick, body);
+		long reach = (long)Math.Ceiling(_clock.TicksIn(MaxRewindSeconds));
+
+		if (body is BodyState state)
+		{
+			// Enough states to reach that far back however often the server sends, and one before it to ease from.
+			tracked.Body.MaxCount = (int)Math.Max(RemoteBody.Capacity, reach + 2);
+			tracked.Body.Add(tick, state);
+		}
+		else
+		{
+			tracked.Body.Clear();
+		}
 
 		// An effect that ended before the furthest a hit reaches back can't count any more.
-		long oldest = tick - (long)Math.Ceiling(_clock.TicksIn(MaxRewindSeconds)) - 1;
+		long oldest = tick - reach - 1;
 		tracked.Effects.RemoveAll(x => x.EndTick is long end && end < oldest);
 	}
 
@@ -307,8 +327,15 @@ public sealed class LagCompensation
 
 		public void OnEffectAdded(ActiveEffectHandle handle)
 		{
-			if (handle.ActiveEffect is not ActiveEffect effect
-				|| effect.EffectData.LagCompensation != EffectLagCompensation.Rewound)
+			if (handle.ActiveEffect is ActiveEffect effect)
+			{
+				Hold(effect);
+			}
+		}
+
+		public void Hold(ActiveEffect effect)
+		{
+			if (effect.EffectData.LagCompensation != EffectLagCompensation.Rewound)
 			{
 				return;
 			}

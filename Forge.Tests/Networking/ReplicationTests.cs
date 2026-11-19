@@ -986,6 +986,92 @@ public class ReplicationTests
 			.Should().Be(TickRate * 0.5, "an instigator further behind is rewound by the cap");
 	}
 
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void A_placed_entity_its_instigator_owns_is_rewound_and_a_body_that_went_away_is_not()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity placed = rig.Place(new NetworkEntityId(1000), client.Peer);
+		placed.Body = new BodyState(Vector3.One, Quaternion.Identity, default, true);
+		rig.Step(6);
+		LagCompensation compensation = rig.Server.Replication!.LagCompensation;
+		var bodies = new List<RewoundBody>();
+
+		compensation.Rewound(client.Peer, rig.Server.Clock.Tick - 2, bodies);
+		bodies.Should().ContainSingle("its owner's client shows it behind, as any mirror");
+
+		placed.Body = null;
+		rig.Step(2);
+
+		compensation.TryRewind(placed, rig.Server.Clock.Tick - 4, out _).Should().BeFalse("its clients let go of it");
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void The_server_keeps_bodies_as_far_back_as_it_rewinds()
+	{
+		var rig = new Rig();
+		rig.Server.Replication!.SendInterval = 1;
+		rig.Server.Replication.LagCompensation.MaxRewindSeconds = 2;
+		Entity target = rig.Spawn();
+
+		for (int i = 0; i < 150; i++)
+		{
+			target.Body = new BodyState(new Vector3(rig.Server.Clock.Tick, 0, 0), Quaternion.Identity, default, true);
+			rig.Step();
+		}
+
+		double shown = rig.Server.Clock.Tick - 100.5;
+		rig.Server.Replication.LagCompensation.TryRewind(target, shown, out BodyState body).Should().BeTrue();
+		body.Position.X.Should().BeApproximately((float)shown, 1e-4f);
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void A_rewound_effect_an_entity_had_as_it_was_registered_counts()
+	{
+		var rig = new Rig();
+		var target = new Entity(rig.ServerTagsManager, rig.ServerCues)
+		{
+			NetworkId = rig.Server.Replication!.AllocateId(),
+		};
+		EffectData hit = HitData(rig);
+		ActiveEffectHandle guard = Rig.Apply(target, GuardData(rig, hit, false, EffectLagCompensation.Rewound))!;
+		rig.Server.Replication.Register(target, 0, PeerId.None);
+		rig.Step(10);
+
+		target.EffectsManager.RemoveEffect(guard);
+
+		Lands(rig.Server.Replication.LagCompensation, target, hit, rig.Server.Clock.Tick - 2)
+			.Should().BeFalse("the guard was up at the tick the instigator saw");
+	}
+
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void A_check_a_blocked_hit_sets_off_leaves_the_rewound_tags_as_they_were()
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		EffectData hit = HitData(rig);
+		rig.Step(10);
+		long before = rig.Server.Clock.Tick;
+		ActiveEffectHandle stun = Rig.Apply(target, GuardData(rig, hit, false, EffectLagCompensation.Rewound))!;
+		Rig.Apply(target, GuardData(rig, hit, true, EffectLagCompensation.Current));
+		int blocked = 0;
+		target.EffectsManager.OnEffectApplicationBlocked += (_, _) =>
+		{
+			blocked++;
+			Rig.Apply(target, Rig.Raise());
+		};
+
+		Lands(rig.Server.Replication!.LagCompensation, target, hit, before - 1);
+		blocked.Should().Be(1, "the immunity turned the hit away, and its handler checked another application");
+		target.EffectsManager.RemoveEffect(stun);
+
+		target.Tags.AllTags.HasTag(rig.ServerTag("state.stunned")).Should().BeFalse("each check put back what it took");
+	}
+
 	[Theory]
 	[Trait("Networking", "LagCompensation")]
 	[InlineData(0, 0.25, 1)]
