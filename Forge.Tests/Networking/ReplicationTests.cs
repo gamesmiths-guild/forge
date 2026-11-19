@@ -1106,6 +1106,35 @@ public class ReplicationTests
 		shown.Should().BeTrue("no change said it went");
 	}
 
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void A_check_set_off_by_a_removal_s_own_tags_leaves_them_removed()
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		EffectData hit = Rig.Raise();
+		rig.Step(10);
+		long before = rig.Server.Clock.Tick;
+		ActiveEffectHandle stun = Rig.Apply(target, GuardData(rig, hit, false, EffectLagCompensation.Rewound))!;
+		Rig.Apply(target, GuardData(rig, hit, true, EffectLagCompensation.Current));
+		Tag stunned = rig.ServerTag("state.stunned");
+		int checks = 0;
+		target.EffectsManager.OnEffectApplicationBlocked += (_, _) => target.EffectsManager.RemoveEffect(stun);
+		target.Tags.OnTagsChanged += x =>
+		{
+			if (!x.HasTag(stunned))
+			{
+				checks++;
+				Rig.Apply(target, Rig.Raise());
+			}
+		};
+
+		Lands(rig.Server.Replication!.LagCompensation, target, hit, before - 1);
+
+		checks.Should().Be(1, "the stun's removal took its tag away");
+		target.Tags.AllTags.HasTag(stunned).Should().BeFalse("the check its removal set off put nothing back");
+	}
+
 	[Theory]
 	[Trait("Networking", "LagCompensation")]
 	[InlineData(0, 0.25, 1)]

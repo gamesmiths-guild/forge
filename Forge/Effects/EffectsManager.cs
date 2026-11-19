@@ -1126,8 +1126,16 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			return false;
 		}
 
-		// Copied, since what a check sets off can test another hit's application.
-		_held = [.. adjustments];
+		// Copied, since what a check sets off can test another hit's application. One being removed, whose tags its
+		// removal takes as they are, is left alone.
+		_held = [.. adjustments.Where(x => x.EndTick is not null || _activeEffects.Contains(x.Effect))];
+
+		if (_held.Length == 0)
+		{
+			_held = null;
+			return false;
+		}
+
 		_heldEnded = [.. _held.Select(x => x.EndTick is not null)];
 		RestoreHeldTags(asThen: true);
 		return true;
