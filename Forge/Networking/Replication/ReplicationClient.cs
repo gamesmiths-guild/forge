@@ -351,8 +351,8 @@ public sealed class ReplicationClient
 			FollowEffects();
 		}
 
-		// The shown tick, not the one asked for, which is infinite as holding is turned off.
-		ExceptionDispatchInfo? expiry = ExpirePredictedCues(_shownTick);
+		// The tick asked for, or the last one shown as holding is turned off, which asks for every tick.
+		ExceptionDispatchInfo? expiry = ExpirePredictedCues(double.IsPositiveInfinity(tick) ? _shownTick : tick);
 		(failure ?? expiry)?.Throw();
 	}
 
@@ -2528,43 +2528,18 @@ public sealed class ReplicationClient
 	// What this client showed early on an entity it lets go of goes with it.
 	private void WithdrawPredictedCues(IForgeEntity target)
 	{
-		for (int i = _predictedCues.Count - 1; i >= 0; i--)
-		{
-			PredictedCue predicted = _predictedCues[i];
-
-			if (!ReferenceEquals(predicted.Target, target))
-			{
-				continue;
-			}
-
-			_predictedCues.RemoveAt(i);
-
-			if (predicted.Persistent)
-			{
-				target.CuesManager.RemoveCue(predicted.CueTag, target, interrupted: true, predicted);
-			}
-		}
+		Withdraw([.. _predictedCues.Where(x => ReferenceEquals(x.Target, target))])?.Throw();
 	}
 
-	// A cue shown early that the server's word didn't follow by the time its tick was shown and then some: an executed
-	// one is let go, a persistent one withdrawn.
-	private ExceptionDispatchInfo? ExpirePredictedCues(double shownTick)
+	// Lets go of cues shown early, each even if one before it throws, as long as what that set off didn't already: a
+	// persistent one is withdrawn while its target is here. The first exception is returned.
+	private ExceptionDispatchInfo? Withdraw(PredictedCue[] cues)
 	{
-		double expired = shownTick - _session.Clock.TicksIn(PredictedCueMarginSeconds);
 		ExceptionDispatchInfo? failure = null;
 
-		for (int i = _predictedCues.Count - 1; i >= 0; i--)
+		foreach (PredictedCue predicted in cues)
 		{
-			PredictedCue predicted = _predictedCues[i];
-
-			if (predicted.Tick >= expired)
-			{
-				continue;
-			}
-
-			_predictedCues.RemoveAt(i);
-
-			if (!predicted.Persistent || !_byEntity.ContainsKey(predicted.Target))
+			if (!_predictedCues.Remove(predicted) || !predicted.Persistent || !_byEntity.ContainsKey(predicted.Target))
 			{
 				continue;
 			}
@@ -2580,6 +2555,14 @@ public sealed class ReplicationClient
 		}
 
 		return failure;
+	}
+
+	// A cue shown early that the server's word didn't follow by the time its tick was shown and then some: an executed
+	// one is let go, a persistent one withdrawn.
+	private ExceptionDispatchInfo? ExpirePredictedCues(double shownTick)
+	{
+		double expired = shownTick - _session.Clock.TicksIn(PredictedCueMarginSeconds);
+		return Withdraw([.. _predictedCues.Where(x => x.Tick < expired)]);
 	}
 
 	private sealed class MirrorPresenter(ReplicationClient client) : IMirrorPresenter
