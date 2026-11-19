@@ -1077,6 +1077,35 @@ public class ReplicationTests
 		target.Tags.AllTags.HasTag(rig.ServerTag("state.stunned")).Should().BeFalse("each check put back what it took");
 	}
 
+	[Fact]
+	[Trait("Networking", "LagCompensation")]
+	public void An_effect_removed_during_a_rewound_check_leaves_what_others_grant()
+	{
+		var rig = new Rig();
+		Entity target = rig.Spawn();
+		EffectData hit = Rig.Raise();
+		Rig.Apply(target, GuardData(rig, hit, false, EffectLagCompensation.Current));
+		rig.Step(10);
+		long before = rig.Server.Clock.Tick;
+		ActiveEffectHandle stun = Rig.Apply(target, GuardData(rig, hit, false, EffectLagCompensation.Rewound))!;
+		Rig.Apply(target, GuardData(rig, hit, true, EffectLagCompensation.Current));
+		int blocked = 0;
+		target.EffectsManager.OnEffectApplicationBlocked += (_, _) =>
+		{
+			blocked++;
+			target.EffectsManager.RemoveEffect(stun);
+		};
+		Tag stunned = rig.ServerTag("state.stunned");
+		bool shown = true;
+		target.Tags.OnTagsChanged += x => shown = x.HasTag(stunned);
+
+		Lands(rig.Server.Replication!.LagCompensation, target, hit, before - 1).Should().BeFalse();
+
+		blocked.Should().Be(1);
+		target.Tags.AllTags.HasTag(stunned).Should().BeTrue("the older guard still grants it");
+		shown.Should().BeTrue("no change said it went");
+	}
+
 	[Theory]
 	[Trait("Networking", "LagCompensation")]
 	[InlineData(0, 0.25, 1)]

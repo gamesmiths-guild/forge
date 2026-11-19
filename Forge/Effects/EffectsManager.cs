@@ -60,8 +60,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 
 	private bool _serverEffectFromOutside;
 
-	// The effects whose tags are held as a lag-compensated hit's instigator saw them, while a check reads them.
+	// The effects whose tags are held as a lag-compensated hit's instigator saw them, while a check reads them, and
+	// which of them had ended as they were held.
 	private LagCompensation.HeldEffect[]? _held;
+
+	private bool[]? _heldEnded;
 
 	/// <summary>
 	/// Event triggered whenever an effect lands on the owner, carrying its evaluated data.
@@ -933,19 +936,6 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		}
 	}
 
-	private static bool AddedSince(IEffectApplicationBlocker blocker, LagCompensation.HeldEffect[] held)
-	{
-		foreach (LagCompensation.HeldEffect effect in held)
-		{
-			if (effect.EndTick is null && Array.IndexOf(effect.Blockers, blocker) >= 0)
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
-
 	private static bool IsStillActive(ActiveEffect activeEffect)
 	{
 		return activeEffect.EffectEvaluatedData.Target.EffectsManager._activeEffects.Contains(activeEffect);
@@ -1110,54 +1100,84 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 	{
 		// A check that another one sets off, as a blocked application's handler applying an effect here, reads the
 		// tags as they're held already.
-		if (_held is not null)
+		if (_held is not null || !HoldRewound())
 		{
-			return effect.CanApply(Owner) && !IsApplicationBlocked(effect, _held);
+			return effect.CanApply(Owner) && !IsApplicationBlocked(effect);
 		}
-
-		IReadOnlyList<LagCompensation.HeldEffect>? adjustments = LagCompensation?.Adjustments(Owner);
-
-		if (adjustments is null || adjustments.Count == 0)
-		{
-			return effect.CanApply(Owner) && !IsApplicationBlocked(effect, []);
-		}
-
-		// Copied, since what a check sets off can test another hit's application.
-		LagCompensation.HeldEffect[] held = [.. adjustments];
-		HoldRewound(held, true);
-		_held = held;
 
 		try
 		{
-			return effect.CanApply(Owner) && !IsApplicationBlocked(effect, held);
+			return effect.CanApply(Owner) && !IsApplicationBlocked(effect);
 		}
 		finally
 		{
-			_held = null;
-			HoldRewound(held, false);
+			ReleaseRewound();
 		}
 	}
 
 	// Puts the tags of the effects that changed since the instigator's tick as they were then, without raising
-	// anything, or back as they are. One removed since was there then; one added since wasn't.
-	private void HoldRewound(LagCompensation.HeldEffect[] held, bool asThen)
+	// anything: one removed since was there then, one added since wasn't. False when nothing changed since.
+	private bool HoldRewound()
 	{
-		foreach (LagCompensation.HeldEffect effect in held)
-		{
-			bool wasThere = effect.EndTick is not null;
+		IReadOnlyList<LagCompensation.HeldEffect>? adjustments = LagCompensation?.Adjustments(Owner);
 
-			foreach (TagContainer tags in effect.Tags)
+		if (adjustments is null || adjustments.Count == 0)
+		{
+			return false;
+		}
+
+		// Copied, since what a check sets off can test another hit's application.
+		_held = [.. adjustments];
+		_heldEnded = [.. _held.Select(x => x.EndTick is not null)];
+		RestoreHeldTags(asThen: true);
+		return true;
+	}
+
+	// Puts the held tags back as they are.
+	private void ReleaseRewound()
+	{
+		if (_held is null)
+		{
+			return;
+		}
+
+		RestoreHeldTags(asThen: false);
+		_held = null;
+		_heldEnded = null;
+	}
+
+	private void RestoreHeldTags(bool asThen)
+	{
+		for (int i = 0; i < _held!.Length; i++)
+		{
+			foreach (TagContainer tags in _held[i].Tags)
 			{
-				Owner.Tags.RestoreModifierTags(tags, asThen == wasThere);
+				Owner.Tags.RestoreModifierTags(tags, asThen == _heldEnded![i]);
 			}
 		}
 	}
 
-	private bool IsApplicationBlocked(Effect effect, LagCompensation.HeldEffect[] held)
+	// Whether a blocker is one an effect added since the instigator's tick has: it wasn't there then.
+	private bool AddedSince(IEffectApplicationBlocker blocker)
 	{
-		foreach (LagCompensation.HeldEffect removed in held)
+		for (int i = 0; i < (_held?.Length ?? 0); i++)
 		{
-			if (removed.EndTick is null)
+			if (!_heldEnded![i] && Array.IndexOf(_held![i].Blockers, blocker) >= 0)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private bool IsApplicationBlocked(Effect effect)
+	{
+		for (int h = 0; h < (_held?.Length ?? 0); h++)
+		{
+			LagCompensation.HeldEffect removed = _held![h];
+
+			if (!_heldEnded![h])
 			{
 				continue;
 			}
@@ -1183,7 +1203,7 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		{
 			IEffectApplicationBlocker blocker = _applicationBlockers[i];
 
-			if (!AddedSince(blocker, held) && !blocker.AllowEffectApplication(in effect))
+			if (!AddedSince(blocker) && !blocker.AllowEffectApplication(in effect))
 			{
 				OnEffectApplicationBlocked?.Invoke(effect, blocker);
 				return true;
@@ -1392,6 +1412,10 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 			reason = EffectRemovalReason.Destroyed;
 		}
 
+		// One removed during a lag-compensated check, by what the check set off, takes away tags as they are, and the
+		// check goes on as the instigator saw what's left.
+		bool rewound = _held is not null;
+		ReleaseRewound();
 		_changeDepth++;
 
 		try
@@ -1432,6 +1456,11 @@ public class EffectsManager(IForgeEntity owner, CuesManager cuesManager)
 		finally
 		{
 			_changeDepth--;
+
+			if (rewound)
+			{
+				HoldRewound();
+			}
 		}
 	}
 }
