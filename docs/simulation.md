@@ -21,6 +21,7 @@ Each tick runs, in order:
 3. **The movement stage runs.** If the entity has a `Mover`, it moves the body by the step. See [Movement](#movement).
 4. **Effects advance by the step.** Durations count down, periodic effects execute, and expired effects end.
 5. **Abilities advance their fixed rail.** Graphs react to the effects as they stand after this tick's expirations. See [Two update rails](statescript/nodes/state/README.md#two-update-rails).
+6. **Projectiles fly.** If the entity has `Shots`, each lightweight projectile it launched before this tick flies its stretch of path. See [Shots](networking/shots.md).
 
 ### Entities that affect each other
 

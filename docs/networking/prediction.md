@@ -80,6 +80,18 @@ The owner predicts what the entity's own tick does. What comes from elsewhere st
 
 An effect counts as from elsewhere when it lands while the entity isn't advancing through its own tick, or comes from what the owner doesn't predict. One applied before the entity's first tick is part of how it starts, which the owner's copy runs too as the host makes it. A run counts the same way, by when it started.
 
+## Coded behaviors
+
+A coded behavior predicts as a graph does when it takes part in rollback, as a [`RollbackBehavior<TContext>`](../rollback.md#coded-behaviors) does. It runs on the server and on its owner's client alike, and a correction runs its ticks again, so it keeps to the rules a graph's nodes keep:
+
+- **Gameplay only through Forge:** effects, tags, attributes and events, which replicate and roll back. Not fields of the entity or the engine's objects, which don't.
+- **What it shows only through cues,** which play once and follow corrections by their net change.
+- **Spawns through the server:** an entity a client may predict through [Spawning](spawning.md), a projectile through [Shots](shots.md).
+- **Input from the entity,** its `Input`, which carries the tick's frame on both machines, never a device.
+- **Time in fixed steps,** counted in `OnFixedUpdate`, never the frame's.
+- **Randomness from the entity's seeded `Random`,** which the server and the owner start alike each tick.
+- **Its state in its context,** so a restore puts it back.
+
 ## Limits
 
 - A run the entity's own tick started is checked, not put right. One the server didn't have, or had otherwise, as when a press arrived too late to run, corrects only through what it changes, and ends as it ends here.
