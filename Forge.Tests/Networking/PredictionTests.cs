@@ -14,6 +14,7 @@ using Gamesmiths.Forge.Effects.Periodic;
 using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Networking;
 using Gamesmiths.Forge.Networking.Replication;
+using Gamesmiths.Forge.Shots;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Action;
@@ -52,7 +53,7 @@ public class PredictionTests
 		"event.blow"
 	];
 
-	private static readonly InputActionSet _actions = new(["right", "dash", "chant", "spark", "guard"]);
+	private static readonly InputActionSet _actions = new(["right", "dash", "chant", "spark", "guard", "shoot"]);
 
 	[Fact]
 	[Trait("Networking", "Prediction")]
@@ -199,6 +200,47 @@ public class PredictionTests
 			rig.ServerPlayer.PositionAt(pushed + 20).X,
 			1e-3f,
 			"the owner goes on from the server's body as sent, to a thousandth");
+	}
+
+	[Theory]
+	[Trait("Networking", "Prediction")]
+	[InlineData(false)]
+	[InlineData(true)]
+	public void A_shot_leaves_its_owner_at_once_and_ends_where_the_server_s_did(bool lossy)
+	{
+		var rig = new Rig(lossy ? new NetworkConditions(0.1, 0.01, 0.05f) : NetworkConditions.Good, seed: 3);
+		Player player = rig.JoinWithPlayer();
+		rig.ServerPlayer.Wall.At = 2;
+		player.Wall.At = 6;
+
+		rig.Hold("shoot", 1);
+
+		ProjectileFlight launched = player.Shots.Flights
+			.Should().ContainSingle("it launched on the owner's own tick").Subject;
+		launched.IsFlying
+			.Should().BeTrue();
+
+		rig.Idle(90);
+
+		ProjectileFlight server = rig.ServerPlayer.Shots.Flights
+			.Should().ContainSingle().Subject;
+		ProjectileFlight owner = player.Shots.Flights
+			.Should().ContainSingle("the server's launch isn't the owner's twice").Subject;
+		server.Id
+			.Should().Be(launched.Id);
+		server.End
+			.Should().Be(FlightEnd.Impact);
+		owner.End
+			.Should().Be(FlightEnd.Impact);
+		owner.EndTick
+			.Should().Be(server.EndTick);
+		owner.EndPoint
+			.Should().Be(server.EndPoint, "where the server ended it, though this machine's wall is further");
+		if (!lossy)
+		{
+			rig.Mirror.Corrections
+				.Should().Be(0, "flights aren't checked: the server's word on them is their end");
+		}
 	}
 
 	[Fact]
@@ -664,6 +706,12 @@ public class PredictionTests
 		// Triggered by event.shove: waits half a second, with nothing for a client to run.
 		public AbilityData Brace { get; }
 
+		// Bound to shoot: a coded behavior that launches a ball along +X and ends a tick later.
+		public AbilityData Shoot { get; }
+
+		// Four units a second, a few seconds long.
+		public ProjectileData Ball { get; } = new("Ball", Vector3.Zero, 0.1f, 3);
+
 		public List<string> Log { get; } = [];
 
 		// Makes a running dash throw as it's captured.
@@ -747,6 +795,11 @@ public class PredictionTests
 				abilityTriggerData: AbilityTriggerData.ForEvent(Tag("event.shove")),
 				behaviorFactory: () => new GraphAbilityBehavior(wait));
 
+			Shoot = new AbilityData(
+				"Shoot",
+				behaviorFactory: () => new ShootBehavior(this),
+				inputBinding: AbilityInputBinding.ForAction("shoot"));
+
 			Graph guard = Parry();
 			Guard = new AbilityData(
 				"Guard",
@@ -765,6 +818,8 @@ public class PredictionTests
 			Registry.Register(AssetKind.Ability, "uid://sparks", Sparks);
 			Registry.Register(AssetKind.Ability, "uid://brace", Brace);
 			Registry.Register(AssetKind.Ability, "uid://guard", Guard);
+			Registry.Register(AssetKind.Ability, "uid://shoot", Shoot);
+			Registry.Register(AssetKind.Projectile, "uid://ball", Ball);
 			Registry.Seal();
 		}
 
@@ -891,6 +946,46 @@ public class PredictionTests
 	}
 
 	// Dashes for the length of its effect, then ends: a coded behavior that takes part in snapshots.
+	private sealed class ShootContext : BehaviorContext
+	{
+		public int Ticks { get; set; }
+	}
+
+	private sealed class ShootBehavior(Assets assets) : RollbackBehavior<ShootContext>
+	{
+		public override void OnStarted(AbilityBehaviorContext context)
+		{
+			base.OnStarted(context);
+			var owner = (Player)context.Owner;
+			owner.Shots.Launch(assets.Ball, owner.Position, new Vector3(4, 0, 0));
+		}
+
+		public override void OnEnded(AbilityBehaviorContext context)
+		{
+		}
+
+		public override void OnFixedUpdate(double deltaTime)
+		{
+			if (++Context.Ticks >= 1)
+			{
+				Context.Ability?.InstanceHandle.End();
+			}
+		}
+	}
+
+	// A wall the balls end on, at an X of its own on each machine.
+	private sealed class ShotWall : IShotHost
+	{
+		public float At { get; set; } = float.MaxValue;
+
+		public ShotStep Fly(in ProjectileFlight flight, Vector3 start, Vector3 finish)
+		{
+			return finish.X - flight.Origin.X >= At
+				? ShotStep.Impact(flight.Origin with { X = flight.Origin.X + At })
+				: ShotStep.Flying;
+		}
+	}
+
 	private sealed class DashBehavior(Assets assets) : ISnapshotAbilityBehavior
 	{
 		private const int Ticks = 15;
@@ -1080,7 +1175,13 @@ public class PredictionTests
 
 		public WalkingMover Mover { get; }
 
+		public EntityShots Shots { get; }
+
+		public ShotWall Wall { get; } = new();
+
 		public Vector3 Position => Mover.Body.Position;
+
+		EntityShots? IForgeEntity.Shots => Shots;
 
 		IEntityMover? IForgeEntity.Mover => Mover;
 
@@ -1099,6 +1200,8 @@ public class PredictionTests
 			Abilities.GrantAbilityPermanently(assets.Sparks, 1, LevelComparison.None, this);
 			Abilities.GrantAbilityPermanently(assets.Brace, 1, LevelComparison.None, this);
 			Abilities.GrantAbilityPermanently(assets.Guard, 1, LevelComparison.None, this);
+			Abilities.GrantAbilityPermanently(assets.Shoot, 1, LevelComparison.None, this);
+			Shots = new EntityShots(this) { Host = Wall };
 
 			if (pulses)
 			{

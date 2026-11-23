@@ -6,6 +6,7 @@ using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Networking.Messages;
+using Gamesmiths.Forge.Shots;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
 
@@ -72,6 +73,7 @@ public sealed class ReplicationServer
 	private readonly SpawnKeys _spawnKeys = new();
 	private readonly CueObserver _cueObserver;
 	private readonly GraphObserver _graphObserver;
+	private readonly ShotObserver _shotObserver;
 	private EffectVisibility _defaultEffectVisibility = EffectVisibility.Public;
 	private uint _nextId = 1;
 
@@ -160,6 +162,7 @@ public sealed class ReplicationServer
 		LagCompensation = new LagCompensation(session.Clock);
 		_cueObserver = new CueObserver(this);
 		_graphObserver = new GraphObserver(this);
+		_shotObserver = new ShotObserver(this);
 
 		for (int i = 0; i < session.Registry.Count(AssetKind.EffectContext); i++)
 		{
@@ -227,6 +230,11 @@ public sealed class ReplicationServer
 		entity.CuesManager.AddObserver(_cueObserver);
 		entity.Abilities.GraphObserver = _graphObserver;
 
+		if (entity.Shots is EntityShots shots)
+		{
+			shots.Observer = _shotObserver;
+		}
+
 		// A client predicts only an entity spawned for it: one placed in its scene is a mirror there, whoever owns it.
 		entity.Abilities.TracksPrediction = sceneIndex >= 0 && owner != PeerId.None && owner != PeerId.Server;
 
@@ -281,6 +289,11 @@ public sealed class ReplicationServer
 		replicated.Cues.Clear();
 		replicated.ClearEffects();
 		entity.Abilities.GraphObserver = null;
+
+		if (entity.Shots is EntityShots shots)
+		{
+			shots.Observer = null;
+		}
 
 		if (!_entityList.Exists(x => x.Entity.CuesManager == entity.CuesManager))
 		{
@@ -462,6 +475,11 @@ public sealed class ReplicationServer
 		{
 			entity.CuesManager.RemoveObserver(_cueObserver);
 			entity.Abilities.GraphObserver = null;
+
+			if (entity.Shots is EntityShots shots)
+			{
+				shots.Observer = null;
+			}
 		}
 
 		foreach (ReplicatedEntity entity in _entityList)
@@ -895,7 +913,7 @@ public sealed class ReplicationServer
 		if (view.Leaving)
 		{
 			_entry.WriteBits((ulong)EntryKind.Despawn, 2);
-			uint lastEvent = WriteEvents(view);
+			uint lastEvent = WriteEvents(view, tick);
 			lastEvent = Math.Max(lastEvent, WriteGraphs(view, tick, despawning: true));
 			_entry.Align();
 			return lastEvent;
@@ -947,7 +965,7 @@ public sealed class ReplicationServer
 		WriteAttributes(view);
 		WriteTags(entity, acked, seen);
 		WriteCues(view);
-		uint maxEvent = WriteEvents(view);
+		uint maxEvent = WriteEvents(view, tick);
 		WriteEffects(view, tick);
 		maxEvent = Math.Max(maxEvent, WriteGraphs(view, tick, despawning: false));
 
@@ -1153,7 +1171,7 @@ public sealed class ReplicationServer
 		}
 	}
 
-	private uint WriteEvents(EntityView view)
+	private uint WriteEvents(EntityView view, long tick)
 	{
 		ReplicatedEntity entity = view.Entity;
 		uint eventsAcked = view.EventsAcked;
@@ -1193,6 +1211,20 @@ public sealed class ReplicationServer
 			}
 
 			_entry.WriteVarUInt(cueEvent.Sequence);
+			_entry.WriteBool(cueEvent.Flight is not null);
+
+			if (cueEvent.Flight is ProjectileFlight flight)
+			{
+				ReplicationCodec.WriteFlight(
+					_entry,
+					flight,
+					tick,
+					_session.Registry.IndexOfAsset(AssetKind.Projectile, flight.Projectile),
+					_session.Registry.BitsFor(AssetKind.Projectile));
+
+				continue;
+			}
+
 			WriteTag(_session.TagsManager.GetNetIndexFromTag(cueEvent.CueTag));
 			ReplicationCodec.WriteParameters(_entry, cueEvent.Parameters);
 		}
@@ -1590,6 +1622,43 @@ public sealed class ReplicationServer
 		public bool Hears(EffectVisibility visibility)
 		{
 			return visibility == EffectVisibility.Public || (visibility == EffectVisibility.OwnerOnly && IsOwner);
+		}
+	}
+
+	// Keeps each replicated entity's launches and the ends of its flights as events. An end goes to the owner as well:
+	// the client that predicts the entity ends the flight where the server did, whatever it predicted.
+	private sealed class ShotObserver(ReplicationServer server) : IShotObserver
+	{
+		public void Launched(EntityShots shots, in ProjectileFlight flight, bool ownersOwn)
+		{
+			Add(shots, flight, ownersOwn);
+		}
+
+		public void Ended(EntityShots shots, in ProjectileFlight flight)
+		{
+			Add(shots, flight, ownersOwn: false);
+		}
+
+		private void Add(EntityShots shots, in ProjectileFlight flight, bool ownersOwn)
+		{
+			if (!server._byEntity.TryGetValue(shots.Owner, out ReplicatedEntity? entity))
+			{
+				return;
+			}
+
+			if (server._session.Registry.IndexOfAsset(AssetKind.Projectile, flight.Projectile) < 0)
+			{
+				throw new InvalidOperationException(
+					$"The projectile {flight.Projectile} isn't in the session's asset registry.");
+			}
+
+			entity.Events.Add(new ReplicatedEntity.CueEvent(
+				++entity.LastEventSequence,
+				default,
+				null,
+				server._session.Clock.Tick,
+				ownersOwn,
+				flight));
 		}
 	}
 

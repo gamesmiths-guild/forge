@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Runtime.ExceptionServices;
 using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Shots;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
 
@@ -15,8 +16,8 @@ namespace Gamesmiths.Forge.Core;
 /// </summary>
 /// <remarks>
 /// <para>It holds the entity's attributes, tags, active effects, granted abilities with their running instances and
-/// graphs, shared variables, input, random source, body and the state its <see cref="IForgeEntity.StateHook"/> keeps
-/// outside Forge. Active effects, abilities and instances are kept as the
+/// graphs, shared variables, input, random source, body, projectiles in flight and the state its
+/// <see cref="IForgeEntity.StateHook"/> keeps outside Forge. Active effects, abilities and instances are kept as the
 /// objects they are, with copies of their state, so a restore brings back the very handles that point at them.</para>
 /// <para>A snapshot never changes, so it can be restored any number of times.</para>
 /// </remarks>
@@ -46,6 +47,8 @@ public sealed class EntitySnapshot
 
 	internal Variant128? ExternalState { get; }
 
+	internal ProjectileFlight[]? Flights { get; }
+
 	internal long EffectsTick { get; }
 
 	internal EntitySnapshot(IForgeEntity entity)
@@ -62,6 +65,7 @@ public sealed class EntitySnapshot
 		Random = entity.Random?.CaptureSnapshot();
 		Body = entity.Mover?.CaptureState();
 		ExternalState = entity.StateHook?.CaptureState();
+		Flights = entity.Shots?.Capture();
 		EffectsTick = entity.EffectsManager.Tick;
 	}
 
@@ -212,6 +216,11 @@ public sealed class EntitySnapshot
 			{
 				failure ??= ExceptionDispatchInfo.Capture(exception);
 			}
+		}
+
+		if (Flights is not null)
+		{
+			Entity.Shots?.Restore(Flights);
 		}
 
 		if (ExternalState is Variant128 externalState)

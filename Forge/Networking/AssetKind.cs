@@ -32,4 +32,9 @@ public enum AssetKind : byte
 	/// <see cref="Replication.EffectContextCodec"/>.
 	/// </summary>
 	EffectContext = 4,
+
+	/// <summary>
+	/// A kind of lightweight projectile: a <see cref="Shots.ProjectileData"/>.
+	/// </summary>
+	Projectile = 5,
 }

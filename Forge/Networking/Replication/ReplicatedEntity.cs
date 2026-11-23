@@ -5,6 +5,7 @@ using Gamesmiths.Forge.Attributes;
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
+using Gamesmiths.Forge.Shots;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
 
@@ -457,12 +458,14 @@ public sealed class ReplicatedEntity
 		long Stamp,
 		bool Expired);
 
-	// A cue executed on the entity: one-shot, numbered in order, and forgotten once it's too old to be worth showing.
-	// One its own tick executed, which its owner predicts, goes to everyone but the owner.
+	// A cue executed on the entity, or a projectile it launched or whose flight ended: one-shot, numbered in order, and
+	// forgotten once it's too old to be worth showing. One its own tick made, which its owner predicts, goes to
+	// everyone but the owner.
 	internal readonly record struct CueEvent(
 		uint Sequence,
 		Tag CueTag,
 		CueParameters? Parameters,
 		long CreatedAtTick,
-		bool OwnersOwn);
+		bool OwnersOwn,
+		ProjectileFlight? Flight = null);
 }
