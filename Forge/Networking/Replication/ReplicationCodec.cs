@@ -41,6 +41,8 @@ internal static class ReplicationCodec
 		double normalized = float.IsNaN(value.NormalizedMagnitude) ? 0 : Math.Clamp(value.NormalizedMagnitude, 0, 1);
 		writer.WriteBits((ulong)Math.Round(normalized * NormalizedLevels), NormalizedBits);
 		writer.WriteVarUInt(value.Source?.NetworkId.Value ?? 0);
+		WriteOptionalVector(writer, value.Position);
+		WriteOptionalVector(writer, value.Normal);
 	}
 
 	internal static CueParameters? ReadParameters(BitReader reader, Func<NetworkEntityId, IForgeEntity?> entities)
@@ -53,11 +55,15 @@ internal static class ReplicationCodec
 		int magnitude = ReadInt(reader);
 		float normalized = reader.ReadBits(NormalizedBits) / NormalizedLevels;
 		uint source = ReadEntityId(reader);
+		System.Numerics.Vector3? position = ReadOptionalVector(reader);
+		System.Numerics.Vector3? normal = ReadOptionalVector(reader);
 
 		return new CueParameters(
 			magnitude,
 			normalized,
-			source == 0 ? null : entities(new NetworkEntityId(source)));
+			source == 0 ? null : entities(new NetworkEntityId(source)),
+			position,
+			normal);
 	}
 
 	// A variable's value as its raw bits, so it arrives exactly as it was, whatever its type.
@@ -192,6 +198,21 @@ internal static class ReplicationCodec
 		writer.WriteFloat(value.X);
 		writer.WriteFloat(value.Y);
 		writer.WriteFloat(value.Z);
+	}
+
+	private static void WriteOptionalVector(BitWriter writer, System.Numerics.Vector3? value)
+	{
+		writer.WriteBool(value.HasValue);
+
+		if (value is System.Numerics.Vector3 vector)
+		{
+			WriteVector(writer, vector);
+		}
+	}
+
+	private static System.Numerics.Vector3? ReadOptionalVector(BitReader reader)
+	{
+		return reader.ReadBool() ? ReadVector(reader) : null;
 	}
 
 	private static System.Numerics.Vector3 ReadVector(BitReader reader)

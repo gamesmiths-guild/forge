@@ -222,7 +222,7 @@ internal static class CueApplicationUtilities
 			customParameters = resolvedCustomParameters as Dictionary<StringKey, object>;
 		}
 
-		return new CueParameters(magnitude, normalizedMagnitude, source, customParameters);
+		return new CueParameters(magnitude, normalizedMagnitude, source, CustomParameters: customParameters);
 	}
 
 	private static bool ResolveCueTags(
