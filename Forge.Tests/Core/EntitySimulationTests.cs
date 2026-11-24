@@ -28,6 +28,19 @@ public class EntitySimulationTests(TagsAndCuesFixture fixture) : IClassFixture<T
 
 	[Fact]
 	[Trait("Simulation", "Tick")]
+	public void An_entity_s_tick_is_the_one_it_was_last_begun_at()
+	{
+		var entity = new TestEntity(_tagsManager, _cuesManager);
+		EntitySimulation.TickOf(entity).Should().Be(-1);
+
+		EntitySimulation.Tick(entity, 7, Step);
+		EntitySimulation.BeginTick(entity, 3);
+
+		EntitySimulation.TickOf(entity).Should().Be(3, "a replay runs an earlier tick again");
+	}
+
+	[Fact]
+	[Trait("Simulation", "Tick")]
 	public void Ticks_advance_effects_by_the_fixed_step()
 	{
 		var entity = new TestEntity(_tagsManager, _cuesManager);

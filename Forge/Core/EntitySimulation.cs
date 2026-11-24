@@ -89,6 +89,16 @@ public static class EntitySimulation
 	}
 
 	/// <summary>
+	/// Gives the tick an entity was last begun at: the one it simulates while it advances, a replay's included.
+	/// </summary>
+	/// <param name="entity">The entity.</param>
+	/// <returns>The tick, or -1 before the entity's first.</returns>
+	public static long TickOf(IForgeEntity entity)
+	{
+		return entity.EffectsManager.Tick;
+	}
+
+	/// <summary>
 	/// Runs the entity's input and movement stages, then advances its effects and fixed-rail abilities by one fixed
 	/// step, without restarting its random.
 	/// </summary>
