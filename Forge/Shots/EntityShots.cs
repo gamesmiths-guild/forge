@@ -242,7 +242,8 @@ public sealed class EntityShots(IForgeEntity owner)
 
 			double age = (tick - flight.Tick) * fixedDeltaTime;
 			Vector3 to = flight.PositionAt(Math.Min(age, flight.Projectile.Lifetime));
-			ShotStep step = Host?.Fly(flight, flight.PositionAt(age - fixedDeltaTime), to) ?? ShotStep.Flying;
+			Vector3 from = flight.PositionAt(Math.Min(age - fixedDeltaTime, flight.Projectile.Lifetime));
+			ShotStep step = Host?.Fly(flight, from, to) ?? ShotStep.Flying;
 
 			if (step.Pierces >= 0 || step.Strength >= 0)
 			{

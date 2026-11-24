@@ -189,14 +189,14 @@ public sealed class EntitySnapshot
 			writer.Write("Tick", flight.Tick);
 			writer.Write("Sequence", flight.Id.Sequence);
 			writer.Write("Projectile", flight.Projectile.Name);
-			WriteQuantized(writer, "Origin", flight.Origin);
-			WriteQuantized(writer, "Velocity", flight.Velocity);
+			WriteExact(writer, "Origin", flight.Origin);
+			WriteExact(writer, "Velocity", flight.Velocity);
 			writer.Write("End", (long)flight.End);
 			writer.Write("End tick", flight.EndTick);
-			WriteQuantized(writer, "End point", flight.EndPoint);
-			WriteQuantized(writer, "End normal", flight.EndNormal);
+			WriteExact(writer, "End point", flight.EndPoint);
+			WriteExact(writer, "End normal", flight.EndNormal);
 			writer.Write("Pierces", flight.Pierces);
-			writer.Write("Strength", Quantized(flight.Strength));
+			writer.Write("Strength", flight.Strength);
 			writer.Close();
 		}
 	}
@@ -288,6 +288,15 @@ public sealed class EntitySnapshot
 		}
 
 		writer.Close();
+		writer.Close();
+	}
+
+	private static void WriteExact(IStateWriter writer, string name, Vector3 value)
+	{
+		writer.Open(name);
+		writer.Write("x", value.X);
+		writer.Write("y", value.Y);
+		writer.Write("z", value.Z);
 		writer.Close();
 	}
 

@@ -118,6 +118,35 @@ public class EntityShotsTests
 
 	[Fact]
 	[Trait("Shots", "Flight")]
+	public void A_flight_first_flown_past_its_lifetime_stays_at_its_lifetime()
+	{
+		var entity = new Shooter();
+		entity.Tick(0);
+		entity.Shots.Launch(new ProjectileData("Dart", Vector3.Zero, 0, 0.02), Vector3.Zero, new Vector3(64, 0, 0));
+
+		entity.Tick(5);
+
+		entity.Host.Stretches[0].From.X.Should().BeApproximately(1.28f, 1e-5f);
+		entity.Host.Stretches[0].To.X.Should().BeApproximately(1.28f, 1e-5f);
+	}
+
+	[Fact]
+	[Trait("Shots", "Flight")]
+	public void A_launch_s_exact_velocity_is_in_the_checksum()
+	{
+		var first = new Shooter();
+		var second = new Shooter();
+		first.Tick(0);
+		second.Tick(0);
+
+		first.Shots.Launch(_ball, Vector3.Zero, Vector3.UnitX);
+		second.Shots.Launch(_ball, Vector3.Zero, new Vector3(1.0004f, 0, 0));
+
+		EntitySimulation.Checksum(second).Should().NotBe(EntitySimulation.Checksum(first));
+	}
+
+	[Fact]
+	[Trait("Shots", "Flight")]
 	public void A_launch_or_an_end_changes_the_checksum()
 	{
 		var entity = new Shooter();
