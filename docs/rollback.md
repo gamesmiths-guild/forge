@@ -26,6 +26,7 @@ EntitySimulation.RestoreSnapshot(entity, snapshot);
 | Input | The current frame and the one waiting for the next tick, if the entity has an `Input`. |
 | Random | Where the generator is, if the entity has a `Random`. |
 | Body | The `BodyState` its [mover](simulation.md#movement) captures, if the entity has a `Mover`. |
+| Projectiles | The lightweight projectiles in flight and those that ended a moment ago, if the entity has `Shots`. See [Shots](networking/shots.md#rollback). |
 | Outside state | What its [state hook](#state-outside-forge) captures, if the entity has a `StateHook`. |
 
 **A restore is silent.** No attribute, tag, effect or ability event is raised, no cue executes, and no graph node activates or deactivates. The [presentation pass](simulation.md#presentation-pass) after it shows only the net change in what the graphs present, and persistent cues follow it: those of effects and Cue nodes it takes away end, and those it brings back start again. See [Cues after a restore](cues.md#cues-after-a-restore).
@@ -65,6 +66,45 @@ public sealed class ChargeBehavior : ISnapshotAbilityBehavior
     public void DropRun() { }
 }
 ```
+
+`RollbackBehavior<TContext>` does that for you: keep everything the run needs to go on in a context class, which a snapshot copies member by member, as a graph's node contexts are copied. Each run starts with a new context. Override `OnCopied` to give the copy its own of anything the run changes in place, such as a list:
+
+```csharp
+public sealed class VolleyContext : BehaviorContext
+{
+    public int Ticks { get; set; }
+
+    public List<ShotId> Fired { get; private set; } = [];
+
+    protected override void OnCopied()
+    {
+        base.OnCopied();
+        Fired = [.. Fired];
+    }
+}
+
+public sealed class VolleyBehavior(ProjectileData bolt) : RollbackBehavior<VolleyContext>
+{
+    public override void OnEnded(AbilityBehaviorContext context) { }
+
+    public override void OnFixedUpdate(double deltaTime)
+    {
+        IForgeEntity owner = Context.Ability!.Owner;
+
+        if (Context.Ticks++ % 8 == 0)
+        {
+            Context.Fired.Add(owner.Shots!.Launch(bolt, Vector3.Zero, Vector3.UnitX * 20).Id);
+        }
+
+        if (Context.Fired.Count == 3)
+        {
+            Context.Ability.InstanceHandle.End();
+        }
+    }
+}
+```
+
+`Context.Ability` is the context the run started with. Fields of the behavior outside its context don't roll back.
 
 Counting in fixed steps, as `OnFixedUpdate` does, makes a restored run come out the same when its ticks run again. The run of a coded behavior that doesn't implement it is left out: a restore neither ends nor brings it back, and it goes on as it is. A behavior that ends within its own activation, such as the [Quick Start](quick-start.md)'s heal, has nothing to leave out.
 
@@ -203,7 +243,7 @@ A replay that finds nothing proves the world is deterministic over those ticks: 
 
 `ChecksumAt(tick)` hashes the world as a tick held left it into 64 bits that come out the same on every machine and in every run that leaves the world the same:
 
-- **Forge's state, value for value:** each entity's attributes, tags, active effects with their timing, stacks and set-by-caller values, granted abilities with the running nodes and variables of their graphs, shared variables, input, random and outside state.
+- **Forge's state, value for value:** each entity's attributes, tags, active effects with their timing, stacks and set-by-caller values, granted abilities with the running nodes and variables of their graphs, shared variables, input, random and outside state, and the entity's [projectile flights](networking/shots.md), exactly, as the network sends them.
 - **The body to a thousandth of a unit**, the precision the network sends it at, so float noise below that isn't a difference.
 - **Entities by their place in the world.** An effect's owner or a variable pointing at an entity counts by that entity's place, so a world that spawned an equal entity in the same place hashes the same.
 - **Not covered directly:** what a running node or an effect component keeps for itself. It counts through what it changes.

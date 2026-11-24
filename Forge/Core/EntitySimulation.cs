@@ -24,6 +24,8 @@ namespace Gamesmiths.Forge.Core;
 /// end.</description></item>
 /// <item><description>Abilities advance their fixed-rail behaviors, so graphs react to the effects as they stand after
 /// this tick's expirations.</description></item>
+/// <item><description>The entity's <see cref="IForgeEntity.Shots"/>, if any, fly a stretch: each projectile launched
+/// before the tick has its stretch of path tested.</description></item>
 /// </list>
 /// <para>Call it once per tick from the host's fixed callback, with the same tick number and step on every machine
 /// that simulates the entity. The frame rail stays separate: call <see cref="EntityAbilities.UpdateAbilities"/> from
@@ -113,6 +115,7 @@ public static class EntitySimulation
 			entity.Mover?.Move(fixedDeltaTime);
 			effects.UpdateEffects(fixedDeltaTime);
 			entity.Abilities.FixedUpdateAbilities(fixedDeltaTime);
+			entity.Shots?.Advance(fixedDeltaTime);
 			effects.EndAdvance();
 		}
 		finally
@@ -127,8 +130,9 @@ public static class EntitySimulation
 	/// <remarks>
 	/// <para>The snapshot holds the entity's attributes, tags, active effects, granted abilities with their running
 	/// instances and graphs, shared variables, input, random source, body, through its
-	/// <see cref="IForgeEntity.Mover"/>, and state kept outside Forge, through its
-	/// <see cref="IForgeEntity.StateHook"/>. See <see cref="EntitySnapshot"/>.</para>
+	/// <see cref="IForgeEntity.Mover"/>, its projectiles in flight, through its <see cref="IForgeEntity.Shots"/>, and
+	/// state kept outside Forge, through its <see cref="IForgeEntity.StateHook"/>. See <see cref="EntitySnapshot"/>.
+	/// </para>
 	/// <para>An ability's run is in it when its behavior is an <see cref="ISnapshotAbilityBehavior"/>, as Statescript
 	/// graphs are. Any other run is left out, and a restore leaves it as it is.</para>
 	/// <para>Take it from the host, between ticks, rather than from inside an ability, an effect or a graph, where the

@@ -22,7 +22,7 @@ namespace Gamesmiths.Forge.Networking;
 public sealed class NetworkAssetRegistry
 {
 	// The kinds, counted by hand: Enum.GetValues isn't AOT-safe, and a new kind is a protocol change anyway.
-	private const int KindCount = 5;
+	private const int KindCount = 6;
 
 	private readonly SortedDictionary<string, object>[] _pending = new SortedDictionary<string, object>[KindCount];
 	private readonly Dictionary<string, int>[] _indices = new Dictionary<string, int>[KindCount];

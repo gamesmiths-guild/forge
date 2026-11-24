@@ -9,6 +9,7 @@ using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Effects.Modifiers;
 using Gamesmiths.Forge.Networking.Messages;
+using Gamesmiths.Forge.Shots;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Tags;
@@ -352,7 +353,9 @@ public sealed class ReplicationClient
 		}
 
 		// The tick asked for, or the last one shown as holding is turned off, which asks for every tick.
-		ExceptionDispatchInfo? expiry = ExpirePredictedCues(double.IsPositiveInfinity(tick) ? _shownTick : tick);
+		double shown = double.IsPositiveInfinity(tick) ? _shownTick : tick;
+		ExceptionDispatchInfo? expiry = ExpirePredictedCues(shown);
+		ExpireMirroredShots(shown);
 		(failure ?? expiry)?.Throw();
 	}
 
@@ -635,6 +638,7 @@ public sealed class ReplicationClient
 			_shownTick = tick;
 			FollowEffects();
 			ExceptionDispatchInfo? expiry = ExpirePredictedCues(tick);
+			ExpireMirroredShots(tick);
 			failure ??= expiry;
 		}
 
@@ -886,7 +890,7 @@ public sealed class ReplicationClient
 				{
 					if (reader.ReadBool())
 					{
-						ReadEvents(reader, going, _session.TagsManager.NetIndexCount);
+						ReadEvents(reader, going, _session.TagsManager.NetIndexCount, tick);
 					}
 
 					if (reader.ReadBool())
@@ -1097,7 +1101,7 @@ public sealed class ReplicationClient
 
 		if (reader.ReadBool())
 		{
-			ReadEvents(reader, mirror, tagCount);
+			ReadEvents(reader, mirror, tagCount, tick);
 		}
 
 		if (reader.ReadBool())
@@ -1167,7 +1171,17 @@ public sealed class ReplicationClient
 		}
 	}
 
-	private void ReadEvents(BitReader reader, Mirror? mirror, int tagCount)
+	private ProjectileData ProjectileAt(int index)
+	{
+		if (index >= _session.Registry.Count(AssetKind.Projectile))
+		{
+			throw new MalformedPacketException($"The registry has no projectile {index}.");
+		}
+
+		return _session.Registry.Get<ProjectileData>(AssetKind.Projectile, index);
+	}
+
+	private void ReadEvents(BitReader reader, Mirror? mirror, int tagCount, long tick)
 	{
 		int count = ReplicationCodec.ReadCount(reader);
 
@@ -1178,6 +1192,24 @@ public sealed class ReplicationClient
 			if (sequence > uint.MaxValue)
 			{
 				throw new MalformedPacketException($"{sequence} is not an event sequence.");
+			}
+
+			if (reader.ReadBool())
+			{
+				ProjectileFlight flight = ReplicationCodec.ReadFlight(
+					reader,
+					tick,
+					_session.Registry.BitsFor(AssetKind.Projectile),
+					ProjectileAt,
+					mirror?.Entity!);
+
+				if (mirror is not null && sequence > mirror.LastEvent)
+				{
+					mirror.LastEvent = (uint)sequence;
+					mirror.ShowFlight(flight);
+				}
+
+				continue;
 			}
 
 			Tag cueTag = TagAt(ReplicationCodec.ReadTagIndex(reader, tagCount));
@@ -2133,6 +2165,11 @@ public sealed class ReplicationClient
 
 		_ended.RemoveWhere(x => x.Tick < oldest);
 		_spawnKeys.ForgetBefore(oldest);
+
+		foreach (Prediction prediction in _timeline.Members)
+		{
+			prediction.Entity.Shots?.ForgetConfirmedBefore(oldest);
+		}
 	}
 
 	// Hands an entity the timeline lets go of to the host to take away.
@@ -2366,6 +2403,11 @@ public sealed class ReplicationClient
 			EntitySimulation.Teardown(entity);
 			entity.Tags.MirrorClear();
 			entity.EffectsManager.MirrorPresenter = _presenter;
+
+			if (entity.Shots is EntityShots shots)
+			{
+				shots.IsMirrored = true;
+			}
 		}
 
 		var mirror = new Mirror(entity, owner, placed, body ?? new RemoteBody());
@@ -2561,6 +2603,19 @@ public sealed class ReplicationClient
 		return failure;
 	}
 
+	private void ExpireMirroredShots(double shownTick)
+	{
+#pragma warning disable S3267 // Loops should be simplified with "LINQ" expressions
+		foreach (Mirror mirror in _mirrors.Values)
+		{
+			if (mirror.Prediction is null)
+			{
+				mirror.Entity.Shots?.ExpireShown(shownTick, _session.Clock.FixedDeltaTime);
+			}
+		}
+#pragma warning restore S3267 // Loops should be simplified with "LINQ" expressions
+	}
+
 	// A cue shown early that the server's word didn't follow by the time its tick was shown and then some: an executed
 	// one is let go, a persistent one withdrawn.
 	private ExceptionDispatchInfo? ExpirePredictedCues(double shownTick)
@@ -2618,6 +2673,24 @@ public sealed class ReplicationClient
 		// The runs the server ended, by the tick of the packet that said so, kept while a copy of that packet's record,
 		// sent again until it's acknowledged, could still bring their actions.
 		public Dictionary<uint, long> EndedGraphs { get; } = [];
+
+		// A launch or an end the server sent: shown on an entity this client mirrors; on one it predicts, which
+		// launched its own already, an end ends the flight where the server did.
+		public void ShowFlight(in ProjectileFlight flight)
+		{
+			if (Entity.Shots is not EntityShots shots)
+			{
+				return;
+			}
+
+			if (flight.IsFlying)
+			{
+				shots.ShowLaunch(flight);
+				return;
+			}
+
+			shots.ShowEnd(flight);
+		}
 
 		public void ForgetEndedGraphs(long before)
 		{

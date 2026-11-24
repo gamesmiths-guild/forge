@@ -14,6 +14,7 @@ using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Networking;
 using Gamesmiths.Forge.Networking.Messages;
 using Gamesmiths.Forge.Networking.Replication;
+using Gamesmiths.Forge.Shots;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Tags;
 using Gamesmiths.Forge.Tests.Helpers;
@@ -34,6 +35,8 @@ public class ReplicationTests
 		["state.burning", "state.wet", "state.stunned", "cue.fire", "cue.hit", "cue.regen", "input.menu"];
 
 	private static readonly InputActionSet _actions = new(["fire"], [new InputVector("l", "r", "u", "d")]);
+
+	private static readonly ProjectileData _ball = new("Ball", new Vector3(0, -2, 0), 0.25f, 3);
 
 	[Fact]
 	[Trait("Networking", "Replication")]
@@ -58,6 +61,80 @@ public class ReplicationTests
 		client.Session.Mirror.BodyOf(mirror)!.Latest!.Value.Position.Should().Be(new Vector3(1.25f, 0, -3.5f));
 		rig.Server.TagsManager.GetNetworkUsage().Select(x => x.Key.ToString())
 			.Should().Contain("state.burning", "the server counts the tags it sends");
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_launch_and_its_end_reach_a_mirror_exactly()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		rig.Step(3);
+		EntitySimulation.Tick(entity, rig.Server.Clock.Tick, 1.0 / TickRate);
+		ProjectileFlight launched = entity.Shots.Launch(_ball, new Vector3(1.1f, 2.2f, 3.3f), new Vector3(9.7f, 4, -1));
+
+		rig.Step(3);
+
+		Entity mirror = client.Find(entity);
+		ProjectileFlight shown = mirror.Shots.Flights.Should().ContainSingle().Subject;
+		shown.Should().Be(launched with { Instigator = mirror, Projectile = shown.Projectile });
+		shown.Projectile.Name.Should().Be("Ball");
+
+		EntitySimulation.Tick(entity, rig.Server.Clock.Tick, 1.0 / TickRate);
+		entity.Shots.End(launched.Id, FlightEnd.Struck, new Vector3(5, 6, 7), Vector3.UnitY).Should().BeTrue();
+		rig.Step(3);
+
+		ProjectileFlight ended = mirror.Shots.Flights.Should().ContainSingle().Subject;
+		ended.End.Should().Be(FlightEnd.Struck);
+		ended.EndTick.Should().Be(entity.Shots.Flights[0].EndTick);
+		ended.EndPoint.Should().Be(new Vector3(5, 6, 7));
+		ended.EndNormal.Should().Be(Vector3.UnitY);
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void A_mirror_ends_a_flight_whose_end_never_arrived_at_its_lifetime()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		rig.Step(3);
+		EntitySimulation.Tick(entity, rig.Server.Clock.Tick, 1.0 / TickRate);
+		entity.Shots.Launch(_ball, Vector3.Zero, Vector3.UnitX);
+		rig.Step(3);
+		Entity mirror = client.Find(entity);
+
+		client.Session.Mirror!.Show(entity.Shots.Flights[0].Tick + (3.0 * TickRate) - 1);
+		mirror.Shots.Flights.Single().IsFlying.Should().BeTrue();
+		client.Session.Mirror.Show(entity.Shots.Flights[0].Tick + (3.0 * TickRate));
+		mirror.Shots.Flights.Single().End.Should().Be(FlightEnd.Expired);
+		client.Session.Mirror.Show(entity.Shots.Flights[0].Tick + (4.0 * TickRate) + 1);
+		mirror.Shots.Flights.Should().BeEmpty();
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void An_end_that_arrives_after_a_mirror_s_expiry_takes_its_place()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		rig.Step(3);
+		EntitySimulation.Tick(entity, rig.Server.Clock.Tick, 1.0 / TickRate);
+		ProjectileFlight launched = entity.Shots.Launch(_ball, Vector3.Zero, Vector3.UnitX);
+		rig.Step(3);
+		Entity mirror = client.Find(entity);
+		client.Session.Mirror!.Show(launched.Tick + (3.5 * TickRate));
+		mirror.Shots.Flights.Single().EndTick.Should().Be(launched.Tick + (3 * TickRate), "its lifetime ends then");
+
+		EntitySimulation.Tick(entity, rig.Server.Clock.Tick, 1.0 / TickRate);
+		entity.Shots.End(launched.Id, FlightEnd.Struck, new Vector3(5, 6, 7)).Should().BeTrue();
+		rig.Step(3);
+
+		ProjectileFlight ended = mirror.Shots.Flights.Should().ContainSingle().Subject;
+		ended.End.Should().Be(FlightEnd.Struck);
+		ended.EndPoint.Should().Be(new Vector3(5, 6, 7));
 	}
 
 	[Fact]
@@ -1448,6 +1525,7 @@ public class ReplicationTests
 	{
 		var registry = new NetworkAssetRegistry();
 		registry.Register(AssetKind.Scene, "uid://creature", "Creature");
+		registry.Register(AssetKind.Projectile, "uid://ball", _ball);
 		registry.Seal();
 		return registry;
 	}
@@ -1724,6 +1802,10 @@ public class ReplicationTests
 
 		public IEntityMover? Mover => Body is null ? null : new FixedMover(this);
 
+		public EntityShots Shots { get; }
+
+		EntityShots? IForgeEntity.Shots => Shots;
+
 		public Entity(TagsManager tags, CuesManager cues)
 		{
 			Attributes = new EntityAttributes(this, Set);
@@ -1731,6 +1813,7 @@ public class ReplicationTests
 			EffectsManager = new EffectsManager(this, cues);
 			CuesManager = cues;
 			Abilities = new EntityAbilities(this);
+			Shots = new EntityShots(this);
 		}
 	}
 

@@ -2,6 +2,7 @@
 
 using Gamesmiths.Forge.Core;
 using Gamesmiths.Forge.Cues;
+using Gamesmiths.Forge.Shots;
 using Gamesmiths.Forge.Statescript;
 
 namespace Gamesmiths.Forge.Networking.Replication;
@@ -21,6 +22,8 @@ internal static class ReplicationCodec
 	internal const int MaxCount = 4096;
 
 	// Normalized magnitudes are sent in a thousandth.
+	private const int FlightEndBits = 2;
+
 	private const int NormalizedBits = 10;
 
 	private const float NormalizedLevels = (1 << NormalizedBits) - 1;
@@ -116,5 +119,83 @@ internal static class ReplicationCodec
 		}
 
 		return (ushort)index;
+	}
+
+	// A flight as a launch or an end: its name and ticks relative to the packet's, and its path exactly, so every
+	// machine flies it along the same points.
+	internal static void WriteFlight(BitWriter writer, in ProjectileFlight flight, long tick, int projectile, int bits)
+	{
+		writer.WriteVarInt(tick - flight.Tick);
+		writer.WriteVarInt(flight.Id.Sequence);
+		writer.WriteBits((ulong)projectile, bits);
+		WriteVector(writer, flight.Origin);
+		WriteVector(writer, flight.Velocity);
+		writer.WriteBool(!flight.IsFlying);
+
+		if (flight.IsFlying)
+		{
+			return;
+		}
+
+		writer.WriteBits((ulong)flight.End, FlightEndBits);
+		writer.WriteVarInt(flight.EndTick - flight.Tick);
+		WriteVector(writer, flight.EndPoint);
+		WriteVector(writer, flight.EndNormal);
+	}
+
+	internal static ProjectileFlight ReadFlight(
+		BitReader reader,
+		long tick,
+		int bits,
+		Func<int, ProjectileData> projectiles,
+		IForgeEntity instigator)
+	{
+		long launched = tick - reader.ReadVarInt();
+		long sequence = reader.ReadVarInt();
+
+		if (sequence is > int.MaxValue or < int.MinValue)
+		{
+			throw new MalformedPacketException($"{sequence} is not a launch's sequence.");
+		}
+
+		ProjectileData projectile = projectiles((int)reader.ReadBits(bits));
+		var flight = new ProjectileFlight(
+			new ShotId(launched, (int)sequence),
+			projectile,
+			instigator,
+			ReadVector(reader),
+			ReadVector(reader));
+
+		if (!reader.ReadBool())
+		{
+			return flight;
+		}
+
+		var end = (FlightEnd)reader.ReadBits(FlightEndBits);
+
+		if (end == FlightEnd.None)
+		{
+			throw new MalformedPacketException("An ended flight has no end.");
+		}
+
+		return flight with
+		{
+			End = end,
+			EndTick = launched + reader.ReadVarInt(),
+			EndPoint = ReadVector(reader),
+			EndNormal = ReadVector(reader),
+		};
+	}
+
+	private static void WriteVector(BitWriter writer, System.Numerics.Vector3 value)
+	{
+		writer.WriteFloat(value.X);
+		writer.WriteFloat(value.Y);
+		writer.WriteFloat(value.Z);
+	}
+
+	private static System.Numerics.Vector3 ReadVector(BitReader reader)
+	{
+		return new System.Numerics.Vector3(reader.ReadFloat(), reader.ReadFloat(), reader.ReadFloat());
 	}
 }

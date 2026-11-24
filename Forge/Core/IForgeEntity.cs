@@ -3,6 +3,7 @@
 using Gamesmiths.Forge.Cues;
 using Gamesmiths.Forge.Effects;
 using Gamesmiths.Forge.Events;
+using Gamesmiths.Forge.Shots;
 using Gamesmiths.Forge.Statescript;
 
 namespace Gamesmiths.Forge.Core;
@@ -90,6 +91,15 @@ public interface IForgeEntity
 	/// <see cref="EntitySimulation.RestoreSnapshot"/> puts it back.
 	/// </remarks>
 	IEntityStateHook? StateHook => null;
+
+	/// <summary>
+	/// Gets the lightweight projectiles this entity launches, or <see langword="null"/> for an entity that launches
+	/// none.
+	/// </summary>
+	/// <remarks>
+	/// Its tick flies them after its abilities, and its snapshots hold them.
+	/// </remarks>
+	EntityShots? Shots => null;
 
 	/// <summary>
 	/// Gets the id this entity is known by across a networked session, or <see cref="NetworkEntityId.None"/> for an

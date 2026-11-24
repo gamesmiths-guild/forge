@@ -10,6 +10,7 @@ using Gamesmiths.Forge.Effects.Duration;
 using Gamesmiths.Forge.Events;
 using Gamesmiths.Forge.Networking;
 using Gamesmiths.Forge.Networking.Replication;
+using Gamesmiths.Forge.Shots;
 using Gamesmiths.Forge.Statescript;
 using Gamesmiths.Forge.Statescript.Nodes;
 using Gamesmiths.Forge.Statescript.Nodes.Action;
@@ -54,6 +55,8 @@ internal static class Program
 			ReplicatesOverLoopback(tagsManager));
 		Check("Prediction takes an effect from elsewhere into the client's own entity", () =>
 			PredictsOverLoopback(tagsManager));
+		Check("A rollback behavior's context and an entity's flights come back from a snapshot", () =>
+			RestoresShots(tagsManager));
 
 		return _failures == 0 ? 0 : 1;
 	}
@@ -142,6 +145,26 @@ internal static class Program
 		EntitySimulation.Tick(entity, 1, 1.0 / 64.0);
 
 		return received;
+	}
+
+	private static bool RestoresShots(TagsManager tagsManager)
+	{
+		var behavior = new VolleyBehavior();
+		behavior.OnStarted(null!);
+		behavior.OnFixedUpdate(0.1);
+		object? kept = behavior.CaptureSnapshot();
+		behavior.OnFixedUpdate(0.1);
+		behavior.RestoreSnapshot(kept);
+
+		var entity = new SmokeEntity(tagsManager);
+		var ball = new ProjectileData("Ball", Vector3.Zero, 0.1f, 1);
+		EntitySimulation.Tick(entity, 0, 0.1);
+		entity.Shots.Launch(ball, Vector3.Zero, Vector3.UnitX);
+		EntitySnapshot snapshot = EntitySimulation.CaptureSnapshot(entity);
+		entity.Shots.Launch(ball, Vector3.Zero, Vector3.UnitY);
+		EntitySimulation.RestoreSnapshot(entity, snapshot);
+
+		return behavior.Fired.Count == 1 && entity.Shots.Flights.Count == 1;
 	}
 
 	private static bool RestoresGraphSnapshot()
@@ -657,13 +680,43 @@ internal static class Program
 
 		public NetworkEntityId NetworkId { get; init; }
 
+		public EntityShots Shots { get; }
+
+		EntityShots? IForgeEntity.Shots => Shots;
+
 		public SmokeEntity(TagsManager tagsManager, params Tag[] tags)
 		{
+			Shots = new EntityShots(this);
 			Attributes = new EntityAttributes(this, []);
 			Tags = new EntityTags(new TagContainer(tagsManager, [.. tags]));
 			CuesManager = new CuesManager();
 			EffectsManager = new EffectsManager(this, CuesManager);
 			Abilities = new EntityAbilities(this);
+		}
+	}
+
+	private sealed class VolleyContext : BehaviorContext
+	{
+		public List<int> Fired { get; private set; } = [];
+
+		protected override void OnCopied()
+		{
+			base.OnCopied();
+			Fired = [.. Fired];
+		}
+	}
+
+	private sealed class VolleyBehavior : RollbackBehavior<VolleyContext>
+	{
+		public List<int> Fired => Context.Fired;
+
+		public override void OnEnded(AbilityBehaviorContext context)
+		{
+		}
+
+		public override void OnFixedUpdate(double deltaTime)
+		{
+			Context.Fired.Add(Context.Fired.Count);
 		}
 	}
 
