@@ -22,7 +22,7 @@ namespace Gamesmiths.Forge.Shots;
 /// <param name="EndPoint">Where it ended.</param>
 /// <param name="EndNormal">The normal of the surface it hit, or zero.</param>
 /// <param name="Pierces">How many colliders it has gone through.</param>
-/// <param name="Strength">The share of its damage it has left, 1 at launch, as going through colliders costs it.
+/// <param name="Strength">The share of its strength it has left, 1 at launch, as going through colliders costs it.
 /// </param>
 public readonly record struct ProjectileFlight(
 	ShotId Id,

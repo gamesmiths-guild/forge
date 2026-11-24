@@ -48,7 +48,7 @@ The entity's [tick](../simulation.md#advancing-an-entity) flies its projectiles 
 | `ShotStep` | Means |
 |---|---|
 | `Flying` | Nothing to end on. |
-| `Passed(pierces, strength)` | It went through colliders on the way: how many in all, and the share of its damage left. The flight keeps them as `Pierces` and `Strength`, so they roll back with it. |
+| `Passed(pierces, strength)` | It went through colliders on the way: how many in all, and the share of its strength left. The flight keeps them as `Pierces` and `Strength`, so they roll back with it. |
 | `Impact(point, normal)` | It ends there. |
 
 A flight that has flown its `Lifetime` ends as `FlightEnd.Expired`. `EntityShots.End` ends one in the entity's current tick, as `Impact` for a detonation on command or `Struck` for a projectile a shot hit. An ended flight stays in `Flights` for a second, so a presentation pass sees its end, then goes.

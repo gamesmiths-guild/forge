@@ -12,7 +12,7 @@ namespace Gamesmiths.Forge.Shots;
 /// <param name="Normal">The normal of the surface it hit, or zero.</param>
 /// <param name="Pierces">How many colliders the projectile has gone through by the end of the stretch, or -1 for as
 /// many as before.</param>
-/// <param name="Strength">The share of its damage it has left by then, or -1 for as much as before.</param>
+/// <param name="Strength">The share of its strength it has left by then, or -1 for as much as before.</param>
 public readonly record struct ShotStep(bool Ended, Vector3 Point, Vector3 Normal, int Pierces = -1, float Strength = -1)
 {
 	/// <summary>
@@ -24,7 +24,7 @@ public readonly record struct ShotStep(bool Ended, Vector3 Point, Vector3 Normal
 	/// Gives a step the projectile flew on from, having gone through colliders on the way.
 	/// </summary>
 	/// <param name="pierces">How many colliders it has gone through in all.</param>
-	/// <param name="strength">The share of its damage it has left.</param>
+	/// <param name="strength">The share of its strength it has left.</param>
 	/// <returns>The step.</returns>
 	public static ShotStep Passed(int pierces, float strength)
 	{
