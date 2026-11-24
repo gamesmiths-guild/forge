@@ -31,7 +31,7 @@ var rocket = new ProjectileData("Rocket", gravity: Vector3.Zero, radius: 0.2f, l
 ProjectileFlight flight = player.Shots.Launch(rocket, origin, direction * 30);
 ```
 
-`Launch` belongs in one of the entity's ticks, as an ability's behavior runs. It throws before the entity's first tick, and on an entity a client mirrors, which only shows the server's launches. A flight is named by a `ShotId`: the tick it was launched in and how many the entity launched before it in that tick. The server and the client that predicts the entity launch the same projectiles in the same order, so they name them alike.
+`Launch` belongs in one of the entity's ticks, as an ability's behavior runs. It throws before the entity's first tick, and on an entity a client mirrors, which only shows the server's launches. A flight is named by a `ShotId`: the tick it was launched in and how many the entity launched before it in that tick. The server and the client that predicts the entity launch the same projectiles in the same order, so they name them alike. A launch in the entity's tick that its client doesn't predict, as a server-only ability's, counts down from -1 instead, so it doesn't shift the names of those the client does.
 
 ## Flying
 
@@ -55,7 +55,7 @@ A flight that has flown its `Lifetime` ends as `FlightEnd.Expired`. `EntityShots
 
 ## Showing
 
-`EntityShots.Present`, called from the host's presentation pass, brings what the host shows in line with the flights, by their net change: `IShotHost.Show` for a flight launched since the last pass, `ShowEnd` for one that ended since, and `Hide` for one a correction took away before its end. A flight a correction takes away and brings back as it was is shown once.
+`EntityShots.Present`, called from the host's presentation pass, brings what the host shows in line with the flights, by their net change: `IShotHost.Show` for a flight launched since the last pass, `ShowEnd` for one that ended since, and `Hide` for one a correction took away before its end. A flight a correction takes away and brings back as it was is shown once; one it brings back launched otherwise, or flying again after its end, is shown anew.
 
 ## Rollback
 
@@ -64,8 +64,8 @@ An [entity snapshot](../rollback.md#entity-snapshots) holds the entity's flights
 ## On the network
 
 - **The server** records each launch and each end of a replicated entity's flights as an event, numbered with its executed cues and expiring as they do (see [Replication](replication.md)). A launch the entity's own tick made goes to everyone but the entity's owner, who launched it as it predicted it. Ends go to everyone, the owner included. The projectile travels as its place in the asset registry, `AssetKind.Projectile`, so every machine registers the same ones. A launch of one that isn't registered throws.
-- **A mirror** holds the server's launches and shows them. The host shows a mirror's flight at the tick the client shows the world at, so it leaves the shooter's hand as the client saw it and reaches its end where the server ended it. One whose end never arrived ends as the client's shown tick takes it past its lifetime. An end for a flight the client never heard of, as when the launch arrived too late, is shown alone.
-- **The owner** predicts its entity's projectiles with the rest of it. The server's end holds through corrections: a flight the owner still flies ends where and when the server's did, and the ticks a correction runs again end it there too. Flights aren't part of the [prediction check](prediction.md#checking-a-tick): the server's word on a flight is its end.
+- **A mirror** holds the server's launches and shows them. The host shows a mirror's flight at the tick the client shows the world at, so it leaves the shooter's hand as the client saw it and reaches its end where the server ended it. One whose end never arrived ends at its lifetime, once the client's shown tick takes it past, and the server's end takes the place of that if it arrives later. An end for a flight the client never heard of, as when the launch arrived too late, is shown alone.
+- **The owner** predicts its entity's projectiles with the rest of it. The server's end holds through corrections: the flight ends where and when the server's did, even if the owner had ended it elsewhere, and the ticks a correction runs again fly it untested to that end. A launch the owner didn't predict, which the server sends it, holds through corrections too. An end for a flight it never heard of is shown alone, as on a mirror. Flights aren't part of the [prediction check](prediction.md#checking-a-tick): the server's word on a flight is its end.
 
 ## Spread
 

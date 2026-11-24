@@ -243,7 +243,7 @@ A replay that finds nothing proves the world is deterministic over those ticks: 
 
 `ChecksumAt(tick)` hashes the world as a tick held left it into 64 bits that come out the same on every machine and in every run that leaves the world the same:
 
-- **Forge's state, value for value:** each entity's attributes, tags, active effects with their timing, stacks and set-by-caller values, granted abilities with the running nodes and variables of their graphs, shared variables, input, random and outside state.
+- **Forge's state, value for value:** each entity's attributes, tags, active effects with their timing, stacks and set-by-caller values, granted abilities with the running nodes and variables of their graphs, shared variables, input, random and outside state, and the entity's [projectile flights](networking/shots.md).
 - **The body to a thousandth of a unit**, the precision the network sends it at, so float noise below that isn't a difference.
 - **Entities by their place in the world.** An effect's owner or a variable pointing at an entity counts by that entity's place, so a world that spawned an equal entity in the same place hashes the same.
 - **Not covered directly:** what a running node or an effect component keeps for itself. It counts through what it changes.
