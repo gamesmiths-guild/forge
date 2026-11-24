@@ -53,7 +53,8 @@ public class PredictionTests
 		"event.blow"
 	];
 
-	private static readonly InputActionSet _actions = new(["right", "dash", "chant", "spark", "guard", "shoot"]);
+	private static readonly InputActionSet _actions =
+		new(["right", "dash", "chant", "spark", "guard", "shoot", "volley"]);
 
 	[Fact]
 	[Trait("Networking", "Prediction")]
@@ -204,16 +205,29 @@ public class PredictionTests
 
 	[Theory]
 	[Trait("Networking", "Prediction")]
-	[InlineData(false)]
-	[InlineData(true)]
-	public void A_shot_leaves_its_owner_at_once_and_ends_where_the_server_s_did(bool lossy)
+	[InlineData(false, 6, false)]
+	[InlineData(true, 6, false)]
+	[InlineData(false, 1, false)]
+	[InlineData(true, 1, false)]
+	[InlineData(false, 6, true)]
+	public void A_shot_leaves_its_owner_at_once_and_ends_where_the_server_s_did(
+		bool lossy,
+		float ownerWall,
+		bool corrected)
 	{
 		var rig = new Rig(lossy ? new NetworkConditions(0.1, 0.01, 0.05f) : NetworkConditions.Good, seed: 3);
 		Player player = rig.JoinWithPlayer();
 		rig.ServerPlayer.Wall.At = 2;
-		player.Wall.At = 6;
+		player.Wall.At = ownerWall;
+		long corrections = rig.Mirror.Corrections;
 
 		rig.Hold("shoot", 1);
+
+		if (corrected)
+		{
+			rig.ServerPlayer.EffectsManager.ApplyEffect(
+				new Effect(rig.ServerAssets.Slow, new EffectOwnership(null, null)));
+		}
 
 		ProjectileFlight launched = player.Shots.Flights
 			.Should().ContainSingle("it launched on the owner's own tick").Subject;
@@ -235,11 +249,53 @@ public class PredictionTests
 		owner.EndTick
 			.Should().Be(server.EndTick);
 		owner.EndPoint
-			.Should().Be(server.EndPoint, "where the server ended it, though this machine's wall is further");
-		if (!lossy)
+			.Should().Be(server.EndPoint, "where the server ended it, wherever this machine's wall is");
+		if (corrected)
 		{
 			rig.Mirror.Corrections
-				.Should().Be(0, "flights aren't checked: the server's word on them is their end");
+				.Should().BeGreaterThan(corrections, "the slow corrects the owner while the shot flies");
+		}
+		else if (!lossy)
+		{
+			rig.Mirror.Corrections
+				.Should().Be(corrections, "flights aren't checked: the server's word on them is their end");
+		}
+	}
+
+	[Theory]
+	[Trait("Networking", "Prediction")]
+	[InlineData(false)]
+	[InlineData(true)]
+	public void A_launch_the_owner_doesn_t_predict_reaches_it_beside_its_own(bool corrected)
+	{
+		var rig = new Rig(NetworkConditions.Good, seed: 3);
+		Player player = rig.JoinWithPlayer();
+		long corrections = rig.Mirror.Corrections;
+
+		rig.Hold("volley", 1);
+		player.Shots.Flights.Should().ContainSingle("the owner predicts one of the two");
+
+		for (int i = 0; i < 60 && player.Shots.Flights.Count < 2; i++)
+		{
+			rig.Idle(1);
+		}
+
+		if (corrected)
+		{
+			rig.ServerPlayer.EffectsManager.ApplyEffect(
+				new Effect(rig.ServerAssets.Slow, new EffectOwnership(null, null)));
+		}
+
+		rig.Idle(30);
+
+		ShotId[] server = [.. rig.ServerPlayer.Shots.Flights.Select(x => x.Id)];
+		server.Should().HaveCount(2);
+		server.Should().Contain(x => x.Sequence < 0, "the server's own shot doesn't take the predicted one's name");
+		player.Shots.Flights.Select(x => x.Id).Should().BeEquivalentTo(server);
+
+		if (corrected)
+		{
+			rig.Mirror.Corrections.Should().BeGreaterThan(corrections, "the server's shot outlasts the correction");
 		}
 	}
 
@@ -709,6 +765,11 @@ public class PredictionTests
 		// Bound to shoot: a coded behavior that launches a ball along +X and ends a tick later.
 		public AbilityData Shoot { get; }
 
+		// Bound to volley: a shot on the server alone, then one the client predicts, in the same tick.
+		public AbilityData ServerVolley { get; }
+
+		public AbilityData Volley { get; }
+
 		// Four units a second, a few seconds long.
 		public ProjectileData Ball { get; } = new("Ball", Vector3.Zero, 0.1f, 3);
 
@@ -799,6 +860,15 @@ public class PredictionTests
 				"Shoot",
 				behaviorFactory: () => new ShootBehavior(this),
 				inputBinding: AbilityInputBinding.ForAction("shoot"));
+			ServerVolley = new AbilityData(
+				"Server volley",
+				behaviorFactory: () => new ShootBehavior(this),
+				inputBinding: AbilityInputBinding.ForAction("volley"),
+				serverOnly: true);
+			Volley = new AbilityData(
+				"Volley",
+				behaviorFactory: () => new ShootBehavior(this),
+				inputBinding: AbilityInputBinding.ForAction("volley"));
 
 			Graph guard = Parry();
 			Guard = new AbilityData(
@@ -819,6 +889,8 @@ public class PredictionTests
 			Registry.Register(AssetKind.Ability, "uid://brace", Brace);
 			Registry.Register(AssetKind.Ability, "uid://guard", Guard);
 			Registry.Register(AssetKind.Ability, "uid://shoot", Shoot);
+			Registry.Register(AssetKind.Ability, "uid://server-volley", ServerVolley);
+			Registry.Register(AssetKind.Ability, "uid://volley", Volley);
 			Registry.Register(AssetKind.Projectile, "uid://ball", Ball);
 			Registry.Seal();
 		}
@@ -1201,6 +1273,8 @@ public class PredictionTests
 			Abilities.GrantAbilityPermanently(assets.Brace, 1, LevelComparison.None, this);
 			Abilities.GrantAbilityPermanently(assets.Guard, 1, LevelComparison.None, this);
 			Abilities.GrantAbilityPermanently(assets.Shoot, 1, LevelComparison.None, this);
+			Abilities.GrantAbilityPermanently(assets.ServerVolley, 1, LevelComparison.None, this);
+			Abilities.GrantAbilityPermanently(assets.Volley, 1, LevelComparison.None, this);
 			Shots = new EntityShots(this) { Host = Wall };
 
 			if (pulses)

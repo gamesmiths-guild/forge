@@ -181,6 +181,24 @@ public sealed class EntitySnapshot
 		{
 			writer.Write("Outside state", externalState);
 		}
+
+		for (int i = 0; i < (Flights?.Length ?? 0); i++)
+		{
+			ProjectileFlight flight = Flights![i];
+			writer.Open("Flights", i);
+			writer.Write("Tick", flight.Tick);
+			writer.Write("Sequence", flight.Id.Sequence);
+			writer.Write("Projectile", flight.Projectile.Name);
+			WriteQuantized(writer, "Origin", flight.Origin);
+			WriteQuantized(writer, "Velocity", flight.Velocity);
+			writer.Write("End", (long)flight.End);
+			writer.Write("End tick", flight.EndTick);
+			WriteQuantized(writer, "End point", flight.EndPoint);
+			WriteQuantized(writer, "End normal", flight.EndNormal);
+			writer.Write("Pierces", flight.Pierces);
+			writer.Write("Strength", Quantized(flight.Strength));
+			writer.Close();
+		}
 	}
 
 	// Puts the entity's state back, silently, between the restore's letting go and taking hold again. An effect

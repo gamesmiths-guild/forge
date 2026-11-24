@@ -28,6 +28,7 @@ public sealed class EntityShots(IForgeEntity owner)
 	private readonly List<ProjectileFlight> _flights = [];
 	private readonly Dictionary<ShotId, ProjectileFlight> _presented = [];
 	private readonly Dictionary<ShotId, ProjectileFlight> _confirmed = [];
+	private readonly Dictionary<ShotId, ProjectileFlight> _received = [];
 	private readonly List<ShotId> _gone = [];
 
 	/// <summary>
@@ -72,19 +73,23 @@ public sealed class EntityShots(IForgeEntity owner)
 			throw new InvalidOperationException("A client shows the server's launches for an entity it mirrors.");
 		}
 
-		int sequence = 0;
+		// A launch in the entity's tick that its client doesn't predict counts down, so it doesn't shift the names of
+		// those the client does.
+		bool ownersOwn = Owner.EffectsManager.RaisesOwnTick;
+		int step = ownersOwn || !Owner.EffectsManager.IsAdvancing ? 1 : -1;
+		int sequence = step > 0 ? 0 : -1;
 
 		foreach (ProjectileFlight launched in _flights)
 		{
-			if (launched.Tick == tick)
+			if (launched.Tick == tick && (launched.Id.Sequence >= 0) == (step > 0))
 			{
-				sequence++;
+				sequence += step;
 			}
 		}
 
 		var flight = new ProjectileFlight(new ShotId(tick, sequence), projectile, Owner, origin, velocity);
 		_flights.Add(flight);
-		Observer?.Launched(this, flight, Owner.EffectsManager.RaisesOwnTick);
+		Observer?.Launched(this, flight, ownersOwn);
 		return flight;
 	}
 
@@ -149,7 +154,25 @@ public sealed class EntityShots(IForgeEntity owner)
 				continue;
 			}
 
-			if (shown.IsFlying && !flight.IsFlying)
+			// A correction that changed a flying flight's launch, or brought an ended flight back, shows it anew.
+			if ((shown.IsFlying && (shown.Origin != flight.Origin || shown.Velocity != flight.Velocity
+				|| shown.Projectile != flight.Projectile)) || (!shown.IsFlying && flight.IsFlying))
+			{
+				if (shown.IsFlying)
+				{
+					host.Hide(shown);
+				}
+
+				host.Show(flight);
+
+				if (!flight.IsFlying)
+				{
+					host.ShowEnd(flight);
+				}
+
+				_presented[flight.Id] = flight;
+			}
+			else if (shown.IsFlying && !flight.IsFlying)
 			{
 				host.ShowEnd(flight);
 				_presented[flight.Id] = flight;
@@ -180,28 +203,45 @@ public sealed class EntityShots(IForgeEntity owner)
 	}
 
 	// Flies each projectile launched before the tick over its stretch of the tick, then lets go of those that ended
-	// long enough ago.
+	// long enough ago. A flight the server ended flies untested to the server's end.
 	internal void Advance(double fixedDeltaTime)
 	{
 		long tick = Owner.EffectsManager.Tick;
+
+		foreach (ProjectileFlight received in _received.Values)
+		{
+			if (received.Tick < tick && IndexOf(received.Id) < 0)
+			{
+				_flights.Add(received);
+			}
+		}
 
 		for (int i = 0; i < _flights.Count; i++)
 		{
 			ProjectileFlight flight = _flights[i];
 
-			if (!flight.IsFlying || flight.Tick >= tick)
+			if (flight.Tick >= tick)
 			{
 				continue;
 			}
 
-			if (_confirmed.TryGetValue(flight.Id, out ProjectileFlight confirmed) && confirmed.EndTick <= tick)
+			if (_confirmed.TryGetValue(flight.Id, out ProjectileFlight confirmed))
 			{
-				_flights[i] = confirmed;
+				if (confirmed.EndTick <= tick)
+				{
+					_flights[i] = confirmed;
+				}
+
+				continue;
+			}
+
+			if (!flight.IsFlying)
+			{
 				continue;
 			}
 
 			double age = (tick - flight.Tick) * fixedDeltaTime;
-			Vector3 to = flight.PositionAt(age);
+			Vector3 to = flight.PositionAt(Math.Min(age, flight.Projectile.Lifetime));
 			ShotStep step = Host?.Fly(flight, flight.PositionAt(age - fixedDeltaTime), to) ?? ShotStep.Flying;
 
 			if (step.Pierces >= 0 || step.Strength >= 0)
@@ -224,7 +264,15 @@ public sealed class EntityShots(IForgeEntity owner)
 		}
 
 		long keep = tick - (long)Math.Ceiling(KeepEndedSeconds / fixedDeltaTime);
-		_flights.RemoveAll(x => !x.IsFlying && x.EndTick < keep);
+
+		for (int i = _flights.Count - 1; i >= 0; i--)
+		{
+			if (!_flights[i].IsFlying && _flights[i].EndTick < keep)
+			{
+				_received.Remove(_flights[i].Id);
+				_flights.RemoveAt(i);
+			}
+		}
 	}
 
 	internal ProjectileFlight[] Capture()
@@ -238,17 +286,24 @@ public sealed class EntityShots(IForgeEntity owner)
 		_flights.AddRange(flights);
 	}
 
-	// A launch the server sent for an entity this client mirrors.
+	// A launch the server sent: for an entity this client mirrors, or one it predicts that didn't predict the launch,
+	// which holds through corrections.
 	internal void ShowLaunch(in ProjectileFlight flight)
 	{
+		if (!IsMirrored)
+		{
+			_received[flight.Id] = flight;
+		}
+
 		if (IndexOf(flight.Id) < 0)
 		{
 			_flights.Add(flight);
 		}
 	}
 
-	// An end the server sent. On an entity this client predicts, it holds through corrections: the ticks run again end
-	// the flight where the server did. On one it mirrors, a flight the client never heard of is shown ending alone.
+	// An end the server sent, which takes the place of one this client gave the flight. On an entity it predicts, it
+	// holds through corrections: the ticks run again end the flight where the server did. A flight the client never
+	// heard of is shown ending alone.
 	internal void ShowEnd(in ProjectileFlight ended)
 	{
 		int index = IndexOf(ended.Id);
@@ -260,18 +315,11 @@ public sealed class EntityShots(IForgeEntity owner)
 
 		if (index < 0)
 		{
-			if (IsMirrored)
-			{
-				_flights.Add(ended);
-			}
-
+			_flights.Add(ended);
 			return;
 		}
 
-		if (_flights[index].IsFlying)
-		{
-			_flights[index] = ended;
-		}
+		_flights[index] = ended;
 	}
 
 	// Ends the flights of a mirrored entity that the shown tick takes past their lifetime, which a lost end leaves
@@ -288,7 +336,7 @@ public sealed class EntityShots(IForgeEntity owner)
 				_flights[i] = flight with
 				{
 					End = FlightEnd.Expired,
-					EndTick = (long)Math.Ceiling(shownTick),
+					EndTick = flight.Tick + (long)Math.Ceiling(flight.Projectile.Lifetime / fixedDeltaTime),
 					EndPoint = flight.PositionAt(flight.Projectile.Lifetime),
 				};
 			}

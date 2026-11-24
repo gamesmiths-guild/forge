@@ -94,7 +94,7 @@ public readonly record struct ProjectileFlight(
 		Vector3 toCenter = center - from;
 		float along = Vector3.Dot(toCenter, direction);
 		float radius = Projectile.Radius;
-		float apart = toCenter.LengthSquared() - (along * along);
+		float apart = (toCenter - (direction * along)).LengthSquared();
 		distance = 0;
 
 		if (apart > radius * radius)

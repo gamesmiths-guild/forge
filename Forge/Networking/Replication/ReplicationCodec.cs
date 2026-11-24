@@ -126,7 +126,7 @@ internal static class ReplicationCodec
 	internal static void WriteFlight(BitWriter writer, in ProjectileFlight flight, long tick, int projectile, int bits)
 	{
 		writer.WriteVarInt(tick - flight.Tick);
-		writer.WriteVarUInt((ulong)flight.Id.Sequence);
+		writer.WriteVarInt(flight.Id.Sequence);
 		writer.WriteBits((ulong)projectile, bits);
 		WriteVector(writer, flight.Origin);
 		WriteVector(writer, flight.Velocity);
@@ -151,9 +151,9 @@ internal static class ReplicationCodec
 		IForgeEntity instigator)
 	{
 		long launched = tick - reader.ReadVarInt();
-		ulong sequence = reader.ReadVarUInt();
+		long sequence = reader.ReadVarInt();
 
-		if (sequence > int.MaxValue)
+		if (sequence is > int.MaxValue or < int.MinValue)
 		{
 			throw new MalformedPacketException($"{sequence} is not a launch's sequence.");
 		}

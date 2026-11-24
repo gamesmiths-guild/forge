@@ -355,12 +355,7 @@ public sealed class ReplicationClient
 		// The tick asked for, or the last one shown as holding is turned off, which asks for every tick.
 		double shown = double.IsPositiveInfinity(tick) ? _shownTick : tick;
 		ExceptionDispatchInfo? expiry = ExpirePredictedCues(shown);
-
-		foreach (Mirror mirror in _mirrors.Values.Where(x => x.Prediction is null))
-		{
-			mirror.Entity.Shots?.ExpireShown(shown, _session.Clock.FixedDeltaTime);
-		}
-
+		ExpireMirroredShots(shown);
 		(failure ?? expiry)?.Throw();
 	}
 
@@ -643,6 +638,7 @@ public sealed class ReplicationClient
 			_shownTick = tick;
 			FollowEffects();
 			ExceptionDispatchInfo? expiry = ExpirePredictedCues(tick);
+			ExpireMirroredShots(tick);
 			failure ??= expiry;
 		}
 
@@ -2605,6 +2601,19 @@ public sealed class ReplicationClient
 		}
 
 		return failure;
+	}
+
+	private void ExpireMirroredShots(double shownTick)
+	{
+#pragma warning disable S3267 // Loops should be simplified with "LINQ" expressions
+		foreach (Mirror mirror in _mirrors.Values)
+		{
+			if (mirror.Prediction is null)
+			{
+				mirror.Entity.Shots?.ExpireShown(shownTick, _session.Clock.FixedDeltaTime);
+			}
+		}
+#pragma warning restore S3267 // Loops should be simplified with "LINQ" expressions
 	}
 
 	// A cue shown early that the server's word didn't follow by the time its tick was shown and then some: an executed

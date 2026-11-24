@@ -115,6 +115,30 @@ public class ReplicationTests
 
 	[Fact]
 	[Trait("Networking", "Replication")]
+	public void An_end_that_arrives_after_a_mirror_s_expiry_takes_its_place()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		rig.Step(3);
+		EntitySimulation.Tick(entity, rig.Server.Clock.Tick, 1.0 / TickRate);
+		ProjectileFlight launched = entity.Shots.Launch(_ball, Vector3.Zero, Vector3.UnitX);
+		rig.Step(3);
+		Entity mirror = client.Find(entity);
+		client.Session.Mirror!.Show(launched.Tick + (3.5 * TickRate));
+		mirror.Shots.Flights.Single().EndTick.Should().Be(launched.Tick + (3 * TickRate), "its lifetime ends then");
+
+		EntitySimulation.Tick(entity, rig.Server.Clock.Tick, 1.0 / TickRate);
+		entity.Shots.End(launched.Id, FlightEnd.Struck, new Vector3(5, 6, 7)).Should().BeTrue();
+		rig.Step(3);
+
+		ProjectileFlight ended = mirror.Shots.Flights.Should().ContainSingle().Subject;
+		ended.End.Should().Be(FlightEnd.Struck);
+		ended.EndPoint.Should().Be(new Vector3(5, 6, 7));
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
 	public void Only_the_tags_of_entries_that_fit_a_packet_are_counted()
 	{
 		var rig = new Rig();

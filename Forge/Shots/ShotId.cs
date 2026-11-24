@@ -8,5 +8,6 @@ namespace Gamesmiths.Forge.Shots;
 /// name them alike.
 /// </summary>
 /// <param name="Tick">The tick the projectile was launched in.</param>
-/// <param name="Sequence">How many projectiles the entity launched before it in that tick.</param>
+/// <param name="Sequence">How many projectiles the entity launched before it in that tick. One its tick launched that
+/// the client predicting it doesn't run, as an unpredicted ability's, counts down from -1 instead.</param>
 public readonly record struct ShotId(long Tick, int Sequence);

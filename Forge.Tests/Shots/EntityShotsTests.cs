@@ -102,6 +102,37 @@ public class EntityShotsTests
 
 	[Fact]
 	[Trait("Shots", "Flight")]
+	public void The_last_stretch_stops_at_the_lifetime()
+	{
+		var entity = new Shooter();
+		entity.Tick(0);
+		entity.Shots.Launch(new ProjectileData("Dart", Vector3.Zero, 0, 0.02), Vector3.Zero, new Vector3(64, 0, 0));
+
+		entity.Tick(1);
+		entity.Tick(2);
+
+		entity.Host.Stretches[1].To.X.Should().BeApproximately(1.28f, 1e-5f);
+		entity.Shots.Flights[0].End.Should().Be(FlightEnd.Expired);
+		entity.Shots.Flights[0].EndPoint.X.Should().BeApproximately(1.28f, 1e-5f);
+	}
+
+	[Fact]
+	[Trait("Shots", "Flight")]
+	public void A_launch_or_an_end_changes_the_checksum()
+	{
+		var entity = new Shooter();
+		entity.Tick(0);
+		ulong before = EntitySimulation.Checksum(entity);
+		entity.Shots.Launch(_ball, Vector3.Zero, Vector3.UnitX);
+		ulong launched = EntitySimulation.Checksum(entity);
+		entity.Shots.End(new ShotId(0, 0), FlightEnd.Struck, Vector3.One);
+
+		launched.Should().NotBe(before);
+		EntitySimulation.Checksum(entity).Should().NotBe(launched);
+	}
+
+	[Fact]
+	[Trait("Shots", "Flight")]
 	public void Ended_flights_go_a_second_after_their_end()
 	{
 		var entity = new Shooter();
@@ -168,6 +199,43 @@ public class EntityShotsTests
 
 	[Fact]
 	[Trait("Shots", "Presentation")]
+	public void A_correction_that_brings_an_ended_flight_back_shows_it_again()
+	{
+		var entity = new Shooter();
+		entity.Tick(0);
+		entity.Shots.Launch(_ball, Vector3.Zero, new Vector3(64, 0, 0));
+		EntitySnapshot launched = EntitySimulation.CaptureSnapshot(entity);
+		entity.Host.ImpactAtX = 0.5f;
+		entity.Tick(1);
+		entity.Shots.Present();
+
+		EntitySimulation.RestoreSnapshot(entity, launched);
+		entity.Shots.Present();
+
+		entity.Host.Log.Should().Equal("show 0:0", "end 0:0 Impact", "show 0:0");
+	}
+
+	[Fact]
+	[Trait("Shots", "Presentation")]
+	public void An_ended_flight_whose_launch_a_correction_moved_shows_no_second_end()
+	{
+		var entity = new Shooter();
+		entity.Tick(0);
+		EntitySnapshot before = EntitySimulation.CaptureSnapshot(entity);
+		entity.Shots.Launch(_ball, Vector3.Zero, Vector3.UnitX);
+		entity.Shots.End(new ShotId(0, 0), FlightEnd.Impact, Vector3.Zero);
+		entity.Shots.Present();
+
+		EntitySimulation.RestoreSnapshot(entity, before);
+		entity.Shots.Launch(_ball, new Vector3(0.01f, 0, 0), Vector3.UnitX);
+		entity.Shots.End(new ShotId(0, 0), FlightEnd.Impact, Vector3.Zero);
+		entity.Shots.Present();
+
+		entity.Host.Log.Should().Equal("show 0:0", "end 0:0 Impact");
+	}
+
+	[Fact]
+	[Trait("Shots", "Presentation")]
 	public void A_flight_that_launched_and_ended_between_passes_shows_both()
 	{
 		var entity = new Shooter();
@@ -193,6 +261,8 @@ public class EntityShotsTests
 		flight.TestRay(Vector3.Zero, Vector3.UnitY, 20, center, out _).Should().BeFalse();
 		flight.TestRay(new Vector3(10, 0, 0), Vector3.UnitX, 1, center, out distance).Should().BeTrue();
 		distance.Should().Be(0);
+		flight.TestRay(Vector3.Zero, Vector3.UnitX, 9000, new Vector3(8192, 1, 0), out _).Should().BeFalse();
+		flight.TestRay(Vector3.Zero, Vector3.UnitX, 9000, new Vector3(8192, 0, 0), out _).Should().BeTrue();
 	}
 
 	[Fact]
