@@ -552,6 +552,7 @@ public class ReplicationTests
 		rig.Step(8);
 		client.Hit.ExecuteCount.Should().Be(1);
 		client.Hit.LastParameters!.Value.Magnitude.Should().Be(25);
+		client.Hit.LastParameters!.Value.Position.Should().BeNull();
 
 		rig.ServerLink!.Conditions = new NetworkConditions(0.01, 0, 1);
 		rig.ServerCues.ExecuteCue(rig.ServerTag("cue.hit"), entity, null);
@@ -560,6 +561,25 @@ public class ReplicationTests
 		rig.Step(8);
 
 		client.Hit.ExecuteCount.Should().Be(1, "the hit expired while the link was down");
+	}
+
+	[Fact]
+	[Trait("Networking", "Replication")]
+	public void An_executed_cue_plays_where_and_facing_the_way_the_server_said()
+	{
+		var rig = new Rig();
+		Client client = rig.Join();
+		Entity entity = rig.Spawn();
+		rig.Step(6);
+
+		rig.ServerCues.ExecuteCue(
+			rig.ServerTag("cue.hit"),
+			entity,
+			new CueParameters(25, 0.25f, null, new Vector3(1.5f, -2.25f, 1e5f), Vector3.UnitY));
+		rig.Step(8);
+
+		client.Hit.LastParameters!.Value.Position.Should().Be(new Vector3(1.5f, -2.25f, 1e5f));
+		client.Hit.LastParameters!.Value.Normal.Should().Be(Vector3.UnitY);
 	}
 
 	[Fact]

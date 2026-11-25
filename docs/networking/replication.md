@@ -23,7 +23,7 @@ Under the hood every value the server sends is stamped with the send it changed 
 
 Abilities, shared variables and input don't replicate: a mirror holds what they produced, not what produced it. Because a mirror's attributes, tags and effects are what the server sends, queries on them, UI bound to them and cue handlers work on a client as they do on the server.
 
-A cue's parameters reach a client as its magnitude, its normalized magnitude and its source, with these limits: `CustomParameters` is always `null`, and `Source` is `null` when the client has no mirror of the source at the moment the cue arrives, and stays so until the server next updates the cue.
+A cue's parameters reach a client as its magnitude, its normalized magnitude, its source and its position and normal, as whole floats, with these limits: `CustomParameters` is always `null`, and `Source` is `null` when the client has no mirror of the source at the moment the cue arrives, and stays so until the server next updates the cue.
 
 ## Body precision
 
@@ -115,7 +115,7 @@ void PlaceShownBody(IForgeEntity entity)
 
 ## The wire
 
-A state packet is the send's sequence and tick, then one entry per entity, then a zero. An entry is the entity's id, its kind (state, spawn or despawn) in 2 bits, for a spawn whether it's placed, its scene index, its owner and its attribute count, then a flag and the data for each of attributes, tags, persistent cues, executed cues, [effects](effects.md#the-wire), [graphs](statescript.md#the-wire), the body and, for the entity's owner, the [prediction checksum](prediction.md#the-wire), padded to a whole byte. An executed cue and a projectile's launch or end share the entity's event numbering; a flight is its launch tick and sequence, the projectile's index in the registry, and its origin, velocity and end as whole floats, so every machine flies the same path. A despawn carries the entity's executed cues, projectile ends and its graphs' actions. A client's acknowledgement goes up on the state channel once per update: the newest sequence it read and a bit for each of the 32 before it, so a lost acknowledgement costs nothing.
+A state packet is the send's sequence and tick, then one entry per entity, then a zero. An entry is the entity's id, its kind (state, spawn or despawn) in 2 bits, for a spawn whether it's placed, its scene index, its owner and its attribute count, then a flag and the data for each of attributes, tags, persistent cues, executed cues (each with its parameters, the position and normal each behind a flag), [effects](effects.md#the-wire), [graphs](statescript.md#the-wire), the body and, for the entity's owner, the [prediction checksum](prediction.md#the-wire), padded to a whole byte. An executed cue and a projectile's launch or end share the entity's event numbering; a flight is its launch tick and sequence, the projectile's index in the registry, and its origin, velocity and end as whole floats, so every machine flies the same path. A despawn carries the entity's executed cues, projectile ends and its graphs' actions. A client's acknowledgement goes up on the state channel once per update: the newest sequence it read and a bit for each of the 32 before it, so a lost acknowledgement costs nothing.
 
 A packet a client can't read is dropped and counted, as every packet is (see [the session](README.md#session)).
 

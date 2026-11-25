@@ -131,6 +131,8 @@ var parameters = new CueParameters(
     Magnitude: 25,              // Raw magnitude value
     NormalizedMagnitude: 0.25f, // Normalized magnitude (0-1)
     Source: attacker,           // Source entity (optional)
+    Position: hitPoint,         // Where it plays (optional)
+    Normal: hitNormal,          // Which way it faces (optional)
     CustomParameters: new Dictionary<StringKey, object>
     {
         { "DamageType", "Fire" },
@@ -138,6 +140,8 @@ var parameters = new CueParameters(
     }
 );
 ```
+
+`Position` and `Normal` place a cue somewhere other than its target, such as where a shot hit and the surface it hit, so a handler can play a spark there, or draw a tracer from its target to it. Without them, a handler plays at its target.
 
 #### Magnitude and Normalization
 

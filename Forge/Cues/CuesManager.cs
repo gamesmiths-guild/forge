@@ -315,7 +315,7 @@ public sealed class CuesManager
 			magnitude,
 			cue.NormalizedMagnitude(magnitude),
 			effectEvaluatedData.Effect.Ownership.Source,
-			effectEvaluatedData.CustomCueParameters);
+			CustomParameters: effectEvaluatedData.CustomCueParameters);
 	}
 
 	// Whether a handler would be sent the same: an effect evaluates its custom parameters anew each time, so they count
@@ -626,7 +626,7 @@ public sealed class CuesManager
 					magnitudes[i],
 					cueData.NormalizedMagnitude(magnitudes[i]),
 					effectEvaluatedData.Effect.Ownership.Source,
-					effectEvaluatedData.CustomCueParameters));
+					CustomParameters: effectEvaluatedData.CustomCueParameters));
 			}
 		}
 	}
